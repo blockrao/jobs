@@ -11,19 +11,33 @@
 ### Step 2: Set DATABASE_URL
 ```bash
 # In Claude Code terminal, one-time setup:
-cp .env.local.example .env.local
+cp .env.example .env.local
 
 # Edit .env.local and paste your connection string
 # On Mac/Linux: nano .env.local
 # On Windows: just edit the file in VS Code
 ```
 
-### Step 3: Run the scraper
+### Step 3: Run the scraper (dry-run first)
 ```bash
 npm run ingest
 ```
 
-Done. Takes 2-3 mins. Check your Vercel app—jobs are live in Supabase.
+✅ **Safe first run**: Dry-run mode is ON by default. You'll see what would be inserted without touching your database.
+
+Done. Takes 2-3 mins. Review the output for quality.
+
+## Go Live (Write to Supabase)
+
+Once you're happy with the dry-run results:
+
+```bash
+# Enable live mode in .env.local
+echo "DRY_RUN=false" >> .env.local
+
+# Run again to actually insert/update jobs in Supabase
+npm run ingest
+```
 
 ## Repeat
 
@@ -31,6 +45,8 @@ Every day/week, just run:
 ```bash
 npm run ingest
 ```
+
+(Runs in live mode if DRY_RUN=false is set)
 
 To automate daily at 8 AM:
 - **Mac/Linux**: Add to `crontab -e`: `0 8 * * * cd /path/to/jobs && npm run ingest`

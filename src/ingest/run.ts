@@ -45,22 +45,29 @@ async function runAdapter(adapter: SourceAdapter): Promise<PortalResult> {
   }
 }
 
-export async function main() {
+export async function main(opts?: { dryRun?: boolean }) {
+  const dryRun = opts?.dryRun !== false ? true : false; // Default: dry-run enabled
+
   // Validate DATABASE_URL is set (required for writing to Supabase)
   if (!process.env.DATABASE_URL) {
     console.error(
       "\n❌ DATABASE_URL not set. This is required to write results to Supabase.\n" +
       "Set it before running:\n" +
       "  export DATABASE_URL='postgresql://postgres:PASSWORD@PROJECT.supabase.co:5432/postgres'\n" +
-      "Or copy .env.local.example → .env.local and fill in your Supabase connection string.\n" +
-      "See SCRAPER_LOCAL.md for details.\n"
+      "Or copy .env.example → .env.local and fill in your Supabase connection string.\n" +
+      "See QUICKSTART_LOCAL.md for setup.\n"
     );
     process.exit(1);
   }
 
   console.log("🚀 SarkariJobs multi-portal ingestion pipeline");
   console.log("=".repeat(60));
-  console.log("📍 Running locally via Claude Code (bypasses cloud proxy)\n");
+  console.log("📍 Running locally via Claude Code (bypasses cloud proxy)");
+  if (dryRun) {
+    console.log("📋 DRY-RUN MODE: Database writes disabled (preview only)\n");
+  } else {
+    console.log("💾 LIVE MODE: Database writes enabled\n");
+  }
 
   // Step 1: Crawl all portals in parallel
   console.log("\n📡 Phase 1: Crawling 5 government job portals...");
@@ -95,20 +102,44 @@ export async function main() {
   const normalizedPostings = normalize(dedupedPostings);
   console.log(`✅ Normalized ${normalizedPostings.length} postings`);
 
-  // Step 5: Write to database
-  console.log(`\n💾 Phase 4: Writing to database...`);
-  try {
-    const dbResult = await writePostingsToDB(dedupedPostings, normalizedPostings);
+  // Step 5: Write to database (or simulate in dry-run)
+  console.log(`\n💾 Phase 4: ${dryRun ? "Simulating" : "Writing to"} database...`);
+  let dbResult = { inserted: 0, updated: 0, skipped: 0, total: dedupedPostings.length };
+
+  if (dryRun) {
+    // Count what would be inserted/skipped
+    let wouldInsert = 0, wouldSkip = 0;
+    for (let i = 0; i < dedupedPostings.length; i++) {
+      const deduped = dedupedPostings[i];
+      if ((deduped.primary.confidence || 0) < 40) {
+        wouldSkip++;
+      } else {
+        wouldInsert++;
+      }
+    }
+    dbResult = { inserted: wouldInsert, updated: 0, skipped: wouldSkip, total: dedupedPostings.length };
     console.log(`
+✅ Database write simulation:
+   • Would insert: ${dbResult.inserted} new postings
+   • Skipped (low confidence < 0.4): ${dbResult.skipped}
+   • Total processed: ${dbResult.total}
+
+   ℹ️  Run with DRY_RUN=false to actually write to Supabase
+    `);
+  } else {
+    try {
+      dbResult = await writePostingsToDB(dedupedPostings, normalizedPostings);
+      console.log(`
 ✅ Database write complete:
    • Inserted: ${dbResult.inserted} new postings
    • Updated: ${dbResult.updated} existing postings
    • Skipped: ${dbResult.skipped} (low confidence < 0.4)
    • Total processed: ${dbResult.total}
-    `);
-  } catch (dbErr) {
-    console.error("❌ Database write failed:", dbErr);
-    throw dbErr;
+      `);
+    } catch (dbErr) {
+      console.error("❌ Database write failed:", dbErr);
+      throw dbErr;
+    }
   }
 
   // Step 6: Dump raw postings for audit
@@ -126,7 +157,11 @@ export async function main() {
   console.log("=".repeat(60));
 }
 
-main().catch((err) => {
+// Allow DRY_RUN env var to disable dry-run mode (default: dry-run enabled)
+const dryRunEnv = process.env.DRY_RUN;
+const liveModeRequested = dryRunEnv === 'false' || dryRunEnv === '0' || dryRunEnv === 'no';
+
+main({ dryRun: !liveModeRequested }).catch((err) => {
   console.error(err);
   process.exit(1);
 });

@@ -11,7 +11,7 @@ Run the government jobs scraper from your machine using Claude Code. Bypasses cl
 
 ### 2. Create `.env.local`
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 # Edit .env.local and paste your Supabase connection string
 ```
 
@@ -25,11 +25,17 @@ npm install
 From Claude Code terminal:
 
 ```bash
-# Full pipeline: crawl → deduplicate → normalize → database write
-npx tsx src/ingest/run.ts
+# Recommended: Uses .env.local (dry-run mode by default)
+npm run ingest
 
 # With explicit DATABASE_URL (if .env.local not set)
-DATABASE_URL="postgresql://..." npx tsx src/ingest/run.ts
+DATABASE_URL="postgresql://..." npm run ingest
+
+# Enable live writes to Supabase (add to .env.local first: DRY_RUN=false)
+DRY_RUN=false npm run ingest
+
+# Or run raw pipeline directly
+npx tsx src/ingest/run.ts
 ```
 
 ## What happens
@@ -47,7 +53,9 @@ DATABASE_URL="postgresql://..." npx tsx src/ingest/run.ts
    - Generates slugs for URLs
    - Assigns exam codes (SSC, UPSC, etc.)
 
-4. **Phase 4**: Writes to Supabase
+4. **Phase 4**: Writes to Supabase (or simulates in dry-run mode)
+   - Default: DRY_RUN mode (preview only, no actual writes)
+   - Set DRY_RUN=false to enable live writes
    - Inserts new postings
    - Updates existing ones (dedup key: source + externalId)
    - Creates timeline entries for stage progression
@@ -60,8 +68,11 @@ DATABASE_URL="postgresql://..." npx tsx src/ingest/run.ts
 
 ### Option A: Manual (Run when you want)
 ```bash
-# Just run the command above whenever
-npx tsx src/ingest/run.ts
+# Dry-run mode (preview, safe)
+npm run ingest
+
+# Live mode (writes to Supabase)
+DRY_RUN=false npm run ingest
 ```
 
 ### Option B: Daily via macOS/Linux cron
@@ -69,8 +80,8 @@ npx tsx src/ingest/run.ts
 # Edit crontab
 crontab -e
 
-# Add this line (runs at 8 AM daily)
-0 8 * * * cd /path/to/jobs && DATABASE_URL="postgresql://..." npx tsx src/ingest/run.ts >> /tmp/scraper.log 2>&1
+# Add this line (runs at 8 AM daily in live mode)
+0 8 * * * cd /path/to/jobs && DRY_RUN=false npm run ingest >> /tmp/scraper.log 2>&1
 ```
 
 ### Option C: Windows Task Scheduler
@@ -78,8 +89,8 @@ crontab -e
 ```batch
 @echo off
 cd C:\path\to\jobs
-set DATABASE_URL=postgresql://...
-npx tsx src/ingest/run.ts >> C:\logs\scraper.log 2>&1
+set DRY_RUN=false
+npm run ingest >> C:\logs\scraper.log 2>&1
 ```
 2. Schedule it via Task Scheduler (Tasks → Create Task)
 
@@ -113,10 +124,12 @@ npm install  # Make sure all deps are installed
 
 ## Next Steps
 
-1. **First run**: `npx tsx src/ingest/run.ts` (takes 2-3 mins)
-2. **Check results**: Visit your Vercel app, refresh browser
-3. **Schedule it**: Set up cron/Task Scheduler for daily runs
-4. **Build notifications**: Once data is reliable, add the alerts system
+1. **First run (dry-run)**: `npm run ingest` (takes 2-3 mins, safe preview)
+2. **Review output**: Check the dry-run results for quality & count
+3. **Enable live mode**: Add `DRY_RUN=false` to `.env.local`
+4. **Second run (live)**: `npm run ingest` to actually insert/update data
+5. **Schedule it**: Set up cron/Task Scheduler for daily live runs
+6. **Build notifications**: Once data is reliable, add the alerts system
 
 ---
 
