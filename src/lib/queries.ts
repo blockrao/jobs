@@ -20,7 +20,7 @@ export async function getPostingBySlug(slug: string) {
   if (!hasDb()) return null;
   const db = getDb();
   const posting = await db.query.postings.findFirst({
-    where: eq(postings.slug, slug),
+    where: and(eq(postings.slug, slug), eq(postings.reviewStatus, "APPROVED")),
     with: {
       organization: true,
       updates: true,
@@ -41,7 +41,7 @@ export async function listPostings(opts?: {
   const db = getDb();
   const limit = opts?.limit ?? 30;
 
-  const conditions = [];
+  const conditions: any[] = [eq(postings.reviewStatus, "APPROVED")];
   if (opts?.kind) conditions.push(eq(postings.kind, opts.kind));
   if (opts?.search) {
     conditions.push(
@@ -66,7 +66,7 @@ export async function listPostings(opts?: {
   }
 
   return db.query.postings.findMany({
-    where: conditions.length ? and(...conditions) : undefined,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
     with: { organization: true },
     orderBy: [desc(postings.datePosted)],
     limit,
@@ -81,7 +81,10 @@ export async function getOrganizationBySlug(slug: string) {
   });
   if (!org) return null;
   const orgPostings = await db.query.postings.findMany({
-    where: eq(postings.organizationId, org.id),
+    where: and(
+      eq(postings.organizationId, org.id),
+      eq(postings.reviewStatus, "APPROVED")
+    ),
     orderBy: [desc(postings.datePosted)],
   });
   return { org, postings: orgPostings };
@@ -106,7 +109,9 @@ export async function getCategoryBySlug(slug: string) {
 
   return {
     category,
-    postings: postingLinks.map((l) => l.posting),
+    postings: postingLinks
+      .map((l) => l.posting)
+      .filter((p) => p.reviewStatus === "APPROVED"),
     articles: articleLinks
       .map((l) => l.article)
       .filter((a) => a.status === "PUBLISHED"),
@@ -151,6 +156,7 @@ export async function getPostingSlugsPageForSitemap(
   return db
     .select({ slug: postings.slug, updatedAt: postings.updatedAt })
     .from(postings)
+    .where(eq(postings.reviewStatus, "APPROVED"))
     .orderBy(postings.id)
     .offset(offset)
     .limit(limit);
