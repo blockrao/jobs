@@ -100,13 +100,14 @@ async function fetchRaw(): Promise<RawPosting[]> {
   let pages = 0;
   for (const url of LISTING_URLS.slice(0, MAX_LISTING_PAGES)) {
     try {
-      const html = await fetchHtml(url, { ua: BROWSER_UA, retries: 1 });
+      // Aggressive retries with exponential backoff and rotating UAs
+      const html = await fetchHtml(url, { ua: BROWSER_UA, retries: 4, retryDelayMs: 2000 });
       cards.push(...extractCards(html));
       pages++;
     } catch (err) {
       console.warn(`  [${SOURCE}] listing ${url} failed: ${(err as Error).message}`);
     }
-    await sleep(400);
+    await sleep(1000); // increased delay between listing requests
   }
   logCrawlCap(SOURCE, pages, MAX_LISTING_PAGES);
   console.log(`  [${SOURCE}] listing-only mode: 0 detail pages fetched (robots policy)`);

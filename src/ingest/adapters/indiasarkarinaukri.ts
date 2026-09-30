@@ -96,7 +96,8 @@ async function fetchRaw(): Promise<RawPosting[]> {
 
   for (const url of LISTING_SITEMAPS.slice(0, MAX_LISTING_PAGES)) {
     try {
-      const xml = await fetchHtml(url, { ua: BROWSER_UA, retries: 1, retryDelayMs: 2000 });
+      // Aggressive retries with exponential backoff and rotating UAs
+      const xml = await fetchHtml(url, { ua: BROWSER_UA, retries: 4, retryDelayMs: 2000 });
       listing.push(...extractVacancyUrls(xml));
       pages++;
     } catch (err) {
@@ -107,7 +108,7 @@ async function fetchRaw(): Promise<RawPosting[]> {
         console.warn(`  [${SOURCE}] listing ${url} failed: ${(err as Error).message}`);
       }
     }
-    await sleep(500);
+    await sleep(1000); // increased delay between listing requests
   }
   logCrawlCap(SOURCE, pages, MAX_LISTING_PAGES);
 
@@ -117,12 +118,13 @@ async function fetchRaw(): Promise<RawPosting[]> {
 
   const enriched = await mapPool(detailTargets, 3, async (item) => {
     try {
+      // Aggressive retries with exponential backoff and rotating UAs
       const html = await fetchHtml(item.url, {
         ua: BROWSER_UA,
-        retries: 1,
-        retryDelayMs: 2000,
+        retries: 4,
+        retryDelayMs: 1500,
       });
-      await sleep(250);
+      await sleep(400); // increased delay between detail requests
       return build(item, parseRscSarkariDetail(html, item.url));
     } catch (err) {
       if (err instanceof WafBlockError) {

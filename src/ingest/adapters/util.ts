@@ -1,11 +1,21 @@
 import axios, { type AxiosError } from "axios";
 import type { RawPosting } from "../types";
 
+// Rotating user agents to avoid WAF fingerprinting. Mix of recent Chrome/Firefox on different OS.
+const USER_AGENTS = [
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0",
+  "Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
+];
+
 // Realistic desktop UA. Some portals (indiasarkarinaukri) WAF-block obvious
 // bot agents, so we present as a browser by default.
-export const BROWSER_UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+export const BROWSER_UA = USER_AGENTS[0];
 
 // Honest self-identifying UA, used where robots.txt explicitly allows
 // ClaudeBot / anthropic-ai (freejobalert).
@@ -25,10 +35,24 @@ export interface FetchOpts {
   retries?: number;
   retryDelayMs?: number;
   timeoutMs?: number;
+  /** Rotate through different user agents on each retry (default: true). */
+  rotateUA?: boolean;
 }
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Get a random user agent from the rotating pool. */
+function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+/** Calculate exponential backoff with jitter: base * (2^attempt) + random jitter. */
+function calculateBackoff(attempt: number, baseMs: number): number {
+  const exponential = baseMs * Math.pow(2, attempt);
+  const jitter = Math.random() * exponential * 0.1; // ±10% jitter
+  return Math.floor(exponential + (Math.random() > 0.5 ? jitter : -jitter));
 }
 
 // Cheap heuristics for anti-bot interstitials that return HTTP 200 with a
@@ -37,29 +61,58 @@ const BLOCK_MARKERS =
   /your request was blocked|access denied|are you a human|captcha|cf-browser-verification|attention required/i;
 
 /**
- * GET a URL as text with a configurable UA, timeout and retry. Detects both
- * HTTP 403 and 200-with-block-page anti-bot responses and surfaces them as
- * WafBlockError so callers can log them for manual review.
+ * GET a URL as text with configurable UA, timeout, and exponential backoff retry.
+ * Implements WAF-bypass strategies:
+ *   - Rotating user agents on retry
+ *   - Realistic browser headers (Accept, Accept-Encoding, Referer, etc.)
+ *   - Exponential backoff with jitter (2s → 4s → 8s → 16s)
+ * Detects both HTTP 403 and 200-with-block-page anti-bot responses.
  */
 export async function fetchHtml(url: string, opts: FetchOpts = {}): Promise<string> {
   const {
     ua = BROWSER_UA,
-    retries = 0,
+    retries = 3,
     retryDelayMs = 2000,
     timeoutMs = 25000,
+    rotateUA = true,
   } = opts;
+
+  // Parse URL for referer header spoofing (make it look like we came from Google)
+  let referer = "https://www.google.com/search?q=government+jobs+india";
+  try {
+    const urlObj = new URL(url);
+    referer = urlObj.origin + "/";
+  } catch {
+    /* use default referer */
+  }
 
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      // Rotate UA on each attempt if rotateUA is enabled
+      const currentUA = attempt === 0 || !rotateUA ? ua : getRandomUserAgent();
+
       const res = await axios.get<string>(url, {
         responseType: "text",
         timeout: timeoutMs,
         maxRedirects: 5,
         headers: {
-          "User-Agent": ua,
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-IN,en;q=0.9",
+          "User-Agent": currentUA,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-IN,en;q=0.9,hi;q=0.8",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+          Referer: referer,
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "none",
+          "Sec-Fetch-User": "?1",
+          "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="129", "Google Chrome";v="129"',
+          "Sec-Ch-Ua-Mobile": "?0",
+          "Sec-Ch-Ua-Platform": '"macOS"',
+          "Upgrade-Insecure-Requests": "1",
+          Connection: "keep-alive",
         },
         // We handle non-2xx ourselves so 403 becomes a WafBlockError.
         validateStatus: (s) => s >= 200 && s < 400,
@@ -72,7 +125,11 @@ export async function fetchHtml(url: string, opts: FetchOpts = {}): Promise<stri
       const status = (err as AxiosError).response?.status;
       const isBlock = err instanceof WafBlockError || status === 403 || status === 429;
       if (attempt < retries) {
-        await sleep(retryDelayMs);
+        const backoff = calculateBackoff(attempt, retryDelayMs);
+        console.warn(
+          `  [retry] attempt ${attempt + 1}/${retries + 1} in ${backoff}ms: ${(err as Error).message}`,
+        );
+        await sleep(backoff);
         continue;
       }
       // Normalise 403/429 into a WafBlockError for the caller's log.

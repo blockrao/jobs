@@ -132,13 +132,14 @@ async function fetchRaw(): Promise<RawPosting[]> {
   let pages = 0;
   for (const url of LISTING_URLS.slice(0, MAX_LISTING_PAGES)) {
     try {
-      const html = await fetchHtml(url, { ua: CLAUDE_UA, retries: 1 });
+      // FreeJobAlert explicitly allows ClaudeBot, but still use retries for resilience
+      const html = await fetchHtml(url, { ua: CLAUDE_UA, retries: 3, retryDelayMs: 1500 });
       listing.push(...extractListing(html));
       pages++;
     } catch (err) {
       console.warn(`  [${SOURCE}] listing ${url} failed: ${(err as Error).message}`);
     }
-    await sleep(400);
+    await sleep(600); // reasonable delay between listing requests
   }
   logCrawlCap(SOURCE, pages, MAX_LISTING_PAGES);
 
@@ -148,8 +149,9 @@ async function fetchRaw(): Promise<RawPosting[]> {
 
   const enriched = await mapPool(detailTargets, 4, async (item) => {
     try {
-      const html = await fetchHtml(item.url, { ua: CLAUDE_UA });
-      await sleep(150);
+      // Retries with exponential backoff (FreeJobAlert allows ClaudeBot, but doesn't hurt)
+      const html = await fetchHtml(item.url, { ua: CLAUDE_UA, retries: 3, retryDelayMs: 1500 });
+      await sleep(250); // increased delay between detail requests
       return build(item, parseDetail(html));
     } catch (err) {
       console.warn(`  [${SOURCE}] detail ${item.url} failed: ${(err as Error).message}`);

@@ -120,9 +120,10 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
 
 async function fetchRaw(): Promise<RawPosting[]> {
   // Resolve the post-sitemap*.xml files from the sitemap index (newest first).
+  // Use aggressive retries with exponential backoff and rotating UAs to bypass WAF.
   let postSitemaps: string[] = [];
   try {
-    const idx = await fetchHtml(SITEMAP_INDEX, { ua: BROWSER_UA, retries: 1 });
+    const idx = await fetchHtml(SITEMAP_INDEX, { ua: BROWSER_UA, retries: 4, retryDelayMs: 2000 });
     postSitemaps = locs(idx)
       .filter((u) => /post-sitemap\d*\.xml$/i.test(u))
       .reverse(); // highest-numbered (most recent) first
@@ -134,7 +135,7 @@ async function fetchRaw(): Promise<RawPosting[]> {
   let pages = 0;
   for (const sm of postSitemaps.slice(0, MAX_LISTING_PAGES)) {
     try {
-      const xml = await fetchHtml(sm, { ua: BROWSER_UA });
+      const xml = await fetchHtml(sm, { ua: BROWSER_UA, retries: 3, retryDelayMs: 2000 });
       for (const raw of locs(xml)) {
         try {
           const u = new URL(raw);
@@ -147,7 +148,7 @@ async function fetchRaw(): Promise<RawPosting[]> {
     } catch (err) {
       console.warn(`  [${SOURCE}] sitemap ${sm} failed: ${(err as Error).message}`);
     }
-    await sleep(400);
+    await sleep(800); // increased delay between sitemap requests
   }
   logCrawlCap(SOURCE, pages, MAX_LISTING_PAGES);
 
@@ -157,8 +158,8 @@ async function fetchRaw(): Promise<RawPosting[]> {
 
   const enriched = await mapPool(detailTargets, 4, async (item) => {
     try {
-      const html = await fetchHtml(item.url, { ua: BROWSER_UA });
-      await sleep(150);
+      const html = await fetchHtml(item.url, { ua: BROWSER_UA, retries: 3, retryDelayMs: 1500 });
+      await sleep(300); // increased delay between detail requests
       return build(item, parseDetail(html));
     } catch (err) {
       console.warn(`  [${SOURCE}] detail ${item.url} failed: ${(err as Error).message}`);

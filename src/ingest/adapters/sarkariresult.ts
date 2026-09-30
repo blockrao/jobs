@@ -96,13 +96,14 @@ async function fetchRaw(): Promise<RawPosting[]> {
   let pages = 0;
   for (const url of LISTING_URLS.slice(0, MAX_LISTING_PAGES)) {
     try {
-      const html = await fetchHtml(url, { ua: BROWSER_UA, retries: 1 });
+      // Aggressive retries with exponential backoff and rotating UAs
+      const html = await fetchHtml(url, { ua: BROWSER_UA, retries: 4, retryDelayMs: 2000 });
       listing.push(...extractListing(html));
       pages++;
     } catch (err) {
       console.warn(`  [${SOURCE}] listing ${url} failed: ${(err as Error).message}`);
     }
-    await sleep(400);
+    await sleep(1000); // increased delay between listing requests
   }
   logCrawlCap(SOURCE, pages, MAX_LISTING_PAGES);
 
@@ -112,8 +113,9 @@ async function fetchRaw(): Promise<RawPosting[]> {
 
   const enriched = await mapPool(detailTargets, 4, async (item) => {
     try {
-      const html = await fetchHtml(item.url, { ua: BROWSER_UA });
-      await sleep(150);
+      // Aggressive retries with exponential backoff and rotating UAs
+      const html = await fetchHtml(item.url, { ua: BROWSER_UA, retries: 3, retryDelayMs: 1500 });
+      await sleep(300); // increased delay between detail requests
       return build(item, parseSarkariDetail(html, item.url));
     } catch (err) {
       console.warn(`  [${SOURCE}] detail ${item.url} failed: ${(err as Error).message}`);
