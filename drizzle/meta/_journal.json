@@ -8,6 +8,13 @@
       "when": 1790778453264,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790780603734,
+      "tag": "0001_colorful_guardsmen",
+      "breakpoints": true
     }
   ]
 }

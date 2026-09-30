@@ -1,0 +1,1122 @@
+{
+  "id": "f1de1a58-9528-4008-a8e6-cd13f83b6465",
+  "prevId": "4cc29693-bcd3-4b47-bca7-6a03fb40ed78",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.article_categories": {
+      "name": "article_categories",
+      "schema": "",
+      "columns": {
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "article_categories_pk": {
+          "name": "article_categories_pk",
+          "columns": [
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "category_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "article_categories_article_id_articles_id_fk": {
+          "name": "article_categories_article_id_articles_id_fk",
+          "tableFrom": "article_categories",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "article_categories_category_id_categories_id_fk": {
+          "name": "article_categories_category_id_categories_id_fk",
+          "tableFrom": "article_categories",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.articles": {
+      "name": "articles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dek": {
+          "name": "dek",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "article_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'GUIDE'"
+        },
+        "author_name": {
+          "name": "author_name",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cover_image_url": {
+          "name": "cover_image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "article_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "articles_slug_idx": {
+          "name": "articles_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.categories": {
+      "name": "categories",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "categories_slug_idx": {
+          "name": "categories_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.organizations": {
+      "name": "organizations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sector": {
+          "name": "sector",
+          "type": "org_sector",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PRIVATE'"
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website_url": {
+          "name": "website_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "headquarters": {
+          "name": "headquarters",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organizations_slug_idx": {
+          "name": "organizations_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.posting_articles": {
+      "name": "posting_articles",
+      "schema": "",
+      "columns": {
+        "posting_id": {
+          "name": "posting_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relation_type": {
+          "name": "relation_type",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'RELATED'"
+        }
+      },
+      "indexes": {
+        "posting_articles_pk": {
+          "name": "posting_articles_pk",
+          "columns": [
+            {
+              "expression": "posting_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "posting_articles_posting_id_postings_id_fk": {
+          "name": "posting_articles_posting_id_postings_id_fk",
+          "tableFrom": "posting_articles",
+          "tableTo": "postings",
+          "columnsFrom": [
+            "posting_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "posting_articles_article_id_articles_id_fk": {
+          "name": "posting_articles_article_id_articles_id_fk",
+          "tableFrom": "posting_articles",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "article_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.posting_categories": {
+      "name": "posting_categories",
+      "schema": "",
+      "columns": {
+        "posting_id": {
+          "name": "posting_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "posting_categories_pk": {
+          "name": "posting_categories_pk",
+          "columns": [
+            {
+              "expression": "posting_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "category_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "posting_categories_posting_id_postings_id_fk": {
+          "name": "posting_categories_posting_id_postings_id_fk",
+          "tableFrom": "posting_categories",
+          "tableTo": "postings",
+          "columnsFrom": [
+            "posting_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "posting_categories_category_id_categories_id_fk": {
+          "name": "posting_categories_category_id_categories_id_fk",
+          "tableFrom": "posting_categories",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.posting_updates": {
+      "name": "posting_updates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "posting_id": {
+          "name": "posting_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage": {
+          "name": "stage",
+          "type": "posting_stage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_date": {
+          "name": "event_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "link_url": {
+          "name": "link_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "posting_updates_posting_idx": {
+          "name": "posting_updates_posting_idx",
+          "columns": [
+            {
+              "expression": "posting_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "posting_updates_posting_id_postings_id_fk": {
+          "name": "posting_updates_posting_id_postings_id_fk",
+          "tableFrom": "posting_updates",
+          "tableTo": "postings",
+          "columnsFrom": [
+            "posting_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.postings": {
+      "name": "postings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "posting_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'GOVERNMENT'"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "post_names": {
+          "name": "post_names",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'[]'::jsonb"
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eligibility": {
+          "name": "eligibility",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "responsibilities": {
+          "name": "responsibilities",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requirements": {
+          "name": "requirements",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_vacancies": {
+          "name": "total_vacancies",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "age_limit_min": {
+          "name": "age_limit_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "age_limit_max": {
+          "name": "age_limit_max",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "age_relaxation_notes": {
+          "name": "age_relaxation_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "application_fee_general": {
+          "name": "application_fee_general",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "application_fee_reserved": {
+          "name": "application_fee_reserved",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "employment_type": {
+          "name": "employment_type",
+          "type": "employment_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'FULL_TIME'"
+        },
+        "workplace_type": {
+          "name": "workplace_type",
+          "type": "workplace_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ONSITE'"
+        },
+        "location_city": {
+          "name": "location_city",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_region": {
+          "name": "location_region",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_country": {
+          "name": "location_country",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'India'"
+        },
+        "salary_min": {
+          "name": "salary_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "salary_max": {
+          "name": "salary_max",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "salary_currency": {
+          "name": "salary_currency",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'INR'"
+        },
+        "salary_period": {
+          "name": "salary_period",
+          "type": "salary_period",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'MONTH'"
+        },
+        "seniority_level": {
+          "name": "seniority_level",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skills": {
+          "name": "skills",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'[]'::jsonb"
+        },
+        "official_notification_url": {
+          "name": "official_notification_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "apply_url": {
+          "name": "apply_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_stage": {
+          "name": "current_stage",
+          "type": "posting_stage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NOTIFICATION_OUT'"
+        },
+        "date_posted": {
+          "name": "date_posted",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "valid_through": {
+          "name": "valid_through",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exam_date": {
+          "name": "exam_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "view_count": {
+          "name": "view_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "source": {
+          "name": "source",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manual'"
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ingested_at": {
+          "name": "ingested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_status": {
+          "name": "review_status",
+          "type": "review_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'APPROVED'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "postings_slug_idx": {
+          "name": "postings_slug_idx",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "postings_org_idx": {
+          "name": "postings_org_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "postings_stage_idx": {
+          "name": "postings_stage_idx",
+          "columns": [
+            {
+              "expression": "current_stage",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "postings_kind_idx": {
+          "name": "postings_kind_idx",
+          "columns": [
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "postings_review_idx": {
+          "name": "postings_review_idx",
+          "columns": [
+            {
+              "expression": "review_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "postings_source_external_idx": {
+          "name": "postings_source_external_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"postings\".\"external_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "postings_organization_id_organizations_id_fk": {
+          "name": "postings_organization_id_organizations_id_fk",
+          "tableFrom": "postings",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.article_status": {
+      "name": "article_status",
+      "schema": "public",
+      "values": [
+        "DRAFT",
+        "PUBLISHED"
+      ]
+    },
+    "public.article_type": {
+      "name": "article_type",
+      "schema": "public",
+      "values": [
+        "GUIDE",
+        "SYLLABUS",
+        "EXAM_PATTERN",
+        "PREVIOUS_PAPERS",
+        "ADMIT_CARD_GUIDE",
+        "RESULT_GUIDE",
+        "CUTOFF",
+        "SALARY_REPORT",
+        "INTERVIEW_PREP",
+        "COMPARISON",
+        "NEWS",
+        "COMPANY_REVIEW"
+      ]
+    },
+    "public.employment_type": {
+      "name": "employment_type",
+      "schema": "public",
+      "values": [
+        "FULL_TIME",
+        "PART_TIME",
+        "CONTRACTOR",
+        "INTERN",
+        "TEMPORARY",
+        "OTHER"
+      ]
+    },
+    "public.org_sector": {
+      "name": "org_sector",
+      "schema": "public",
+      "values": [
+        "GOVERNMENT_CENTRAL",
+        "GOVERNMENT_STATE",
+        "PSU",
+        "BANKING",
+        "DEFENCE",
+        "RAILWAY",
+        "PRIVATE"
+      ]
+    },
+    "public.posting_kind": {
+      "name": "posting_kind",
+      "schema": "public",
+      "values": [
+        "GOVERNMENT",
+        "PRIVATE"
+      ]
+    },
+    "public.posting_stage": {
+      "name": "posting_stage",
+      "schema": "public",
+      "values": [
+        "NOTIFICATION_OUT",
+        "APPLICATION_OPEN",
+        "APPLICATION_CLOSED",
+        "ADMIT_CARD_RELEASED",
+        "EXAM_SCHEDULED",
+        "EXAM_CONDUCTED",
+        "ANSWER_KEY_OUT",
+        "OBJECTION_WINDOW",
+        "RESULT_OUT",
+        "MERIT_LIST_OUT",
+        "INTERVIEW_SCHEDULED",
+        "FINAL_RESULT_OUT",
+        "ACTIVE",
+        "FILLED",
+        "CLOSED"
+      ]
+    },
+    "public.review_status": {
+      "name": "review_status",
+      "schema": "public",
+      "values": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ]
+    },
+    "public.salary_period": {
+      "name": "salary_period",
+      "schema": "public",
+      "values": [
+        "HOUR",
+        "DAY",
+        "WEEK",
+        "MONTH",
+        "YEAR"
+      ]
+    },
+    "public.workplace_type": {
+      "name": "workplace_type",
+      "schema": "public",
+      "values": [
+        "REMOTE",
+        "HYBRID",
+        "ONSITE"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -10,7 +10,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ---------- Enums ----------
 
@@ -49,6 +49,15 @@ export const postingStageEnum = pgEnum("posting_stage", [
   "ACTIVE",
   "FILLED",
   "CLOSED",
+]);
+
+// Moderation state for ingested postings. Manually-created rows default to
+// APPROVED; auto-ingested rows land as PENDING (or APPROVED above a confidence
+// threshold). Public pages only show APPROVED.
+export const reviewStatusEnum = pgEnum("review_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
 ]);
 
 export const employmentTypeEnum = pgEnum("employment_type", [
@@ -200,6 +209,19 @@ export const postings = pgTable(
     closedAt: timestamp("closed_at", { withTimezone: true }),
 
     viewCount: integer("view_count").notNull().default(0),
+
+    // --- Provenance & moderation (ingestion pipeline) ---
+    // Manual admin entries: source = 'manual', review_status = 'APPROVED'.
+    // Ingested entries carry their source + stable external id for dedup.
+    source: varchar("source", { length: 60 }).notNull().default("manual"),
+    externalId: varchar("external_id", { length: 200 }),
+    sourceUrl: text("source_url"),
+    ingestedAt: timestamp("ingested_at", { withTimezone: true }),
+    confidence: integer("confidence"),
+    reviewStatus: reviewStatusEnum("review_status")
+      .notNull()
+      .default("APPROVED"),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -212,6 +234,12 @@ export const postings = pgTable(
     index("postings_org_idx").on(table.organizationId),
     index("postings_stage_idx").on(table.currentStage),
     index("postings_kind_idx").on(table.kind),
+    index("postings_review_idx").on(table.reviewStatus),
+    // Dedup key for ingestion upserts. Partial unique (external_id can be
+    // null for manual rows, which are excluded from the constraint).
+    uniqueIndex("postings_source_external_idx")
+      .on(table.source, table.externalId)
+      .where(sql`${table.externalId} is not null`),
   ],
 );
 
