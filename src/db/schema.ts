@@ -128,6 +128,48 @@ export const organizations = pgTable(
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
 );
 
+// ---------- Commissions (SSC, UPSC, Banking, Railways, etc.) ----------
+
+export const commissions = pgTable(
+  "commissions",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 80 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    description: text("description"),
+    color: varchar("color", { length: 7 }).default("#000000"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [uniqueIndex("commissions_slug_idx").on(table.slug)],
+);
+
+// ---------- Exams (CGL, CHSL, MTS under SSC; IAS, IPS under UPSC; etc.) ----------
+
+export const exams = pgTable(
+  "exams",
+  {
+    id: serial("id").primaryKey(),
+    commissionId: integer("commission_id")
+      .notNull()
+      .references(() => commissions.id),
+    slug: varchar("slug", { length: 80 }).notNull(),
+    label: varchar("label", { length: 160 }).notNull(),
+    description: text("description"),
+    eligibility: text("eligibility"),
+    salaryMin: integer("salary_min"),
+    salaryMax: integer("salary_max"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("exams_slug_idx").on(table.slug),
+    index("exams_commission_idx").on(table.commissionId),
+  ],
+);
+
 // ---------- Categories (role / sector / state taxonomy for hub pages) ----------
 
 export const categories = pgTable(
@@ -157,6 +199,9 @@ export const postings = pgTable(
     organizationId: integer("organization_id")
       .notNull()
       .references(() => organizations.id),
+    // Link to specific exam (e.g. SSC CGL, SSC CHSL). Replaces regex inference.
+    // Nullable to support existing postings and gradual migration.
+    examId: integer("exam_id").references(() => exams.id),
     // Multiple post/role names under one recruitment notification
     // (e.g. ["Assistant Section Officer", "Inspector"]).
     postNames: jsonb("post_names").$type<string[]>().default([]),
@@ -232,6 +277,7 @@ export const postings = pgTable(
   (table) => [
     uniqueIndex("postings_slug_idx").on(table.slug),
     index("postings_org_idx").on(table.organizationId),
+    index("postings_exam_idx").on(table.examId),
     index("postings_stage_idx").on(table.currentStage),
     index("postings_kind_idx").on(table.kind),
     index("postings_review_idx").on(table.reviewStatus),
@@ -348,6 +394,18 @@ export const articleCategories = pgTable(
 
 // ---------- Relations ----------
 
+export const commissionsRelations = relations(commissions, ({ many }) => ({
+  exams: many(exams),
+}));
+
+export const examsRelations = relations(exams, ({ one, many }) => ({
+  commission: one(commissions, {
+    fields: [exams.commissionId],
+    references: [commissions.id],
+  }),
+  postings: many(postings),
+}));
+
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   postings: many(postings),
 }));
@@ -361,6 +419,10 @@ export const postingsRelations = relations(postings, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [postings.organizationId],
     references: [organizations.id],
+  }),
+  exam: one(exams, {
+    fields: [postings.examId],
+    references: [exams.id],
   }),
   updates: many(postingUpdates),
   postingCategories: many(postingCategories),

@@ -4,6 +4,8 @@ import {
   articleCategories,
   articles,
   categories,
+  commissions,
+  exams,
   organizations,
   postingCategories,
   postings,
@@ -183,47 +185,79 @@ export async function getAllOrganizationSlugsForSitemap() {
   return db.select({ slug: organizations.slug }).from(organizations);
 }
 
-// Exam type detection from title
-export function detectExamType(title: string): string | null {
-  const examPatterns: Record<string, RegExp> = {
-    ssc: /(SSC|SSC-C|SSSC)/i,
-    upsc: /(UPSC|IAS|IPS|IFS)/i,
-    banking: /(IBPS|SBI|RBI|Banking)/i,
-    railways: /(RRB|Railways|Railway)/i,
-    state: /(TPSC|GPSC|MPSC|BPSC|OPSC|UKSSSC|PSSSB|CGL|SSC State)/i,
-    teaching: /(CTET|STET|Teaching|Teacher|Anganwadi)/i,
-    defence: /(NDA|CDS|Defence|Military|Army)/i,
-  };
-
-  for (const [type, pattern] of Object.entries(examPatterns)) {
-    if (pattern.test(title)) return type;
-  }
-  return null;
+// Get all commissions with their exams
+export async function listCommissionsWithExams() {
+  if (!hasDb()) return [];
+  const db = getDb();
+  return db.query.commissions.findMany({
+    with: { exams: true },
+    orderBy: [commissions.name],
+  });
 }
 
-export async function getPostingsByExamType(examType: string) {
+// Get a single commission with all its exams
+export async function getCommissionBySlug(slug: string) {
+  if (!hasDb()) return null;
+  const db = getDb();
+  return db.query.commissions.findFirst({
+    where: eq(commissions.slug, slug),
+    with: { exams: true },
+  });
+}
+
+// Get a single exam with its commission
+export async function getExamBySlug(slug: string) {
+  if (!hasDb()) return null;
+  const db = getDb();
+  return db.query.exams.findFirst({
+    where: eq(exams.slug, slug),
+    with: { commission: true },
+  });
+}
+
+// Get postings for a specific exam
+export async function getPostingsByExam(examSlug: string) {
   if (!hasDb()) return [];
   const db = getDb();
 
-  // Get all approved postings and filter by exam type in-app
-  const allPostings = await db.query.postings.findMany({
-    where: eq(postings.reviewStatus, "APPROVED"),
-    with: { organization: true },
-    orderBy: [desc(postings.datePosted)],
-    limit: 100,
+  const exam = await db.query.exams.findFirst({
+    where: eq(exams.slug, examSlug),
   });
 
-  return allPostings.filter(
-    (p) => detectExamType(p.title)?.toLowerCase() === examType.toLowerCase()
-  );
+  if (!exam) return [];
+
+  return db.query.postings.findMany({
+    where: and(
+      eq(postings.examId, exam.id),
+      eq(postings.reviewStatus, "APPROVED")
+    ),
+    with: { organization: true },
+    orderBy: [desc(postings.datePosted)],
+  });
 }
 
-export const EXAM_TYPES = [
-  { slug: "ssc", label: "SSC (Staff Selection Commission)", color: "#3b82f6" },
-  { slug: "upsc", label: "UPSC (Civil Services)", color: "#8b5cf6" },
-  { slug: "banking", label: "Banking & Finance", color: "#ec4899" },
-  { slug: "railways", label: "Railways (RRB)", color: "#f59e0b" },
-  { slug: "state", label: "State Exams", color: "#10b981" },
-  { slug: "teaching", label: "Teaching & Education", color: "#06b6d4" },
-  { slug: "defence", label: "Defence & Military", color: "#ef4444" },
-];
+// Get postings for a specific commission (all exams under it)
+export async function getPostingsByCommission(commissionSlug: string) {
+  if (!hasDb()) return [];
+  const db = getDb();
+
+  const comm = await db.query.commissions.findFirst({
+    where: eq(commissions.slug, commissionSlug),
+    with: { exams: true },
+  });
+
+  if (!comm) return [];
+
+  const examIds = comm.exams.map((e) => e.id);
+  if (examIds.length === 0) return [];
+
+  return db.query.postings.findMany({
+    where: and(
+      inArray(postings.examId, examIds),
+      eq(postings.reviewStatus, "APPROVED")
+    ),
+    with: { organization: true, exam: { with: { commission: true } } },
+    orderBy: [desc(postings.datePosted)],
+    limit: 200,
+  });
+}
