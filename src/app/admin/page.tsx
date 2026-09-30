@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { getDb } from "@/db";
 import { articles, categories, organizations, postings } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   createArticle,
   createCategory,
   createOrganization,
   createPosting,
   logoutAction,
+  approvePosting,
+  rejectPosting,
 } from "./actions";
 import { STAGE_LABELS } from "@/lib/labels";
 
@@ -15,10 +17,11 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
   const db = getDb();
-  const [orgs, cats, postingRows, articleRows] = await Promise.all([
+  const [orgs, cats, postingRows, pendingRows, articleRows] = await Promise.all([
     db.select().from(organizations).orderBy(desc(organizations.createdAt)),
     db.select().from(categories).orderBy(desc(categories.createdAt)),
     db.select().from(postings).orderBy(desc(postings.createdAt)).limit(50),
+    db.select().from(postings).where(eq(postings.reviewStatus, "PENDING")).orderBy(desc(postings.createdAt)).limit(100),
     db.select().from(articles).orderBy(desc(articles.createdAt)).limit(50),
   ]);
 
@@ -74,6 +77,39 @@ export default async function AdminDashboard() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold">Review Queue ({pendingRows.length} pending)</h2>
+        {pendingRows.length === 0 ? (
+          <p className="mt-3 text-sm text-neutral-500">All postings approved! ✓</p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {pendingRows.map((p) => (
+              <div key={p.id} className="flex items-start justify-between gap-4 rounded-md border border-black/10 p-4">
+                <div className="flex-1">
+                  <div className="font-semibold">{p.title}</div>
+                  <div className="text-xs text-neutral-500">
+                    ID: {p.id} | Confidence: {p.confidence}% | Source: {p.source}
+                  </div>
+                  {p.description && (
+                    <div className="mt-2 text-xs text-neutral-600 line-clamp-2">{p.description}</div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <form action={approvePosting}>
+                    <input type="hidden" name="postingId" value={p.id} />
+                    <button className="btn w-20 bg-green-600 hover:bg-green-700">Approve</button>
+                  </form>
+                  <form action={rejectPosting}>
+                    <input type="hidden" name="postingId" value={p.id} />
+                    <button className="btn w-20 bg-red-600 hover:bg-red-700">Reject</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section>

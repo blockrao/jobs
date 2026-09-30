@@ -160,6 +160,40 @@ export async function updatePostingStage(postingId: number, formData: FormData) 
   revalidatePath("/");
 }
 
+async function approvePostingDirect(postingId: number) {
+  const db = getDb();
+  await db
+    .update(postings)
+    .set({ reviewStatus: "APPROVED", updatedAt: new Date() })
+    .where(eq(postings.id, postingId));
+  revalidatePath("/admin");
+  revalidatePath("/jobs");
+  revalidatePath("/");
+}
+
+async function rejectPostingDirect(postingId: number) {
+  const db = getDb();
+  await db
+    .update(postings)
+    .set({ reviewStatus: "REJECTED", updatedAt: new Date() })
+    .where(eq(postings.id, postingId));
+  revalidatePath("/admin");
+  revalidatePath("/jobs");
+  revalidatePath("/");
+}
+
+export async function approvePosting(formData: FormData) {
+  const postingId = num(formData, "postingId");
+  if (!postingId) return;
+  await approvePostingDirect(postingId);
+}
+
+export async function rejectPosting(formData: FormData) {
+  const postingId = num(formData, "postingId");
+  if (!postingId) return;
+  await rejectPostingDirect(postingId);
+}
+
 export async function createArticle(formData: FormData) {
   const db = getDb();
   const title = str(formData, "title");
