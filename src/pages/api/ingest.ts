@@ -16,7 +16,7 @@ export default async function handler(
 
   try {
     console.log("🚀 Cron: Starting ingestion pipeline...");
-    const { main } = await import("../../src/ingest/run");
+    const { main } = await import("../../ingest/run");
     await main();
     res.status(200).json({ success: true, message: "Ingestion complete" });
   } catch (err) {

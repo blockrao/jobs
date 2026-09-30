@@ -45,7 +45,7 @@ async function runAdapter(adapter: SourceAdapter): Promise<PortalResult> {
   }
 }
 
-async function main() {
+export async function main() {
   console.log("🚀 SarkariJobs multi-portal ingestion pipeline");
   console.log("=".repeat(60));
 
