@@ -10,3 +10,4 @@
 *.pem
 npm-debug.log*
 /coverage
+scraper_output.json
