@@ -1,8 +1,22 @@
-import crypto from "node:crypto";
-import type { postings } from "@/db/schema";
+import { createHash } from "node:crypto";
+import type { postings } from "../db/schema";
 import type { RawPosting } from "./types";
+import type { DedupedPosting } from "./deduplicate";
 
 type PostingStage = (typeof postings.$inferSelect)["currentStage"];
+
+export interface NormalizedPosting {
+  slug: string;
+  organizationSlug: string;
+  title: string;
+  titleHi?: string;
+  description?: string;
+  descriptionHi?: string;
+  timeline: Array<{
+    stage: PostingStage;
+    date: Date;
+  }>;
+}
 
 // Progression order for lifecycle stages. A higher index means "later" in the
 // recruitment lifecycle. Used to decide whether a re-ingested posting has
@@ -54,8 +68,7 @@ export function deterministicSlug(
   externalId: string,
   title: string,
 ): string {
-  const hash = crypto
-    .createHash("sha1")
+  const hash = createHash("sha1")
     .update(`${source}:${externalId}`)
     .digest("hex")
     .slice(0, 6);
@@ -97,4 +110,62 @@ export function reviewStatusForConfidence(
 ): "APPROVED" | "PENDING" {
   if (confidence == null) return "PENDING";
   return confidence >= AUTO_APPROVE_THRESHOLD ? "APPROVED" : "PENDING";
+}
+
+export function normalize(
+  dedupedPostings: DedupedPosting[]
+): NormalizedPosting[] {
+  return dedupedPostings.map((deduped) => {
+    const raw = deduped.primary;
+    const sourceKey = deduped.sources[0]?.portal || 'unknown';
+    const slug = deterministicSlug(sourceKey, raw.externalId, raw.title);
+    const organizationSlug = raw.organizationSlug || slugify(deduped.organizationName);
+
+    // Build timeline from inferred stages
+    const timeline: Array<{ stage: PostingStage; date: Date }> = [];
+
+    // Always start with notification
+    if (raw.datePosted) {
+      timeline.push({
+        stage: "NOTIFICATION_OUT",
+        date: raw.datePosted,
+      });
+    }
+
+    // Add exam date if present
+    if (raw.examDate) {
+      timeline.push({
+        stage: "EXAM_SCHEDULED",
+        date: raw.examDate,
+      });
+    }
+
+    // Add deadline (APPLICATION_CLOSED) if present
+    if (deduped.deadline) {
+      timeline.push({
+        stage: "APPLICATION_CLOSED",
+        date: deduped.deadline,
+      });
+    }
+
+    // Infer current stage from title/description
+    const inferredStage = inferStage(raw);
+    timeline.push({
+      stage: inferredStage,
+      date: new Date(), // Current time as placeholder
+    });
+
+    // Sort by date
+    timeline.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    return {
+      slug,
+      organizationSlug,
+      title: raw.title,
+      titleHi: raw.title, // TODO: Implement Hindi translation
+      description: raw.description,
+      descriptionHi: raw.description, // TODO: Implement Hindi translation
+      timeline,
+    };
+  });
 }

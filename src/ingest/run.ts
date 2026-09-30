@@ -7,6 +7,9 @@ import { indiasarkarinaukriAdapter } from "./adapters/indiasarkarinaukri";
 import { sarkarinaukriAdapter } from "./adapters/sarkarinaukri";
 import { sahisarkarijobsAdapter } from "./adapters/sahisarkarijobs";
 import { freejobalertAdapter } from "./adapters/freejobalert";
+import { deduplicate } from "./deduplicate";
+import { normalize } from "./normalize";
+import { writePostingsToDB } from "../db/operations/write-postings";
 
 const adapters: SourceAdapter[] = [
   sarkariresultAdapter,
@@ -43,12 +46,17 @@ async function runAdapter(adapter: SourceAdapter): Promise<PortalResult> {
 }
 
 async function main() {
-  console.log("RojgarSetu raw ingestion — 5 government job portals");
+  console.log("🚀 SarkariJobs multi-portal ingestion pipeline");
   console.log("=".repeat(60));
 
-  // Crawl all portals in parallel; one portal failing must not abort the rest.
+  // Step 1: Crawl all portals in parallel
+  console.log("\n📡 Phase 1: Crawling 5 government job portals...");
   const results = await Promise.all(adapters.map(runAdapter));
 
+  const allRaw = results.flatMap((r) => r.postings);
+  console.log(`\n✅ Crawled ${allRaw.length} raw postings`);
+
+  // Step 2: Per-portal summary
   console.log(`\n${"=".repeat(60)}`);
   console.log("Per-portal summary");
   console.log("-".repeat(60));
@@ -58,13 +66,37 @@ async function main() {
     const status = r.error ? `ERROR: ${r.error}` : `${r.count} jobs`;
     console.log(`  ${r.label.padEnd(22)} ${status}`);
   }
-  const withFields = results
-    .flatMap((r) => r.postings)
-    .filter((p) => p.validThrough || p.totalVacancies).length;
+  const withFields = allRaw.filter((p) => p.validThrough || p.totalVacancies).length;
   console.log("-".repeat(60));
   console.log(`  TOTAL raw postings: ${total}  (${withFields} with deadline/vacancy detail)`);
 
-  // Dump for the dedup/normalize step to consume.
+  // Step 3: Deduplicate
+  console.log(`\n📊 Phase 2: Deduplicating (earliest deadline strategy)...`);
+  const dedupedPostings = deduplicate(allRaw);
+  console.log(`✅ Deduplicated to ${dedupedPostings.length} unique postings`);
+
+  // Step 4: Normalize
+  console.log(`\n🔧 Phase 3: Normalizing (exam codes, stages, slugs)...`);
+  const normalizedPostings = normalize(dedupedPostings);
+  console.log(`✅ Normalized ${normalizedPostings.length} postings`);
+
+  // Step 5: Write to database
+  console.log(`\n💾 Phase 4: Writing to database...`);
+  try {
+    const dbResult = await writePostingsToDB(dedupedPostings, normalizedPostings);
+    console.log(`
+✅ Database write complete:
+   • Inserted: ${dbResult.inserted} new postings
+   • Updated: ${dbResult.updated} existing postings
+   • Skipped: ${dbResult.skipped} (low confidence < 0.4)
+   • Total processed: ${dbResult.total}
+    `);
+  } catch (dbErr) {
+    console.error("❌ Database write failed:", dbErr);
+    throw dbErr;
+  }
+
+  // Step 6: Dump raw postings for audit
   const dump = {
     generatedAt: new Date().toISOString(),
     portals: Object.fromEntries(results.map((r) => [r.source, r.count])),
@@ -72,40 +104,11 @@ async function main() {
     postings: results.flatMap((r) => r.postings.map((p) => ({ source: r.source, ...p }))),
   };
   writeFileSync(DUMP_PATH, JSON.stringify(dump, null, 2));
-  console.log(`\nRaw RawPosting[] dumped to: ${DUMP_PATH}`);
+  console.log(`\n📄 Raw postings audit dump: ${DUMP_PATH}`);
 
-  // One sample per portal to verify field extraction.
   console.log(`\n${"=".repeat(60)}`);
-  console.log("Sample RawPosting (one per portal)");
-  console.log("-".repeat(60));
-  for (const r of results) {
-    const sample = r.postings[0];
-    if (!sample) {
-      console.log(`\n[${r.source}] (no postings)`);
-      continue;
-    }
-    console.log(`\n[${r.source}]`);
-    console.log(
-      JSON.stringify(
-        {
-          externalId: sample.externalId,
-          title: sample.title,
-          organizationName: sample.organizationName,
-          organizationSector: sample.organizationSector,
-          totalVacancies: sample.totalVacancies,
-          datePosted: sample.datePosted,
-          validThrough: sample.validThrough,
-          examDate: sample.examDate,
-          eligibility: sample.eligibility?.slice(0, 80),
-          locationRegion: sample.locationRegion,
-          confidence: sample.confidence,
-          sourceUrl: sample.sourceUrl,
-        },
-        null,
-        2,
-      ),
-    );
-  }
+  console.log("✨ Ingestion pipeline complete");
+  console.log("=".repeat(60));
 }
 
 main().catch((err) => {
