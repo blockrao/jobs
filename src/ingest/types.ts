@@ -7,6 +7,9 @@ type OrgSector = "GOVERNMENT_CENTRAL" | "GOVERNMENT_STATE" | "PSU" | "BANKING" |
 // Source-agnostic normalized shape every adapter returns. The normalizer maps
 // this into DB rows (posting + organization + categories + timeline).
 export interface RawPosting {
+  // Source portal key (e.g. "sarkariresult", "ssc-portal"). Combined with
+  // externalId, this forms the dedup key for upserts.
+  source?: string;
   // Stable identifier from the source, unique within that source. Combined
   // with `source` this is the dedup key — re-ingesting the same notification
   // must yield the same externalId so it updates in place, not duplicates.

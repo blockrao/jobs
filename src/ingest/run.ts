@@ -53,7 +53,9 @@ export async function main() {
   console.log("\n📡 Phase 1: Crawling 5 government job portals...");
   const results = await Promise.all(adapters.map(runAdapter));
 
-  const allRaw = results.flatMap((r) => r.postings);
+  const allRaw = results.flatMap((r) =>
+    r.postings.map((p) => ({ ...p, source: r.source }))
+  );
   console.log(`\n✅ Crawled ${allRaw.length} raw postings`);
 
   // Step 2: Per-portal summary

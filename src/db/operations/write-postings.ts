@@ -2,6 +2,7 @@ import { getDb } from "../index";
 import { postings, postingUpdates, organizations } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
+import { inferStage, isStageAdvance } from "../../ingest/normalize";
 import { eq, and } from "drizzle-orm";
 
 export async function writePostingsToDB(
@@ -61,7 +62,7 @@ export async function writePostingsToDB(
       .limit(1);
 
     const primaryScore = deduped.primary.confidence || 0;
-    const currentStage = deduped.primary.stage || "NOTIFICATION_OUT";
+    const currentStage = inferStage(deduped.primary);
 
     if (existingPosting.length === 0) {
       // Insert new posting
@@ -131,8 +132,43 @@ export async function writePostingsToDB(
 
       updated++;
 
-      // Optionally: update or create timeline entries
-      // (Skip for now; can be implemented if needed for reschedules)
+      // Update or create timeline entries for stage progression
+      const existingPost = existingPosting[0];
+      if (
+        existingPost.currentStage &&
+        isStageAdvance(existingPost.currentStage, currentStage)
+      ) {
+        // Stage has progressed; add new timeline entry
+        await db.insert(postingUpdates).values({
+          postingId: existingId,
+          stage: currentStage as any,
+          title: `${currentStage.replace(/_/g, " ")} - ${deduped.organizationName}`,
+          eventDate: new Date(),
+          createdAt: new Date(),
+        });
+      }
+
+      // Add any new timeline stages from normalized timeline
+      if (norm.timeline.length > 0) {
+        const existingUpdates = await db
+          .select({ stage: postingUpdates.stage })
+          .from(postingUpdates)
+          .where(eq(postingUpdates.postingId, existingId));
+
+        const existingStages = new Set(existingUpdates.map((u) => u.stage));
+
+        for (const stage of norm.timeline) {
+          if (!existingStages.has(stage.stage)) {
+            await db.insert(postingUpdates).values({
+              postingId: existingId,
+              stage: stage.stage as any,
+              title: `${stage.stage.replace(/_/g, " ")} - ${deduped.organizationName}`,
+              eventDate: stage.date,
+              createdAt: new Date(),
+            });
+          }
+        }
+      }
     }
   }
 
