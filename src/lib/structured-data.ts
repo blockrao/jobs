@@ -1,0 +1,219 @@
+import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
+import type {
+  articles,
+  organizations,
+  postingUpdates,
+  postings,
+} from "@/db/schema";
+
+type Posting = typeof postings.$inferSelect;
+type Organization = typeof organizations.$inferSelect;
+type PostingUpdate = typeof postingUpdates.$inferSelect;
+type Article = typeof articles.$inferSelect;
+
+// Stages before this point mean the posting still represents an open
+// hiring/application opportunity — safe to emit full JobPosting markup
+// with apply info. Past this point (result/merit-list stages) the page is
+// informational, not a live opening, so Google's JobPosting guidelines say
+// to stop emitting it rather than mislead job-search crawlers.
+const HIRING_OPEN_STAGES = new Set([
+  "NOTIFICATION_OUT",
+  "APPLICATION_OPEN",
+  "APPLICATION_CLOSED",
+  "ADMIT_CARD_RELEASED",
+  "EXAM_SCHEDULED",
+  "ACTIVE",
+]);
+
+export function isHiringOpen(stage: string) {
+  return HIRING_OPEN_STAGES.has(stage);
+}
+
+const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
+  FULL_TIME: "FULL_TIME",
+  PART_TIME: "PART_TIME",
+  CONTRACTOR: "CONTRACTOR",
+  INTERN: "INTERN",
+  TEMPORARY: "TEMPORARY",
+  OTHER: "OTHER",
+};
+
+export function buildOrganizationSchema(org: Organization) {
+  return {
+    "@type": "Organization",
+    "@id": absoluteUrl(`/organizations/${org.slug}#org`),
+    name: org.name,
+    url: org.websiteUrl ?? absoluteUrl(`/organizations/${org.slug}`),
+    logo: org.logoUrl ?? undefined,
+    description: org.description ?? undefined,
+  };
+}
+
+export function buildJobPostingSchema(
+  posting: Posting,
+  org: Organization,
+): Record<string, unknown> | null {
+  if (!isHiringOpen(posting.currentStage)) return null;
+
+  const url = absoluteUrl(`/jobs/${posting.slug}`);
+
+  const baseSalary =
+    posting.salaryMin || posting.salaryMax
+      ? {
+          "@type": "MonetaryAmount",
+          currency: posting.salaryCurrency ?? "INR",
+          value: {
+            "@type": "QuantitativeValue",
+            minValue: posting.salaryMin ?? undefined,
+            maxValue: posting.salaryMax ?? undefined,
+            unitText: posting.salaryPeriod ?? "MONTH",
+          },
+        }
+      : undefined;
+
+  const jobLocation =
+    posting.workplaceType === "REMOTE"
+      ? undefined
+      : {
+          "@type": "Place",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: posting.locationCity ?? undefined,
+            addressRegion: posting.locationRegion ?? undefined,
+            addressCountry: posting.locationCountry ?? "IN",
+          },
+        };
+
+  const applicantLocationRequirements =
+    posting.workplaceType === "REMOTE"
+      ? { "@type": "Country", name: posting.locationCountry ?? "IN" }
+      : undefined;
+
+  return {
+    "@type": "JobPosting",
+    "@id": `${url}#jobposting`,
+    url,
+    title: posting.title,
+    description: posting.description,
+    identifier: {
+      "@type": "PropertyValue",
+      name: org.name,
+      value: String(posting.id),
+    },
+    datePosted: posting.datePosted?.toISOString(),
+    validThrough: posting.validThrough?.toISOString(),
+    employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "OTHER",
+    hiringOrganization: buildOrganizationSchema(org),
+    jobLocation,
+    jobLocationType:
+      posting.workplaceType === "REMOTE" ? "TELECOMMUTE" : undefined,
+    applicantLocationRequirements,
+    baseSalary,
+    totalJobOpenings: posting.totalVacancies ?? undefined,
+    directApply: Boolean(posting.applyUrl),
+  };
+}
+
+export function buildExamEventSchema(posting: Posting) {
+  if (!posting.examDate) return null;
+  const url = absoluteUrl(`/jobs/${posting.slug}`);
+  return {
+    "@type": "Event",
+    "@id": `${url}#examevent`,
+    name: `${posting.title} — Exam`,
+    startDate: posting.examDate.toISOString(),
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: posting.locationCity ?? undefined,
+        addressRegion: posting.locationRegion ?? undefined,
+        addressCountry: posting.locationCountry ?? "IN",
+      },
+    },
+  };
+}
+
+export function buildBreadcrumbSchema(
+  items: { name: string; path: string }[],
+) {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+export function buildFAQSchema(qas: { question: string; answer: string }[]) {
+  if (qas.length === 0) return null;
+  return {
+    "@type": "FAQPage",
+    mainEntity: qas.map((qa) => ({
+      "@type": "Question",
+      name: qa.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: qa.answer,
+      },
+    })),
+  };
+}
+
+export function buildArticleSchema(
+  article: Article,
+  aboutPostingUrls: string[] = [],
+) {
+  const url = absoluteUrl(`/articles/${article.slug}`);
+  return {
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: article.title,
+    description: article.dek ?? undefined,
+    image: article.coverImageUrl ?? undefined,
+    author: article.authorName
+      ? { "@type": "Person", name: article.authorName }
+      : { "@type": "Organization", name: SITE_NAME },
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    datePublished: article.publishedAt?.toISOString(),
+    dateModified: article.updatedAt.toISOString(),
+    mainEntityOfPage: url,
+    about: aboutPostingUrls.map((u) => ({ "@type": "JobPosting", "@id": `${u}#jobposting` })),
+  };
+}
+
+export function buildWebSiteSchema() {
+  return {
+    "@type": "WebSite",
+    "@id": `${SITE_URL}#website`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/jobs?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+// Wraps any set of schema.org node objects into a single JSON-LD @graph,
+// dropping nulls so callers can pass optional builders inline.
+export function jsonLdGraph(...nodes: (Record<string, unknown> | null)[]) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": nodes.filter(Boolean),
+  };
+}
+
+export function postingTimelineToText(updates: PostingUpdate[]) {
+  return updates
+    .slice()
+    .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())
+    .map((u) => `${u.eventDate.toDateString()}: ${u.title}`)
+    .join("\n");
+}
