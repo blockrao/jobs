@@ -1,4 +1,5 @@
 import axios, { type AxiosError } from "axios";
+import { chromium, type Browser, type Page } from "playwright";
 import type { RawPosting } from "../types";
 
 // Rotating user agents to avoid WAF fingerprinting. Mix of recent Chrome/Firefox on different OS.
@@ -53,6 +54,25 @@ function calculateBackoff(attempt: number, baseMs: number): number {
   const exponential = baseMs * Math.pow(2, attempt);
   const jitter = Math.random() * exponential * 0.1; // ±10% jitter
   return Math.floor(exponential + (Math.random() > 0.5 ? jitter : -jitter));
+}
+
+/** Singleton browser instance for Playwright-based fetching. */
+let browserInstance: Browser | null = null;
+
+/** Get or create a Playwright browser instance. */
+async function getBrowser(): Promise<Browser> {
+  if (!browserInstance) {
+    browserInstance = await chromium.launch({ headless: true });
+  }
+  return browserInstance;
+}
+
+/** Close the browser instance (call on process exit). */
+export async function closeBrowser(): Promise<void> {
+  if (browserInstance) {
+    await browserInstance.close();
+    browserInstance = null;
+  }
 }
 
 // Cheap heuristics for anti-bot interstitials that return HTTP 200 with a
@@ -137,6 +157,80 @@ export async function fetchHtml(url: string, opts: FetchOpts = {}): Promise<stri
       throw err;
     }
   }
+  throw lastErr;
+}
+
+/**
+ * GET a URL using Playwright browser automation. Renders JavaScript and looks
+ * like a real browser, which bypasses many WAF systems that detect Axios-style
+ * HTTP clients. Slower than fetchHtml but more effective against Cloudflare/AWS WAF.
+ */
+export async function fetchHtmlWithBrowser(
+  url: string,
+  opts: FetchOpts = {},
+): Promise<string> {
+  const { retries = 2, retryDelayMs = 3000, timeoutMs = 30000 } = opts;
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const browser = await getBrowser();
+    let page: Page | null = null;
+    try {
+      page = await browser.newPage();
+      // Spoof viewport and user agent to look like a real browser
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await page.setUserAgent(getRandomUserAgent());
+
+      // Set realistic headers
+      await page.setExtraHTTPHeaders({
+        "Accept-Language": "en-IN,en;q=0.9,hi;q=0.8",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+
+      // Navigate with timeout
+      const response = await page.goto(url, {
+        waitUntil: "networkidle",
+        timeout: timeoutMs,
+      });
+
+      if (!response || response.status() >= 400) {
+        throw new WafBlockError(url);
+      }
+
+      // Check for WAF interstitials in rendered HTML
+      const content = await page.content();
+      if (BLOCK_MARKERS.test(content.slice(0, 4000))) {
+        throw new WafBlockError(url);
+      }
+
+      return content;
+    } catch (err) {
+      lastErr = err;
+      const isBlock =
+        err instanceof WafBlockError ||
+        (err instanceof Error && err.message.includes("403"));
+
+      if (attempt < retries) {
+        const backoff = calculateBackoff(attempt, retryDelayMs);
+        console.warn(
+          `  [browser-retry] attempt ${attempt + 1}/${retries + 1} in ${backoff}ms: ${(err as Error).message}`,
+        );
+        await sleep(backoff);
+        continue;
+      }
+
+      if (isBlock && !(err instanceof WafBlockError)) {
+        throw new WafBlockError(url);
+      }
+      throw err;
+    } finally {
+      if (page) {
+        await page.close();
+      }
+    }
+  }
+
   throw lastErr;
 }
 
