@@ -175,21 +175,24 @@ export async function fetchHtmlWithBrowser(
   for (let attempt = 0; attempt <= retries; attempt++) {
     const browser = await getBrowser();
     let page: Page | null = null;
+    let context: any = null;
     try {
-      page = await browser.newPage();
-      // Spoof viewport and user agent to look like a real browser
-      await page.setViewportSize({ width: 1280, height: 720 });
-      await page.setUserAgent(getRandomUserAgent());
+      // Create a context with a spoofed user agent
+      context = await browser.newContext({
+        userAgent: getRandomUserAgent(),
+        viewport: { width: 1280, height: 720 },
+      });
+      page = await context.newPage();
 
-      // Set realistic headers
-      await page.setExtraHTTPHeaders({
+      // Set realistic headers (page is non-null after newPage())
+      await page!.setExtraHTTPHeaders({
         "Accept-Language": "en-IN,en;q=0.9,hi;q=0.8",
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
       });
 
       // Navigate with timeout
-      const response = await page.goto(url, {
+      const response = await page!.goto(url, {
         waitUntil: "networkidle",
         timeout: timeoutMs,
       });
@@ -199,7 +202,7 @@ export async function fetchHtmlWithBrowser(
       }
 
       // Check for WAF interstitials in rendered HTML
-      const content = await page.content();
+      const content = await page!.content();
       if (BLOCK_MARKERS.test(content.slice(0, 4000))) {
         throw new WafBlockError(url);
       }
@@ -227,6 +230,9 @@ export async function fetchHtmlWithBrowser(
     } finally {
       if (page) {
         await page.close();
+      }
+      if (context) {
+        await context.close();
       }
     }
   }

@@ -1,20 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildWebSiteSchema, jsonLdGraph } from "@/lib/structured-data";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -31,10 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const siteSchema = jsonLdGraph(buildWebSiteSchema());
 
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <script
           type="application/ld+json"
