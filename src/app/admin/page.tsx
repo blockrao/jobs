@@ -35,6 +35,39 @@ export default async function AdminDashboard() {
       </div>
 
       <section>
+        <h2 className="text-lg font-semibold">Review Queue ({pendingRows.length} pending)</h2>
+        {pendingRows.length === 0 ? (
+          <p className="mt-3 text-sm text-neutral-500">All postings approved! ✓</p>
+        ) : (
+          <div className="mt-3 space-y-3 max-h-96 overflow-y-auto border border-black/10 rounded-md p-4">
+            {pendingRows.map((p) => (
+              <div key={p.id} className="flex items-start justify-between gap-4 rounded-md border border-black/10 bg-neutral-900/30 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm">{p.title}</div>
+                  <div className="text-xs text-neutral-500 mt-1">
+                    ID: {p.id} | Score: {p.confidence}% | Source: {p.source}
+                  </div>
+                  {p.description && (
+                    <div className="mt-1 text-xs text-neutral-600 line-clamp-1">{p.description}</div>
+                  )}
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <form action={approvePosting}>
+                    <input type="hidden" name="postingId" value={p.id} />
+                    <button className="btn text-xs px-2 py-1 bg-green-600 hover:bg-green-700">✓</button>
+                  </form>
+                  <form action={rejectPosting}>
+                    <input type="hidden" name="postingId" value={p.id} />
+                    <button className="btn text-xs px-2 py-1 bg-red-600 hover:bg-red-700">✕</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
         <h2 className="text-lg font-semibold">Organizations</h2>
         <form action={createOrganization} className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-black/10 p-4 sm:grid-cols-3">
           <input name="name" placeholder="Name *" required className="input" />
@@ -77,39 +110,6 @@ export default async function AdminDashboard() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Review Queue ({pendingRows.length} pending)</h2>
-        {pendingRows.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-500">All postings approved! ✓</p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {pendingRows.map((p) => (
-              <div key={p.id} className="flex items-start justify-between gap-4 rounded-md border border-black/10 p-4">
-                <div className="flex-1">
-                  <div className="font-semibold">{p.title}</div>
-                  <div className="text-xs text-neutral-500">
-                    ID: {p.id} | Confidence: {p.confidence}% | Source: {p.source}
-                  </div>
-                  {p.description && (
-                    <div className="mt-2 text-xs text-neutral-600 line-clamp-2">{p.description}</div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <form action={approvePosting}>
-                    <input type="hidden" name="postingId" value={p.id} />
-                    <button className="btn w-20 bg-green-600 hover:bg-green-700">Approve</button>
-                  </form>
-                  <form action={rejectPosting}>
-                    <input type="hidden" name="postingId" value={p.id} />
-                    <button className="btn w-20 bg-red-600 hover:bg-red-700">Reject</button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       <section>
