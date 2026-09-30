@@ -182,3 +182,48 @@ export async function getAllOrganizationSlugsForSitemap() {
   const db = getDb();
   return db.select({ slug: organizations.slug }).from(organizations);
 }
+
+// Exam type detection from title
+export function detectExamType(title: string): string | null {
+  const examPatterns: Record<string, RegExp> = {
+    ssc: /(SSC|SSC-C|SSSC)/i,
+    upsc: /(UPSC|IAS|IPS|IFS)/i,
+    banking: /(IBPS|SBI|RBI|Banking)/i,
+    railways: /(RRB|Railways|Railway)/i,
+    state: /(TPSC|GPSC|MPSC|BPSC|OPSC|UKSSSC|PSSSB|CGL|SSC State)/i,
+    teaching: /(CTET|STET|Teaching|Teacher|Anganwadi)/i,
+    defence: /(NDA|CDS|Defence|Military|Army)/i,
+  };
+
+  for (const [type, pattern] of Object.entries(examPatterns)) {
+    if (pattern.test(title)) return type;
+  }
+  return null;
+}
+
+export async function getPostingsByExamType(examType: string) {
+  if (!hasDb()) return [];
+  const db = getDb();
+
+  // Get all approved postings and filter by exam type in-app
+  const allPostings = await db.query.postings.findMany({
+    where: eq(postings.reviewStatus, "APPROVED"),
+    with: { organization: true },
+    orderBy: [desc(postings.datePosted)],
+    limit: 100,
+  });
+
+  return allPostings.filter(
+    (p) => detectExamType(p.title)?.toLowerCase() === examType.toLowerCase()
+  );
+}
+
+export const EXAM_TYPES = [
+  { slug: "ssc", label: "SSC (Staff Selection Commission)", color: "#3b82f6" },
+  { slug: "upsc", label: "UPSC (Civil Services)", color: "#8b5cf6" },
+  { slug: "banking", label: "Banking & Finance", color: "#ec4899" },
+  { slug: "railways", label: "Railways (RRB)", color: "#f59e0b" },
+  { slug: "state", label: "State Exams", color: "#10b981" },
+  { slug: "teaching", label: "Teaching & Education", color: "#06b6d4" },
+  { slug: "defence", label: "Defence & Military", color: "#ef4444" },
+];

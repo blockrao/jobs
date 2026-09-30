@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const NAV_LINKS = [
-  { href: "/jobs?kind=GOVERNMENT", label: "Govt Jobs" },
-  { href: "/jobs?kind=PRIVATE", label: "Private Jobs" },
-  { href: "/categories", label: "Categories" },
-  { href: "/articles", label: "Guides & Articles" },
+  { href: "/jobs", label: "All Jobs" },
+  { href: "/exams", label: "By Exam" },
+  { href: "/news", label: "News" },
+  { href: "/articles", label: "Guides" },
 ];
 
 export function Header() {

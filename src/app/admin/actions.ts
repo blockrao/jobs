@@ -14,6 +14,7 @@ import {
   postings,
 } from "@/db/schema";
 import { adminSessionToken, checkAdminPassword } from "@/lib/admin-token";
+import { detectExamType } from "@/lib/queries";
 
 const COOKIE_NAME = "admin_session";
 
@@ -160,14 +161,60 @@ export async function updatePostingStage(postingId: number, formData: FormData) 
   revalidatePath("/");
 }
 
+async function createApprovalNews(postingId: number) {
+  const db = getDb();
+  const p = await db.query.postings.findFirst({
+    where: eq(postings.id, postingId),
+    with: { organization: true },
+  });
+
+  if (!p) return;
+  const examType = detectExamType(p.title);
+  const slugBase = p.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  const slug = `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
+
+  // Create news article for this posting
+  const [newsArticle] = await db
+    .insert(articles)
+    .values({
+      title: `${p.title} — ${p.totalVacancies || "Multiple"} Vacancies Open`,
+      slug,
+      body: `${p.organization.name} has released ${p.totalVacancies || "multiple"} vacancies for ${p.title}.\n\n**Key Details:**\n- Organization: ${p.organization.name}\n- Positions: ${p.totalVacancies || "See details"}\n- Location: ${p.locationCity || "Multiple"}\n- Salary: ${p.salaryMin && p.salaryMax ? `₹${p.salaryMin}-${p.salaryMax}` : "As per norms"}\n- Apply by: ${p.validThrough ? new Date(p.validThrough).toLocaleDateString("en-IN") : "Check official notification"}\n\n[View Full Details](/jobs/${p.slug})`,
+      dek: `${p.totalVacancies || ""} positions open at ${p.organization.name} — apply now`,
+      type: examType === "teaching" ? "ADMIT_CARD_GUIDE" : "NEWS",
+      authorName: "Job Alerts",
+      status: "PUBLISHED",
+      publishedAt: new Date(),
+    })
+    .returning({ id: articles.id });
+
+  // Link article to posting
+  if (newsArticle) {
+    await db.insert(postingArticles).values({
+      postingId,
+      articleId: newsArticle.id,
+      relationType: "RELATED",
+    });
+  }
+}
+
 async function approvePostingDirect(postingId: number) {
   const db = getDb();
   await db
     .update(postings)
     .set({ reviewStatus: "APPROVED", updatedAt: new Date() })
     .where(eq(postings.id, postingId));
+
+  // Generate news article for this posting
+  await createApprovalNews(postingId);
+
   revalidatePath("/admin");
   revalidatePath("/jobs");
+  revalidatePath("/news");
+  revalidatePath("/exams");
   revalidatePath("/");
 }
 
