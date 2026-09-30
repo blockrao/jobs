@@ -12,6 +12,7 @@
     "db:push:BROKEN": "dotenv -e .env.local -- drizzle-kit push",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts",
+    "ingest": "dotenv -e .env.local -- tsx src/ingest/run.ts",
     "ingest:raw": "tsx src/ingest/run.ts"
   },
   "dependencies": {

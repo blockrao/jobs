@@ -46,8 +46,21 @@ async function runAdapter(adapter: SourceAdapter): Promise<PortalResult> {
 }
 
 export async function main() {
+  // Validate DATABASE_URL is set (required for writing to Supabase)
+  if (!process.env.DATABASE_URL) {
+    console.error(
+      "\n❌ DATABASE_URL not set. This is required to write results to Supabase.\n" +
+      "Set it before running:\n" +
+      "  export DATABASE_URL='postgresql://postgres:PASSWORD@PROJECT.supabase.co:5432/postgres'\n" +
+      "Or copy .env.local.example → .env.local and fill in your Supabase connection string.\n" +
+      "See SCRAPER_LOCAL.md for details.\n"
+    );
+    process.exit(1);
+  }
+
   console.log("🚀 SarkariJobs multi-portal ingestion pipeline");
   console.log("=".repeat(60));
+  console.log("📍 Running locally via Claude Code (bypasses cloud proxy)\n");
 
   // Step 1: Crawl all portals in parallel
   console.log("\n📡 Phase 1: Crawling 5 government job portals...");
