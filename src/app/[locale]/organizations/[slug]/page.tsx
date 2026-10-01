@@ -1,0 +1,277 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getOrganizationBySlug, getOrganizationRecruitments, getOrganizationExams, getOrganizationStats } from "@/db/operations/get-organizations";
+import { absoluteUrl } from "@/lib/site";
+
+function buildBreadcrumbSchema(items: { name: string; path: string }[], locale: string): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+function buildOrganizationSchema(org: any, locale: string): object {
+  const nameHi = (org as any).nameHi;
+  const descriptionHi = (org as any).descriptionHi;
+  const name = locale === "hi" ? nameHi || org.name : org.name;
+  const description = locale === "hi" ? descriptionHi || org.description : org.description;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name,
+    description: description || `Government recruitment organization: ${name}`,
+    url: absoluteUrl(`/${locale}/organizations/${org.slug}`),
+    ...(org.logoUrl && { logo: org.logoUrl }),
+    ...(org.website && { sameAs: org.website }),
+    inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
+  };
+}
+
+export const revalidate = 3600;
+
+type Props = {
+  params: Promise<{ slug: string; locale: string }>
+};
+
+export async function generateMetadata({
+  params,
+}: Props): Promise<Metadata> {
+  const { slug, locale } = await params;
+  const org = await getOrganizationBySlug(slug);
+
+  if (!org) return {};
+
+  const nameHi = (org as any).nameHi;
+  const descriptionHi = (org as any).descriptionHi;
+  const name = locale === "hi" ? nameHi || org.name : org.name;
+  const description = locale === "hi" ? descriptionHi : org.description;
+
+  const title = `${name} - Recruitment Campaigns & Exams`;
+  const metaDescription = description ||
+    `${name}: View all recruitment campaigns, exams conducted, available positions, and application details.`;
+
+  return {
+    title,
+    description: metaDescription,
+    alternates: {
+      canonical: `/${locale}/organizations/${org.slug}`,
+      languages: {
+        en: `${absoluteUrl('/en/organizations/' + org.slug)}`,
+        hi: `${absoluteUrl('/hi/organizations/' + org.slug)}`,
+      }
+    },
+    openGraph: {
+      title,
+      description: metaDescription,
+      url: absoluteUrl(`/${locale}/organizations/${org.slug}`),
+      type: "website",
+    },
+  };
+}
+
+export default async function OrganizationPage({ params }: Props) {
+  const { slug, locale } = await params;
+  const org = await getOrganizationBySlug(slug);
+
+  if (!org) {
+    notFound();
+  }
+
+  const [recruitmentResults, examResults, stats] = await Promise.all([
+    getOrganizationRecruitments(org.id),
+    getOrganizationExams(org.id),
+    getOrganizationStats(org.id),
+  ]);
+
+  const recruitments = recruitmentResults.map((r) => r.recruitment);
+  const exams = examResults;
+
+  const isExamAuthority = org.roles?.includes("EXAM_AUTHORITY") || false;
+  const isRecruitingBody = org.roles?.includes("RECRUITING_BODY") || false;
+
+  const nameHi = (org as any).nameHi;
+  const descriptionHi = (org as any).descriptionHi;
+  const displayName = locale === "hi" ? nameHi || org.name : org.name;
+  const displayDescription = locale === "hi" ? descriptionHi : org.description;
+
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: locale === "hi" ? "होम" : "Home", path: `/${locale}` },
+    { name: displayName, path: `/${locale}/organizations/${org.slug}` },
+  ], locale);
+
+  const organizationSchema = buildOrganizationSchema(org, locale);
+
+  const jsonLdScripts = [breadcrumbSchema, organizationSchema];
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {jsonLdScripts.map((schema, idx) => (
+        <script
+          key={idx}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-start gap-4 mb-4">
+          {org.logoUrl && (
+            <img
+              src={org.logoUrl}
+              alt={displayName}
+              className="w-16 h-16 rounded-lg object-cover"
+            />
+          )}
+          <div>
+            <h1 className="text-4xl font-bold">{displayName}</h1>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {org.roles?.map((role) => (
+                <span
+                  key={role}
+                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                >
+                  {role.replace(/_/g, " ")}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Description */}
+      {displayDescription && (
+        <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+          <p className="text-lg text-gray-700">{displayDescription}</p>
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {stats.recruitmentCount > 0 && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+            <div className="text-3xl font-bold text-blue-600">{stats.recruitmentCount}</div>
+            <div className="text-sm text-gray-600">{locale === "hi" ? "भर्ती अभियान" : "Recruitment Campaigns"}</div>
+          </div>
+        )}
+        {isExamAuthority && stats.examCount > 0 && (
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg text-center">
+            <div className="text-3xl font-bold text-purple-600">{stats.examCount}</div>
+            <div className="text-sm text-gray-600">{locale === "hi" ? "आयोजित परीक्षाएं" : "Exams Conducted"}</div>
+          </div>
+        )}
+        {stats.positionCount > 0 && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+            <div className="text-3xl font-bold text-green-600">{stats.positionCount}</div>
+            <div className="text-sm text-gray-600">{locale === "hi" ? "भर्ती पद" : "Positions Recruited"}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Official Links */}
+      {org.website && (
+        <div className="mb-8 p-4 border-l-4 border-blue-500 bg-blue-50 rounded">
+          <h3 className="font-semibold mb-2">{locale === "hi" ? "आधिकारिक वेबसाइट" : "Official Website"}</h3>
+          <a
+            href={org.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline break-all"
+          >
+            {org.website}
+          </a>
+        </div>
+      )}
+
+      {/* Exams Section */}
+      {isExamAuthority && exams.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "आयोजित परीक्षाएं" : "Exams Conducted"}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {exams.map((exam) => (
+              <Link
+                key={exam.id}
+                href={`/${locale}/exams/${exam.slug}`}
+                className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
+              >
+                <div className="font-semibold text-blue-600 hover:underline">
+                  {locale === "hi" ? exam.labelHi || exam.name : exam.name}
+                </div>
+                {exam.shortName && (
+                  <div className="text-sm text-gray-600 mt-1">({exam.shortName})</div>
+                )}
+                {exam.frequency && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    {locale === "hi" ? "आवृत्ति" : "Frequency"}: {exam.frequency}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recruitment Campaigns Section */}
+      {recruitments.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "भर्ती अभियान" : "Recruitment Campaigns"}</h2>
+          <div className="space-y-3">
+            {recruitments
+              .sort((a, b) => b.year - a.year)
+              .map((recruitment) => (
+                <Link
+                  key={recruitment.id}
+                  href={`/${locale}/recruitments/${recruitment.slug}`}
+                  className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-blue-600 hover:underline text-lg">
+                        {recruitment.name}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {recruitment.totalVacancies && `${recruitment.totalVacancies} ${locale === "hi" ? "रिक्तियां" : "vacancies"}`}
+                        {recruitment.totalVacancies && recruitment.year && " • "}
+                        {recruitment.year}
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium px-3 py-1 bg-green-100 text-green-800 rounded">
+                      {recruitment.status}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {recruitments.length === 0 && exams.length === 0 && (
+        <div className="p-8 text-center bg-gray-50 rounded-lg">
+          <p className="text-gray-600">
+            {locale === "hi"
+              ? "इस समय कोई सक्रिय भर्ती अभियान या परीक्षा नहीं है।"
+              : "No active recruitment campaigns or exams at the moment."}
+          </p>
+        </div>
+      )}
+
+      {/* Breadcrumb */}
+      <div className="mt-12 pt-6 border-t text-sm text-gray-600">
+        <Link href={`/${locale}`} className="hover:underline">
+          {locale === "hi" ? "होम" : "Home"}
+        </Link>
+        {" / "}
+        <span>{displayName}</span>
+      </div>
+    </div>
+  );
+}

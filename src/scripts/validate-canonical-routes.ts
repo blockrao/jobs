@@ -123,7 +123,7 @@ async function validateCanonicalRoutes(): Promise<RouteCheckResult> {
 
     const missingExamSlug = examsData.filter((e) => !e.slug);
     const missingExamTranslations = examsData.filter(
-      (e) => !e.nameHi || !e.descriptionHi
+      (e) => !(e as any).labelHi || !e.descriptionHi
     );
 
     if (missingExamSlug.length > 0) {
@@ -195,7 +195,7 @@ async function validateCanonicalRoutes(): Promise<RouteCheckResult> {
 
     const missingArticleSlug = articlesData.filter((a) => !a.slug);
     const missingArticleTranslations = articlesData.filter(
-      (a) => !a.titleHi || !a.contentHi
+      (a) => !a.titleHi || !(a as any).bodyHi
     );
 
     if (missingArticleSlug.length > 0) {

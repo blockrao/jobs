@@ -187,6 +187,8 @@ export const organizations = pgTable(
     website: text("website"),
     logoUrl: text("logo_url"),
     description: text("description"),
+    nameHi: varchar("name_hi", { length: 200 }), // Hindi translation
+    descriptionHi: text("description_hi"), // Hindi translation
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -261,6 +263,9 @@ export const exams = pgTable(
     category: varchar("category", { length: 80 }), // e.g., "Phase 1", "Phase 2", "Prelims/Mains"
     frequency: varchar("frequency", { length: 60 }).default("ANNUAL"), // annual, biennial, ad_hoc
     description: text("description"),
+    labelHi: varchar("label_hi", { length: 160 }), // Hindi translation of exam name
+    descriptionHi: text("description_hi"), // Hindi translation
+    eligibilityHi: text("eligibility_hi"), // Hindi translation
     syllabus: text("syllabus"),
     examPattern: text("exam_pattern"),
     stages: jsonb("stages").$type<Array<{ stage: string; type: string }>>(),
