@@ -97,6 +97,29 @@ export const positionCategoryEnum = pgEnum("position_category", [
   "OTHER",
 ]);
 
+// Source authority levels
+export const sourceAuthorityEnum = pgEnum("source_authority", [
+  "OFFICIAL",              // SSC website, UPSC website, etc. — primary source
+  "TRUSTED_SECONDARY",     // Employment News, recruitment portal republishing official
+  "AGGREGATED",            // Multiple sources combined
+]);
+
+// Recruitment event types (lifecycle events)
+export const recruitmentEventTypeEnum = pgEnum("recruitment_event_type", [
+  "NOTIFICATION_PUBLISHED",
+  "APPLICATION_OPENED",
+  "APPLICATION_DEADLINE_EXTENDED",
+  "CORRIGENDUM",
+  "VACANCY_REVISED",
+  "EXAM_DATE_CHANGED",
+  "EXAM_HELD",
+  "ADMIT_CARD_RELEASED",
+  "ANSWER_KEY_RELEASED",
+  "RESULT_DECLARED",
+  "FINAL_RESULT",
+  "OTHER",
+]);
+
 // Qualification levels
 export const qualificationLevelEnum = pgEnum("qualification_level", [
   "SECONDARY",                 // 10th
@@ -174,6 +197,57 @@ export const organizations = pgTable(
   (table) => [index("organizations_slug_idx").on(table.slug)],
 );
 
+// ========== DATA SOURCES (Provenance Layer) ==========
+
+export const sources = pgTable(
+  "sources",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 200 }).notNull(),
+    type: varchar("type", { length: 80 }).notNull(), // "official_portal", "employment_news", "aggregator", "scraper"
+    baseUrl: text("base_url"),
+    authority: sourceAuthorityEnum("authority").notNull().default("AGGREGATED"),
+    isOfficial: boolean("is_official").default(false),
+    active: boolean("active").default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("sources_authority_idx").on(table.authority)],
+);
+
+export const sourceDocuments = pgTable(
+  "source_documents",
+  {
+    id: serial("id").primaryKey(),
+    sourceId: integer("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    documentType: varchar("document_type", { length: 80 }), // "notification", "corrigendum", "result", etc.
+    externalId: varchar("external_id", { length: 200 }), // official reference number
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    discoveredAt: timestamp("discovered_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    contentHash: varchar("content_hash", { length: 64 }), // SHA-256 of content for dedup
+    rawContent: text("raw_content"),
+    extractedAt: timestamp("extracted_at", { withTimezone: true }),
+    extractionMethod: varchar("extraction_method", { length: 80 }), // "pdf_parser", "html_scraper", "api", etc.
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("source_documents_source_idx").on(table.sourceId),
+    index("source_documents_url_idx").on(table.url),
+    index("source_documents_content_hash_idx").on(table.contentHash),
+  ],
+);
+
 export const exams = pgTable(
   "exams",
   {
@@ -247,6 +321,18 @@ export const recruitments = pgTable(
     year: smallint("year").notNull(),
     name: varchar("name", { length: 220 }).notNull(),
     slug: varchar("slug", { length: 220 }).notNull().unique(),
+
+    // External identity for deduplication
+    officialNotificationNumber: varchar("official_notification_number", {
+      length: 200,
+    }), // e.g., "No. 22/2026-RC"
+    externalIdentifiers: jsonb("external_identifiers").$type<
+      Record<string, string>
+    >(), // {"ssc_ref": "22/2026-RC", "employment_news_ref": "..."}
+    sourceDocumentId: integer("source_document_id").references(
+      () => sourceDocuments.id,
+    ), // primary official source document
+
     status: recruitmentStatusEnum("status")
       .notNull()
       .default("UPCOMING"),
@@ -274,6 +360,11 @@ export const recruitments = pgTable(
     index("recruitments_organization_idx").on(table.organizationId),
     index("recruitments_exam_idx").on(table.examId),
     index("recruitments_status_idx").on(table.status),
+    uniqueIndex("recruitments_official_notification_idx").on(
+      table.organizationId,
+      table.officialNotificationNumber,
+    ), // Dedup: org + official notification number is unique
+    index("recruitments_source_document_idx").on(table.sourceDocumentId),
   ],
 );
 
@@ -294,6 +385,36 @@ export const selectionProcesses = pgTable(
       .defaultNow(),
   },
   (table) => [index("selection_processes_recruitment_idx").on(table.recruitmentId)],
+);
+
+// ========== CHANGE HISTORY (Recruitment Lifecycle Events) ==========
+
+export const recruitmentEvents = pgTable(
+  "recruitment_events",
+  {
+    id: serial("id").primaryKey(),
+    recruitmentId: integer("recruitment_id")
+      .notNull()
+      .references(() => recruitments.id, { onDelete: "cascade" }),
+    eventType: recruitmentEventTypeEnum("event_type").notNull(),
+    eventDate: timestamp("event_date", { withTimezone: true }).notNull(),
+    title: varchar("title", { length: 220 }),
+    description: text("description"),
+    changedFields: jsonb("changed_fields").$type<
+      Record<string, { old?: unknown; new?: unknown }>
+    >(), // {vacancies: {old: 500, new: 450}, deadline: {old: "2026-10-15", new: "2026-10-31"}}
+    sourceDocumentId: integer("source_document_id").references(
+      () => sourceDocuments.id,
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("recruitment_events_recruitment_idx").on(table.recruitmentId),
+    index("recruitment_events_type_idx").on(table.eventType),
+    index("recruitment_events_date_idx").on(table.eventDate),
+  ],
 );
 
 // ========== RECRUITMENT-SPECIFIC ROLES & ELIGIBILITY ==========
@@ -352,6 +473,7 @@ export const eligibilities = pgTable(
     skillsRequired: jsonb("skills_required").$type<string[]>(),
     citizenship: citizenshipEnum("citizenship").default("INDIAN"),
     otherConditions: jsonb("other_conditions").$type<Record<string, unknown>>(),
+    hasAlternatives: boolean("has_alternatives").default(false), // if true, check eligibility_alternatives for OR conditions
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -360,6 +482,38 @@ export const eligibilities = pgTable(
       .defaultNow(),
   },
   (table) => [index("eligibilities_post_idx").on(table.postId)],
+);
+
+// Alternative eligibility criteria (for "OR" conditions)
+// E.g., Post requires: (B.Tech) OR (B.Sc + XYZ condition)
+export const eligibilityAlternatives = pgTable(
+  "eligibility_alternatives",
+  {
+    id: serial("id").primaryKey(),
+    eligibilityId: integer("eligibility_id")
+      .notNull()
+      .references(() => eligibilities.id, { onDelete: "cascade" }),
+    alternativeOrder: smallint("alternative_order").notNull(), // 1, 2, 3... to order alternatives
+    qualificationId: integer("qualification_id").references(
+      () => qualifications.id,
+    ),
+    ageMin: smallint("age_min"),
+    ageMax: smallint("age_max"),
+    experienceYearsMin: smallint("experience_years_min"),
+    experienceYearsMax: smallint("experience_years_max"),
+    additionalConditions: text("additional_conditions"), // free text for complex conditions
+    description: text("description"), // e.g., "B.Tech in CSE" or "B.Sc + typing test"
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("eligibility_alternatives_eligibility_idx").on(table.eligibilityId),
+    index("eligibility_alternatives_order_idx").on(
+      table.eligibilityId,
+      table.alternativeOrder,
+    ),
+  ],
 );
 
 // ========== VACANCY BREAKDOWN (Extensible Dimensions) ==========
@@ -397,13 +551,24 @@ export const postings = pgTable(
   "postings",
   {
     id: serial("id").primaryKey(),
-    source: varchar("source", { length: 60 }).notNull().default("manual"),
-    externalId: varchar("external_id", { length: 200 }),
+    sourceId: integer("source_id").references(() => sources.id),
+    sourceDocumentId: integer("source_document_id").references(
+      () => sourceDocuments.id,
+    ), // where this posting came from
+    externalId: varchar("external_id", { length: 200 }), // external system's ID
     sourceUrl: text("source_url"),
 
     title: varchar("title", { length: 220 }).notNull(),
     description: text("description"),
     slug: varchar("slug", { length: 220 }).notNull().unique(),
+
+    // Raw source preservation
+    rawTitle: text("raw_title"), // original title from source
+    rawDescription: text("raw_description"), // original description
+    rawContent: text("raw_content"), // full raw HTML/text
+    contentHash: varchar("content_hash", { length: 64 }), // SHA-256 for dedup across sources
+    extractedAt: timestamp("extracted_at", { withTimezone: true }),
+    extractionMethod: varchar("extraction_method", { length: 80 }), // "pdf_parser", "html_scraper", etc.
 
     // JobOye normalization (inferred from title/content)
     inferredRecruitmentId: integer("inferred_recruitment_id").references(
@@ -418,7 +583,15 @@ export const postings = pgTable(
     isCanonical: boolean("is_canonical").default(false), // if multiple sources describe same posting
     canonicalSlug: varchar("canonical_slug", { length: 220 }),
 
+    // Posting status + expiry tracking (Google JobPosting compatible)
     status: postingStatusEnum("status").notNull().default("ACTIVE"),
+    applicationDeadline: timestamp("application_deadline", {
+      withTimezone: true,
+    }), // For Google JobPosting schema: validThrough
+    examDate: timestamp("exam_date", { withTimezone: true }), // When exam occurs
+    resultDate: timestamp("result_date", { withTimezone: true }), // When results published
+    markedExpiredAt: timestamp("marked_expired_at", { withTimezone: true }), // When we marked it expired
+    lastCrawledAt: timestamp("last_crawled_at", { withTimezone: true }), // Last time we checked source
 
     // Scraped metadata
     scrapedAt: timestamp("scraped_at", { withTimezone: true }),
@@ -440,12 +613,15 @@ export const postings = pgTable(
   },
   (table) => [
     index("postings_slug_idx").on(table.slug),
+    index("postings_source_idx").on(table.sourceId),
     index("postings_recruitment_idx").on(table.inferredRecruitmentId),
     index("postings_post_idx").on(table.inferredPostId),
     index("postings_status_idx").on(table.status),
     index("postings_review_idx").on(table.reviewStatus),
+    index("postings_deadline_idx").on(table.applicationDeadline),
+    index("postings_content_hash_idx").on(table.contentHash), // for dedup detection
     uniqueIndex("postings_source_external_idx")
-      .on(table.source, table.externalId)
+      .on(table.sourceId, table.externalId)
       .where(sql`${table.externalId} is not null`),
   ],
 ) as any;
@@ -488,6 +664,23 @@ export const qualificationsRelations = relations(qualifications, ({
   eligibilities: many(eligibilities),
 }));
 
+export const sourcesRelations = relations(sources, ({ many }) => ({
+  documents: many(sourceDocuments),
+  postings: many(postings),
+}));
+
+export const sourceDocumentsRelations = relations(
+  sourceDocuments,
+  ({ one, many }) => ({
+    source: one(sources, {
+      fields: [sourceDocuments.sourceId],
+      references: [sources.id],
+    }),
+    recruitmentEvents: many(recruitmentEvents),
+    postings: many(postings),
+  }),
+);
+
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   exams: many(exams),
   recruitments: many(recruitments),
@@ -521,10 +714,29 @@ export const recruitmentsRelations = relations(recruitments, ({
     fields: [recruitments.examId],
     references: [exams.id],
   }),
+  sourceDocument: one(sourceDocuments, {
+    fields: [recruitments.sourceDocumentId],
+    references: [sourceDocuments.id],
+  }),
   posts: many(posts),
   selectionProcesses: many(selectionProcesses),
+  events: many(recruitmentEvents),
   postings: many(postings),
 }));
+
+export const recruitmentEventsRelations = relations(
+  recruitmentEvents,
+  ({ one }) => ({
+    recruitment: one(recruitments, {
+      fields: [recruitmentEvents.recruitmentId],
+      references: [recruitments.id],
+    }),
+    sourceDocument: one(sourceDocuments, {
+      fields: [recruitmentEvents.sourceDocumentId],
+      references: [sourceDocuments.id],
+    }),
+  }),
+);
 
 export const selectionProcessesRelations = relations(
   selectionProcesses,
@@ -550,7 +762,7 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   postings: many(postings),
 }));
 
-export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
+export const eligibilitiesRelations = relations(eligibilities, ({ one, many }) => ({
   post: one(posts, {
     fields: [eligibilities.postId],
     references: [posts.id],
@@ -559,7 +771,22 @@ export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
     fields: [eligibilities.qualificationId],
     references: [qualifications.id],
   }),
+  alternatives: many(eligibilityAlternatives),
 }));
+
+export const eligibilityAlternativesRelations = relations(
+  eligibilityAlternatives,
+  ({ one }) => ({
+    eligibility: one(eligibilities, {
+      fields: [eligibilityAlternatives.eligibilityId],
+      references: [eligibilities.id],
+    }),
+    qualification: one(qualifications, {
+      fields: [eligibilityAlternatives.qualificationId],
+      references: [qualifications.id],
+    }),
+  }),
+);
 
 export const vacanciesRelations = relations(vacancies, ({ one }) => ({
   post: one(posts, {
@@ -573,6 +800,14 @@ export const vacanciesRelations = relations(vacancies, ({ one }) => ({
 }));
 
 export const postingsRelations = relations(postings, ({ one }) => ({
+  source: one(sources, {
+    fields: [postings.sourceId],
+    references: [sources.id],
+  }),
+  sourceDocument: one(sourceDocuments, {
+    fields: [postings.sourceDocumentId],
+    references: [sourceDocuments.id],
+  }),
   recruitment: one(recruitments, {
     fields: [postings.inferredRecruitmentId],
     references: [recruitments.id],
