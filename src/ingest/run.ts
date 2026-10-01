@@ -118,7 +118,7 @@ export async function main(opts?: { dryRun?: boolean }) {
         wouldInsert++;
       }
     }
-    dbResult = { inserted: wouldInsert, updated: 0, skipped: wouldSkip, total: dedupedPostings.length };
+    dbResult = { inserted: wouldInsert, updated: 0, skipped: wouldSkip, inferred: 0, orphaned: 0, total: dedupedPostings.length };
     console.log(`
 ✅ Database write simulation:
    • Would insert: ${dbResult.inserted} new postings
@@ -131,13 +131,23 @@ export async function main(opts?: { dryRun?: boolean }) {
   } else {
     try {
       dbResult = await writePostingsToDB(dedupedPostings, normalizedPostings);
+      const inferencedPct = dbResult.total > 0
+        ? ((dbResult.inferred / (dbResult.inserted + dbResult.updated)) * 100).toFixed(1)
+        : "0";
       console.log(`
 ✅ Database write complete:
    • Inserted: ${dbResult.inserted} new postings
    • Updated: ${dbResult.updated} existing postings
-   • Skipped: ${dbResult.skipped} (low confidence < 0.4)
+   • Successfully inferred: ${dbResult.inferred} postings (${inferencedPct}%)
+   • Orphaned (no match): ${dbResult.orphaned} postings
+   • Skipped (low confidence < 0.4): ${dbResult.skipped}
    • Total processed: ${dbResult.total}
    • Exams linked: ${withExamDetection} postings automatically linked to exam pages
+
+Graph Model Inference Stats:
+   • Postings linked to Recruitment: ${dbResult.inferred}
+   • Postings linked to Post (Position): ${dbResult.inferred}
+   • Confidence-boosted by inference: +15 points (max 100)
       `);
     } catch (dbErr) {
       console.error("❌ Database write failed:", dbErr);
