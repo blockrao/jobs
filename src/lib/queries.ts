@@ -205,7 +205,17 @@ export async function getCommissionBySlug(slug: string) {
   });
 }
 
-// Get a single exam with its commission
+// Get a single exam with just its commission (lightweight - for metadata)
+export async function getExamBySlugLight(slug: string) {
+  if (!hasDb()) return null;
+  const db = getDb();
+  return db.query.exams.findFirst({
+    where: eq(exams.slug, slug),
+    with: { commission: true },
+  });
+}
+
+// Get a single exam with its commission and all related exams (heavy - for page render)
 export async function getExamBySlug(slug: string) {
   if (!hasDb()) return null;
   const db = getDb();

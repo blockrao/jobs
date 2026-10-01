@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getExamBySlug, getPostingsByExam, listCommissionsWithExams } from "@/lib/queries";
+import { getExamBySlug, getExamBySlugLight, getPostingsByExam, listCommissionsWithExams } from "@/lib/queries";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
 
 export const revalidate = 300;
@@ -10,7 +10,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { exam_slug } = await params;
-  const exam = await getExamBySlug(exam_slug);
+  const exam = await getExamBySlugLight(exam_slug);
   return {
     title: exam ? exam.label : "Exam Jobs",
     description: `Browse all open ${exam?.label || "job"} positions and apply online.`,
