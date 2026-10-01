@@ -15,6 +15,7 @@
     "db:backfill-locations": "dotenv -e .env.local -- tsx src/scripts/backfill-locations.ts",
     "i18n:translate-hindi": "dotenv -e .env.local -- tsx src/scripts/translate-jobs-to-hindi.ts",
     "i18n:demo": "npx tsx src/scripts/demo-translation-mock.ts",
+    "validate:routes": "dotenv -e .env.local -- tsx src/scripts/validate-canonical-routes.ts",
     "ingest": "dotenv -e .env.local -- tsx src/ingest/run.ts",
     "ingest:raw": "tsx src/ingest/run.ts",
     "approve-jobs": "dotenv -e .env.local -- tsx src/scripts/approve-pending-jobs.ts"
