@@ -155,7 +155,7 @@ async function searchPostingsEnglish(
         ELSE 'NORMAL'
       END as priority_level
     FROM postings p
-    LEFT JOIN organizations_new o ON o.id = p.organization_id
+    LEFT JOIN organizations o ON o.id = p.organization_id
     WHERE p.review_status = 'APPROVED'
       AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
       AND p.is_expired = FALSE
@@ -306,7 +306,7 @@ async function searchPostingsHindi(
         ELSE 'NORMAL'
       END as priority_level
     FROM postings p
-    LEFT JOIN organizations_new o ON o.id = p.organization_id
+    LEFT JOIN organizations o ON o.id = p.organization_id
     WHERE ${conditions.join(" AND ")}
     ORDER BY
       ${
@@ -404,7 +404,7 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
         SELECT DISTINCT suggestion FROM (
           SELECT o.name as suggestion
           FROM postings p
-          LEFT JOIN organizations_new o ON o.id = p.organization_id
+          LEFT JOIN organizations o ON o.id = p.organization_id
           WHERE p.review_status = 'APPROVED'
             AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
             AND p.is_expired = FALSE
