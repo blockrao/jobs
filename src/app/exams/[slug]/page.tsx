@@ -4,6 +4,43 @@ import { notFound } from "next/navigation";
 import { getExamBySlug, getExamRelatedPositions, getExamRecruitmentDetails } from "@/db/operations/get-exams";
 import { absoluteUrl } from "@/lib/site";
 
+interface BreadcrumbItem {
+  "@type": "ListItem";
+  position: number;
+  name: string;
+  item: string;
+}
+
+function buildBreadcrumbSchema(items: { name: string; path: string }[]): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+function buildExamSchema(exam: any, organization: any): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "EducationalOccupationalCredential",
+    name: exam.name,
+    description: exam.description || `${exam.name} government exam`,
+    url: absoluteUrl(`/exams/${exam.slug}`),
+    provider: {
+      "@type": "Organization",
+      name: organization.name,
+      url: absoluteUrl(`/organizations/${organization.slug}`),
+    },
+    ...(exam.frequency && { educationalLevel: exam.frequency }),
+    inLanguage: "en-IN",
+  };
+}
+
 export const revalidate = 3600; // 1 hour
 
 type Props = { params: Promise<{ slug: string }> };
@@ -50,8 +87,26 @@ export default async function ExamPage({ params }: Props) {
     getExamRecruitmentDetails(exam.id),
   ]);
 
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: organization.name, path: `/organizations/${organization.slug}` },
+    { name: exam.name, path: `/exams/${exam.slug}` },
+  ]);
+
+  const examSchema = buildExamSchema(exam, organization);
+
+  const jsonLdScripts = [breadcrumbSchema, examSchema];
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {jsonLdScripts.map((schema, idx) => (
+        <script
+          key={idx}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">

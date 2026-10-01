@@ -4,6 +4,32 @@ import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getOrganizationRecruitments, getOrganizationExams, getOrganizationStats } from "@/db/operations/get-organizations";
 import { absoluteUrl } from "@/lib/site";
 
+function buildBreadcrumbSchema(items: { name: string; path: string }[]): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+function buildOrganizationSchema(org: any): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: org.name,
+    description: org.description || `Government recruitment organization: ${org.name}`,
+    url: absoluteUrl(`/organizations/${org.slug}`),
+    ...(org.logoUrl && { logo: org.logoUrl }),
+    ...(org.website && { sameAs: org.website }),
+    inLanguage: "en-IN",
+  };
+}
+
 export const revalidate = 3600; // 1 hour
 
 type Props = { params: Promise<{ slug: string }> };
@@ -53,8 +79,25 @@ export default async function OrganizationPage({ params }: Props) {
   const isExamAuthority = org.roles?.includes("EXAM_AUTHORITY") || false;
   const isRecruitingBody = org.roles?.includes("RECRUITING_BODY") || false;
 
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: org.name, path: `/organizations/${org.slug}` },
+  ]);
+
+  const organizationSchema = buildOrganizationSchema(org);
+
+  const jsonLdScripts = [breadcrumbSchema, organizationSchema];
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {jsonLdScripts.map((schema, idx) => (
+        <script
+          key={idx}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-start gap-4 mb-4">

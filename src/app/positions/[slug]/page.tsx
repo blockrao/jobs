@@ -4,6 +4,39 @@ import { notFound } from "next/navigation";
 import { getPositionBySlug, getPositionQualification, getPositionRelatedExams, getPositionRelatedRecruitments, getPositionPostings } from "@/db/operations/get-positions";
 import { absoluteUrl } from "@/lib/site";
 
+function buildBreadcrumbSchema(items: { name: string; path: string }[]): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+function buildPositionSchema(position: any): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: position.name,
+    description: position.description || `Government position: ${position.name}`,
+    url: absoluteUrl(`/positions/${position.slug}`),
+    ...(position.typicalSalaryMin && position.typicalSalaryMax && {
+      baseSalary: {
+        "@type": "PriceSpecification",
+        currency: "INR",
+        minValue: position.typicalSalaryMin,
+        maxValue: position.typicalSalaryMax,
+      },
+    }),
+    jobLocationType: "TELECOMMUTE",
+    inLanguage: "en-IN",
+  };
+}
+
 export const revalidate = 3600; // 1 hour
 
 type Props = { params: Promise<{ slug: string }> };
@@ -48,8 +81,25 @@ export default async function PositionPage({ params }: Props) {
     getPositionPostings(position.id, 10),
   ]);
 
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: position.name, path: `/positions/${position.slug}` },
+  ]);
+
+  const positionSchema = buildPositionSchema(position);
+
+  const jsonLdScripts = [breadcrumbSchema, positionSchema];
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {jsonLdScripts.map((schema, idx) => (
+        <script
+          key={idx}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">{position.name}</h1>

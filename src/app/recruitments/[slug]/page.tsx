@@ -8,6 +8,38 @@ export const revalidate = 3600; // 1 hour
 
 type Props = { params: Promise<{ slug: string }> };
 
+function buildBreadcrumbSchema(items: { name: string; path: string }[]): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
+}
+
+function buildRecruitmentSchema(recruitment: any): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: recruitment.name,
+    description: recruitment.description || `${recruitment.name} recruitment campaign`,
+    url: absoluteUrl(`/recruitments/${recruitment.slug}`),
+    startDate: recruitment.applicationStartDate
+      ? new Date(recruitment.applicationStartDate).toISOString()
+      : undefined,
+    endDate: recruitment.applicationEndDate
+      ? new Date(recruitment.applicationEndDate).toISOString()
+      : undefined,
+    eventStatus: recruitment.status === "CLOSED" ? "EventCancelled" : "EventScheduled",
+    eventAttendanceMode: "OnlineEventAttendanceMode",
+    inLanguage: "en-IN",
+  };
+}
+
 export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
@@ -56,8 +88,25 @@ export default async function RecruitmentPage({ params }: Props) {
     getRecruitmentVacancyCount(recruitment.id),
   ]);
 
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: recruitment.name, path: `/recruitments/${recruitment.slug}` },
+  ]);
+
+  const recruitmentSchema = buildRecruitmentSchema(recruitment);
+
+  const jsonLdScripts = [breadcrumbSchema, recruitmentSchema];
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {jsonLdScripts.map((schema, idx) => (
+        <script
+          key={idx}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">{recruitment.name}</h1>
