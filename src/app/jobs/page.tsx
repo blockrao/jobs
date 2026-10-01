@@ -30,7 +30,12 @@ export default async function JobsListPage({ searchParams }: Props) {
   const { kind, q } = await searchParams;
   const validKind =
     kind === "GOVERNMENT" || kind === "PRIVATE" ? kind : undefined;
-  const results = await listPostings({ kind: validKind, search: q, limit: 50 });
+  let results: Awaited<ReturnType<typeof listPostings>> = [];
+  try {
+    results = await listPostings({ kind: validKind, search: q, limit: 50 });
+  } catch {
+    results = [];
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

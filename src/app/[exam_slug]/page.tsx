@@ -19,14 +19,20 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export async function generateStaticParams() {
-  const commissions = await listCommissionsWithExams();
-  const params = [];
-  for (const comm of commissions) {
-    for (const exam of comm.exams) {
-      params.push({ exam_slug: exam.slug });
+  try {
+    const commissions = await listCommissionsWithExams();
+    const params = [];
+    for (const comm of commissions) {
+      for (const exam of comm.exams) {
+        params.push({ exam_slug: exam.slug });
+      }
     }
+    return params;
+  } catch {
+    // Database unavailable during build - return empty array
+    // Pages will be generated on-demand (ISR) instead
+    return [];
   }
-  return params;
 }
 
 export default async function ExamPage({ params }: Props) {

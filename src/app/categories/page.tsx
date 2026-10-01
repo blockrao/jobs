@@ -12,7 +12,12 @@ export const metadata: Metadata = {
 };
 
 export default async function CategoriesPage() {
-  const categories = await listCategories();
+  let categories: Awaited<ReturnType<typeof listCategories>> = [];
+  try {
+    categories = await listCategories();
+  } catch {
+    categories = [];
+  }
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-2xl font-bold tracking-tight">Categories</h1>

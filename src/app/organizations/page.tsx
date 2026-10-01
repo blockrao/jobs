@@ -50,15 +50,29 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default async function OrganizationsPage() {
-  const allOrganizations = await getAllOrganizations();
+  let allOrganizations: Awaited<ReturnType<typeof getAllOrganizations>> = [];
+  try {
+    allOrganizations = await getAllOrganizations();
+  } catch {
+    allOrganizations = [];
+  }
 
   // Get stats for each organization
-  const orgsWithStats = await Promise.all(
-    allOrganizations.map(async (org) => {
-      const stats = await getOrganizationStats(org.id);
-      return { ...org, ...stats };
-    })
-  );
+  let orgsWithStats: any[] = [];
+  try {
+    orgsWithStats = await Promise.all(
+      allOrganizations.map(async (org) => {
+        const stats = await getOrganizationStats(org.id);
+        return { ...org, ...stats };
+      })
+    );
+  } catch {
+    orgsWithStats = allOrganizations.map((org) => ({
+      ...org,
+      recruitmentCount: 0,
+      examCount: 0,
+    }));
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

@@ -9,13 +9,22 @@ export const metadata = {
 };
 
 export default async function ExamsPage() {
-  const commissions = await listCommissionsWithExams();
+  let commissions: Awaited<ReturnType<typeof listCommissionsWithExams>> = [];
+  try {
+    commissions = await listCommissionsWithExams();
+  } catch {
+    commissions = [];
+  }
 
   // Get open count per commission
   const postingsByComm = new Map<number, number>();
   for (const comm of commissions) {
-    const posts = await getPostingsByCommission(comm.slug);
-    postingsByComm.set(comm.id, posts.length);
+    try {
+      const posts = await getPostingsByCommission(comm.slug);
+      postingsByComm.set(comm.id, posts.length);
+    } catch {
+      postingsByComm.set(comm.id, 0);
+    }
   }
 
   return (

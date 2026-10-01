@@ -5,12 +5,24 @@ import { STAGE_LABELS, formatDate } from "@/lib/labels";
 export const revalidate = 120;
 
 export default async function Home() {
-  const [govtJobs, privateJobs, categories, articles] = await Promise.all([
-    listPostings({ kind: "GOVERNMENT", limit: 8 }),
-    listPostings({ kind: "PRIVATE", limit: 8 }),
-    listCategories(),
-    listArticles({ limit: 6 }),
-  ]);
+  let govtJobs: Awaited<ReturnType<typeof listPostings>> = [];
+  let privateJobs: Awaited<ReturnType<typeof listPostings>> = [];
+  let categories: Awaited<ReturnType<typeof listCategories>> = [];
+  let articles: Awaited<ReturnType<typeof listArticles>> = [];
+  try {
+    const results = await Promise.all([
+      listPostings({ kind: "GOVERNMENT", limit: 8 }).catch(() => []),
+      listPostings({ kind: "PRIVATE", limit: 8 }).catch(() => []),
+      listCategories().catch(() => []),
+      listArticles({ limit: 6 }).catch(() => []),
+    ]);
+    [govtJobs, privateJobs, categories, articles] = results;
+  } catch {
+    govtJobs = [];
+    privateJobs = [];
+    categories = [];
+    articles = [];
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">

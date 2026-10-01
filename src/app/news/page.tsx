@@ -10,7 +10,12 @@ export const metadata = {
 };
 
 export default async function NewsPage() {
-  const articles = await listArticles({ limit: 50 });
+  let articles: Awaited<ReturnType<typeof listArticles>> = [];
+  try {
+    articles = await listArticles({ limit: 50 });
+  } catch {
+    articles = [];
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

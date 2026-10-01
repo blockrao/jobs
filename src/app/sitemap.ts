@@ -16,10 +16,10 @@ const MAX_POSTING_URLS = 45000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [postingRows, articleRows, categoryRows, orgRows] = await Promise.all([
-    getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS),
-    getAllArticleSlugsForSitemap(),
-    getAllCategorySlugsForSitemap(),
-    getAllOrganizationSlugsForSitemap(),
+    getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
+    getAllArticleSlugsForSitemap().catch(() => []),
+    getAllCategorySlugsForSitemap().catch(() => []),
+    getAllOrganizationSlugsForSitemap().catch(() => []),
   ]);
 
   const staticEntries: MetadataRoute.Sitemap = [

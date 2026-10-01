@@ -44,15 +44,28 @@ async function getPositionStats(positionId: number) {
 }
 
 export default async function PositionsPage() {
-  const allPositions = await getAllPositions();
+  let allPositions: Awaited<ReturnType<typeof getAllPositions>> = [];
+  try {
+    allPositions = await getAllPositions();
+  } catch {
+    allPositions = [];
+  }
 
   // Get stats for each position
-  const positionsWithStats = await Promise.all(
-    allPositions.map(async (pos) => {
-      const stats = await getPositionStats(pos.id);
-      return { ...pos, ...stats };
-    })
-  );
+  let positionsWithStats: any[] = [];
+  try {
+    positionsWithStats = await Promise.all(
+      allPositions.map(async (pos) => {
+        const stats = await getPositionStats(pos.id);
+        return { ...pos, ...stats };
+      })
+    );
+  } catch {
+    positionsWithStats = allPositions.map((pos) => ({
+      ...pos,
+      recruitmentCount: 0,
+    }));
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

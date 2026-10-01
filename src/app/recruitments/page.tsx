@@ -54,15 +54,29 @@ async function getRecruitmentStats(recruitmentId: number) {
 }
 
 export default async function RecruitmentsPage() {
-  const allRecruitments = await getAllRecruitments();
+  let allRecruitments: Awaited<ReturnType<typeof getAllRecruitments>> = [];
+  try {
+    allRecruitments = await getAllRecruitments();
+  } catch {
+    allRecruitments = [];
+  }
 
   // Get stats for each recruitment
-  const recruitmentsWithStats = await Promise.all(
-    allRecruitments.map(async (rec) => {
-      const stats = await getRecruitmentStats(rec.id);
-      return { ...rec, ...stats };
-    })
-  );
+  let recruitmentsWithStats: any[] = [];
+  try {
+    recruitmentsWithStats = await Promise.all(
+      allRecruitments.map(async (rec) => {
+        const stats = await getRecruitmentStats(rec.id);
+        return { ...rec, ...stats };
+      })
+    );
+  } catch {
+    recruitmentsWithStats = allRecruitments.map((rec) => ({
+      ...rec,
+      postCount: 0,
+      totalVacancies: 0,
+    }));
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -17,10 +17,16 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export async function generateStaticParams() {
-  const commissions = await listCommissionsWithExams();
-  return commissions.map((comm) => ({
-    commission_slug: comm.slug,
-  }));
+  try {
+    const commissions = await listCommissionsWithExams();
+    return commissions.map((comm) => ({
+      commission_slug: comm.slug,
+    }));
+  } catch {
+    // Database unavailable during build - return empty array
+    // Pages will be generated on-demand (ISR) instead
+    return [];
+  }
 }
 
 export default async function CommissionPage({ params }: Props) {

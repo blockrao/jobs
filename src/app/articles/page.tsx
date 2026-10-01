@@ -13,7 +13,12 @@ export const metadata: Metadata = {
 };
 
 export default async function ArticlesPage() {
-  const articles = await listArticles({ limit: 50 });
+  let articles: Awaited<ReturnType<typeof listArticles>> = [];
+  try {
+    articles = await listArticles({ limit: 50 });
+  } catch {
+    articles = [];
+  }
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-2xl font-bold tracking-tight">Guides & Articles</h1>
