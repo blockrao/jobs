@@ -11,22 +11,20 @@ type Organization = typeof organizations.$inferSelect;
 type PostingUpdate = typeof postingUpdates.$inferSelect;
 type Article = typeof articles.$inferSelect;
 
-// Stages before this point mean the posting still represents an open
-// hiring/application opportunity — safe to emit full JobPosting markup
-// with apply info. Past this point (result/merit-list stages) the page is
-// informational, not a live opening, so Google's JobPosting guidelines say
-// to stop emitting it rather than mislead job-search crawlers.
-const HIRING_OPEN_STAGES = new Set([
-  "NOTIFICATION_OUT",
-  "APPLICATION_OPEN",
-  "APPLICATION_CLOSED",
-  "ADMIT_CARD_RELEASED",
-  "EXAM_SCHEDULED",
-  "ACTIVE",
-]);
+// Stages that represent an actual open hiring/application opportunity —
+// safe to emit JobPosting markup and show an "Apply" CTA. Once applications
+// close (APPLICATION_CLOSED onward: admit card, exam, result, merit list...)
+// the page is informational, not a live opening, so Google's JobPosting
+// guidelines say to stop emitting markup rather than mislead job-search
+// crawlers. A stage can also lag reality — e.g. still "APPLICATION_OPEN" in
+// our data after the deadline has passed — so this also checks validThrough
+// directly rather than trusting the stage alone.
+const HIRING_OPEN_STAGES = new Set(["NOTIFICATION_OUT", "APPLICATION_OPEN", "ACTIVE"]);
 
-export function isHiringOpen(stage: string) {
-  return HIRING_OPEN_STAGES.has(stage);
+export function isHiringOpen(stage: string, validThrough?: Date | null) {
+  if (!HIRING_OPEN_STAGES.has(stage)) return false;
+  if (validThrough && validThrough.getTime() < Date.now()) return false;
+  return true;
 }
 
 const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
@@ -53,7 +51,16 @@ export function buildJobPostingSchema(
   posting: Posting,
   org: Organization,
 ): Record<string, unknown> | null {
-  if (!isHiringOpen(posting.currentStage)) return null;
+  if (!isHiringOpen(posting.currentStage, posting.validThrough)) return null;
+
+  // JobPosting.title must be the job title (e.g. "Research Associate III"),
+  // never the scraped headline ("...Recruitment 2026 – Apply Online for 1
+  // Post") — Google is explicit about this. We only have a trustworthy job
+  // title once it's been extracted into postNames; if it hasn't, we do not
+  // guess at one by trimming the headline, we skip JobPosting markup
+  // entirely rather than publish a mislabeled title.
+  const extractedTitle = posting.postNames?.[0]?.trim();
+  if (!extractedTitle) return null;
 
   const url = absoluteUrl(`/jobs/${posting.slug}`);
 
@@ -93,7 +100,7 @@ export function buildJobPostingSchema(
     "@type": "JobPosting",
     "@id": `${url}#jobposting`,
     url,
-    title: posting.title,
+    title: extractedTitle,
     description: posting.description,
     identifier: {
       "@type": "PropertyValue",

@@ -24,6 +24,22 @@ export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }> };
 
+// Scraped descriptions are stored as HTML (often literally opening with
+// "<p>{the same title again}</p>"), which is unusable as a meta description
+// — it leaks markup into search snippets and just repeats the <title> tag.
+function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string {
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  // Drop a leading restatement of the title so the snippet isn't
+  // "<title> — <org> | <title> ..." in the search result.
+  const deduped = text.toLowerCase().startsWith(repeatOf.toLowerCase())
+    ? text.slice(repeatOf.length).replace(/^[\s.:–-]+/, "")
+    : text;
+  return deduped.length > maxLen ? `${deduped.slice(0, maxLen - 1).trimEnd()}…` : deduped;
+}
+
 export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
@@ -32,15 +48,19 @@ export async function generateMetadata({
   if (!posting) return {};
 
   const title = `${posting.title} — ${posting.organization.name}`;
-  const description =
-    posting.description.length > 155
-      ? `${posting.description.slice(0, 152)}...`
-      : posting.description;
+  const description = plainTextSnippet(posting.description, posting.title);
+
+  // Tier B/C postings (incomplete, duplicate, non-job content, or a stale
+  // "open" stage — see src/lib/content-quality/gate.ts) stay crawlable and
+  // linkable but are kept out of the index until they pass the gate, per
+  // the content quality standard: publish ≠ indexable.
+  const indexable = posting.indexTier === "A";
 
   return {
     title,
     description,
     alternates: { canonical: `/jobs/${posting.slug}` },
+    robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       title,
       description,
@@ -89,7 +109,7 @@ export default async function JobPage({ params }: Props) {
   if (!posting) notFound();
 
   const org = posting.organization;
-  const hiringOpen = isHiringOpen(posting.currentStage);
+  const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting);
   const timeline = [...posting.updates].sort(
     (a, b) => a.eventDate.getTime() - b.eventDate.getTime(),

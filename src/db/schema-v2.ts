@@ -588,6 +588,14 @@ export const postings = pgTable(
     isCanonical: boolean("is_canonical").default(false), // if multiple sources describe same posting
     canonicalSlug: varchar("canonical_slug", { length: 220 }),
 
+    // Content Quality Gate (see src/lib/content-quality/gate.ts). Same
+    // physical "postings" table as schema.ts — kept in sync here because
+    // the ingestion pipeline (write-postings.ts) writes through this
+    // definition, not schema.ts's.
+    indexTier: varchar("index_tier", { length: 1 }).notNull().default("C"),
+    qualityMissing: jsonb("quality_missing").$type<string[]>().notNull().default([]),
+    qualityEvaluatedAt: timestamp("quality_evaluated_at", { withTimezone: true }),
+
     // Posting status + expiry tracking (Google JobPosting compatible)
     status: postingStatusEnum("status").notNull().default("ACTIVE"),
     applicationDeadline: timestamp("application_deadline", {

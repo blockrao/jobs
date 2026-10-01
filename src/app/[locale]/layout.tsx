@@ -25,15 +25,6 @@ export async function generateMetadata(
   const canonicalUrl = new URL(SITE_URL);
   canonicalUrl.pathname = `/${locale}`;
 
-  const alternates: Record<string, string> = {
-    canonical: canonicalUrl.toString(),
-  };
-
-  // Add hreflang links for all locales
-  for (const loc of locales) {
-    alternates[`x-${loc}`] = `${SITE_URL}/${loc}`;
-  }
-
   const translations: Record<string, string> = {
     en: `${SITE_NAME} — Govt & Private Job Notifications, Results, Guides`,
     hi: 'JobOye — सरकारी और निजी नौकरी सूचनाएं, परिणाम, गाइड',
@@ -52,8 +43,11 @@ export async function generateMetadata(
     },
     description: descriptions[locale as keyof typeof descriptions] || descriptions['en'],
     alternates: {
+      // Fallback only — every page under this layout (articles/exams/
+      // organizations) sets its own correct alternates.canonical for its
+      // actual path, which replaces this. No languages/hreflang block: see
+      // the note in the <head> above.
       canonical: canonicalUrl.toString(),
-      languages: alternates,
     },
     openGraph: {
       title: translations[locale as keyof typeof translations] || translations['en'],
@@ -87,22 +81,13 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className="h-full antialiased">
       <head>
-        {/* Hreflang for search engines */}
-        <link
-          rel="alternate"
-          hrefLang="en"
-          href={`${SITE_URL}/en`}
-        />
-        <link
-          rel="alternate"
-          hrefLang="hi"
-          href={`${SITE_URL}/hi`}
-        />
-        <link
-          rel="alternate"
-          hrefLang="x-default"
-          href={SITE_URL}
-        />
+        {/* No manual hreflang <link> tags here: they previously pointed at
+            the bare /en and /hi roots (no page exists there — see
+            root layout.tsx) regardless of which actual page rendered them.
+            Each child page's own generateMetadata sets its correct
+            alternates.canonical; a real hreflang pair (this article/exam/org
+            page in the other language) can be added once that counterpart
+            page exists and both sides can link to each other. */}
 
         {/* Google Analytics 4 */}
         {gaId && (

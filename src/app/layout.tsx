@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     "Latest government and private job notifications across India — admit cards, exam dates, answer keys, results, and in-depth guides, all in one place.",
   alternates: {
     canonical: "/",
-    languages: {
-      en: `${SITE_URL}/en`,
-      hi: `${SITE_URL}/hi`,
-      "x-default": SITE_URL,
-    },
+    // No hreflang languages block here: /en and /hi have no page of their
+    // own (only /en/articles/[slug], /en/exams/[slug], etc. under
+    // src/app/[locale]/ resolve). A broken hreflang target is worse than
+    // none — add this back once a root page exists per locale, or scope it
+    // per-route in each [locale] segment that actually has one.
   },
   openGraph: {
     title: `${SITE_NAME} — Govt & Private Job Notifications, Results, Guides`,
@@ -43,11 +43,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className="h-full antialiased">
       <head>
-        {/* Hreflang for search engines */}
-        <link rel="alternate" hrefLang="en" href={`${SITE_URL}/en`} />
-        <link rel="alternate" hrefLang="hi" href={`${SITE_URL}/hi`} />
-        <link rel="alternate" hrefLang="x-default" href={SITE_URL} />
-
         {/* Google Analytics 4 */}
         {gaId && (
           <>

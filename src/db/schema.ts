@@ -338,6 +338,15 @@ export const postings = pgTable(
     canonicalSlug: varchar("canonical_slug", { length: 220 }),
     status: varchar("status", { length: 20 }).default("ACTIVE"),
 
+    // --- Content Quality Gate (SEO/indexability) ---
+    // Computed by src/lib/content-quality/gate.ts. 'A' = indexable (sitemap +
+    // JobPosting markup eligible), 'B' = public but not indexed (incomplete,
+    // enrichment candidate), 'C' = not published as a standalone page
+    // (non-job content, duplicate, or stale/expired-while-marked-open).
+    indexTier: varchar("index_tier", { length: 1 }).notNull().default("C"),
+    qualityMissing: jsonb("quality_missing").$type<string[]>().notNull().default([]),
+    qualityEvaluatedAt: timestamp("quality_evaluated_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

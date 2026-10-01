@@ -194,7 +194,11 @@ export async function getPostingSlugsPageForSitemap(
   return db
     .select({ slug: postings.slug, updatedAt: postings.updatedAt })
     .from(postings)
-    .where(eq(postings.reviewStatus, "APPROVED"))
+    // Sitemap = Tier A only (src/lib/content-quality/gate.ts). Approved-but-
+    // incomplete, duplicate, or non-job postings stay crawlable on-site but
+    // out of the sitemap and noindex'd — see generateMetadata in
+    // src/app/jobs/[slug]/page.tsx.
+    .where(and(eq(postings.reviewStatus, "APPROVED"), eq(postings.indexTier, "A")))
     .orderBy(postings.id)
     .offset(offset)
     .limit(limit);

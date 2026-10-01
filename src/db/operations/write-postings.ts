@@ -5,6 +5,18 @@ import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
 import { eq, and, like, sql } from "drizzle-orm";
+import { evaluateContentQuality } from "../../lib/content-quality/gate";
+
+// NOTE: NormalizedPosting currently carries only slug/title/description(+hi)/
+// examSlug/timeline — no eligibility, vacancies, location, or apply/official
+// URL. Nothing in this pipeline extracts those facts yet, so every posting
+// written here is necessarily missing most of the Content Quality Gate's
+// Tier A requirements (see src/lib/content-quality/gate.ts). That's the gate
+// working correctly, not a bug: it should hold postings at Tier B until a
+// real extraction step (not just title/description scraping) exists to fill
+// eligibility, totalVacancies, locationCity/Region, applyUrl and
+// officialNotificationUrl. Building that extraction step is the real fix —
+// this pipeline otherwise has nothing to feed the gate.
 
 /**
  * Extract year from posting title/content
@@ -209,6 +221,30 @@ export async function writePostingsToDB(
       )
       .limit(1);
 
+    const isCanonical = deduped.sources.length === 1;
+
+    // Evaluate against the gate with exactly what this pipeline currently
+    // captures — everything it doesn't extract (eligibility, vacancies,
+    // location, apply/official URLs) correctly comes through as "missing",
+    // which is why this will land almost everything in Tier B until
+    // extraction is built. See the module note above.
+    const gate = evaluateContentQuality({
+      title: deduped.primary.title,
+      totalVacancies: null,
+      eligibility: null,
+      description: deduped.primary.description || "",
+      locationCity: null,
+      locationRegion: null,
+      applyUrl: null,
+      officialNotificationUrl: null,
+      currentStage: "NOTIFICATION_OUT",
+      validThrough: null,
+      postNames: null,
+      isCanonical,
+      canonicalSlug: norm.slug,
+      slug: norm.slug,
+    });
+
     if (existingPosting.length === 0) {
       // Insert new posting with inferred relationships
       await db
@@ -220,7 +256,7 @@ export async function writePostingsToDB(
           inferredRecruitmentId,
           inferredPostId,
           confidenceScore,
-          isCanonical: deduped.sources.length === 1, // Single source = canonical
+          isCanonical, // Single source = canonical
           canonicalSlug: norm.slug,
           status: "ACTIVE",
           source: sourcePortal,
@@ -228,6 +264,9 @@ export async function writePostingsToDB(
           sourceUrl: deduped.primary.sourceUrl,
           scrapedAt: new Date(),
           reviewStatus: confidenceScore >= 70 ? "APPROVED" : "PENDING",
+          indexTier: gate.tier,
+          qualityMissing: gate.missing,
+          qualityEvaluatedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -243,9 +282,12 @@ export async function writePostingsToDB(
           inferredRecruitmentId,
           inferredPostId,
           confidenceScore,
-          isCanonical: deduped.sources.length === 1,
+          isCanonical,
           canonicalSlug: norm.slug,
           reviewStatus: confidenceScore >= 70 ? "APPROVED" : "PENDING",
+          indexTier: gate.tier,
+          qualityMissing: gate.missing,
+          qualityEvaluatedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(
