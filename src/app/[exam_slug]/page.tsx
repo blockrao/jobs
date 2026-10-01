@@ -42,9 +42,8 @@ export default async function ExamPage({ params }: Props) {
   }
 
   // Get related exams (other exams in same commission)
-  const commissions = await listCommissionsWithExams();
-  const currentComm = commissions.find((c) => c.id === exam.commission?.id);
-  const relatedExams = currentComm?.exams.filter((e) => e.id !== exam.id) || [];
+  // Use exam.commission relationship instead of fetching all commissions
+  const relatedExams = exam.commission?.exams?.filter((e) => e.id !== exam.id) || [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

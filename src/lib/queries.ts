@@ -211,7 +211,11 @@ export async function getExamBySlug(slug: string) {
   const db = getDb();
   return db.query.exams.findFirst({
     where: eq(exams.slug, slug),
-    with: { commission: true },
+    with: {
+      commission: {
+        with: { exams: true }
+      }
+    },
   });
 }
 
