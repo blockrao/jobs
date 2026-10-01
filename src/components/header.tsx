@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
 
 const NAV_LINKS = [
+  { href: "/search", label: "Search" },
   { href: "/jobs", label: "All Jobs" },
   { href: "/exams", label: "By Exam" },
   { href: "/news", label: "News" },
