@@ -9,7 +9,8 @@ import { sahisarkarijobsAdapter } from "./adapters/sahisarkarijobs";
 import { freejobalertAdapter } from "./adapters/freejobalert";
 import { deduplicate } from "./deduplicate";
 import { normalize } from "./normalize";
-import { writePostingsToDB } from "../db/operations/write-postings";
+import { writePostingsToDB as writePostingsToDBLegacy } from "../db/operations/write-postings";
+import { writePostingsToDB } from "../db/operations/write-postings-v2";
 
 const adapters: SourceAdapter[] = [
   sarkariresultAdapter,
