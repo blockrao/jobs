@@ -12,6 +12,9 @@ export function AnalyticsTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Skip if pathname is null (can happen during SSR)
+    if (!pathname) return;
+
     // Extract route information and track accordingly
     const parts = pathname.split('/').filter(Boolean);
 
