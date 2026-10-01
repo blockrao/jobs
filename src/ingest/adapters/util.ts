@@ -406,6 +406,29 @@ interface OrgRule {
   name: string;
   sector: OrgSector;
   state?: string;
+  /**
+   * This rule's regex matches a *category* of employer (any IIT/NIT/IIIT/
+   * university here), not one specific employer, so `name` is never a real
+   * organization — using it directly glues every distinct real institution
+   * matching the regex into one shared row (confirmed live: 11 unrelated
+   * universities — IIT Madras, Kokrajhar University, GSFC University, Alagappa
+   * University... — all landed on a single "Educational Institution" org row).
+   * That's the exact catch-all failure mode the Recruitment/Post identity
+   * rewrite exists to avoid, just recreated one layer up on org identity
+   * instead. Pull the real name out of the title itself rather than use
+   * `name`; `name` is kept only as the last-resort fallback.
+   */
+  extractName?: boolean;
+}
+
+// Words before the first "action" keyword in a scraped title — e.g. "AIIMS
+// Rishikesh" out of "AIIMS Rishikesh Recruitment 2026 ...". Shared by the
+// extractName rules and the final fallback below.
+function leadingOrgPhrase(title: string): string | null {
+  const m = title.match(
+    /^(.*?)\s+(?:Recruitment|Online Form|Vacanc|Notification|Apply|Admission|Admit\s*Card|Result)/i,
+  );
+  return m ? collapse(m[1]) : null;
 }
 
 // Ordered; first match wins. Covers the common recruiters seen across portals.
@@ -422,15 +445,28 @@ const ORG_RULES: OrgRule[] = [
   { re: /Railway|\bRailways\b|\bRRC\b|\bRRB\b/i, name: "Railway Recruitment Board", sector: "RAILWAY" },
   { re: /\bCRPF\b|\bBSF\b|\bITBP\b|\bCISF\b|\bSSB\b|Assam Rifles|Central Armed Police/i, name: "Central Armed Police Forces", sector: "DEFENCE" },
   { re: /Indian Army|Indian Navy|Indian Air Force|\bIAF\b|\bDRDO\b|Defence/i, name: "Indian Armed Forces", sector: "DEFENCE" },
-  { re: /\bNTPC\b|\bONGC\b|\bBHEL\b|\bGAIL\b|\bSAIL\b|\bNPCIL\b|\bCPRI\b/i, name: "Public Sector Undertaking", sector: "PSU" },
+  // PSU acronyms are each one specific, unambiguous company — unlike the old
+  // single rule that matched all seven and collapsed them into one
+  // "Public Sector Undertaking" row (confirmed live: NTPC, SAIL, CPRI all
+  // landed there). Each gets its own rule and real name instead.
+  { re: /\bNTPC\b/i, name: "NTPC Limited", sector: "PSU" },
+  { re: /\bONGC\b/i, name: "Oil and Natural Gas Corporation (ONGC)", sector: "PSU" },
+  { re: /\bBHEL\b/i, name: "Bharat Heavy Electricals Limited (BHEL)", sector: "PSU" },
+  { re: /\bGAIL\b/i, name: "GAIL (India) Limited", sector: "PSU" },
+  { re: /\bSAIL\b/i, name: "Steel Authority of India Limited (SAIL)", sector: "PSU" },
+  { re: /\bNPCIL\b/i, name: "Nuclear Power Corporation of India Limited (NPCIL)", sector: "PSU" },
+  { re: /\bCPRI\b/i, name: "Central Power Research Institute (CPRI)", sector: "PSU" },
   { re: /\bUPSSSC\b|\bUPESSC\b|Uttar Pradesh|\bUP\b/i, name: "Uttar Pradesh State Recruitment", sector: "GOVERNMENT_STATE", state: "Uttar Pradesh" },
   { re: /\bBPSC\b|Bihar/i, name: "Bihar Public Service Commission", sector: "GOVERNMENT_STATE", state: "Bihar" },
   { re: /\bRPSC\b|\bRSMSSB\b|Rajasthan/i, name: "Rajasthan Public Service Commission", sector: "GOVERNMENT_STATE", state: "Rajasthan" },
   { re: /\bMPESB\b|\bMPPSC\b|Madhya Pradesh/i, name: "Madhya Pradesh State Recruitment", sector: "GOVERNMENT_STATE", state: "Madhya Pradesh" },
   { re: /\bJKSSB\b|Jammu|Kashmir/i, name: "J&K Services Selection Board", sector: "GOVERNMENT_STATE", state: "Jammu and Kashmir" },
   { re: /Karnataka|\bKPSC\b|\bKEA\b/i, name: "Karnataka State Recruitment", sector: "GOVERNMENT_STATE", state: "Karnataka" },
-  { re: /\bAIIMS\b|Medical College|\bICMR\b/i, name: "AIIMS / Medical Institute", sector: "GOVERNMENT_CENTRAL" },
-  { re: /\bIIT\b|\bNIT\b|\bIIIT\b|University|Vidyalaya|\bIGNOU\b/i, name: "Educational Institution", sector: "GOVERNMENT_CENTRAL" },
+  // "AIIMS / Medical Institute" has the same category-not-employer problem as
+  // education below (AIIMS Delhi vs AIIMS Rishikesh vs an unrelated medical
+  // college are different employers) — extract the real name instead.
+  { re: /\bAIIMS\b|Medical College|\bICMR\b/i, name: "AIIMS / Medical Institute", sector: "GOVERNMENT_CENTRAL", extractName: true },
+  { re: /\bIIT\b|\bNIT\b|\bIIIT\b|University|Vidyalaya|\bIGNOU\b/i, name: "Educational Institution", sector: "GOVERNMENT_CENTRAL", extractName: true },
 ];
 
 /**
@@ -445,16 +481,16 @@ export function inferOrg(title: string): {
 } {
   for (const rule of ORG_RULES) {
     if (rule.re.test(title)) {
+      const extracted = rule.extractName ? leadingOrgPhrase(title) : null;
       return {
-        organizationName: rule.name,
+        organizationName: extracted && extracted.length >= 4 ? extracted.slice(0, 120) : rule.name,
         organizationSector: rule.sector,
         organizationState: rule.state,
       };
     }
   }
-  // Fallback: words before the first recruitment keyword.
-  const m = title.match(/^(.*?)\s+(?:Recruitment|Online Form|Vacanc|Notification|Apply)/i);
-  const name = collapse(m ? m[1] : title).slice(0, 120) || "Government of India";
+  // Fallback: words before the first recruitment/result/admission keyword.
+  const name = leadingOrgPhrase(title)?.slice(0, 120) || "Government of India";
   return { organizationName: name, organizationSector: "GOVERNMENT_CENTRAL" };
 }
 

@@ -42,6 +42,45 @@ function recruitmentYear(raw: NormalizedPosting): number | null {
   return match ? parseInt(match[0], 10) : null;
 }
 
+// Organizations used to be lookup-only here ("creating organizations on the
+// fly is out of scope — that's a reference-data decision"), which quietly
+// skipped every posting whose organization wasn't already seeded. That was
+// masking the real problem: inferOrg() (src/ingest/adapters/util.ts) used to
+// collapse distinct real employers (NTPC/SAIL/ONGC/... , every IIT/
+// university) into one shared category row. Now that inferOrg returns the
+// real specific name, lookup-only would just mean those specific names get
+// silently skipped instead of silently mis-bucketed — worse, not better. So
+// this resolves the same way recruitments/posts/sources already do:
+// find-by-slug, else create, racing safely via onConflictDoNothing.
+async function getOrCreateOrganization(
+  db: ReturnType<typeof getDb>,
+  slug: string,
+  name: string,
+  sector: NormalizedPosting["organizationSector"],
+  state: string | undefined,
+) {
+  const existing = await db.query.organizations.findFirst({ where: eq(organizations.slug, slug) });
+  if (existing) return existing;
+
+  const safeSlug = truncateForColumn(slug, 160);
+  const safeName = truncateForColumn(name, 200);
+  await db
+    .insert(organizations)
+    .values({
+      slug: safeSlug,
+      name: safeName,
+      sector: sector || "GOVERNMENT_CENTRAL",
+      state: state ?? null,
+    })
+    .onConflictDoNothing({ target: organizations.slug });
+
+  const created = await db.query.organizations.findFirst({ where: eq(organizations.slug, safeSlug) });
+  if (!created) {
+    throw new Error(`getOrCreateOrganization: slug "${safeSlug}" conflicted but no row found`);
+  }
+  return created;
+}
+
 async function getOrCreateSource(db: ReturnType<typeof getDb>, portalSlug: string, sampleUrl: string) {
   const existing = await db.query.sources.findFirst({ where: eq(sources.slug, portalSlug) });
   if (existing) return existing;
@@ -119,16 +158,13 @@ export async function writePostingsToDB(
       continue;
     }
 
-    const org = await db.query.organizations.findFirst({
-      where: eq(organizations.slug, norm.organizationSlug),
-    });
-    if (!org) {
-      // Creating organizations on the fly is out of scope here — that's a
-      // reference-data decision, not something a single posting should
-      // drive. Leave it for the moderation queue.
-      skipped++;
-      continue;
-    }
+    const org = await getOrCreateOrganization(
+      db,
+      norm.organizationSlug,
+      norm.organizationName,
+      norm.organizationSector,
+      norm.organizationState,
+    );
 
     const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
     const sourcePortal = deduped.sources[0]?.portal || "unknown";
