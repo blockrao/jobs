@@ -31,9 +31,35 @@ import {
   getNewlyAnnounced,
   SearchFilters,
 } from "@/lib/search-queries";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: 100 requests per minute per IP
+    const clientIp = getClientIp(request);
+    const rateLimitResult = rateLimit(clientIp, 100, 60000);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Rate limit exceeded",
+          message: "Too many requests. Please try again in a moment.",
+          retryAfter: Math.ceil(
+            (rateLimitResult.resetTime - Date.now()) / 1000
+          ),
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.ceil(
+              (rateLimitResult.resetTime - Date.now()) / 1000
+            ).toString(),
+          },
+        }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse query parameters

@@ -68,10 +68,12 @@ export async function POST(request: NextRequest) {
 /**
  * Vercel cron configuration (vercel.json):
  *
- * "crons": [{
+ * Add to crons array:
+ * {
  *   "path": "/api/cron/update-recruitment-lifecycle",
- *   "schedule": "0 */4 * * *"
- * }]
+ *   "schedule": "0 every 4 hours"
+ * }
  *
- * Runs every 4 hours
+ * Actual cron: 0 asterisk-slash-4 asterisk asterisk asterisk
+ * (Every 4 hours at minute 0)
  */
