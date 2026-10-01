@@ -291,7 +291,6 @@ export const postings = pgTable(
     locationCountry: varchar("location_country", { length: 120 }).default(
       "India",
     ),
-    locationId: integer("location_id").references(() => locations.id),
 
     salaryMin: integer("salary_min"),
     salaryMax: integer("salary_max"),
@@ -333,6 +332,29 @@ export const postings = pgTable(
       .notNull()
       .default("APPROVED"),
 
+    // Real FKs onto the provenance layer (sources/sourceDocuments, declared
+    // further down this file) — these existed on the live table before this
+    // pass but were never declared here, so write-postings-v2.ts's attempt
+    // to persist them was silently a no-op (Drizzle only writes columns it
+    // knows about). Verified against live information_schema.
+    sourceId: integer("source_id").references(() => sources.id),
+    sourceDocumentId: integer("source_document_id").references(
+      () => sourceDocuments.id,
+    ),
+
+    // --- Editorial/publishing workflow (pre-existing, not driven by the
+    // ingestion pipeline rewritten this session — restored here after being
+    // found live on information_schema; see publishing-queries.ts) ---
+    dataCompletenessStatus: varchar("data_completeness_status", {
+      length: 40,
+    }),
+    publishingStatus: varchar("publishing_status", { length: 40 }),
+    verificationStatus: varchar("verification_status", { length: 40 }),
+    flaggedForReview: boolean("flagged_for_review"),
+    reviewNotes: text("review_notes"),
+    sourceConfidence: smallint("source_confidence"),
+    lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
+
     // Resolution onto the canonical entity layer (recruitments/posts,
     // declared further down this file). Set by the resolver in
     // src/ingest/resolve.ts using a real identity key, not kept here as a
@@ -361,6 +383,15 @@ export const postings = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+
+    // Deliberately NOT declared here, though they're real live columns
+    // (verified against information_schema): official_application_url,
+    // source_type, is_expired, expiration_reason, expired_at, search_text
+    // (tsvector — not a plain Drizzle column type), announcement_state,
+    // closing_state, urgency_score, days_to_closing. Nothing in this
+    // session's pipeline or restored code reads/writes them, and guessing
+    // their intended semantics wrong would be worse than leaving them out —
+    // add them with real usage when something actually needs them.
   },
   (table) => [
     uniqueIndex("postings_slug_idx").on(table.slug),
@@ -369,7 +400,6 @@ export const postings = pgTable(
     index("postings_stage_idx").on(table.currentStage),
     index("postings_kind_idx").on(table.kind),
     index("postings_review_idx").on(table.reviewStatus),
-    index("postings_location_id_idx").on(table.locationId),
     // Phase 3: v2 linkage indexes
     index("postings_inferred_recruitment_idx").on(table.inferredRecruitmentId),
     index("postings_inferred_post_idx").on(table.inferredPostId),
@@ -523,10 +553,24 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
   articleCategories: many(articleCategories),
 }));
 
+// `locations` has no postings relation: postings store location as free-text
+// (locationCity/locationRegion/locationCountry), not a locations FK — that
+// column never existed on the live table (see the comment above `postings`
+// for how this was found). `locations` is only referenced by `vacancies`,
+// in the canonical layer below.
 export const locationsRelations = relations(locations, ({ many }) => ({
-  postings: many(postings),
+  vacancies: many(vacancies),
 }));
 
+// Note: no `source`/`sourceDocument` entries here even though
+// postings.sourceId/sourceDocumentId are real FKs — `sources` and
+// `sourceDocuments` are declared later in this file (the canonical entity
+// layer, below), and relations() callbacks run eagerly at module-eval time,
+// so referencing them here would hit a temporal-dead-zone ReferenceError.
+// The FK columns themselves (declared with a lazy `.references(() => ...)`
+// arrow, safe regardless of declaration order) are enough for querying via
+// `eq(postings.sourceId, ...)`; a relational `with: { source: true }`
+// accessor can be added once this file's declaration order is cleaned up.
 export const postingsRelations = relations(postings, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [postings.organizationId],
@@ -535,10 +579,6 @@ export const postingsRelations = relations(postings, ({ one, many }) => ({
   exam: one(exams, {
     fields: [postings.examId],
     references: [exams.id],
-  }),
-  location: one(locations, {
-    fields: [postings.locationId],
-    references: [locations.id],
   }),
   updates: many(postingUpdates),
   postingCategories: many(postingCategories),
