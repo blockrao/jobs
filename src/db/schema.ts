@@ -9,6 +9,7 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -300,6 +301,14 @@ export const postings = pgTable(
       .notNull()
       .default("APPROVED"),
 
+    // Phase 3: Link to v2 Post (for canonical routes)
+    inferredRecruitmentId: integer("inferred_recruitment_id"),
+    inferredPostId: integer("inferred_post_id"),
+    confidenceScore: integer("confidence_score"),
+    isCanonical: boolean("is_canonical").default(false),
+    canonicalSlug: varchar("canonical_slug", { length: 220 }),
+    status: varchar("status", { length: 20 }).default("ACTIVE"),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -315,6 +324,11 @@ export const postings = pgTable(
     index("postings_kind_idx").on(table.kind),
     index("postings_review_idx").on(table.reviewStatus),
     index("postings_location_id_idx").on(table.locationId),
+    // Phase 3: v2 linkage indexes
+    index("postings_inferred_recruitment_idx").on(table.inferredRecruitmentId),
+    index("postings_inferred_post_idx").on(table.inferredPostId),
+    index("postings_status_idx").on(table.status),
+    index("postings_confidence_idx").on(table.confidenceScore),
     // Dedup key for ingestion upserts. Partial unique (external_id can be
     // null for manual rows, which are excluded from the constraint).
     uniqueIndex("postings_source_external_idx")

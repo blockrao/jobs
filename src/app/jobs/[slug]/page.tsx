@@ -94,7 +94,7 @@ export default async function JobPage({ params }: Props) {
   const timeline = [...posting.updates].sort(
     (a, b) => a.eventDate.getTime() - b.eventDate.getTime(),
   );
-  const relatedArticles = posting.postingArticles.map((pa) => pa.article);
+  const relatedArticles = posting.postingArticles.map((pa: any) => pa.article);
   const kindPath = posting.kind === "GOVERNMENT" ? "GOVERNMENT" : "PRIVATE";
 
   const schema = jsonLdGraph(
@@ -128,6 +128,22 @@ export default async function JobPage({ params }: Props) {
           Home
         </Link>{" "}
         /{" "}
+        {posting.canonicalPosition && (
+          <>
+            <Link href={`/positions/${posting.canonicalPosition.slug}`} className="hover:underline">
+              {posting.canonicalPosition.name}
+            </Link>
+            {" / "}
+          </>
+        )}
+        {posting.canonicalRecruitment && (
+          <>
+            <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="hover:underline">
+              {posting.canonicalRecruitment.name}
+            </Link>
+            {" / "}
+          </>
+        )}
         <Link href={`/jobs?kind=${kindPath}`} className="hover:underline">
           {KIND_LABELS[posting.kind]} Jobs
         </Link>{" "}
@@ -335,7 +351,7 @@ export default async function JobPage({ params }: Props) {
         <section className="mt-10">
           <h2 className="text-lg font-semibold">Related Guides</h2>
           <ul className="mt-3 space-y-2">
-            {relatedArticles.map((article) => (
+            {relatedArticles.map((article: any) => (
               <li key={article.id}>
                 <Link
                   href={`/articles/${article.slug}`}
@@ -353,6 +369,32 @@ export default async function JobPage({ params }: Props) {
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Related Information</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Canonical Position Hub - if v2 post is linked */}
+          {posting.canonicalPosition && (
+            <Link
+              href={`/positions/${posting.canonicalPosition.slug}`}
+              className="rounded-lg border border-blue-200 bg-blue-50 p-4 hover:bg-blue-100"
+            >
+              <div className="font-semibold text-blue-900">📍 {posting.canonicalPosition.name}</div>
+              <div className="text-sm text-blue-700">
+                View all recruitment campaigns for this position
+              </div>
+            </Link>
+          )}
+
+          {/* Canonical Recruitment Hub - if v2 recruitment is linked */}
+          {posting.canonicalRecruitment && (
+            <Link
+              href={`/recruitments/${posting.canonicalRecruitment.slug}`}
+              className="rounded-lg border border-green-200 bg-green-50 p-4 hover:bg-green-100"
+            >
+              <div className="font-semibold text-green-900">🎯 {posting.canonicalRecruitment.name}</div>
+              <div className="text-sm text-green-700">
+                View recruitment timeline and all posts
+              </div>
+            </Link>
+          )}
+
           {/* Organization Hub */}
           <Link
             href={`/organizations/${org.slug}`}
