@@ -261,6 +261,8 @@ export const postings = pgTable(
     source: varchar("source", { length: 60 }).notNull().default("manual"),
     externalId: varchar("external_id", { length: 200 }),
     sourceUrl: text("source_url"),
+    // Every portal this posting was seen on (multi-portal provenance).
+    sourcePortals: jsonb("source_portals").$type<string[]>().notNull().default([]),
     ingestedAt: timestamp("ingested_at", { withTimezone: true }),
     confidence: integer("confidence"),
     reviewStatus: reviewStatusEnum("review_status")
@@ -286,6 +288,13 @@ export const postings = pgTable(
     uniqueIndex("postings_source_external_idx")
       .on(table.source, table.externalId)
       .where(sql`${table.externalId} is not null`),
+    // Read-path + search indexes.
+    index("postings_date_posted_idx").on(table.datePosted),
+    index("postings_valid_through_idx").on(table.validThrough),
+    index("postings_fts_idx").using(
+      "gin",
+      sql`to_tsvector('english', coalesce(${table.title}, '') || ' ' || coalesce(${table.description}, ''))`,
+    ),
   ],
 );
 
