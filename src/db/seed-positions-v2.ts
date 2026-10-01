@@ -1,5 +1,5 @@
 import { getDbV2 } from "./index";
-import { positions, qualifications } from "./schema-v2";
+import { positions, qualifications } from "./schema";
 
 const db = getDbV2();
 

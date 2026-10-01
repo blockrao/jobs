@@ -24,19 +24,18 @@ function buildBreadcrumbSchema(items: { name: string; path: string }[]): object 
   };
 }
 
-function buildExamSchema(exam: any, organization: any): object {
+function buildExamSchema(exam: any, commission: any): object {
   return {
     "@context": "https://schema.org",
     "@type": "EducationalOccupationalCredential",
-    name: exam.name,
-    description: exam.description || `${exam.name} government exam`,
+    name: exam.label,
+    description: exam.description || `${exam.label} government exam`,
     url: absoluteUrl(`/exams/${exam.slug}`),
     provider: {
       "@type": "Organization",
-      name: organization.name,
-      url: absoluteUrl(`/organizations/${organization.slug}`),
+      name: commission.name,
+      url: absoluteUrl(`/commissions/${commission.slug}`),
     },
-    ...(exam.frequency && { educationalLevel: exam.frequency }),
     inLanguage: "en-IN",
   };
 }
@@ -54,9 +53,9 @@ export async function generateMetadata({
   if (!examData) return {};
 
   const exam = examData.exam;
-  const title = `${exam.name} - Exam Pattern, Syllabus & Recruitment`;
+  const title = `${exam.label} - Eligibility, Salary & Recruitment`;
   const description = exam.description ||
-    `${exam.name}: Detailed exam pattern, syllabus, positions recruited, notification links, and all related government recruitment campaigns.`;
+    `${exam.label}: Eligibility, positions recruited, notification links, and all related government recruitment campaigns.`;
 
   return {
     title,
@@ -80,7 +79,7 @@ export default async function ExamPage({ params }: Props) {
   }
 
   const exam = examData.exam;
-  const organization = examData.organization;
+  const commission = examData.commission;
 
   const [relatedPositions, recruitmentDetails] = await Promise.all([
     getExamRelatedPositions(exam.id),
@@ -89,11 +88,11 @@ export default async function ExamPage({ params }: Props) {
 
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Home", path: "/" },
-    { name: organization.name, path: `/organizations/${organization.slug}` },
-    { name: exam.name, path: `/exams/${exam.slug}` },
+    { name: commission.name, path: `/commissions/${commission.slug}` },
+    { name: exam.label, path: `/exams/${exam.slug}` },
   ]);
 
-  const examSchema = buildExamSchema(exam, organization);
+  const examSchema = buildExamSchema(exam, commission);
 
   const jsonLdScripts = [breadcrumbSchema, examSchema];
 
@@ -109,22 +108,14 @@ export default async function ExamPage({ params }: Props) {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">
-          {exam.name}
-          {exam.shortName && <span className="text-2xl text-gray-600 ml-2">({exam.shortName})</span>}
-        </h1>
+        <h1 className="text-4xl font-bold mb-2">{exam.label}</h1>
         <div className="flex flex-wrap gap-4 text-sm">
           <Link
-            href={`/organizations/${organization.slug}`}
+            href={`/commissions/${commission.slug}`}
             className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full hover:underline"
           >
-            {organization.name}
+            {commission.name}
           </Link>
-          {exam.frequency && (
-            <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full">
-              Frequency: {exam.frequency}
-            </span>
-          )}
         </div>
       </div>
 
@@ -135,28 +126,16 @@ export default async function ExamPage({ params }: Props) {
         </div>
       )}
 
+      {/* Eligibility */}
+      {exam.eligibility && (
+        <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h2 className="text-2xl font-bold mb-4">Eligibility</h2>
+          <p className="text-sm whitespace-pre-wrap">{exam.eligibility}</p>
+        </div>
+      )}
+
       {/* Tabs-like sections */}
       <div className="space-y-8">
-        {/* Exam Pattern */}
-        {exam.examPattern && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">Exam Pattern</h2>
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg whitespace-pre-wrap text-sm">
-              {exam.examPattern}
-            </div>
-          </div>
-        )}
-
-        {/* Syllabus */}
-        {exam.syllabus && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">Syllabus</h2>
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg whitespace-pre-wrap text-sm">
-              {exam.syllabus}
-            </div>
-          </div>
-        )}
-
         {/* Positions Recruited */}
         {relatedPositions.length > 0 && (
           <div className="mb-8">
@@ -237,7 +216,7 @@ export default async function ExamPage({ params }: Props) {
       <div className="mt-12 pt-6 border-t text-sm text-gray-600">
         <Link href="/" className="hover:underline">Home</Link>
         {" / "}
-        <span>{exam.name}</span>
+        <span>{exam.label}</span>
       </div>
     </div>
   );

@@ -17,11 +17,10 @@ function buildBreadcrumbSchema(items: { name: string; path: string }[], locale: 
   };
 }
 
-function buildExamSchema(exam: any, organization: any, locale: string): object {
+function buildExamSchema(exam: any, commission: any, locale: string): object {
   const labelHi = (exam as any).labelHi;
   const descriptionHi = (exam as any).descriptionHi;
-  const nameHi = (organization as any).nameHi;
-  const name = locale === "hi" ? labelHi || exam.name : exam.name;
+  const name = locale === "hi" ? labelHi || exam.label : exam.label;
   const description = locale === "hi" ? descriptionHi || exam.description : exam.description;
 
   return {
@@ -32,10 +31,9 @@ function buildExamSchema(exam: any, organization: any, locale: string): object {
     url: absoluteUrl(`/${locale}/exams/${exam.slug}`),
     provider: {
       "@type": "Organization",
-      name: locale === "hi" ? organization.nameHi || organization.name : organization.name,
-      url: absoluteUrl(`/${locale}/organizations/${organization.slug}`),
+      name: locale === "hi" ? commission.nameHi || commission.name : commission.name,
+      url: absoluteUrl(`/${locale}/commissions/${commission.slug}`),
     },
-    ...(exam.frequency && { educationalLevel: exam.frequency }),
     inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
   };
 }
@@ -55,11 +53,11 @@ export async function generateMetadata({
   const exam = examData.exam;
   const labelHi = exam.labelHi;
   const descriptionHi = exam.descriptionHi;
-  const name = locale === "hi" ? labelHi || exam.name : exam.name;
-  const title = `${name} - Exam Pattern, Syllabus & Recruitment`;
+  const name = locale === "hi" ? labelHi || exam.label : exam.label;
+  const title = `${name} - Eligibility, Salary & Recruitment`;
   const description = locale === "hi" ? descriptionHi : exam.description;
   const metaDescription = description ||
-    `${name}: Detailed exam pattern, syllabus, positions recruited, notification links, and all related government recruitment campaigns.`;
+    `${name}: Eligibility, positions recruited, notification links, and all related government recruitment campaigns.`;
 
   return {
     title,
@@ -89,17 +87,17 @@ export default async function ExamPage({ params }: Props) {
   }
 
   const exam = examData.exam;
-  const organization = examData.organization;
+  const commission = examData.commission;
 
   const labelHi = (exam as any).labelHi;
   const descriptionHi = (exam as any).descriptionHi;
   const eligibilityHi = (exam as any).eligibilityHi;
-  const nameHi = (organization as any).nameHi;
+  const commissionNameHi = (commission as any).nameHi;
 
-  const displayExamName = locale === "hi" ? labelHi || exam.name : exam.name;
+  const displayExamName = locale === "hi" ? labelHi || exam.label : exam.label;
   const displayExamDescription = locale === "hi" ? descriptionHi : exam.description;
   const displayExamEligibility = locale === "hi" ? eligibilityHi : (exam as any).eligibility;
-  const displayOrgName = locale === "hi" ? nameHi || organization.name : organization.name;
+  const displayCommissionName = locale === "hi" ? commissionNameHi || commission.name : commission.name;
 
   const [relatedPositions, recruitmentDetails] = await Promise.all([
     getExamRelatedPositions(exam.id),
@@ -108,11 +106,11 @@ export default async function ExamPage({ params }: Props) {
 
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: locale === "hi" ? "होम" : "Home", path: `/${locale}` },
-    { name: displayOrgName, path: `/${locale}/organizations/${organization.slug}` },
+    { name: displayCommissionName, path: `/${locale}/commissions/${commission.slug}` },
     { name: displayExamName, path: `/${locale}/exams/${exam.slug}` },
   ], locale);
 
-  const examSchema = buildExamSchema(exam, organization, locale);
+  const examSchema = buildExamSchema(exam, commission, locale);
 
   const jsonLdScripts = [breadcrumbSchema, examSchema];
 
@@ -128,22 +126,14 @@ export default async function ExamPage({ params }: Props) {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">
-          {displayExamName}
-          {exam.shortName && <span className="text-2xl text-gray-600 ml-2">({exam.shortName})</span>}
-        </h1>
+        <h1 className="text-4xl font-bold mb-2">{displayExamName}</h1>
         <div className="flex flex-wrap gap-4 text-sm">
           <Link
-            href={`/${locale}/organizations/${organization.slug}`}
+            href={`/${locale}/commissions/${commission.slug}`}
             className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full hover:underline"
           >
-            {displayOrgName}
+            {displayCommissionName}
           </Link>
-          {exam.frequency && (
-            <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full">
-              {locale === "hi" ? "आवृत्ति" : "Frequency"}: {exam.frequency}
-            </span>
-          )}
         </div>
       </div>
 
@@ -156,26 +146,6 @@ export default async function ExamPage({ params }: Props) {
 
       {/* Tabs-like sections */}
       <div className="space-y-8">
-        {/* Exam Pattern */}
-        {exam.examPattern && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "परीक्षा पैटर्न" : "Exam Pattern"}</h2>
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg whitespace-pre-wrap text-sm">
-              {exam.examPattern}
-            </div>
-          </div>
-        )}
-
-        {/* Syllabus */}
-        {exam.syllabus && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "पाठ्यक्रम" : "Syllabus"}</h2>
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg whitespace-pre-wrap text-sm">
-              {exam.syllabus}
-            </div>
-          </div>
-        )}
-
         {/* Eligibility */}
         {displayExamEligibility && (
           <div className="mb-8">

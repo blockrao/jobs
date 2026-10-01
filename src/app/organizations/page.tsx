@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDbV2 } from "@/db";
-import { organizations, recruitments, exams } from "@/db/schema-v2";
+import { getDb } from "@/db";
+import { organizations, recruitments } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { asc, eq } from "drizzle-orm";
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function getAllOrganizations() {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return [];
 
   return db.query.organizations.findMany({
@@ -29,18 +29,23 @@ async function getAllOrganizations() {
 }
 
 async function getOrganizationStats(organizationId: number) {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return { recruitmentCount: 0, examCount: 0 };
 
+  // An exam doesn't belong to one organization (it belongs to the commission
+  // that conducts it, e.g. SSC, UPSC) — organizations only connect to exams
+  // indirectly, through the recruitments that use them. So "exam count" here
+  // is the number of distinct exams this org has recruited through, not
+  // exams the org owns.
   const recruitmentsList = await db.query.recruitments.findMany({
     where: eq(recruitments.organizationId, organizationId),
   });
 
-  const examsList = await db.query.exams.findMany({
-    where: eq(exams.organizationId, organizationId),
-  });
+  const examCount = new Set(
+    recruitmentsList.map((r) => r.examId).filter((id): id is number => id != null),
+  ).size;
 
-  return { recruitmentCount: recruitmentsList.length, examCount: examsList.length };
+  return { recruitmentCount: recruitmentsList.length, examCount };
 }
 
 const ROLE_LABELS: Record<string, string> = {

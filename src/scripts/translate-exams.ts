@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "@/db";
-import { exams } from "@/db/schema-v2";
+import { exams } from "@/db/schema";
 import { isNull, eq } from "drizzle-orm";
 
 const client = new Anthropic({
@@ -35,7 +35,7 @@ Format your response as a JSON array with these exact keys per object:
 
 interface ExamRecord {
   id: number;
-  name: string;
+  label: string;
   description: string | null;
   [key: string]: any;
 }
@@ -46,7 +46,7 @@ async function translateExamBatch(
   const examsJson = JSON.stringify(
     examsList.map((exam) => ({
       id: exam.id,
-      name: exam.name,
+      name: exam.label,
       description: exam.description,
     })),
     null,

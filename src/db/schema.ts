@@ -4,6 +4,7 @@ import {
   text,
   varchar,
   integer,
+  smallint,
   timestamp,
   pgEnum,
   jsonb,
@@ -200,37 +201,39 @@ export const categories = pgTable(
   (table) => [uniqueIndex("categories_slug_idx").on(table.slug)],
 );
 
-// ---------- Locations (geographic hierarchy: state → district → city) ----------
-
+// ---------- Locations (flat state/UT/national reference list) ----------
+//
+// Verified against live information_schema: the table is a flat list keyed
+// by (name, slug, type) — not the state/district/city hierarchy with
+// stateCode/stateName/latitude/longitude/hierarchyPath/updatedAt columns
+// this file used to declare. Those columns don't exist in the live DB; the
+// declaration had drifted (same class of bug as the pre-rewrite postings
+// writer), it just happened not to break a build until something tried to
+// insert against the real columns. Hindi name columns exist per level
+// (state/district/city) for when the table grows district/city rows; today
+// only state/UT/national rows exist, so only stateNameHi is populated.
+// `type` is plain varchar at the DB level (not a Postgres enum) — verified
+// against information_schema — so it's typed here as a TS string union
+// instead of pgEnum, which would assert a DB-level enum that doesn't exist.
 export const locations = pgTable(
   "locations",
   {
     id: serial("id").primaryKey(),
-    stateCode: varchar("state_code", { length: 2 }).notNull(),
-    stateName: varchar("state_name", { length: 80 }).notNull(),
-    // Hindi translations for geographic names
-    stateNameHi: varchar("state_name_hi", { length: 80 }),
-    districtName: varchar("district_name", { length: 100 }),
-    districtNameHi: varchar("district_name_hi", { length: 100 }),
-    cityName: varchar("city_name", { length: 100 }),
-    cityNameHi: varchar("city_name_hi", { length: 100 }),
-    latitude: varchar("latitude", { length: 20 }), // Store as string to avoid float precision issues
-    longitude: varchar("longitude", { length: 20 }),
-    slug: varchar("slug", { length: 255 }).notNull().unique(),
-    hierarchyPath: varchar("hierarchy_path", { length: 255 }),
-    createdAt: timestamp("created_at", { withTimezone: true })
+    name: varchar("name", { length: 120 }).notNull(),
+    slug: varchar("slug", { length: 120 }).notNull().unique(),
+    type: varchar("type", { length: 60 })
       .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$type<"state" | "union_territory" | "national">(),
+    stateNameHi: varchar("state_name_hi", { length: 80 }),
+    districtNameHi: varchar("district_name_hi", { length: 100 }),
+    cityNameHi: varchar("city_name_hi", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [
     uniqueIndex("locations_slug_idx").on(table.slug),
-    index("locations_state_code_idx").on(table.stateCode),
-    index("locations_state_name_idx").on(table.stateName),
-    index("locations_district_idx").on(table.stateCode, table.districtName),
-    index("locations_city_idx").on(table.stateCode, table.districtName, table.cityName),
+    index("locations_type_idx").on(table.type),
   ],
 );
 
@@ -330,9 +333,14 @@ export const postings = pgTable(
       .notNull()
       .default("APPROVED"),
 
-    // Phase 3: Link to v2 Post (for canonical routes)
-    inferredRecruitmentId: integer("inferred_recruitment_id"),
-    inferredPostId: integer("inferred_post_id"),
+    // Resolution onto the canonical entity layer (recruitments/posts,
+    // declared further down this file). Set by the resolver in
+    // src/ingest/resolve.ts using a real identity key, not kept here as a
+    // bare unvalidated integer the way it was before this file was unified.
+    inferredRecruitmentId: integer("inferred_recruitment_id").references(
+      () => recruitments.id,
+    ),
+    inferredPostId: integer("inferred_post_id").references(() => posts.id),
     confidenceScore: integer("confidence_score"),
     isCanonical: boolean("is_canonical").default(false),
     canonicalSlug: varchar("canonical_slug", { length: 220 }),
@@ -590,3 +598,312 @@ export const articleCategoriesRelations = relations(
     }),
   }),
 );
+
+// =====================================================================
+// Canonical entity layer: Organization -> Recruitment -> Post -> Vacancy/
+// Eligibility, plus the provenance tables (sources/sourceDocuments) and
+// reference tables (qualifications/positions) feeding it.
+//
+// This used to live in a separate schema-v2.ts, maintained by hand
+// alongside this file as a second, independent description of the same
+// Postgres database. The two drifted: column names didn't match (this
+// file's `organizations.websiteUrl` vs. the old file's `website`),
+// `recruitments.organizationId`/`examId` were foreign-keyed to orphaned
+// `organizations_new`/`exams_new` tables (16/15 rows, dead since an
+// earlier migration was never finished) instead of the real tables below,
+// and several enum value sets didn't match what Postgres actually had
+// (domicile_type in particular — live values are ANY/STATE/DISTRICT/
+// UNION_TERRITORY/SPECIFIC, not the ANY/STATE_SPECIFIC/
+// UNION_TERRITORY_SPECIFIC/NATIONAL_ONLY the old file declared).
+//
+// Every table and enum below was checked against live
+// information_schema/pg_enum, not copied from either prior file. See
+// ARCHITECTURE-REDESIGN.md for the full audit. recruitments/posts/
+// positions/eligibilities/vacancies/selection_processes were truncated as
+// part of this change — they were populated by a one-off backfill script
+// that bulk-matched postings onto hand-authored generic "position family"
+// templates (keyword substring matching, not extraction), producing
+// cross-organization catch-all buckets. The table shapes were sound; the
+// data in them wasn't.
+// =====================================================================
+
+export const sourceAuthorityEnum = pgEnum("source_authority", [
+  "OFFICIAL", // SSC/UPSC/state-PSC site, etc. — primary source
+  "TRUSTED_SECONDARY", // Employment News, a portal republishing an official notice
+  "AGGREGATED", // Multiple sources combined, no single authoritative one
+]);
+
+export const qualificationLevelEnum = pgEnum("qualification_level", [
+  "SECONDARY",
+  "SENIOR_SECONDARY",
+  "BACHELOR",
+  "MASTER",
+  "PHD",
+]);
+
+export const positionCategoryEnum = pgEnum("position_category", [
+  "POLICE",
+  "ADMINISTRATIVE",
+  "BANKING",
+  "TEACHING",
+  "ENGINEERING",
+  "MEDICAL",
+  "DEFENCE",
+  "RAILWAY",
+  "POSTAL",
+  "CUSTOMS",
+  "TAX",
+  "JUDICIAL",
+  "LEGAL",
+  "PSU",
+  "OTHER",
+]);
+
+// Live values only — do not add APPLICATION_CLOSED/EXAM_HELD etc. without
+// an ALTER TYPE migration first; the old schema-v2.ts declared those and
+// they were never applied to the live enum.
+export const recruitmentStatusEnum = pgEnum("recruitment_status", [
+  "UPCOMING",
+  "ACTIVE",
+  "RESULTS",
+  "ARCHIVED",
+]);
+
+// Live values only — EX_SERVICEMAN/PH were declared in the old file but
+// never applied live.
+export const vacancyCategoryTypeEnum = pgEnum("vacancy_category_type", [
+  "GENERAL",
+  "SC",
+  "ST",
+  "OBC",
+  "EWS",
+]);
+
+// Live values only — OTHERS was declared in the old file but never applied.
+export const genderEnum = pgEnum("gender", ["ANY", "MALE", "FEMALE"]);
+
+export const citizenshipEnum = pgEnum("citizenship", ["INDIAN", "ANY"]);
+
+// Live values only — materially different from the old file's declaration
+// (ANY/STATE_SPECIFIC/UNION_TERRITORY_SPECIFIC/NATIONAL_ONLY, none of
+// which match what's actually in Postgres).
+export const domicileTypeEnum = pgEnum("domicile_type", [
+  "ANY",
+  "STATE",
+  "DISTRICT",
+  "UNION_TERRITORY",
+  "SPECIFIC",
+]);
+
+export const sources = pgTable("sources", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 160 }).notNull(),
+  name: varchar("name", { length: 200 }).notNull(),
+  url: text("url").notNull(),
+  authority: sourceAuthorityEnum("authority").notNull(),
+  isOfficial: boolean("is_official").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const sourceDocuments = pgTable("source_documents", {
+  id: serial("id").primaryKey(),
+  sourceId: integer("source_id").notNull().references(() => sources.id),
+  sourceUrl: text("source_url"),
+  documentType: varchar("document_type", { length: 80 }),
+  externalId: varchar("external_id", { length: 200 }),
+  contentHash: varchar("content_hash", { length: 64 }),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Added alongside this rewrite — the raw capture every extraction step
+  // depends on. Declared in the old schema-v2.ts but never actually
+  // migrated onto the live table, so nothing was ever persisted here.
+  rawContent: text("raw_content"),
+  extractedAt: timestamp("extracted_at", { withTimezone: true }),
+  extractionMethod: varchar("extraction_method", { length: 80 }),
+});
+
+export const qualifications = pgTable("qualifications", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  slug: varchar("slug", { length: 120 }).notNull(),
+  level: qualificationLevelEnum("level").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const positions = pgTable("positions", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  slug: varchar("slug", { length: 120 }).notNull(),
+  category: positionCategoryEnum("category").notNull(),
+  description: text("description"),
+  typicalQualificationId: integer("typical_qualification_id").references(() => qualifications.id),
+  typicalAgeMin: smallint("typical_age_min"),
+  typicalAgeMax: smallint("typical_age_max"),
+  typicalSalaryMin: integer("typical_salary_min"),
+  typicalSalaryMax: integer("typical_salary_max"),
+  careerPath: jsonb("career_path").$type<Array<{ level: number; title: string }>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// THE canonical hiring-round entity — one row per actual announced
+// recruitment. Identity key for resolution (see src/ingest/resolve.ts):
+// (organizationId, officialNotificationNumber) when available, falling
+// back to (organizationId, examId, year) + title similarity. Never
+// "nearest existing recruitment by substring match" — that's what
+// produced the corrupted data this replaces.
+export const recruitments = pgTable(
+  "recruitments",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id),
+    examId: integer("exam_id").references(() => exams.id),
+    year: smallint("year").notNull(),
+    name: varchar("name", { length: 220 }).notNull(),
+    slug: varchar("slug", { length: 220 }).notNull(),
+    status: recruitmentStatusEnum("status").notNull().default("UPCOMING"),
+    notificationDate: timestamp("notification_date", { withTimezone: true }),
+    applicationStartDate: timestamp("application_start_date", { withTimezone: true }),
+    applicationEndDate: timestamp("application_end_date", { withTimezone: true }),
+    examDate: timestamp("exam_date", { withTimezone: true }),
+    resultDate: timestamp("result_date", { withTimezone: true }),
+    totalVacancies: integer("total_vacancies"),
+    description: text("description"),
+    notificationUrl: text("notification_url"),
+    // The real identity-key field. Government recruitments are published
+    // with a reference number (e.g. "No. 22/2026-RC") that's far more
+    // reliable than matching on year+title. Nullable because not every
+    // source captures it, but it's preferred whenever present.
+    officialNotificationNumber: varchar("official_notification_number", { length: 200 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Mirrors the DB-level partial unique index added in this migration —
+    // enforced in Postgres, not just in application code.
+    uniqueIndex("recruitments_org_notification_idx")
+      .on(table.organizationId, table.officialNotificationNumber)
+      .where(sql`${table.officialNotificationNumber} is not null`),
+  ],
+);
+
+// One specific role inside a recruitment — this is where the real job
+// title lives (e.g. "Research Associate III"), never the scraped headline.
+// Identity key: (recruitmentId, lower(name)), enforced at the DB level.
+export const posts = pgTable(
+  "posts",
+  {
+    id: serial("id").primaryKey(),
+    recruitmentId: integer("recruitment_id").notNull().references(() => recruitments.id, { onDelete: "cascade" }),
+    positionId: integer("position_id").notNull().references(() => positions.id),
+    name: varchar("name", { length: 200 }).notNull(),
+    slug: varchar("slug", { length: 200 }).notNull(),
+    description: text("description"),
+    salaryMin: integer("salary_min"),
+    salaryMax: integer("salary_max"),
+    payLevel: jsonb("pay_level").$type<Record<string, unknown>>(),
+    vacancyTotal: integer("vacancy_total"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("posts_recruitment_name_idx").on(table.recruitmentId, sql`lower(${table.name})`),
+  ],
+);
+
+// Structured eligibility, child of Post — NOT a prose blob. Live FK is
+// post_id (the old schema-v2.ts declared positionId, which doesn't exist
+// on this table).
+export const eligibilities = pgTable("eligibilities", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  qualificationId: integer("qualification_id").references(() => qualifications.id),
+  ageMin: smallint("age_min"),
+  ageMax: smallint("age_max"),
+  experienceYearsMin: smallint("experience_years_min"),
+  experienceYearsMax: smallint("experience_years_max"),
+  domicileType: domicileTypeEnum("domicile_type"),
+  domicileValue: jsonb("domicile_value"),
+  physicalRequirements: text("physical_requirements"),
+  skillsRequired: jsonb("skills_required").$type<string[]>(),
+  citizenship: citizenshipEnum("citizenship"),
+  otherConditions: jsonb("other_conditions"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const selectionProcessTypeEnum = pgEnum("selection_process_type", [
+  "EXAM",
+  "DIRECT",
+  "INTERVIEW",
+  "PHYSICAL_TEST",
+  "SKILL_TEST",
+  "MERIT",
+  "MEDICAL",
+  "DOCUMENT_VERIFICATION",
+  "HYBRID",
+]);
+
+export const selectionProcesses = pgTable("selection_processes", {
+  id: serial("id").primaryKey(),
+  recruitmentId: integer("recruitment_id").notNull().references(() => recruitments.id, { onDelete: "cascade" }),
+  processType: selectionProcessTypeEnum("process_type").notNull(),
+  stages: jsonb("stages").$type<string[]>(),
+  details: jsonb("details"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const vacancies = pgTable("vacancies", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  locationId: integer("location_id").references(() => locations.id),
+  categoryType: vacancyCategoryTypeEnum("category_type").notNull(),
+  gender: genderEnum("gender"),
+  count: integer("count").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const sourcesRelations = relations(sources, ({ many }) => ({
+  documents: many(sourceDocuments),
+}));
+
+export const sourceDocumentsRelations = relations(sourceDocuments, ({ one }) => ({
+  source: one(sources, { fields: [sourceDocuments.sourceId], references: [sources.id] }),
+}));
+
+export const positionsRelations = relations(positions, ({ one, many }) => ({
+  typicalQualification: one(qualifications, {
+    fields: [positions.typicalQualificationId],
+    references: [qualifications.id],
+  }),
+  posts: many(posts),
+}));
+
+export const recruitmentsRelations = relations(recruitments, ({ one, many }) => ({
+  organization: one(organizations, { fields: [recruitments.organizationId], references: [organizations.id] }),
+  exam: one(exams, { fields: [recruitments.examId], references: [exams.id] }),
+  posts: many(posts),
+  selectionProcesses: many(selectionProcesses),
+}));
+
+export const selectionProcessesRelations = relations(selectionProcesses, ({ one }) => ({
+  recruitment: one(recruitments, { fields: [selectionProcesses.recruitmentId], references: [recruitments.id] }),
+}));
+
+export const postsRelations = relations(posts, ({ one, many }) => ({
+  recruitment: one(recruitments, { fields: [posts.recruitmentId], references: [recruitments.id] }),
+  position: one(positions, { fields: [posts.positionId], references: [positions.id] }),
+  eligibilities: many(eligibilities),
+  vacancies: many(vacancies),
+}));
+
+export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
+  post: one(posts, { fields: [eligibilities.postId], references: [posts.id] }),
+  qualification: one(qualifications, { fields: [eligibilities.qualificationId], references: [qualifications.id] }),
+}));
+
+export const vacanciesRelations = relations(vacancies, ({ one }) => ({
+  post: one(posts, { fields: [vacancies.postId], references: [posts.id] }),
+  location: one(locations, { fields: [vacancies.locationId], references: [locations.id] }),
+}));

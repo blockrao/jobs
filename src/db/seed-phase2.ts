@@ -22,7 +22,7 @@ import {
   positions,
   qualifications,
   locations,
-} from "./schema-v2";
+} from "./schema";
 import { eq } from "drizzle-orm";
 
 const db = getDbV2();

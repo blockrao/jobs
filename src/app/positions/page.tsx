@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDbV2 } from "@/db";
-import { positions } from "@/db/schema-v2";
+import { getDb } from "@/db";
+import { positions } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { asc } from "drizzle-orm";
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function getAllPositions() {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return [];
 
   return db.query.positions.findMany({

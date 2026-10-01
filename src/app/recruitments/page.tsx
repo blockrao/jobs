@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDbV2 } from "@/db";
-import { recruitments, posts, vacancies } from "@/db/schema-v2";
+import { getDb } from "@/db";
+import { recruitments, posts, vacancies } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { desc, eq, inArray } from "drizzle-orm";
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function getAllRecruitments() {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return [];
 
   return db.query.recruitments.findMany({
@@ -32,7 +32,7 @@ async function getAllRecruitments() {
 }
 
 async function getRecruitmentStats(recruitmentId: number) {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return { postCount: 0, totalVacancies: 0 };
 
   const postsList = await db.query.posts.findMany({

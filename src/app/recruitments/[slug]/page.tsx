@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDbV2 } from "@/db";
-import { recruitments } from "@/db/schema-v2";
+import { getDb } from "@/db";
+import { recruitments } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { eq } from "drizzle-orm";
 
@@ -11,7 +11,7 @@ export const revalidate = 300; // 5 minutes
 type Props = { params: Promise<{ slug: string }> };
 
 async function getRecruitmentBySlug(slug: string) {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return null;
 
   const result = await db.query.recruitments.findFirst({
@@ -71,7 +71,7 @@ export default async function RecruitmentPage({ params }: Props) {
   }
 
   const posts_data = recruitment.posts || [];
-  const totalVacancies = posts_data.reduce((sum, p) => sum + (p.totalVacancies || 0), 0);
+  const totalVacancies = posts_data.reduce((sum, p) => sum + (p.vacancyTotal || 0), 0);
 
   // Calculate days to closing from applicationEndDate
   const daysToClosing = recruitment.applicationEndDate
@@ -209,9 +209,9 @@ export default async function RecruitmentPage({ params }: Props) {
                   <div>
                     <h3 className="font-semibold text-blue-600">{post.name}</h3>
                   </div>
-                  {post.totalVacancies && (
+                  {post.vacancyTotal && (
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">{post.totalVacancies}</div>
+                      <div className="text-2xl font-bold text-green-600">{post.vacancyTotal}</div>
                       <div className="text-xs text-gray-600">Vacancies</div>
                     </div>
                   )}

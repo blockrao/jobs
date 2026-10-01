@@ -1,5 +1,5 @@
 import { and, desc, eq, ilike, inArray, isNotNull, isNull, or } from "drizzle-orm";
-import { getDb, getDbV2 } from "@/db";
+import { getDb } from "@/db";
 import {
   articleCategories,
   articles,
@@ -11,7 +11,7 @@ import {
   postingCategories,
   postings,
 } from "@/db/schema";
-import { posts, recruitments, positions } from "@/db/schema-v2";
+import { posts, recruitments, positions } from "@/db/schema";
 
 // Before DATABASE_URL is configured, every query degrades to an empty
 // result instead of throwing. This lets the site build and deploy (with
@@ -43,8 +43,7 @@ export async function getPostingBySlug(slug: string) {
 
   if (posting.inferredPostId) {
     try {
-      const dbV2 = getDbV2();
-      canonicalPost = await dbV2.query.posts.findFirst({
+      canonicalPost = await db.query.posts.findFirst({
         where: eq(posts.id, posting.inferredPostId),
         with: {
           recruitment: true,
@@ -56,8 +55,7 @@ export async function getPostingBySlug(slug: string) {
         canonicalPosition = canonicalPost.position;
       }
     } catch (e) {
-      // Silently fail if v2 DB not available
-      console.warn("Could not fetch v2 canonical links:", e);
+      console.warn("Could not fetch canonical links:", e);
     }
   }
 

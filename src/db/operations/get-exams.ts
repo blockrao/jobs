@@ -1,20 +1,25 @@
 import { getDb } from "../index";
-import { exams, recruitments, posts, positions, organizations } from "../schema-v2";
+import { exams, recruitments, posts, positions, commissions } from "../schema";
 import { eq } from "drizzle-orm";
 
 /**
  * Get exam by slug
- * Includes organization details
+ *
+ * Includes the commission details (e.g. SSC, UPSC) — the body that conducts
+ * the exam. There's no `exams.organizationId`: an exam isn't owned by one
+ * recruiting organization, it's reused across many organizations' separate
+ * recruitments (see getExamRelatedRecruitments). The commission is the
+ * exam's real, singular parent.
  */
 export async function getExamBySlug(slug: string) {
   const db = getDb();
   const result = await db
     .select({
       exam: exams,
-      organization: organizations,
+      commission: commissions,
     })
     .from(exams)
-    .innerJoin(organizations, eq(exams.organizationId, organizations.id))
+    .innerJoin(commissions, eq(exams.commissionId, commissions.id))
     .where(eq(exams.slug, slug))
     .limit(1);
 

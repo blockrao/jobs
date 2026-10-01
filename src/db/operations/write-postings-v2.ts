@@ -1,242 +1,112 @@
-import { getDbV2 } from "../index";
-import {
-  postings,
-  organizations,
-  exams,
-  recruitments,
-  posts as postsTable,
-  positions,
-  sources,
-  sourceDocuments,
-  recruitmentEvents,
-} from "../schema-v2";
+/**
+ * Ingestion writer.
+ *
+ * Replaces the previous version of this file, which could not have
+ * successfully run against the live database: it wrote columns
+ * (rawTitle, rawContent, contentHash, scrapedAt, applicationDeadline,
+ * lastCrawledAt...) that don't exist on the real `postings` table, imported
+ * from a schema-v2.ts that had drifted from reality and was cast `as any`
+ * to suppress the resulting type errors rather than fix them. It also used
+ * keyword/substring matching for recruitment and position resolution — the
+ * mechanism that produced the "PSU General Recruitment" catch-all bucket.
+ *
+ * This version: writes only real, verified columns (schema.ts, checked
+ * against live information_schema — see the comment block above the
+ * canonical-entity-layer tables in that file); uses real identity-key
+ * resolution (src/ingest/resolve.ts); and persists every fact the adapters
+ * already extract (eligibility, vacancies, location, apply/official URLs,
+ * postNames) instead of discarding them, which normalize() used to do.
+ */
+
+import { getDb } from "../index";
+import { postings, organizations, sources, sourceDocuments } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
-import { inferStage } from "../../ingest/normalize";
+import { inferStage, reviewStatusForConfidence } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
-import { eq, and, like, sql } from "drizzle-orm";
+import { resolveRecruitment, resolvePost } from "../../ingest/resolve";
+import { evaluateContentQuality } from "../../lib/content-quality/gate";
+import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 
-/**
- * Calculate SHA-256 hash of posting content for deduplication
- */
 function hashContent(title: string, description: string): string {
-  const content = `${title}|${description}`;
-  return crypto.createHash("sha256").update(content).digest("hex");
+  return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
 }
 
-/**
- * Extract year from posting title/content
- */
-function extractYear(text: string): number | null {
-  const yearMatch = text.match(/20\d{2}/);
-  return yearMatch ? parseInt(yearMatch[0], 10) : null;
+// Year for recruitment identity: prefer a real captured date over regex
+// guessing off the title.
+function recruitmentYear(raw: NormalizedPosting): number | null {
+  if (raw.datePosted) return raw.datePosted.getFullYear();
+  if (raw.examDate) return raw.examDate.getFullYear();
+  const match = `${raw.title} ${raw.description ?? ""}`.match(/20\d{2}/);
+  return match ? parseInt(match[0], 10) : null;
 }
 
-/**
- * Match position by title pattern
- */
-async function inferPositionId(
-  title: string,
-  description: string
-): Promise<number | null> {
-  const db = getDbV2();
-  const searchText = `${title} ${description}`.toLowerCase();
-
-  const patterns = [
-    { slug: "constable", keywords: ["constable", "gd", "general duty"] },
-    { slug: "aso", keywords: ["assistant section officer", "aso"] },
-    { slug: "jso", keywords: ["junior statistical officer", "jso"] },
-    { slug: "ias", keywords: ["ias", "ips", "ifs", "administrative service"] },
-    { slug: "sub-inspector", keywords: ["sub inspector", "si", "upper"] },
-    { slug: "head-constable", keywords: ["head constable", "hc"] },
-  ];
-
-  for (const pattern of patterns) {
-    if (pattern.keywords.some((keyword) => searchText.includes(keyword))) {
-      const result = await db
-        .select()
-        .from(positions)
-        .where(eq(positions.slug, pattern.slug))
-        .limit(1);
-
-      if (result.length > 0) {
-        return result[0].id;
-      }
-    }
+async function getOrCreateSource(db: ReturnType<typeof getDb>, portalSlug: string, sampleUrl: string) {
+  const existing = await db.query.sources.findFirst({ where: eq(sources.slug, portalSlug) });
+  if (existing) return existing;
+  let origin = sampleUrl;
+  try {
+    origin = new URL(sampleUrl).origin;
+  } catch {
+    /* keep sampleUrl as-is if it isn't a parseable URL */
   }
-
-  return null;
-}
-
-/**
- * Find matching recruitment by organization and year
- */
-async function inferRecruitmentId(
-  organizationSlug: string,
-  year: number | null,
-  title: string
-): Promise<{ id: number; confidenceScore: number } | null> {
-  const db = getDbV2();
-
-  const org = await db
-    .select()
-    .from(organizations)
-    .where(eq(organizations.slug, organizationSlug))
-    .limit(1);
-
-  if (!org || org.length === 0) {
-    return null;
-  }
-
-  const recruits = await db
-    .select()
-    .from(recruitments)
-    .where(eq(recruitments.organizationId, org[0].id));
-
-  for (const rec of recruits) {
-    if (year && rec.year === year) {
-      return { id: rec.id, confidenceScore: 90 };
-    }
-
-    if (rec.name.toLowerCase().includes(title.toLowerCase().substring(0, 20))) {
-      return { id: rec.id, confidenceScore: 75 };
-    }
-  }
-
-  return null;
-}
-
-/**
- * Get or create source_document for a posting feed
- * Links the posting back to the original source evidence
- */
-async function getOrCreateSourceDocument(
-  sourcePortal: string,
-  externalId: string,
-  sourceUrl: string,
-  rawContent: string
-): Promise<number> {
-  const db = getDbV2();
-  const contentHash = hashContent(rawContent, externalId);
-
-  // Find existing source by portal name
-  const sourceRow = await db
-    .select()
-    .from(sources)
-    .where(like(sources.name, `%${sourcePortal}%`))
-    .limit(1);
-
-  let sourceId: number;
-  if (sourceRow.length === 0) {
-    // Create default aggregated source if portal not found
-    const newSource = await db
-      .insert(sources)
-      .values({
-        name: sourcePortal,
-        type: "aggregator",
-        authority: "AGGREGATED" as any,
-        isOfficial: false,
-        active: true,
-      })
-      .returning();
-    sourceId = newSource[0].id;
-  } else {
-    sourceId = sourceRow[0].id;
-  }
-
-  // Try to find existing source_document
-  const existingDoc = await db
-    .select()
-    .from(sourceDocuments)
-    .where(
-      and(
-        eq(sourceDocuments.sourceId, sourceId),
-        eq(sourceDocuments.externalId, externalId)
-      )
-    )
-    .limit(1);
-
-  if (existingDoc.length > 0) {
-    return existingDoc[0].id;
-  }
-
-  // Create new source_document
-  const newDoc = await db
-    .insert(sourceDocuments)
+  const [created] = await db
+    .insert(sources)
     .values({
-      sourceId: sourceId,
-      url: sourceUrl,
-      documentType: "posting",
-      externalId: externalId,
-      publishedAt: new Date(),
-      contentHash: contentHash,
-      rawContent: rawContent.substring(0, 10000), // Store first 10KB
-      extractionMethod: "web_scraper",
+      slug: portalSlug,
+      name: portalSlug,
+      url: origin,
+      authority: "AGGREGATED",
+      isOfficial: false,
     })
     .returning();
-
-  return newDoc[0].id;
+  return created;
 }
 
-/**
- * Track recruitment event if important fields changed
- */
-async function trackRecruitmentEvent(
-  recruitmentId: number,
-  sourceDocumentId: number,
-  newDeadline?: Date,
-  newVacancies?: number,
-  eventType: string = "POSTING_UPDATED"
+async function getOrCreateSourceDocument(
+  db: ReturnType<typeof getDb>,
+  sourceId: number,
+  externalId: string,
+  sourceUrl: string,
+  rawContent: string,
 ) {
-  const db = getDbV2();
-
-  const changedFields: Record<string, { old?: any; new?: any }> = {};
-  if (newDeadline) {
-    changedFields.application_deadline = { new: newDeadline.toISOString() };
+  const existing = await db.query.sourceDocuments.findFirst({
+    where: and(eq(sourceDocuments.sourceId, sourceId), eq(sourceDocuments.externalId, externalId)),
+  });
+  if (existing) {
+    await db
+      .update(sourceDocuments)
+      .set({ rawContent, extractedAt: new Date(), extractionMethod: "web_scraper" })
+      .where(eq(sourceDocuments.id, existing.id));
+    return existing.id;
   }
-  if (newVacancies) {
-    changedFields.vacancies = { new: newVacancies };
-  }
-
-  if (Object.keys(changedFields).length === 0) {
-    return; // No changes to track
-  }
-
-  await db
-    .insert(recruitmentEvents)
+  const [created] = await db
+    .insert(sourceDocuments)
     .values({
-      recruitmentId: recruitmentId,
-      eventType: "OTHER" as any,
-      eventDate: new Date(),
-      title: "Posting updated in ingestion pipeline",
-      description: `Updated via scraper feed: ${Object.keys(changedFields).join(", ")}`,
-      changedFields: changedFields,
-      sourceDocumentId: sourceDocumentId,
+      sourceId,
+      sourceUrl,
+      documentType: "posting",
+      externalId,
+      contentHash: hashContent(sourceUrl, rawContent),
+      publishedAt: new Date(),
+      rawContent,
+      extractedAt: new Date(),
+      extractionMethod: "web_scraper",
     })
-    .onConflictDoNothing(); // Safe to ignore duplicates
+    .returning({ id: sourceDocuments.id });
+  return created.id;
 }
 
-/**
- * Write postings to database with full provenance tracking
- */
 export async function writePostingsToDB(
   dedupedPostings: DedupedPosting[],
-  normalized: NormalizedPosting[]
-): Promise<{
-  inserted: number;
-  updated: number;
-  skipped: number;
-  inferred: number;
-  orphaned: number;
-  total: number;
-}> {
-  const db = getDbV2();
+  normalized: NormalizedPosting[],
+): Promise<{ inserted: number; updated: number; skipped: number; resolved: number; total: number }> {
+  const db = getDb();
   let inserted = 0,
     updated = 0,
     skipped = 0,
-    inferred = 0,
-    orphaned = 0;
+    resolved = 0;
 
   const examSlugs = await loadExamSlugs();
 
@@ -244,224 +114,162 @@ export async function writePostingsToDB(
     const deduped = dedupedPostings[i];
     const norm = normalized[i];
 
-    // Skip low-confidence postings
     if ((deduped.primary.confidence || 0) < 40) {
       skipped++;
       continue;
     }
 
-    const examId = norm.examSlug ? examSlugs.get(norm.examSlug) || null : null;
-
-    // Resolve organization
-    const orgResult = await db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.slug, norm.organizationSlug))
-      .limit(1);
-
-    let orgId: number;
-    if (orgResult.length === 0) {
+    const org = await db.query.organizations.findFirst({
+      where: eq(organizations.slug, norm.organizationSlug),
+    });
+    if (!org) {
+      // Creating organizations on the fly is out of scope here — that's a
+      // reference-data decision, not something a single posting should
+      // drive. Leave it for the moderation queue.
       skipped++;
       continue;
-    } else {
-      orgId = orgResult[0].id;
     }
 
-    // Extract year for recruitment inference
-    const year = extractYear(
-      deduped.primary.title + " " + (deduped.primary.description || "")
-    );
-
-    // Try to infer recruitment
-    let inferredRecruitmentId: number | null = null;
-    let recruitmentConfidence = 0;
-    const recruitmentMatch = await inferRecruitmentId(
-      norm.organizationSlug,
-      year,
-      deduped.primary.title
-    );
-    if (recruitmentMatch) {
-      inferredRecruitmentId = recruitmentMatch.id;
-      recruitmentConfidence = recruitmentMatch.confidenceScore;
-    }
-
-    // Try to infer position
-    let inferredPostId: number | null = null;
-    const positionId = await inferPositionId(
-      deduped.primary.title,
-      deduped.primary.description || ""
-    );
-
-    if (positionId && inferredRecruitmentId) {
-      const postResult = await db
-        .select()
-        .from(postsTable)
-        .where(
-          and(
-            eq(postsTable.recruitmentId, inferredRecruitmentId),
-            eq(postsTable.positionId, positionId)
-          )
-        )
-        .limit(1);
-
-      if (postResult.length > 0) {
-        inferredPostId = postResult[0].id;
-      }
-    }
-
-    // Calculate confidence score
-    const baseConfidence = deduped.primary.confidence || 0;
-    let confidenceScore = baseConfidence;
-    if (inferredRecruitmentId && inferredPostId) {
-      confidenceScore = Math.min(100, baseConfidence + 15);
-      inferred++;
-    } else if (inferredRecruitmentId || positionId) {
-      confidenceScore = Math.min(100, baseConfidence + 5);
-    } else {
-      orphaned++;
-    }
-
-    // ========== PROVENANCE LAYER ==========
+    const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
     const sourcePortal = deduped.sources[0]?.portal || "unknown";
-    const rawContent =
-      deduped.primary.title +
-      " " +
-      (deduped.primary.description || "") +
-      " " +
-      (deduped.primary.eligibility || "");
-    const contentHash = hashContent(
-      deduped.primary.title,
-      deduped.primary.description || ""
+
+    // --- Resolve onto the canonical entity layer (identity-key based) ---
+    const recruitment = await resolveRecruitment(
+      db,
+      {
+        organizationId: org.id,
+        examId,
+        year: recruitmentYear(norm),
+        officialNotificationNumber: null, // not yet captured by any adapter
+        title: norm.title,
+      },
+      norm.slug,
     );
 
-    // Get or create source_document (audit trail)
+    let postId: number | null = null;
+    const extractedJobTitle = norm.postNames?.[0]?.trim();
+    if (extractedJobTitle) {
+      const post = await resolvePost(
+        db,
+        {
+          recruitmentId: recruitment.id,
+          name: extractedJobTitle,
+          positionCategory: "OTHER",
+        },
+        `${norm.slug}-post`,
+      );
+      postId = post.id;
+    }
+    // No extractedJobTitle -> postId stays null. The gate already treats a
+    // missing extracted title as a Tier A blocker; we don't fabricate a
+    // Post name from the scraped headline to work around that.
+    if (recruitment.created || postId) resolved++;
+
+    // --- Provenance: persist the raw capture, not just a confidence score ---
+    const rawContent = [norm.title, norm.description, norm.eligibility].filter(Boolean).join("\n\n");
+    const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
     const sourceDocumentId = await getOrCreateSourceDocument(
-      sourcePortal,
-      deduped.primary.externalId,
-      deduped.primary.sourceUrl,
-      rawContent
+      db,
+      source.id,
+      norm.externalId,
+      norm.sourceUrl,
+      rawContent,
     );
 
-    // Get source_id
-    const sourceRow = await db
-      .select()
-      .from(sources)
-      .where(like(sources.name, `%${sourcePortal}%`))
-      .limit(1);
-    const sourceId =
-      sourceRow.length > 0 ? sourceRow[0].id : (sourceRow[0]?.id || null);
+    const baseConfidence = deduped.primary.confidence ?? 0;
+    const confidenceScore = postId
+      ? Math.min(100, baseConfidence + 15)
+      : recruitment.created === false
+        ? Math.min(100, baseConfidence + 5)
+        : baseConfidence;
 
-    // Check if posting already exists
-    const existingPosting = await db
-      .select()
-      .from(postings)
-      .where(
-        and(
-          eq(postings.source, sourcePortal),
-          eq(postings.externalId, deduped.primary.externalId)
-        )
-      )
-      .limit(1);
+    const currentStage = inferStage(deduped.primary);
 
-    if (existingPosting.length === 0) {
-      // Insert new posting with provenance
-      await db
-        .insert(postings)
-        .values({
-          slug: norm.slug,
-          title: deduped.primary.title,
-          description: deduped.primary.description || "",
-          inferredRecruitmentId,
-          inferredPostId,
-          confidenceScore,
-          isCanonical: deduped.sources.length === 1,
-          canonicalSlug: norm.slug,
-          status: "ACTIVE",
-          source: sourcePortal,
-          externalId: deduped.primary.externalId,
-          sourceUrl: deduped.primary.sourceUrl,
-          scrapedAt: new Date(),
-          reviewStatus: confidenceScore >= 70 ? "APPROVED" : "PENDING",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // NEW: Provenance fields
-          sourceId: sourceId,
-          sourceDocumentId: sourceDocumentId,
-          rawTitle: deduped.primary.title,
-          rawDescription: deduped.primary.description || "",
-          rawContent: rawContent.substring(0, 50000), // Store full content
-          contentHash: contentHash,
-          extractedAt: new Date(),
-          extractionMethod: "web_scraper",
-          applicationDeadline: deduped.primary.validThrough,
-          examDate: deduped.primary.examDate,
-          lastCrawledAt: new Date(),
-        })
-        .onConflictDoNothing();
+    // --- Content quality gate (src/lib/content-quality/gate.ts) ---
+    const gate = evaluateContentQuality({
+      title: norm.title,
+      totalVacancies: norm.totalVacancies ?? null,
+      eligibility: norm.eligibility ?? null,
+      description: norm.description ?? null,
+      locationCity: norm.locationCity ?? null,
+      locationRegion: norm.locationRegion ?? null,
+      applyUrl: norm.applyUrl ?? null,
+      officialNotificationUrl: norm.officialNotificationUrl ?? null,
+      currentStage,
+      validThrough: norm.validThrough ?? null,
+      postNames: norm.postNames ?? null,
+      isCanonical: deduped.sources.length === 1,
+      canonicalSlug: norm.slug,
+      slug: norm.slug,
+    });
 
+    const existingPosting = await db.query.postings.findFirst({
+      where: and(eq(postings.source, sourcePortal), eq(postings.externalId, norm.externalId)),
+    });
+
+    const sharedFields = {
+      title: norm.title,
+      kind: norm.kind,
+      organizationId: org.id,
+      examId,
+      postNames: norm.postNames ?? [],
+      description: norm.description || "",
+      eligibility: norm.eligibility ?? null,
+      totalVacancies: norm.totalVacancies ?? null,
+      ageLimitMin: norm.ageLimitMin ?? null,
+      ageLimitMax: norm.ageLimitMax ?? null,
+      applicationFeeGeneral: norm.applicationFeeGeneral ?? null,
+      applicationFeeReserved: norm.applicationFeeReserved ?? null,
+      locationCity: norm.locationCity ?? null,
+      locationRegion: norm.locationRegion ?? null,
+      locationCountry: norm.locationCountry ?? "India",
+      salaryMin: norm.salaryMin ?? null,
+      salaryMax: norm.salaryMax ?? null,
+      salaryCurrency: norm.salaryCurrency ?? "INR",
+      salaryPeriod: norm.salaryPeriod ?? "MONTH",
+      officialNotificationUrl: norm.officialNotificationUrl ?? null,
+      applyUrl: norm.applyUrl ?? null,
+      currentStage,
+      validThrough: norm.validThrough ?? null,
+      examDate: norm.examDate ?? null,
+      inferredRecruitmentId: recruitment.id,
+      inferredPostId: postId,
+      confidenceScore,
+      confidence: Math.round(baseConfidence),
+      isCanonical: deduped.sources.length === 1,
+      canonicalSlug: norm.slug,
+      sourceId: source.id,
+      sourceDocumentId,
+      sourcePortals: deduped.sources.map((s) => s.portal),
+      indexTier: gate.tier,
+      qualityMissing: gate.missing,
+      qualityEvaluatedAt: new Date(),
+      updatedAt: new Date(),
+    } as const;
+
+    if (!existingPosting) {
+      await db.insert(postings).values({
+        ...sharedFields,
+        slug: norm.slug,
+        source: sourcePortal,
+        externalId: norm.externalId,
+        sourceUrl: norm.sourceUrl,
+        ingestedAt: new Date(),
+        confidence: Math.round(baseConfidence),
+        reviewStatus: reviewStatusForConfidence(confidenceScore),
+        status: "ACTIVE",
+        datePosted: norm.datePosted ?? new Date(),
+        createdAt: new Date(),
+      });
       inserted++;
-
-      // Track event if recruitment was inferred
-      if (inferredRecruitmentId) {
-        await trackRecruitmentEvent(
-          inferredRecruitmentId,
-          sourceDocumentId,
-          deduped.primary.validThrough,
-          deduped.primary.totalVacancies,
-          "POSTING_INGESTED"
-        );
-      }
     } else {
-      // Update existing posting
-      const old = existingPosting[0];
       await db
         .update(postings)
-        .set({
-          title: deduped.primary.title,
-          description: deduped.primary.description || "",
-          inferredRecruitmentId,
-          inferredPostId,
-          confidenceScore,
-          isCanonical: deduped.sources.length === 1,
-          canonicalSlug: norm.slug,
-          updatedAt: new Date(),
-          // Update provenance
-          sourceDocumentId: sourceDocumentId,
-          rawTitle: deduped.primary.title,
-          rawDescription: deduped.primary.description || "",
-          rawContent: rawContent.substring(0, 50000),
-          contentHash: contentHash,
-          extractedAt: new Date(),
-          applicationDeadline: deduped.primary.validThrough,
-          examDate: deduped.primary.examDate,
-          lastCrawledAt: new Date(),
-        })
-        .where(
-          and(
-            eq(postings.source, sourcePortal),
-            eq(postings.externalId, deduped.primary.externalId)
-          )
-        );
-
+        .set({ ...sharedFields, reviewStatus: reviewStatusForConfidence(confidenceScore) })
+        .where(and(eq(postings.source, sourcePortal), eq(postings.externalId, norm.externalId)));
       updated++;
-
-      // Track event if deadline changed
-      if (
-        old.application_deadline !==
-        (deduped.primary.validThrough?.getTime() || null)
-      ) {
-        if (inferredRecruitmentId) {
-          await trackRecruitmentEvent(
-            inferredRecruitmentId,
-            sourceDocumentId,
-            deduped.primary.validThrough,
-            deduped.primary.totalVacancies,
-            "APPLICATION_DEADLINE_EXTENDED"
-          );
-        }
-      }
     }
   }
 
-  return { inserted, updated, skipped, inferred, orphaned, total: dedupedPostings.length };
+  return { inserted, updated, skipped, resolved, total: dedupedPostings.length };
 }

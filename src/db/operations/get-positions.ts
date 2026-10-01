@@ -1,5 +1,5 @@
 import { getDb } from "../index";
-import { positions, posts, recruitments, exams, qualifications, postings } from "../schema-v2";
+import { positions, posts, recruitments, exams, qualifications, postings } from "../schema";
 import { eq } from "drizzle-orm";
 
 /**

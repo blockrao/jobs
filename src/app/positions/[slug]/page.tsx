@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDbV2 } from "@/db";
-import { positions, posts, recruitments } from "@/db/schema-v2";
+import { getDb } from "@/db";
+import { positions, posts, recruitments } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { eq, inArray } from "drizzle-orm";
 
@@ -11,7 +11,7 @@ export const revalidate = 3600; // 1 hour
 type Props = { params: Promise<{ slug: string }> };
 
 async function getPositionBySlug(slug: string) {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return null;
 
   const result = await db.query.positions.findFirst({
@@ -22,7 +22,7 @@ async function getPositionBySlug(slug: string) {
 }
 
 async function getRecruitmentsByPosition(positionId: number) {
-  const db = getDbV2();
+  const db = getDb();
   if (!db) return [];
 
   const postsList = await db.query.posts.findMany({

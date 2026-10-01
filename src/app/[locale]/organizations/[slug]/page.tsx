@@ -30,7 +30,7 @@ function buildOrganizationSchema(org: any, locale: string): object {
     description: description || `Government recruitment organization: ${name}`,
     url: absoluteUrl(`/${locale}/organizations/${org.slug}`),
     ...(org.logoUrl && { logo: org.logoUrl }),
-    ...(org.website && { sameAs: org.website }),
+    ...(org.websiteUrl && { sameAs: org.websiteUrl }),
     inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
   };
 }
@@ -94,9 +94,6 @@ export default async function OrganizationPage({ params }: Props) {
   const recruitments = recruitmentResults.map((r) => r.recruitment);
   const exams = examResults;
 
-  const isExamAuthority = org.roles?.includes("EXAM_AUTHORITY") || false;
-  const isRecruitingBody = org.roles?.includes("RECRUITING_BODY") || false;
-
   const nameHi = (org as any).nameHi;
   const descriptionHi = (org as any).descriptionHi;
   const displayName = locale === "hi" ? nameHi || org.name : org.name;
@@ -134,14 +131,9 @@ export default async function OrganizationPage({ params }: Props) {
           <div>
             <h1 className="text-4xl font-bold">{displayName}</h1>
             <div className="flex flex-wrap gap-2 mt-2">
-              {org.roles?.map((role) => (
-                <span
-                  key={role}
-                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                >
-                  {role.replace(/_/g, " ")}
-                </span>
-              ))}
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                {org.sector.replace(/_/g, " ")}
+              </span>
             </div>
           </div>
         </div>
@@ -162,7 +154,7 @@ export default async function OrganizationPage({ params }: Props) {
             <div className="text-sm text-gray-600">{locale === "hi" ? "भर्ती अभियान" : "Recruitment Campaigns"}</div>
           </div>
         )}
-        {isExamAuthority && stats.examCount > 0 && (
+        {stats.examCount > 0 && (
           <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg text-center">
             <div className="text-3xl font-bold text-purple-600">{stats.examCount}</div>
             <div className="text-sm text-gray-600">{locale === "hi" ? "आयोजित परीक्षाएं" : "Exams Conducted"}</div>
@@ -177,24 +169,24 @@ export default async function OrganizationPage({ params }: Props) {
       </div>
 
       {/* Official Links */}
-      {org.website && (
+      {org.websiteUrl && (
         <div className="mb-8 p-4 border-l-4 border-blue-500 bg-blue-50 rounded">
           <h3 className="font-semibold mb-2">{locale === "hi" ? "आधिकारिक वेबसाइट" : "Official Website"}</h3>
           <a
-            href={org.website}
+            href={org.websiteUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:underline break-all"
           >
-            {org.website}
+            {org.websiteUrl}
           </a>
         </div>
       )}
 
       {/* Exams Section */}
-      {isExamAuthority && exams.length > 0 && (
+      {exams.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "आयोजित परीक्षाएं" : "Exams Conducted"}</h2>
+          <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "परीक्षाएं" : "Exams Recruited Through"}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {exams.map((exam) => (
               <Link
@@ -203,16 +195,8 @@ export default async function OrganizationPage({ params }: Props) {
                 className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
               >
                 <div className="font-semibold text-blue-600 hover:underline">
-                  {locale === "hi" ? exam.labelHi || exam.name : exam.name}
+                  {locale === "hi" ? exam.labelHi || exam.label : exam.label}
                 </div>
-                {exam.shortName && (
-                  <div className="text-sm text-gray-600 mt-1">({exam.shortName})</div>
-                )}
-                {exam.frequency && (
-                  <div className="text-sm text-gray-600 mt-1">
-                    {locale === "hi" ? "आवृत्ति" : "Frequency"}: {exam.frequency}
-                  </div>
-                )}
               </Link>
             ))}
           </div>

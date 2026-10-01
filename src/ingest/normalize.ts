@@ -6,14 +6,18 @@ import { detectExamSlug } from "./exam-linker";
 
 type PostingStage = (typeof postings.$inferSelect)["currentStage"];
 
-export interface NormalizedPosting {
+// Carries every fact RawPosting captured (eligibility, vacancies, location,
+// apply/official URLs, postNames, salary, age limits — adapters already
+// extract all of this, see src/ingest/adapters/) plus what normalization
+// itself computes (slug, organizationSlug, examSlug, timeline). Earlier,
+// this type kept only title/description/examSlug/timeline and silently
+// dropped the rest on the way to the database — the actual reason postings
+// ended up missing eligibility/vacancies/location/URLs, not a gap in
+// extraction.
+export interface NormalizedPosting extends RawPosting {
   slug: string;
   organizationSlug: string;
-  title: string;
-  titleHi?: string;
-  description?: string;
-  descriptionHi?: string;
-  examSlug?: string; // Detected exam slug (e.g. "ssc-cgl")
+  examSlug?: string;
   timeline: Array<{
     stage: PostingStage;
     date: Date;
@@ -123,54 +127,31 @@ export function normalize(
     const slug = deterministicSlug(sourceKey, raw.externalId, raw.title);
     const organizationSlug = raw.organizationSlug || slugify(deduped.organizationName);
 
-    // Detect exam slug from title/description
     const examMatch = detectExamSlug(raw.title, raw.description);
     const examSlug = examMatch?.slug;
 
-    // Build timeline from inferred stages
     const timeline: Array<{ stage: PostingStage; date: Date }> = [];
-
-    // Always start with notification
     if (raw.datePosted) {
-      timeline.push({
-        stage: "NOTIFICATION_OUT",
-        date: raw.datePosted,
-      });
+      timeline.push({ stage: "NOTIFICATION_OUT", date: raw.datePosted });
     }
-
-    // Add exam date if present
     if (raw.examDate) {
-      timeline.push({
-        stage: "EXAM_SCHEDULED",
-        date: raw.examDate,
-      });
+      timeline.push({ stage: "EXAM_SCHEDULED", date: raw.examDate });
     }
-
-    // Add deadline (APPLICATION_CLOSED) if present
     if (deduped.deadline) {
-      timeline.push({
-        stage: "APPLICATION_CLOSED",
-        date: deduped.deadline,
-      });
+      timeline.push({ stage: "APPLICATION_CLOSED", date: deduped.deadline });
     }
-
-    // Infer current stage from title/description
     const inferredStage = inferStage(raw);
-    timeline.push({
-      stage: inferredStage,
-      date: new Date(), // Current time as placeholder
-    });
-
-    // Sort by date
+    timeline.push({ stage: inferredStage, date: new Date() });
     timeline.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     return {
+      // Every RawPosting field (eligibility, totalVacancies, location,
+      // applyUrl, officialNotificationUrl, postNames, salary, age limits,
+      // ...) passes through untouched. Only the fields normalize() itself
+      // is responsible for computing are overridden below.
+      ...raw,
       slug,
       organizationSlug,
-      title: raw.title,
-      titleHi: raw.title, // TODO: Implement Hindi translation
-      description: raw.description,
-      descriptionHi: raw.description, // TODO: Implement Hindi translation
       examSlug,
       timeline,
     };

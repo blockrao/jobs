@@ -1,5 +1,5 @@
 import { getDb } from "../index";
-import { organizations, recruitments, exams, posts, positions } from "../schema-v2";
+import { organizations, recruitments, exams, posts, positions } from "../schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -37,18 +37,23 @@ export async function getOrganizationRecruitments(organizationId: number) {
 }
 
 /**
- * Get all exams conducted by this organization
- * Only relevant if organization is an EXAM_AUTHORITY
+ * Get all exams this organization has recruited through.
+ *
+ * An exam's parent is the commission that conducts it (SSC, UPSC, ...), not
+ * the recruiting organization — organizations only connect to exams
+ * indirectly, through recruitments. So this is "exams this org has used",
+ * not "exams this org owns" (there's no such relationship in the schema).
  */
 export async function getOrganizationExams(organizationId: number) {
   const db = getDb();
 
   const result = await db
-    .select()
+    .selectDistinct({ exam: exams })
     .from(exams)
-    .where(eq(exams.organizationId, organizationId));
+    .innerJoin(recruitments, eq(recruitments.examId, exams.id))
+    .where(eq(recruitments.organizationId, organizationId));
 
-  return result;
+  return result.map((r) => r.exam);
 }
 
 /**
@@ -83,9 +88,10 @@ export async function getOrganizationStats(organizationId: number) {
     .where(eq(recruitments.organizationId, organizationId));
 
   const examsCount = await db
-    .select()
+    .selectDistinct({ id: exams.id })
     .from(exams)
-    .where(eq(exams.organizationId, organizationId));
+    .innerJoin(recruitments, eq(recruitments.examId, exams.id))
+    .where(eq(recruitments.organizationId, organizationId));
 
   const positionsCount = await db
     .selectDistinct({ id: positions.id })

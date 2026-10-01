@@ -9,7 +9,6 @@ import { sahisarkarijobsAdapter } from "./adapters/sahisarkarijobs";
 import { freejobalertAdapter } from "./adapters/freejobalert";
 import { deduplicate } from "./deduplicate";
 import { normalize } from "./normalize";
-import { writePostingsToDB as writePostingsToDBLegacy } from "../db/operations/write-postings";
 import { writePostingsToDB } from "../db/operations/write-postings-v2";
 
 const adapters: SourceAdapter[] = [
@@ -106,7 +105,7 @@ export async function main(opts?: { dryRun?: boolean }) {
 
   // Step 5: Write to database (or simulate in dry-run)
   console.log(`\n💾 Phase 4: ${dryRun ? "Simulating" : "Writing to"} database...`);
-  let dbResult: { inserted: number; updated: number; skipped: number; inferred: number; orphaned: number; total: number };
+  let dbResult: { inserted: number; updated: number; skipped: number; resolved: number; total: number };
 
   if (dryRun) {
     // Count what would be inserted/skipped
@@ -119,7 +118,7 @@ export async function main(opts?: { dryRun?: boolean }) {
         wouldInsert++;
       }
     }
-    dbResult = { inserted: wouldInsert, updated: 0, skipped: wouldSkip, inferred: 0, orphaned: 0, total: dedupedPostings.length };
+    dbResult = { inserted: wouldInsert, updated: 0, skipped: wouldSkip, resolved: 0, total: dedupedPostings.length };
     console.log(`
 ✅ Database write simulation:
    • Would insert: ${dbResult.inserted} new postings
@@ -132,23 +131,17 @@ export async function main(opts?: { dryRun?: boolean }) {
   } else {
     try {
       dbResult = await writePostingsToDB(dedupedPostings, normalizedPostings);
-      const inferencedPct = dbResult.total > 0
-        ? ((dbResult.inferred / (dbResult.inserted + dbResult.updated)) * 100).toFixed(1)
+      const resolvedPct = (dbResult.inserted + dbResult.updated) > 0
+        ? ((dbResult.resolved / (dbResult.inserted + dbResult.updated)) * 100).toFixed(1)
         : "0";
       console.log(`
 ✅ Database write complete:
    • Inserted: ${dbResult.inserted} new postings
    • Updated: ${dbResult.updated} existing postings
-   • Successfully inferred: ${dbResult.inferred} postings (${inferencedPct}%)
-   • Orphaned (no match): ${dbResult.orphaned} postings
-   • Skipped (low confidence < 0.4): ${dbResult.skipped}
+   • Resolved onto Recruitment/Post: ${dbResult.resolved} postings (${resolvedPct}%)
+   • Skipped (low confidence < 0.4, or no matching organization): ${dbResult.skipped}
    • Total processed: ${dbResult.total}
    • Exams linked: ${withExamDetection} postings automatically linked to exam pages
-
-Graph Model Inference Stats:
-   • Postings linked to Recruitment: ${dbResult.inferred}
-   • Postings linked to Post (Position): ${dbResult.inferred}
-   • Confidence-boosted by inference: +15 points (max 100)
       `);
     } catch (dbErr) {
       console.error("❌ Database write failed:", dbErr);

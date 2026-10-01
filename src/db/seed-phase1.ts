@@ -18,7 +18,7 @@ import {
   organizations,
   exams,
   positions,
-} from "./schema-v2";
+} from "./schema";
 import { eq } from "drizzle-orm";
 
 const db = getDbV2();
@@ -75,7 +75,7 @@ async function seedPhase1() {
     for (const loc of locationData) {
       await db
         .insert(locations)
-        .values(loc)
+        .values(loc as { name: string; slug: string; type: "state" | "union_territory" | "national" })
         .onConflictDoNothing();
     }
     console.log(`  ✓ Inserted ${locationData.length} locations\n`);
