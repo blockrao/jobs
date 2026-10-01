@@ -52,6 +52,40 @@ export default async function Home() {
         />
       </div>
 
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold mb-4">Browse Government Jobs</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <Link
+            href="/positions"
+            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
+          >
+            <div className="font-semibold text-sm">Positions</div>
+            <div className="text-xs text-neutral-600 mt-1">Career paths</div>
+          </Link>
+          <Link
+            href="/exams"
+            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
+          >
+            <div className="font-semibold text-sm">Exams</div>
+            <div className="text-xs text-neutral-600 mt-1">By commission</div>
+          </Link>
+          <Link
+            href="/recruitments"
+            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
+          >
+            <div className="font-semibold text-sm">Campaigns</div>
+            <div className="text-xs text-neutral-600 mt-1">By year</div>
+          </Link>
+          <Link
+            href="/organizations"
+            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
+          >
+            <div className="font-semibold text-sm">Organizations</div>
+            <div className="text-xs text-neutral-600 mt-1">All employers</div>
+          </Link>
+        </div>
+      </section>
+
       {categories.length > 0 && (
         <section className="mt-12">
           <h2 className="text-lg font-semibold">Browse by Category</h2>
