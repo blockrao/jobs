@@ -348,6 +348,35 @@ export default async function JobPage({ params }: Props) {
           </ul>
         </section>
       )}
+
+      {/* Related Canonical Hubs */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Related Information</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Organization Hub */}
+          <Link
+            href={`/organizations/${org.slug}`}
+            className="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50"
+          >
+            <div className="font-semibold text-neutral-900">{org.name}</div>
+            <div className="text-sm text-neutral-600">View all campaigns and exams</div>
+          </Link>
+
+          {/* Exam Hub - if exam is linked */}
+          {posting.exam && (
+            <Link
+              href={`/exams/${posting.exam.slug}`}
+              className="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50"
+            >
+              <div className="font-semibold text-neutral-900">{posting.exam.name}</div>
+              <div className="text-sm text-neutral-600">
+                {posting.exam.shortName ? `(${posting.exam.shortName}) ` : ""}
+                View exam details and other campaigns
+              </div>
+            </Link>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
