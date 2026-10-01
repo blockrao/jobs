@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { JobPostingLink } from "@/components/job-posting-link";
 import { getExamBySlug, getExamBySlugLight, getPostingsByExam, listCommissionsWithExams } from "@/lib/queries";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
 
@@ -82,12 +83,15 @@ export default async function ExamPage({ params }: Props) {
         <ul className="divide-y divide-black/10 mb-8">
           {postings.map((posting) => (
             <li key={posting.id} className="py-4">
-              <Link
+              <JobPostingLink
                 href={`/jobs/${posting.slug}`}
+                slug={posting.slug}
+                title={posting.title}
+                examSlug={exam_slug}
                 className="text-base font-semibold hover:underline block"
               >
                 {posting.title}
-              </Link>
+              </JobPostingLink>
               <p className="text-sm text-neutral-600 mt-1">
                 {posting.organization.name}
                 {posting.locationCity ? ` · ${posting.locationCity}` : ""} ·{" "}
