@@ -83,7 +83,12 @@ export function DiscoverySections({ limit = 6 }: DiscoverySectionsProps) {
     return null;
   }
 
-  const sections = [
+  const sections: Array<{
+    key: string;
+    icon: string;
+    color: "red" | "yellow" | "green";
+    section: { label: string; description: string; count: number; results: SearchResult[] };
+  }> = [
     {
       key: "urgentOpportunities",
       icon: "🔥",
