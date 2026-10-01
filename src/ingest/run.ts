@@ -100,7 +100,8 @@ export async function main(opts?: { dryRun?: boolean }) {
   // Step 4: Normalize
   console.log(`\n🔧 Phase 3: Normalizing (exam codes, stages, slugs)...`);
   const normalizedPostings = normalize(dedupedPostings);
-  console.log(`✅ Normalized ${normalizedPostings.length} postings`);
+  const withExamDetection = normalizedPostings.filter((p) => p.examSlug).length;
+  console.log(`✅ Normalized ${normalizedPostings.length} postings (${withExamDetection} linked to exams)`);
 
   // Step 5: Write to database (or simulate in dry-run)
   console.log(`\n💾 Phase 4: ${dryRun ? "Simulating" : "Writing to"} database...`);
@@ -123,6 +124,7 @@ export async function main(opts?: { dryRun?: boolean }) {
    • Would insert: ${dbResult.inserted} new postings
    • Skipped (low confidence < 0.4): ${dbResult.skipped}
    • Total processed: ${dbResult.total}
+   • Exams detected: ${withExamDetection} postings will auto-link to exam pages
 
    ℹ️  Run with DRY_RUN=false to actually write to Supabase
     `);
@@ -135,6 +137,7 @@ export async function main(opts?: { dryRun?: boolean }) {
    • Updated: ${dbResult.updated} existing postings
    • Skipped: ${dbResult.skipped} (low confidence < 0.4)
    • Total processed: ${dbResult.total}
+   • Exams linked: ${withExamDetection} postings automatically linked to exam pages
       `);
     } catch (dbErr) {
       console.error("❌ Database write failed:", dbErr);

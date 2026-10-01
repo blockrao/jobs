@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { postings } from "../db/schema";
 import type { RawPosting } from "./types";
 import type { DedupedPosting } from "./deduplicate";
+import { detectExamSlug } from "./exam-linker";
 
 type PostingStage = (typeof postings.$inferSelect)["currentStage"];
 
@@ -12,6 +13,7 @@ export interface NormalizedPosting {
   titleHi?: string;
   description?: string;
   descriptionHi?: string;
+  examSlug?: string; // Detected exam slug (e.g. "ssc-cgl")
   timeline: Array<{
     stage: PostingStage;
     date: Date;
@@ -121,6 +123,10 @@ export function normalize(
     const slug = deterministicSlug(sourceKey, raw.externalId, raw.title);
     const organizationSlug = raw.organizationSlug || slugify(deduped.organizationName);
 
+    // Detect exam slug from title/description
+    const examMatch = detectExamSlug(raw.title, raw.description);
+    const examSlug = examMatch?.slug;
+
     // Build timeline from inferred stages
     const timeline: Array<{ stage: PostingStage; date: Date }> = [];
 
@@ -165,6 +171,7 @@ export function normalize(
       titleHi: raw.title, // TODO: Implement Hindi translation
       description: raw.description,
       descriptionHi: raw.description, // TODO: Implement Hindi translation
+      examSlug,
       timeline,
     };
   });

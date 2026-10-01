@@ -1,8 +1,9 @@
 import { getDb } from "../index";
-import { postings, postingUpdates, organizations } from "../schema";
+import { postings, postingUpdates, organizations, exams } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, isStageAdvance } from "../../ingest/normalize";
+import { loadExamSlugs } from "../../ingest/exam-linker";
 import { eq, and } from "drizzle-orm";
 
 export async function writePostingsToDB(
@@ -14,6 +15,9 @@ export async function writePostingsToDB(
     updated = 0,
     skipped = 0;
 
+  // Pre-load all exam slugs to avoid repeated DB queries
+  const examSlugs = await loadExamSlugs();
+
   for (let i = 0; i < dedupedPostings.length; i++) {
     const deduped = dedupedPostings[i];
     const norm = normalized[i];
@@ -23,6 +27,9 @@ export async function writePostingsToDB(
       skipped++;
       continue;
     }
+
+    // Resolve exam slug to exam ID if provided
+    const examId = norm.examSlug ? examSlugs.get(norm.examSlug) || null : null;
 
     // Ensure organization exists
     const orgResult = await db
@@ -73,6 +80,7 @@ export async function writePostingsToDB(
           title: deduped.primary.title,
           kind: deduped.primary.kind || "GOVERNMENT",
           organizationId: orgId,
+          examId: examId || undefined, // Link to exam if detected
           currentStage,
           description: deduped.primary.description || "",
           eligibility: deduped.primary.eligibility,
@@ -114,6 +122,7 @@ export async function writePostingsToDB(
         .update(postings)
         .set({
           title: deduped.primary.title,
+          examId: examId || undefined, // Update exam link if detected
           currentStage,
           description: deduped.primary.description || "",
           eligibility: deduped.primary.eligibility,

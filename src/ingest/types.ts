@@ -58,6 +58,10 @@ export interface RawPosting {
   // Category slugs or names to attach (created if missing).
   categories?: string[];
 
+  // Detected exam slug if job posting matches a known exam (e.g. "ssc-cgl", "upsc-ias")
+  // Used for auto-linking jobs to exam pages. Detected from title/description.
+  examSlug?: string;
+
   // 0–100. Below the publish threshold the row lands as PENDING for review.
   confidence?: number;
 }
