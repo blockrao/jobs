@@ -24,7 +24,7 @@ import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, reviewStatusForConfidence } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
-import { resolveRecruitment, resolvePost } from "../../ingest/resolve";
+import { resolveRecruitment, resolvePost, truncateForColumn } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
@@ -185,9 +185,17 @@ export async function writePostingsToDB(
 
     const currentStage = inferStage(deduped.primary);
 
+    // postings.title/locationCity/locationRegion are varchar-bounded, but
+    // the scraped text feeding them isn't (see src/ingest/resolve.ts for the
+    // live crash this same bug class caused on recruitments.name — a full
+    // portal headline, district list and all, exceeding a 220-char column).
+    const safeTitle = truncateForColumn(norm.title, 220);
+    const safeLocationCity = norm.locationCity ? truncateForColumn(norm.locationCity, 120) : null;
+    const safeLocationRegion = norm.locationRegion ? truncateForColumn(norm.locationRegion, 120) : null;
+
     // --- Content quality gate (src/lib/content-quality/gate.ts) ---
     const gate = evaluateContentQuality({
-      title: norm.title,
+      title: safeTitle,
       totalVacancies: norm.totalVacancies ?? null,
       eligibility: norm.eligibility ?? null,
       description: norm.description ?? null,
@@ -208,7 +216,7 @@ export async function writePostingsToDB(
     });
 
     const sharedFields = {
-      title: norm.title,
+      title: safeTitle,
       kind: norm.kind,
       organizationId: org.id,
       examId,
@@ -220,8 +228,8 @@ export async function writePostingsToDB(
       ageLimitMax: norm.ageLimitMax ?? null,
       applicationFeeGeneral: norm.applicationFeeGeneral ?? null,
       applicationFeeReserved: norm.applicationFeeReserved ?? null,
-      locationCity: norm.locationCity ?? null,
-      locationRegion: norm.locationRegion ?? null,
+      locationCity: safeLocationCity,
+      locationRegion: safeLocationRegion,
       locationCountry: norm.locationCountry ?? "India",
       salaryMin: norm.salaryMin ?? null,
       salaryMax: norm.salaryMax ?? null,

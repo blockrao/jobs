@@ -58,6 +58,32 @@ function titleSimilarity(a: string, b: string): number {
 
 const FALLBACK_SIMILARITY_THRESHOLD = 0.6;
 
+// `recruitments.name` and `posts.name` are varchar-bounded, but the text
+// feeding them (a scraped headline, sometimes a full portal title with a
+// district list appended) is not. Truncate on a word boundary so a long
+// raw title never crashes the insert — this isn't a display-formatting
+// concern, it's the difference between "ingestion completes" and "ingestion
+// throws a Postgres error on an attacker-sized headline nobody wrote."
+export function truncateForColumn(value: string, maxLength: number): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  const ELLIPSIS = "…";
+  const budget = maxLength - ELLIPSIS.length;
+  const cut = trimmed.slice(0, budget);
+  // Prefer breaking on whitespace so we don't cut mid-word, but only if that
+  // doesn't throw away too much of the budget.
+  const lastSpace = cut.lastIndexOf(" ");
+  const safeCut = lastSpace > budget * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${safeCut.trimEnd()}${ELLIPSIS}`;
+}
+
+// Matches recruitments.name's declared length (schema.ts). Kept as a named
+// constant here rather than imported from the column so this file doesn't
+// need a Drizzle introspection dependency just to read a number.
+const RECRUITMENT_NAME_MAX_LENGTH = 220;
+// Matches posts.name's declared length (schema.ts).
+const POST_NAME_MAX_LENGTH = 200;
+
 export async function resolveRecruitment(
   db: Db,
   identity: RecruitmentIdentity,
@@ -112,7 +138,7 @@ export async function resolveRecruitment(
       organizationId: identity.organizationId,
       examId: identity.examId,
       year: identity.year ?? new Date().getFullYear(),
-      name: identity.title,
+      name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
       slug,
       officialNotificationNumber: identity.officialNotificationNumber,
     })
@@ -165,7 +191,8 @@ export interface ResolvedPost {
 // create a Post with a fabricated name. The gate already treats a missing
 // extracted title as a Tier A blocker for exactly this reason.
 export async function resolvePost(db: Db, identity: PostIdentity, slug: string): Promise<ResolvedPost> {
-  const normalizedName = identity.name.trim().toLowerCase();
+  const safeName = truncateForColumn(identity.name, POST_NAME_MAX_LENGTH);
+  const normalizedName = safeName.trim().toLowerCase();
 
   // Scoped to one recruitment (typically single-digit post counts), so a
   // JS-side case-insensitive match is simpler than a functional-index query
@@ -200,7 +227,7 @@ export async function resolvePost(db: Db, identity: PostIdentity, slug: string):
     .values({
       recruitmentId: identity.recruitmentId,
       positionId: position.id,
-      name: identity.name,
+      name: safeName,
       slug,
     })
     .returning({ id: posts.id });
