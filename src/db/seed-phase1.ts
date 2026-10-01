@@ -11,17 +11,17 @@
  * Run with: npx tsx src/db/seed-phase1.ts
  */
 
-import { getDb } from "./index";
+import { getDbV2 } from "./index";
 import {
   locations,
   qualifications,
-  organizationsNew,
-  examsNew,
+  organizations,
+  exams,
   positions,
 } from "./schema-v2";
 import { eq } from "drizzle-orm";
 
-const db = getDb();
+const db = getDbV2();
 
 async function seedPhase1() {
   console.log("🌱 Phase 1 Seed: Reference Data & Persistent Entities\n");
@@ -203,7 +203,7 @@ async function seedPhase1() {
 
     for (const org of orgData) {
       await db
-        .insert(organizationsNew)
+        .insert(organizations)
         .values(org as any)
         .onConflictDoNothing();
     }
@@ -214,8 +214,8 @@ async function seedPhase1() {
 
     // Get organization IDs for reference
     const getOrgId = async (slug: string) => {
-      const result = await db.query.organizationsNew.findFirst({
-        where: eq(organizationsNew.slug, slug),
+      const result = await db.query.organizations.findFirst({
+        where: eq(organizations.slug, slug),
       });
       return result?.id!;
     };
@@ -386,7 +386,7 @@ async function seedPhase1() {
 
     for (const exam of examData) {
       await db
-        .insert(examsNew)
+        .insert(exams)
         .values(exam as any)
         .onConflictDoNothing();
     }

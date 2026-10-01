@@ -74,7 +74,7 @@ export default async function OrganizationPage({ params }: Props) {
   ]);
 
   const recruitments = recruitmentResults.map((r) => r.recruitment);
-  const exams = examResults.map((r) => r.exam);
+  const exams = examResults;
 
   const isExamAuthority = org.roles?.includes("EXAM_AUTHORITY") || false;
   const isRecruitingBody = org.roles?.includes("RECRUITING_BODY") || false;

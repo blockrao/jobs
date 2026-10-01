@@ -368,9 +368,8 @@ export default async function JobPage({ params }: Props) {
               href={`/exams/${posting.exam.slug}`}
               className="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50"
             >
-              <div className="font-semibold text-neutral-900">{posting.exam.name}</div>
+              <div className="font-semibold text-neutral-900">{posting.exam.label}</div>
               <div className="text-sm text-neutral-600">
-                {posting.exam.shortName ? `(${posting.exam.shortName}) ` : ""}
                 View exam details and other campaigns
               </div>
             </Link>

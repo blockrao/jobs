@@ -160,11 +160,7 @@ export const organizations = pgTable(
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 200 }).notNull(),
     slug: varchar("slug", { length: 160 }).notNull().unique(),
-    roles: pgEnum("role")("roles", [
-      "EXAM_AUTHORITY",
-      "RECRUITING_BODY",
-      "EMPLOYER",
-    ]).array().default(sql`'{}'::organization_role[]`),
+    roles: organizationRoleEnum("roles").array().default(sql`'{}'::organization_role[]`),
     website: text("website"),
     logoUrl: text("logo_url"),
     description: text("description"),
@@ -450,9 +446,9 @@ export const postings = pgTable(
     index("postings_review_idx").on(table.reviewStatus),
     uniqueIndex("postings_source_external_idx")
       .on(table.source, table.externalId)
-      .where(sql`${postings.externalId} is not null`),
+      .where(sql`${table.externalId} is not null`),
   ],
-);
+) as any;
 
 // ========== CANONICAL PAGES (SEO Layer) ==========
 

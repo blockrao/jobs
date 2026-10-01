@@ -105,7 +105,7 @@ export async function main(opts?: { dryRun?: boolean }) {
 
   // Step 5: Write to database (or simulate in dry-run)
   console.log(`\n💾 Phase 4: ${dryRun ? "Simulating" : "Writing to"} database...`);
-  let dbResult = { inserted: 0, updated: 0, skipped: 0, total: dedupedPostings.length };
+  let dbResult: { inserted: number; updated: number; skipped: number; inferred: number; orphaned: number; total: number };
 
   if (dryRun) {
     // Count what would be inserted/skipped

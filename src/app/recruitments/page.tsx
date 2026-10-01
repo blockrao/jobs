@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getDbV2 } from "@/db";
 import { recruitments, posts, vacancies } from "@/db/schema-v2";
 import { absoluteUrl } from "@/lib/site";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 
 export const revalidate = 3600; // 1 hour
 
@@ -39,8 +39,13 @@ async function getRecruitmentStats(recruitmentId: number) {
     where: eq(posts.recruitmentId, recruitmentId),
   });
 
+  if (postsList.length === 0) {
+    return { postCount: 0, totalVacancies: 0 };
+  }
+
+  const postIds = postsList.map((p) => p.id);
   const vacanciesList = await db.query.vacancies.findMany({
-    where: eq(vacancies.recruitmentId, recruitmentId),
+    where: inArray(vacancies.postId, postIds),
   });
 
   const totalVacancies = vacanciesList.reduce((sum, v) => sum + v.count, 0);
@@ -100,7 +105,7 @@ export default async function RecruitmentsPage() {
                       {recruitment.name}
                     </h2>
                     <p className="text-sm text-gray-600">
-                      {recruitment.organization.name}
+                      {(recruitment.organization as any)?.name || "Unknown Organization"}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ${getStatusColor(recruitment.status)}`}>

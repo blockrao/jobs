@@ -10,17 +10,22 @@
  * Run with: npx tsx src/db/seed-phase2.ts
  */
 
-import { getDb } from "./index";
+import { getDbV2 } from "./index";
 import {
   recruitments,
   posts,
   eligibilities,
   vacancies,
   selectionProcesses,
+  organizations,
+  exams,
+  positions,
+  qualifications,
+  locations,
 } from "./schema-v2";
 import { eq } from "drizzle-orm";
 
-const db = getDb();
+const db = getDbV2();
 
 async function seedPhase2() {
   console.log("🌱 Phase 2 Seed: Temporal Entities & Recruitment Data\n");
@@ -28,36 +33,36 @@ async function seedPhase2() {
   try {
     // ========== Helper Functions ==========
     const getOrgId = async (slug: string) => {
-      const result = await db.query.organizationsNew.findFirst({
-        where: eq(db.schema?.organizationsNew.slug, slug),
+      const result = await db.query.organizations.findFirst({
+        where: eq(organizations.slug, slug),
       });
       return result?.id;
     };
 
     const getExamId = async (slug: string) => {
-      const result = await db.query.examsNew.findFirst({
-        where: eq(db.schema?.examsNew.slug, slug),
+      const result = await db.query.exams.findFirst({
+        where: eq(exams.slug, slug),
       });
       return result?.id;
     };
 
     const getPositionId = async (slug: string) => {
       const result = await db.query.positions.findFirst({
-        where: eq(db.schema?.positions.slug, slug),
+        where: eq(positions.slug, slug),
       });
       return result?.id;
     };
 
     const getQualificationId = async (slug: string) => {
       const result = await db.query.qualifications.findFirst({
-        where: eq(db.schema?.qualifications.slug, slug),
+        where: eq(qualifications.slug, slug),
       });
       return result?.id;
     };
 
     const getLocationId = async (slug: string) => {
       const result = await db.query.locations.findFirst({
-        where: eq(db.schema?.locations.slug, slug),
+        where: eq(locations.slug, slug),
       });
       return result?.id;
     };

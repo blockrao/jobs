@@ -98,7 +98,7 @@ async function inferRecruitmentId(
 export async function writePostingsToDB(
   dedupedPostings: DedupedPosting[],
   normalized: NormalizedPosting[]
-) {
+): Promise<{ inserted: number; updated: number; skipped: number; inferred: number; orphaned: number; total: number }> {
   const db = getDb();
   let inserted = 0,
     updated = 0,
