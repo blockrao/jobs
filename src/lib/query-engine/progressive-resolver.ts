@@ -187,9 +187,10 @@ async function validateConstraintsAgainstGraph(
       ? constraint.value
       : [constraint.value];
 
-    const validValues = values.filter((v) =>
-      knownValues.some((kv) => kv.toLowerCase() === v.toLowerCase())
-    );
+    const validValues = values.filter((v) => {
+      const vStr = String(v).toLowerCase();
+      return knownValues.some((kv) => kv.toLowerCase() === vStr);
+    });
 
     if (validValues.length === values.length) {
       // All values are valid
@@ -201,7 +202,7 @@ async function validateConstraintsAgainstGraph(
       );
       validated[key] = {
         ...constraint,
-        value: validValues,
+        value: validValues.map(String),
         confidence: constraint.confidence * 0.7, // Lower confidence for partial matches
         validated: false,
       };

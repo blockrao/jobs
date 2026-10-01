@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "@/db";
 import { postings } from "@/db/schema";
-import { isNull } from "drizzle-orm";
+import { isNull, eq } from "drizzle-orm";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -41,11 +41,23 @@ Format your response as a JSON object with these exact keys:
   "location_city_hi": "Hindi translation of location or null"
 }`;
 
+interface JobRecord {
+  id: number;
+  title: string;
+  description: string | null;
+  eligibility: string | null;
+  responsibilities: string | null;
+  requirements: string | null;
+  ageRelaxationNotes: string | null;
+  locationCity: string | null;
+  [key: string]: any; // Other fields from postings table
+}
+
 async function translateJobBatch(
-  jobs: typeof jobs[]
+  jobsList: JobRecord[]
 ): Promise<JobTranslation[]> {
   const jobsJson = JSON.stringify(
-    jobs.map((job) => ({
+    jobsList.map((job) => ({
       id: job.id,
       title: job.title,
       description: job.description,
@@ -66,7 +78,7 @@ async function translateJobBatch(
     messages: [
       {
         role: "user",
-        content: `Please translate these ${jobs.length} job postings to Hindi:\n\n${jobsJson}`,
+        content: `Please translate these ${jobsList.length} job postings to Hindi:\n\n${jobsJson}`,
       },
     ],
   });
@@ -133,7 +145,7 @@ async function translateAndUpdate() {
             ageRelaxationNotesHi: translation.age_relaxation_notes_hi,
             locationCityHi: translation.location_city_hi,
           })
-          .where(postings.id.equals(translation.id));
+          .where(eq(postings.id, translation.id));
 
         successCount++;
       }

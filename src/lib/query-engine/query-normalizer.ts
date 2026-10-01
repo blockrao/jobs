@@ -142,9 +142,10 @@ export async function normalizeQuery(
   };
 
   // Remove null values
-  Object.keys(normalizedSearchParams).forEach((key) => {
-    if (normalizedSearchParams[key] === null) {
-      delete normalizedSearchParams[key];
+  const params = normalizedSearchParams as Record<string, unknown>;
+  Object.keys(params).forEach((key) => {
+    if (params[key] === null) {
+      delete params[key];
     }
   });
 
@@ -230,9 +231,10 @@ export function normalizeQueryQuick(input: string): NormalizedQuery {
   };
 
   // Remove undefined values
-  Object.keys(normalizedSearchParams).forEach((key) => {
-    if (normalizedSearchParams[key] === undefined) {
-      delete normalizedSearchParams[key];
+  const params = normalizedSearchParams as Record<string, unknown>;
+  Object.keys(params).forEach((key) => {
+    if (params[key] === undefined) {
+      delete params[key];
     }
   });
 

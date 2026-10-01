@@ -72,7 +72,11 @@ export default async function RecruitmentPage({ params }: Props) {
 
   const posts_data = recruitment.posts || [];
   const totalVacancies = posts_data.reduce((sum, p) => sum + (p.totalVacancies || 0), 0);
-  const daysToClosing = recruitment.daysToClosing;
+
+  // Calculate days to closing from applicationEndDate
+  const daysToClosing = recruitment.applicationEndDate
+    ? Math.ceil((recruitment.applicationEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
   const isClosingSoon = daysToClosing !== null && daysToClosing <= 3 && daysToClosing > 0;
   const isClosed = daysToClosing !== null && daysToClosing <= 0;
 
@@ -91,12 +95,13 @@ export default async function RecruitmentPage({ params }: Props) {
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
             <span className={`inline-block w-3 h-3 rounded-full ${
-              recruitment.calculatedStatus === 'APPLICATION_OPEN' ? 'bg-green-500' :
-              recruitment.calculatedStatus === 'CLOSING_SOON' ? 'bg-orange-500' :
-              recruitment.calculatedStatus === 'EXAM_SCHEDULED' ? 'bg-blue-500' :
+              isClosingSoon ? 'bg-orange-500' :
+              isClosed ? 'bg-red-500' :
+              recruitment.status === 'UPCOMING' ? 'bg-blue-500' :
+              recruitment.status === 'ACTIVE' ? 'bg-green-500' :
               'bg-gray-400'
             }`}></span>
-            <span className="font-medium">{recruitment.calculatedStatus || recruitment.status}</span>
+            <span className="font-medium">{isClosingSoon ? 'CLOSING SOON' : isClosed ? 'CLOSED' : recruitment.status}</span>
           </div>
 
           {totalVacancies > 0 && (
@@ -133,7 +138,7 @@ export default async function RecruitmentPage({ params }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <div className="text-sm text-gray-600 font-medium mb-1">Organization</div>
-            <div className="text-lg font-semibold">{recruitment.organization?.name}</div>
+            <div className="text-lg font-semibold">{(recruitment.organization as any)?.name || 'Organization'}</div>
           </div>
           <div>
             <div className="text-sm text-gray-600 font-medium mb-1">Total Vacancies</div>
@@ -261,13 +266,13 @@ export default async function RecruitmentPage({ params }: Props) {
               <span className="ml-auto">→</span>
             </a>
           )}
-          {recruitment.organization?.website && (
-            <a href={recruitment.organization.website} target="_blank" rel="noopener noreferrer"
+          {recruitment.organization && (recruitment.organization as any)?.website && (
+            <a href={(recruitment.organization as any).website} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-3 p-4 bg-white border border-blue-200 rounded hover:bg-blue-50">
               <span>🌐</span>
               <div>
                 <div className="font-medium text-blue-900">Official Website</div>
-                <div className="text-xs text-blue-700">{recruitment.organization.name}</div>
+                <div className="text-xs text-blue-700">{(recruitment.organization as any)?.name || 'Organization'}</div>
               </div>
               <span className="ml-auto">→</span>
             </a>
@@ -280,9 +285,9 @@ export default async function RecruitmentPage({ params }: Props) {
         <p className="text-sm text-amber-900">
           <strong>JobOye is an independent job information platform.</strong> Always verify details in the official notification before applying.
         </p>
-        {recruitment.statusLastCalculated && (
+        {recruitment.updatedAt && (
           <p className="text-xs text-amber-700 mt-2">
-            Last verified: {new Date(recruitment.statusLastCalculated).toLocaleDateString("en-IN")}
+            Last updated: {new Date(recruitment.updatedAt).toLocaleDateString("en-IN")}
           </p>
         )}
       </div>
