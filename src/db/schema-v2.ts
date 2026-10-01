@@ -360,10 +360,10 @@ export const recruitments = pgTable(
     index("recruitments_organization_idx").on(table.organizationId),
     index("recruitments_exam_idx").on(table.examId),
     index("recruitments_status_idx").on(table.status),
-    uniqueIndex("recruitments_official_notification_idx").on(
+    index("recruitments_official_notification_idx").on(
       table.organizationId,
       table.officialNotificationNumber,
-    ), // Dedup: org + official notification number is unique
+    ), // Identity signal for lookups; recruitment identity survives missing/changed notification numbers
     index("recruitments_source_document_idx").on(table.sourceDocumentId),
   ],
 );

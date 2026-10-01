@@ -95,16 +95,17 @@ created_at (timestamp)
 ### `recruitments` (Added External Identity + Provenance)
 ```sql
 -- NEW FIELDS:
-official_notification_number (varchar) -- e.g., "No. 22/2026-RC"
+official_notification_number (varchar) -- e.g., "No. 22/2026-RC" (strong signal, not universal key)
 external_identifiers (jsonb) -- {"ssc_ref": "22/2026-RC", "en_ref": "..."}
 source_document_id (FK → source_documents) -- Primary official source
 
--- NEW UNIQUE INDEX:
-UNIQUE (organization_id, official_notification_number)
--- Ensures org + notification number can't be duplicated
+-- NEW INDEX (queryable, not enforced unique):
+INDEX on (organization_id, official_notification_number)
+-- Enables lookups and joining by notification; does NOT enforce uniqueness
+-- Recruitment identity survives missing, changed, or duplicate notification numbers
 ```
 
-**Purpose:** Deduplication. Enable: "if (org="SSC" AND notification="No. 22/2026") then this is THE 2026 CGL recruitment"
+**Purpose:** Provenance tracking + identity signal. Recruitment identity is based on (id, organization), not notification number. The notification_number field is queryable but not the universal key. This allows recovery if notification numbers change, duplicate, or are missing entirely.
 
 ---
 
@@ -247,6 +248,26 @@ recruitment_events (lifecycle tracking)
 
 ---
 
+## Architectural Principles (Established Oct 2026)
+
+### Recruitment Identity
+- **Core Principle:** Recruitment identity must survive missing, changed, or duplicate notification numbers.
+- **Identity Key:** (organization_id, id) is the permanent recruitment identity.
+- **Notification Number:** Acts as a queryable identity signal, not the universal key.
+- **Implication:** Deduplication is content-based (via source_documents + content_hash), not notification-based.
+
+### Events as Evidence
+- **Core Principle:** `recruitment_events` represents externally evidenced changes from source documents, not every database mutation.
+- **Event Source:** Every event must be traceable to a source_document.
+- **Change Tracking:** Only meaningful, document-evidenced changes are recorded (corrigenda, vacancy revisions, date changes, result announcements).
+
+### No Further Architecture Expansion
+- The foundation (provenance, events, structured eligibility, raw preservation) is now frozen.
+- Next work: **Ingest real data → measure quality metrics → let production data expose next problems.**
+- Quality metrics to measure: recruitment match rate, post/position match rate, duplicate rate, orphan rate, confidence by source.
+
+---
+
 ## Backward Compatibility
 
 **Breaking Changes:**
@@ -274,12 +295,13 @@ Once fully implemented, you can answer:
    AND sd.document_type = 'notification'
    ```
 
-2. **Deduplication:** "Is this another copy of SSC CGL 2026?"
+2. **Identity Lookup:** "Find recruitment by organization and notification number"
    ```sql
    SELECT * FROM recruitments
    WHERE organization_id = 1 
    AND official_notification_number = 'No. 01/2026-RC'
-   -- Returns 1 or 0 (enforced by UNIQUE constraint)
+   -- May return 0, 1, or multiple matches (identity survives missing/changed notification numbers)
+   -- Real recruitment dedup is content-based (via source documents + content_hash)
    ```
 
 3. **Change History:** "What changed in this recruitment and when?"
