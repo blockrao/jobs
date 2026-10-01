@@ -801,7 +801,10 @@ export const recruitments = pgTable(
     examId: integer("exam_id").references(() => exams.id),
     year: smallint("year").notNull(),
     name: varchar("name", { length: 220 }).notNull(),
-    slug: varchar("slug", { length: 220 }).notNull(),
+    // Unique at the DB level (recruitments_slug_unique) — confirmed live
+    // when resolve.ts hit it on a retried ingestion run; declared here now
+    // too so Drizzle's types and any future migration stay honest about it.
+    slug: varchar("slug", { length: 220 }).notNull().unique(),
     status: recruitmentStatusEnum("status").notNull().default("UPCOMING"),
     notificationDate: timestamp("notification_date", { withTimezone: true }),
     applicationStartDate: timestamp("application_start_date", { withTimezone: true }),
