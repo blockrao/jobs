@@ -441,9 +441,29 @@ const ORG_RULES: OrgRule[] = [
   { re: /\bIBPS\b|Regional Rural Bank|Gramin Bank/i, name: "Institute of Banking Personnel Selection", sector: "BANKING" },
   { re: /\bSBI\b/i, name: "State Bank of India", sector: "BANKING" },
   { re: /\bRBI\b|Reserve Bank/i, name: "Reserve Bank of India", sector: "BANKING" },
-  { re: /Canara Bank|Bank of Baroda|Bank of India|\bPNB\b|\bLIC\b/i, name: "Public Sector Bank", sector: "BANKING" },
+  // Same fix: these are distinct banks, confirmed live glued onto one
+  // "Public Sector Bank" row (Bank of Baroda and Central Bank of India both
+  // landed there — and a correctly-named separate "Bank of Baroda" row
+  // already existed too, so the old rule was also creating duplicates).
+  { re: /Canara Bank/i, name: "Canara Bank", sector: "BANKING" },
+  { re: /Bank of Baroda/i, name: "Bank of Baroda", sector: "BANKING" },
+  { re: /Bank of India/i, name: "Bank of India", sector: "BANKING" },
+  { re: /\bPNB\b|Punjab National Bank/i, name: "Punjab National Bank (PNB)", sector: "BANKING" },
+  { re: /\bLIC\b|Life Insurance Corporation/i, name: "Life Insurance Corporation (LIC)", sector: "BANKING" },
+  { re: /Central Bank of India/i, name: "Central Bank of India", sector: "BANKING" },
   { re: /Railway|\bRailways\b|\bRRC\b|\bRRB\b/i, name: "Railway Recruitment Board", sector: "RAILWAY" },
-  { re: /\bCRPF\b|\bBSF\b|\bITBP\b|\bCISF\b|\bSSB\b|Assam Rifles|Central Armed Police/i, name: "Central Armed Police Forces", sector: "DEFENCE" },
+  // Each CAPF is a distinct real force, not interchangeable — confirmed
+  // live: ITBP, SSB, and BSF recruitments had all landed on one shared
+  // "Central Armed Police Forces" row (the user's own example of the
+  // Commission/Organization/Role structure he wants to rely on, so getting
+  // ITBP right here specifically matters). Same fix as the PSU rule above.
+  { re: /\bCRPF\b/i, name: "Central Reserve Police Force (CRPF)", sector: "DEFENCE" },
+  { re: /\bBSF\b/i, name: "Border Security Force (BSF)", sector: "DEFENCE" },
+  { re: /\bITBP\b/i, name: "Indo-Tibetan Border Police Force (ITBP)", sector: "DEFENCE" },
+  { re: /\bCISF\b/i, name: "Central Industrial Security Force (CISF)", sector: "DEFENCE" },
+  { re: /\bSSB\b/i, name: "Sashastra Seema Bal (SSB)", sector: "DEFENCE" },
+  { re: /Assam Rifles/i, name: "Assam Rifles", sector: "DEFENCE" },
+  { re: /Central Armed Police/i, name: "Central Armed Police Forces", sector: "DEFENCE" },
   { re: /Indian Army|Indian Navy|Indian Air Force|\bIAF\b|\bDRDO\b|Defence/i, name: "Indian Armed Forces", sector: "DEFENCE" },
   // PSU acronyms are each one specific, unambiguous company — unlike the old
   // single rule that matched all seven and collapsed them into one
