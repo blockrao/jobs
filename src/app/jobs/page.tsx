@@ -2,23 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listPostings } from "@/lib/queries";
 import { STAGE_LABELS, KIND_LABELS, formatDate } from "@/lib/labels";
+import { GeoFilters } from "@/components/geo-filters";
 
 export const revalidate = 120;
 
 type Props = {
-  searchParams: Promise<{ kind?: string; q?: string }>;
+  searchParams: Promise<{
+    kind?: string;
+    q?: string;
+    state?: string;
+    district?: string;
+    radius_km?: string;
+  }>;
 };
 
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  const { kind } = await searchParams;
-  const label =
-    kind === "GOVERNMENT"
-      ? "Government Jobs"
-      : kind === "PRIVATE"
-        ? "Private Jobs"
-        : "All Jobs";
+  const { kind, state } = await searchParams;
+  let label = "All Jobs";
+  if (kind === "GOVERNMENT") label = "Government Jobs";
+  else if (kind === "PRIVATE") label = "Private Jobs";
+  if (state) label = `${label} in ${state}`;
+
   return {
     title: label,
     description: `Browse the latest ${label.toLowerCase()} notifications and openings across India.`,
@@ -27,24 +33,36 @@ export async function generateMetadata({
 }
 
 export default async function JobsListPage({ searchParams }: Props) {
-  const { kind, q } = await searchParams;
+  const { kind, q, state, district, radius_km } = await searchParams;
   const validKind =
     kind === "GOVERNMENT" || kind === "PRIVATE" ? kind : undefined;
   let results: Awaited<ReturnType<typeof listPostings>> = [];
   try {
-    results = await listPostings({ kind: validKind, search: q, limit: 50 });
+    results = await listPostings({
+      kind: validKind,
+      search: q,
+      state: state,
+      district: district,
+      radiusKm: radius_km ? parseInt(radius_km) : undefined,
+      limit: 50,
+    });
   } catch {
     results = [];
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-2xl font-bold tracking-tight">
         {validKind ? `${KIND_LABELS[validKind]} Jobs` : "All Jobs"}
       </h1>
 
       <form className="mt-4 flex gap-2" action="/jobs" method="get">
         {validKind && <input type="hidden" name="kind" value={validKind} />}
+        {state && <input type="hidden" name="state" value={state} />}
+        {district && <input type="hidden" name="district" value={district} />}
+        {radius_km && (
+          <input type="hidden" name="radius_km" value={radius_km} />
+        )}
         <input
           type="search"
           name="q"
@@ -89,31 +107,50 @@ export default async function JobsListPage({ searchParams }: Props) {
         </Link>
       </div>
 
-      <ul className="mt-6 divide-y divide-black/10">
-        {results.map((posting) => (
-          <li key={posting.id} className="py-4">
-            <Link
-              href={`/jobs/${posting.slug}`}
-              className="text-base font-semibold hover:underline"
-            >
-              {posting.title}
-            </Link>
-            <p className="text-sm text-neutral-600">
-              {posting.organization.name}
-              {posting.locationCity ? ` · ${posting.locationCity}` : ""} ·{" "}
-              {STAGE_LABELS[posting.currentStage] ?? posting.currentStage}
-            </p>
-            <p className="text-xs text-neutral-400">
-              Posted {formatDate(posting.datePosted)}
-            </p>
-          </li>
-        ))}
-        {results.length === 0 && (
-          <li className="py-8 text-center text-sm text-neutral-500">
-            No jobs found. Try a different search.
-          </li>
-        )}
-      </ul>
+      <div className="mt-6 grid gap-6 lg:grid-cols-4">
+        <aside className="lg:col-span-1">
+          <GeoFilters />
+        </aside>
+
+        <div className="lg:col-span-3">
+          <div className="mb-4 text-sm text-neutral-600">
+            Showing {results.length} job{results.length !== 1 ? "s" : ""}
+            {state && ` in ${state}`}
+            {district && ` · ${district} district`}
+          </div>
+
+          <ul className="divide-y divide-black/10">
+            {results.map((posting) => (
+              <li key={posting.id} className="py-4">
+                <Link
+                  href={`/jobs/${posting.slug}`}
+                  className="text-base font-semibold hover:underline"
+                >
+                  {posting.title}
+                </Link>
+                <p className="text-sm text-neutral-600">
+                  {posting.organization.name}
+                  {posting.location?.hierarchyPath
+                    ? ` · ${posting.location.hierarchyPath}`
+                    : posting.locationCity
+                      ? ` · ${posting.locationCity}`
+                      : ""}{" "}
+                  ·{" "}
+                  {STAGE_LABELS[posting.currentStage] ?? posting.currentStage}
+                </p>
+                <p className="text-xs text-neutral-400">
+                  Posted {formatDate(posting.datePosted)}
+                </p>
+              </li>
+            ))}
+            {results.length === 0 && (
+              <li className="py-8 text-center text-sm text-neutral-500">
+                No jobs found. Try a different search.
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

@@ -186,6 +186,36 @@ export const categories = pgTable(
   (table) => [uniqueIndex("categories_slug_idx").on(table.slug)],
 );
 
+// ---------- Locations (geographic hierarchy: state → district → city) ----------
+
+export const locations = pgTable(
+  "locations",
+  {
+    id: serial("id").primaryKey(),
+    stateCode: varchar("state_code", { length: 2 }).notNull(),
+    stateName: varchar("state_name", { length: 80 }).notNull(),
+    districtName: varchar("district_name", { length: 100 }),
+    cityName: varchar("city_name", { length: 100 }),
+    latitude: varchar("latitude", { length: 20 }), // Store as string to avoid float precision issues
+    longitude: varchar("longitude", { length: 20 }),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    hierarchyPath: varchar("hierarchy_path", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("locations_slug_idx").on(table.slug),
+    index("locations_state_code_idx").on(table.stateCode),
+    index("locations_state_name_idx").on(table.stateName),
+    index("locations_district_idx").on(table.stateCode, table.districtName),
+    index("locations_city_idx").on(table.stateCode, table.districtName, table.cityName),
+  ],
+);
+
 // ---------- Postings (the permanent canonical entity) ----------
 
 export const postings = pgTable(
@@ -228,6 +258,7 @@ export const postings = pgTable(
     locationCountry: varchar("location_country", { length: 120 }).default(
       "India",
     ),
+    locationId: integer("location_id").references(() => locations.id),
 
     salaryMin: integer("salary_min"),
     salaryMax: integer("salary_max"),
@@ -283,6 +314,7 @@ export const postings = pgTable(
     index("postings_stage_idx").on(table.currentStage),
     index("postings_kind_idx").on(table.kind),
     index("postings_review_idx").on(table.reviewStatus),
+    index("postings_location_id_idx").on(table.locationId),
     // Dedup key for ingestion upserts. Partial unique (external_id can be
     // null for manual rows, which are excluded from the constraint).
     uniqueIndex("postings_source_external_idx")
@@ -424,6 +456,10 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
   articleCategories: many(articleCategories),
 }));
 
+export const locationsRelations = relations(locations, ({ many }) => ({
+  postings: many(postings),
+}));
+
 export const postingsRelations = relations(postings, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [postings.organizationId],
@@ -432,6 +468,10 @@ export const postingsRelations = relations(postings, ({ one, many }) => ({
   exam: one(exams, {
     fields: [postings.examId],
     references: [exams.id],
+  }),
+  location: one(locations, {
+    fields: [postings.locationId],
+    references: [locations.id],
   }),
   updates: many(postingUpdates),
   postingCategories: many(postingCategories),

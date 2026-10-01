@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   articleCategories,
@@ -6,6 +6,7 @@ import {
   categories,
   commissions,
   exams,
+  locations,
   organizations,
   postingCategories,
   postings,
@@ -38,6 +39,9 @@ export async function listPostings(opts?: {
   kind?: "GOVERNMENT" | "PRIVATE";
   categorySlug?: string;
   search?: string;
+  state?: string;
+  district?: string;
+  radiusKm?: number;
   limit?: number;
 }) {
   if (!hasDb()) return [];
@@ -68,9 +72,48 @@ export async function listPostings(opts?: {
     conditions.push(inArray(postings.id, ids));
   }
 
+  // Geo-filtering logic
+  if (opts?.state) {
+    // When state is provided, filter postings linked to locations in that state
+    const stateLocations = await db.query.locations.findMany({
+      where: eq(locations.stateCode, opts.state),
+    });
+
+    if (stateLocations.length > 0) {
+      const locationIds = stateLocations.map((l) => l.id);
+
+      if (opts?.district) {
+        // Further filter by district if provided
+        const districtLocations = stateLocations.filter(
+          (l) => l.districtName === opts.district
+        );
+
+        if (districtLocations.length > 0) {
+          const districtLocationIds = districtLocations.map((l) => l.id);
+          conditions.push(
+            or(
+              inArray(postings.locationId, districtLocationIds),
+              // Also match via legacy locationCity/locationRegion for unbackfilled data
+              ilike(postings.locationRegion, `%${opts.state}%`)
+            )
+          );
+        }
+      } else {
+        // Match state-level filtering
+        conditions.push(
+          or(
+            inArray(postings.locationId, locationIds),
+            // Also match via legacy locationRegion for unbackfilled data
+            ilike(postings.locationRegion, `%${opts.state}%`)
+          )
+        );
+      }
+    }
+  }
+
   return db.query.postings.findMany({
     where: conditions.length > 0 ? and(...conditions) : undefined,
-    with: { organization: true },
+    with: { organization: true, location: true },
     orderBy: [desc(postings.datePosted)],
     limit,
   });
