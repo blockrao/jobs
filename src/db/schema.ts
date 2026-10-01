@@ -118,6 +118,9 @@ export const organizations = pgTable(
     logoUrl: text("logo_url"),
     websiteUrl: text("website_url"),
     description: text("description"),
+    // Hindi translations
+    nameHi: varchar("name_hi", { length: 200 }),
+    descriptionHi: text("description_hi"),
     headquarters: varchar("headquarters", { length: 160 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -137,7 +140,10 @@ export const commissions = pgTable(
     id: serial("id").primaryKey(),
     slug: varchar("slug", { length: 80 }).notNull(),
     name: varchar("name", { length: 160 }).notNull(),
+    // Hindi translations
+    nameHi: varchar("name_hi", { length: 160 }),
     description: text("description"),
+    descriptionHi: text("description_hi"),
     color: varchar("color", { length: 7 }).default("#000000"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -157,8 +163,12 @@ export const exams = pgTable(
       .references(() => commissions.id),
     slug: varchar("slug", { length: 80 }).notNull(),
     label: varchar("label", { length: 160 }).notNull(),
+    // Hindi translations
+    labelHi: varchar("label_hi", { length: 160 }),
     description: text("description"),
+    descriptionHi: text("description_hi"),
     eligibility: text("eligibility"),
+    eligibilityHi: text("eligibility_hi"),
     salaryMin: integer("salary_min"),
     salaryMax: integer("salary_max"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -179,7 +189,10 @@ export const categories = pgTable(
     id: serial("id").primaryKey(),
     slug: varchar("slug", { length: 160 }).notNull(),
     name: varchar("name", { length: 160 }).notNull(),
+    // Hindi translations
+    nameHi: varchar("name_hi", { length: 160 }),
     description: text("description"),
+    descriptionHi: text("description_hi"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -195,8 +208,12 @@ export const locations = pgTable(
     id: serial("id").primaryKey(),
     stateCode: varchar("state_code", { length: 2 }).notNull(),
     stateName: varchar("state_name", { length: 80 }).notNull(),
+    // Hindi translations for geographic names
+    stateNameHi: varchar("state_name_hi", { length: 80 }),
     districtName: varchar("district_name", { length: 100 }),
+    districtNameHi: varchar("district_name_hi", { length: 100 }),
     cityName: varchar("city_name", { length: 100 }),
+    cityNameHi: varchar("city_name_hi", { length: 100 }),
     latitude: varchar("latitude", { length: 20 }), // Store as string to avoid float precision issues
     longitude: varchar("longitude", { length: 20 }),
     slug: varchar("slug", { length: 255 }).notNull().unique(),
@@ -240,6 +257,18 @@ export const postings = pgTable(
     eligibility: text("eligibility"),
     responsibilities: text("responsibilities"),
     requirements: text("requirements"),
+
+    // Hindi translations (nullable, populated via background job or Claude API)
+    titleHi: varchar("title_hi", { length: 220 }),
+    descriptionHi: text("description_hi"),
+    eligibilityHi: text("eligibility_hi"),
+    responsibilitiesHi: text("responsibilities_hi"),
+    requirementsHi: text("requirements_hi"),
+    ageRelaxationNotesHi: text("age_relaxation_notes_hi"),
+    locationCityHi: varchar("location_city_hi", { length: 120 }),
+
+    // Language default for this posting (en or hi)
+    languageDefault: varchar("language_default", { length: 10 }).default("en"),
 
     totalVacancies: integer("total_vacancies"),
     ageLimitMin: integer("age_limit_min"),
@@ -356,7 +385,10 @@ export const postingUpdates = pgTable(
       .references(() => postings.id, { onDelete: "cascade" }),
     stage: postingStageEnum("stage").notNull(),
     title: varchar("title", { length: 220 }).notNull(),
+    // Hindi translations
+    titleHi: varchar("title_hi", { length: 220 }),
     description: text("description"),
+    descriptionHi: text("description_hi"),
     eventDate: timestamp("event_date", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -394,8 +426,12 @@ export const articles = pgTable(
     id: serial("id").primaryKey(),
     slug: varchar("slug", { length: 220 }).notNull(),
     title: varchar("title", { length: 220 }).notNull(),
+    // Hindi translations
+    titleHi: varchar("title_hi", { length: 220 }),
     dek: text("dek"),
+    dekHi: text("dek_hi"),
     body: text("body").notNull(),
+    bodyHi: text("body_hi"),
     type: articleTypeEnum("type").notNull().default("GUIDE"),
     authorName: varchar("author_name", { length: 120 }),
     coverImageUrl: text("cover_image_url"),

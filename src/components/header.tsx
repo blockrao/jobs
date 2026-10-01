@@ -1,5 +1,8 @@
+'use client';
+
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/site";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 const NAV_LINKS = [
   { href: "/search", label: "Search" },
@@ -27,6 +30,7 @@ export function Header() {
             </Link>
           ))}
         </nav>
+        <LanguageSwitcher />
       </div>
     </header>
   );
