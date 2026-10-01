@@ -22,7 +22,7 @@ import { getDb } from "../index";
 import { postings, organizations, sources, sourceDocuments } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
-import { inferStage, reviewStatusForConfidence } from "../../ingest/normalize";
+import { inferStage, reviewStatusForConfidence, isNonRecruitmentContent } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
 import { resolveRecruitment, resolvePost, truncateForColumn } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
@@ -154,6 +154,14 @@ export async function writePostingsToDB(
     const norm = normalized[i];
 
     if ((deduped.primary.confidence || 0) < 40) {
+      skipped++;
+      continue;
+    }
+
+    if (isNonRecruitmentContent(norm.title)) {
+      // Result/admit-card/marksheet/syllabus content, not a job opening —
+      // see isNonRecruitmentContent's comment. Don't mint a fake org +
+      // recruitment for it.
       skipped++;
       continue;
     }

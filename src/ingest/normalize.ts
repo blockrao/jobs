@@ -108,6 +108,29 @@ export function inferStage(raw: RawPosting): PostingStage {
   return raw.kind === "PRIVATE" ? "ACTIVE" : "NOTIFICATION_OUT";
 }
 
+// Titles whose only real content is a result/admit-card/answer-key/
+// marksheet/syllabus/seat-matrix/time-table update, with no actual
+// recruitment signal (Recruitment/Vacancy/Bharti/Apply/Online Form/Posts).
+// These aren't job openings — portals publish them alongside real listings
+// (exam results, class 10/12 marksheets, academic syllabi) — but the
+// pipeline was creating a brand-new fake Organization + Recruitment for each
+// one. Confirmed live and deleted: "NEET PG 2026 Seat Matrix Out", "BSEB
+// Class 10 & 12 Marksheet 2026", "MGSU Syllabus 2025-26" etc. had each
+// become their own invented "organization". Properly matching these to an
+// *existing* recruitment's lifecycle (advance its stage instead of minting a
+// new entity) is real, separate work — until that exists, skip ingesting
+// them as new entities rather than fabricate one.
+const NON_RECRUITMENT_KEYWORD =
+  /\b(Result|Admit\s*Card|Answer\s*Key|Time\s*Table|Seat\s*Matrix|Marksheet|Mark\s*Sheet|Syllabus|Score\s*Card|Counselling|Registration)\b/i;
+// "Posts" (plural, the standard "for 500 Posts" vacancy-count phrasing) —
+// not the bare singular "Post", which false-matches inside "Post Graduate",
+// "Post Office", etc. and would wrongly let non-recruitment titles through.
+const RECRUITMENT_SIGNAL = /\b(Recruitment|Vacanc|Bharti|Apply\s*Online|Online\s*Form|Notification|Posts)\b/i;
+
+export function isNonRecruitmentContent(title: string): boolean {
+  return NON_RECRUITMENT_KEYWORD.test(title) && !RECRUITMENT_SIGNAL.test(title);
+}
+
 // Confidence >= this is auto-approved; below it lands in the moderation queue.
 export const AUTO_APPROVE_THRESHOLD = 70;
 
