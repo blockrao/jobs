@@ -214,7 +214,7 @@ export default async function ExamPage({ params }: Props) {
                           {recruitment.posts.length} position(s):
                         </div>
                         <div className="space-y-1">
-                          {recruitment.posts.map((item) => (
+                          {recruitment.posts.map((item: any) => (
                             <Link
                               key={item.post.id}
                               href={`/positions/${item.position.slug}`}

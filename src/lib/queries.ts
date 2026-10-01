@@ -25,6 +25,7 @@ export async function getPostingBySlug(slug: string) {
     where: and(eq(postings.slug, slug), eq(postings.reviewStatus, "APPROVED")),
     with: {
       organization: true,
+      exam: true,
       updates: true,
       postingCategories: { with: { category: true } },
       postingArticles: { with: { article: true } },

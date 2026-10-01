@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDb } from "@/db";
-import { recruitments } from "@/db/schema-v2";
+import { getDbV2 } from "@/db";
+import { recruitments, posts, vacancies } from "@/db/schema-v2";
 import { absoluteUrl } from "@/lib/site";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export const revalidate = 3600; // 1 hour
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function getAllRecruitments() {
-  const db = getDb();
+  const db = getDbV2();
   if (!db) return [];
 
   return db.query.recruitments.findMany({
@@ -32,20 +32,20 @@ async function getAllRecruitments() {
 }
 
 async function getRecruitmentStats(recruitmentId: number) {
-  const db = getDb();
+  const db = getDbV2();
   if (!db) return { postCount: 0, totalVacancies: 0 };
 
-  const posts = await db.query.posts.findMany({
-    where: (posts, { eq }) => eq(posts.recruitmentId, recruitmentId),
+  const postsList = await db.query.posts.findMany({
+    where: eq(posts.recruitmentId, recruitmentId),
   });
 
-  const vacancies = await db.query.vacancies.findMany({
-    where: (vacancies, { eq }) => eq(vacancies.recruitmentId, recruitmentId),
+  const vacanciesList = await db.query.vacancies.findMany({
+    where: eq(vacancies.recruitmentId, recruitmentId),
   });
 
-  const totalVacancies = vacancies.reduce((sum, v) => sum + v.count, 0);
+  const totalVacancies = vacanciesList.reduce((sum, v) => sum + v.count, 0);
 
-  return { postCount: posts.length, totalVacancies };
+  return { postCount: postsList.length, totalVacancies };
 }
 
 export default async function RecruitmentsPage() {

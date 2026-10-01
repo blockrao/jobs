@@ -219,7 +219,7 @@ export default async function RecruitmentPage({ params }: Props) {
                 {post.eligibilities && post.eligibilities.length > 0 && (
                   <div className="text-sm mt-3 pt-3 border-t">
                     <div className="text-gray-600 font-medium mb-2">Eligibility</div>
-                    {post.eligibilities.map((elig) => (
+                    {post.eligibilities.map((elig: any) => (
                       <div key={elig.id} className="text-sm text-gray-700 mb-1">
                         {elig.ageMin && elig.ageMax && (
                           <span>Age: {elig.ageMin} - {elig.ageMax} years</span>

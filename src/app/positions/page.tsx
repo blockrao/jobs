@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDb } from "@/db";
-import { positions } from "@/db/schema-v2";
+import { getDbV2 } from "@/db";
+import { positions, posts } from "@/db/schema-v2";
+import { asc, eq } from "drizzle-orm";
 import { absoluteUrl } from "@/lib/site";
 
 export const revalidate = 3600; // 1 hour
@@ -19,20 +20,20 @@ export const metadata: Metadata = {
 };
 
 async function getAllPositions() {
-  const db = getDb();
+  const db = getDbV2();
   if (!db) return [];
 
   return db.query.positions.findMany({
-    orderBy: (positions, { asc }) => [asc(positions.name)],
+    orderBy: [asc(positions.name)],
   });
 }
 
 async function getPositionStats(positionId: number) {
-  const db = getDb();
+  const db = getDbV2();
   if (!db) return { recruitmentCount: 0 };
 
   const recruitmentPosts = await db.query.posts.findMany({
-    where: (posts, { eq }) => eq(posts.positionId, positionId),
+    where: eq(posts.positionId, positionId),
   });
 
   const recruitmentCount = new Set(

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getDb } from "@/db";
-import { organizations } from "@/db/schema-v2";
+import { getDbV2 } from "@/db";
+import { organizations, recruitments, exams } from "@/db/schema-v2";
 import { absoluteUrl } from "@/lib/site";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 export const revalidate = 3600; // 1 hour
 
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function getAllOrganizations() {
-  const db = getDb();
+  const db = getDbV2();
   if (!db) return [];
 
   return db.query.organizations.findMany({
@@ -29,18 +29,18 @@ async function getAllOrganizations() {
 }
 
 async function getOrganizationStats(organizationId: number) {
-  const db = getDb();
+  const db = getDbV2();
   if (!db) return { recruitmentCount: 0, examCount: 0 };
 
-  const recruitments = await db.query.recruitments.findMany({
-    where: (recruitments, { eq }) => eq(recruitments.organizationId, organizationId),
+  const recruitmentsList = await db.query.recruitments.findMany({
+    where: eq(recruitments.organizationId, organizationId),
   });
 
-  const exams = await db.query.exams.findMany({
-    where: (exams, { eq }) => eq(exams.organizationId, organizationId),
+  const examsList = await db.query.exams.findMany({
+    where: eq(exams.organizationId, organizationId),
   });
 
-  return { recruitmentCount: recruitments.length, examCount: exams.length };
+  return { recruitmentCount: recruitmentsList.length, examCount: examsList.length };
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -103,9 +103,9 @@ export default async function OrganizationsPage() {
                   </p>
                 )}
 
-                {org.roles && org.roles.length > 0 && (
+                {(org as any).roles && (org as any).roles.length > 0 && (
                   <div className="mb-4 flex flex-wrap gap-2">
-                    {org.roles.map((role) => (
+                    {(org as any).roles.map((role: string) => (
                       <span
                         key={role}
                         className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium"
