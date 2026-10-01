@@ -424,7 +424,6 @@ export async function writePostingsToDB(
           confidenceScore,
           isCanonical: deduped.sources.length === 1,
           canonicalSlug: norm.slug,
-          reviewStatus: confidenceScore >= 70 ? "APPROVED" : "PENDING",
           updatedAt: new Date(),
           // Update provenance
           sourceDocumentId: sourceDocumentId,
