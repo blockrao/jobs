@@ -38,6 +38,9 @@ export const EXAMS: Record<string, FilterEntity> = {
       "ssc",
       "staff selection commission",
       "कर्मचारी चयन आयोग",
+      "एसएससी",
+      "karmchari chayan ayog",
+      "karmi chayan commission",
     ],
   },
   UPSC: {
@@ -68,7 +71,18 @@ export const EXAMS: Record<string, FilterEntity> = {
     ],
     category: "exam",
     hindi: "संघ लोक सेवा आयोग",
-    searchable: ["upsc", "union public service commission", "संघ लोक सेवा आयोग"],
+    searchable: [
+      "upsc",
+      "union public service commission",
+      "संघ लोक सेवा आयोग",
+      "यूपीएससी",
+      "sangh lok seva ayog",
+      "ias",
+      "ips",
+      "civil services",
+      "pcs",
+      "psc",
+    ],
   },
   IBPS: {
     canonical: "IBPS",
@@ -140,17 +154,17 @@ export const EXAMS: Record<string, FilterEntity> = {
 export const STATES: Record<string, FilterEntity> = {
   Delhi: {
     canonical: "Delhi",
-    aliases: ["delhi", "delhis", "ncr", "national capital region"],
+    aliases: ["delhi", "delhis", "ncr", "national capital region", "दिल्ली"],
     category: "state",
     hindi: "दिल्ली",
-    searchable: ["delhi", "ncr"],
+    searchable: ["delhi", "ncr", "दिल्ली"],
   },
   "Uttar Pradesh": {
     canonical: "Uttar Pradesh",
-    aliases: ["uttar pradesh", "up", "u.p", "up jobs"],
+    aliases: ["uttar pradesh", "up", "u.p", "up jobs", "उत्तर प्रदेश"],
     category: "state",
     hindi: "उत्तर प्रदेश",
-    searchable: ["uttar pradesh", "up"],
+    searchable: ["uttar pradesh", "up", "उत्तर प्रदेश"],
   },
   Maharashtra: {
     canonical: "Maharashtra",

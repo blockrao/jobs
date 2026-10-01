@@ -29,6 +29,7 @@ import {
   deserializeSession,
   isSessionStale,
 } from "@/lib/query-engine/query-context-manager";
+import { detectLanguage } from "@/lib/query-engine/language-detector";
 
 interface NormalizeV2RequestBody {
   input: string;
@@ -94,6 +95,9 @@ export async function POST(request: NextRequest) {
         }
       : undefined;
 
+    // Detect language
+    const languageDetection = detectLanguage(input);
+
     // Progressive resolution pipeline
     const result = await resolveQueryProgressively(
       input,
@@ -120,6 +124,8 @@ export async function POST(request: NextRequest) {
       sessionId: session.sessionId,
       data: {
         original_input: input,
+        language: languageDetection.detected,
+        language_confidence: Number(languageDetection.confidence.toFixed(2)),
         intent: result.structuredQuery.intent,
         constraints: Object.entries(result.structuredQuery.constraints).map(
           ([key, constraint]) => ({
@@ -210,6 +216,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Detect language
+    const languageDetection = detectLanguage(query);
+
     // Quick resolution without LLM
     const result = await resolveQueryProgressively(query, {
       exams: Object.keys(knowledgeGraph.exams),
@@ -224,6 +233,8 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           original_input: query,
+          language: languageDetection.detected,
+          language_confidence: Number(languageDetection.confidence.toFixed(2)),
           intent: result.structuredQuery.intent,
           constraints: Object.entries(result.structuredQuery.constraints).map(
             ([key, constraint]) => ({

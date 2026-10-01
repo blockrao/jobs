@@ -138,9 +138,11 @@ function calculateConfidence(
 
 /**
  * Stopwords to exclude from keyword extraction
+ * Includes English and common Hindi stopwords
  */
 function isStopword(word: string): boolean {
   const stopwords = new Set([
+    // English stopwords
     "a",
     "an",
     "the",
@@ -195,6 +197,30 @@ function isStopword(word: string): boolean {
     "notification",
     "vacancy",
     "recruitment",
+    // Hindi stopwords
+    "की",
+    "का",
+    "से",
+    "के",
+    "हैं",
+    "है",
+    "और",
+    "में",
+    "को",
+    "पर",
+    "भर्ती",
+    "परीक्षा",
+    "नौकरी",
+    "पद",
+    "आवेदन",
+    "सरकारी",
+    "रिक्ति",
+    "या",
+    "एक",
+    "किस",
+    "क्या",
+    "यह",
+    "वह",
   ]);
 
   return stopwords.has(word);
