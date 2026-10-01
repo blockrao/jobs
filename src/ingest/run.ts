@@ -21,7 +21,7 @@ const adapters: SourceAdapter[] = [
 ];
 
 const DUMP_PATH =
-  process.env.INGEST_OUT ?? path.join(tmpdir(), "rojgarsetu-raw-postings.json");
+  process.env.INGEST_OUT ?? path.join(tmpdir(), "joboye-raw-postings.json");
 
 interface PortalResult {
   source: string;
@@ -61,7 +61,7 @@ export async function main(opts?: { dryRun?: boolean }) {
     process.exit(1);
   }
 
-  console.log("🚀 SarkariJobs multi-portal ingestion pipeline");
+  console.log("🚀 JobOye multi-portal ingestion pipeline");
   console.log("=".repeat(60));
   console.log("📍 Running locally via Claude Code (bypasses cloud proxy)");
   if (dryRun) {

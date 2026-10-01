@@ -186,7 +186,7 @@ async function main() {
     dek: "A complete breakdown of the SSC CGL 2026 syllabus, exam pattern, and marking scheme.",
     body: "SSC CGL 2026 is conducted in multiple tiers. Tier-I covers General Intelligence, General Awareness, Quantitative Aptitude, and English Comprehension...",
     type: "SYLLABUS",
-    authorName: "RojgarSetu Editorial",
+    authorName: "JobOye Editorial",
     status: "PUBLISHED",
     publishedAt: new Date(),
   });
@@ -197,7 +197,7 @@ async function main() {
     dek: "What to expect in the interview process and how to prepare.",
     body: "Acme Technologies' backend engineering interview covers system design, data structures, and a take-home assignment...",
     type: "INTERVIEW_PREP",
-    authorName: "RojgarSetu Editorial",
+    authorName: "JobOye Editorial",
     status: "PUBLISHED",
     publishedAt: new Date(),
   });

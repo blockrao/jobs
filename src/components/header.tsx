@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE_NAME } from "@/lib/site";
 
 const NAV_LINKS = [
   { href: "/jobs", label: "All Jobs" },
@@ -12,7 +13,7 @@ export function Header() {
     <header className="border-b border-black/10">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
         <Link href="/" className="text-lg font-bold tracking-tight">
-          RojgarSetu
+          {SITE_NAME}
         </Link>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {NAV_LINKS.map((link) => (

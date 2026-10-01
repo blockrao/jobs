@@ -21,7 +21,7 @@ function resolveSiteUrl(): string {
 
 export const SITE_URL = resolveSiteUrl();
 
-export const SITE_NAME = "RojgarSetu";
+export const SITE_NAME = "JobOye";
 
 export function absoluteUrl(path: string) {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;

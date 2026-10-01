@@ -61,7 +61,7 @@ npx tsx src/ingest/run.ts
    - Creates timeline entries for stage progression
 
 5. **Phase 5**: Audit dump
-   - Saves raw data to `/tmp/rojgarsetu-raw-postings.json`
+   - Saves raw data to `/tmp/joboye-raw-postings.json`
    - For manual review & debugging
 
 ## Schedule Options
