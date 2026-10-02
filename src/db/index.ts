@@ -9,7 +9,16 @@ import * as schema from "./schema";
 // schema.ts above the canonical-entity-layer tables). One client, one
 // schema, one source of truth now.
 function createDb() {
-  const client = postgres(process.env.DATABASE_URL!, { prepare: false });
+  const client = postgres(process.env.DATABASE_URL!, {
+    prepare: false,
+    // Without this, an unreachable/misrouted DB (wrong host, network
+    // filtering a build environment doesn't surface as a DNS error, a
+    // transient pooler hiccup) hangs the connection indefinitely instead
+    // of failing — which stalls page builds and requests rather than
+    // letting the existing try/catch fallbacks (empty state) kick in.
+    // 10s is generous for Supabase's pooler but still bounded.
+    connect_timeout: 10,
+  });
   return drizzle(client, { schema });
 }
 
