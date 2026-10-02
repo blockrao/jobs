@@ -18,10 +18,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
   if (!article) return {};
+  // Only advertise the Hindi alternate when this article is actually
+  // translated (titleHi) — advertising a hi URL with English content would
+  // mislead search engines rather than help them find real Hindi content.
+  const hasHindi = Boolean((article as any).titleHi);
   return {
     title: article.title,
     description: article.dek ?? article.body.slice(0, 155),
-    alternates: { canonical: `/articles/${article.slug}` },
+    alternates: {
+      canonical: `/articles/${article.slug}`,
+      ...(hasHindi && {
+        languages: {
+          en: absoluteUrl(`/en/articles/${article.slug}`),
+          hi: absoluteUrl(`/hi/articles/${article.slug}`),
+        },
+      }),
+    },
     openGraph: {
       title: article.title,
       description: article.dek ?? undefined,

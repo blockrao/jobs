@@ -190,7 +190,14 @@ export async function getPostingSlugsPageForSitemap(
   if (!hasDb()) return [];
   const db = getDb();
   return db
-    .select({ slug: postings.slug, updatedAt: postings.updatedAt })
+    .select({
+      slug: postings.slug,
+      updatedAt: postings.updatedAt,
+      // Carried through so the sitemap can emit a hi alternate only for
+      // postings that actually have translated content — see
+      // src/app/[locale]/jobs/[slug]/page.tsx.
+      titleHi: postings.titleHi,
+    })
     .from(postings)
     // Sitemap = Tier A only (src/lib/content-quality/gate.ts). Approved-but-
     // incomplete, duplicate, or non-job postings stay crawlable on-site but
@@ -206,7 +213,7 @@ export async function getAllArticleSlugsForSitemap() {
   if (!hasDb()) return [];
   const db = getDb();
   return db
-    .select({ slug: articles.slug, updatedAt: articles.updatedAt })
+    .select({ slug: articles.slug, updatedAt: articles.updatedAt, titleHi: articles.titleHi })
     .from(articles)
     .where(eq(articles.status, "PUBLISHED"));
 }
@@ -220,7 +227,16 @@ export async function getAllCategorySlugsForSitemap() {
 export async function getAllOrganizationSlugsForSitemap() {
   if (!hasDb()) return [];
   const db = getDb();
-  return db.select({ slug: organizations.slug }).from(organizations);
+  return db.select({ slug: organizations.slug, nameHi: organizations.nameHi }).from(organizations);
+}
+
+// All 68 exams have labelHi populated and /exams/[slug] + /hi/exams/[slug]
+// both exist, but exams were never in the sitemap at all — added here
+// alongside the hreflang work so Google can actually discover them.
+export async function getAllExamSlugsForSitemap() {
+  if (!hasDb()) return [];
+  const db = getDb();
+  return db.select({ slug: exams.slug, labelHi: exams.labelHi }).from(exams);
 }
 
 // Get all commissions with their exams

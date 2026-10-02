@@ -55,11 +55,22 @@ export async function generateMetadata({
   // linkable but are kept out of the index until they pass the gate, per
   // the content quality standard: publish ≠ indexable.
   const indexable = posting.indexTier === "A";
+  // Only advertise the Hindi alternate when this posting actually has
+  // translated content (titleHi) — see src/app/[locale]/jobs/[slug] for why.
+  const hasHindi = Boolean((posting as any).titleHi);
 
   return {
     title,
     description,
-    alternates: { canonical: `/jobs/${posting.slug}` },
+    alternates: {
+      canonical: `/jobs/${posting.slug}`,
+      ...(hasHindi && {
+        languages: {
+          en: absoluteUrl(`/en/jobs/${posting.slug}`),
+          hi: absoluteUrl(`/hi/jobs/${posting.slug}`),
+        },
+      }),
+    },
     robots: indexable ? undefined : { index: false, follow: true },
     openGraph: {
       title,

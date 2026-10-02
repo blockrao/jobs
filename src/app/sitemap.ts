@@ -3,6 +3,7 @@ import { SITE_URL } from "@/lib/site";
 import {
   getAllArticleSlugsForSitemap,
   getAllCategorySlugsForSitemap,
+  getAllExamSlugsForSitemap,
   getAllOrganizationSlugsForSitemap,
   getPostingSlugsPageForSitemap,
 } from "@/lib/queries";
@@ -15,12 +16,26 @@ import {
 const MAX_POSTING_URLS = 45000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows] = await Promise.all([
+  const [postingRows, articleRows, categoryRows, orgRows, examRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
     getAllCategorySlugsForSitemap().catch(() => []),
     getAllOrganizationSlugsForSitemap().catch(() => []),
+    getAllExamSlugsForSitemap().catch(() => []),
   ]);
+
+  // Only emit a hi alternate for rows that actually have translated
+  // content — see src/app/[locale]/jobs|articles|organizations|exams/
+  // generateMetadata for the matching per-page logic. Advertising a hi URL
+  // with no real Hindi content would mislead search engines, not help them.
+  const hiAlternates = (slug: string, basePath: string) => ({
+    alternates: {
+      languages: {
+        en: `${SITE_URL}/en${basePath}/${slug}`,
+        hi: `${SITE_URL}/hi${basePath}/${slug}`,
+      },
+    },
+  });
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1 },
@@ -34,6 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: row.updatedAt,
     changeFrequency: "daily",
     priority: 0.8,
+    ...((row as any).titleHi ? hiAlternates(row.slug, "/jobs") : {}),
   }));
 
   const articleEntries: MetadataRoute.Sitemap = articleRows.map((row) => ({
@@ -41,6 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: row.updatedAt,
     changeFrequency: "weekly",
     priority: 0.6,
+    ...((row as any).titleHi ? hiAlternates(row.slug, "/articles") : {}),
   }));
 
   const categoryEntries: MetadataRoute.Sitemap = categoryRows.map((row) => ({
@@ -53,6 +70,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/organizations/${row.slug}`,
     changeFrequency: "weekly",
     priority: 0.4,
+    ...((row as any).nameHi ? hiAlternates(row.slug, "/organizations") : {}),
+  }));
+
+  // Exams were never in the sitemap at all before this — all 68 have
+  // labelHi, so every one gets the hi alternate.
+  const examEntries: MetadataRoute.Sitemap = examRows.map((row) => ({
+    url: `${SITE_URL}/exams/${row.slug}`,
+    changeFrequency: "weekly",
+    priority: 0.5,
+    ...hiAlternates(row.slug, "/exams"),
   }));
 
   return [
@@ -61,5 +88,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...articleEntries,
     ...categoryEntries,
     ...orgEntries,
+    ...examEntries,
   ];
 }

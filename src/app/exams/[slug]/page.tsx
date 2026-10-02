@@ -60,7 +60,18 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/exams/${exam.slug}` },
+    // All 68 exams have labelHi/descriptionHi populated, and /hi/exams/[slug]
+    // already exists — declare the reciprocal hreflang here so Google
+    // actually discovers the Hindi version instead of only finding it from
+    // the /hi side. Without this pair, search engines can't reliably treat
+    // the two URLs as language alternates of the same content.
+    alternates: {
+      canonical: `/exams/${exam.slug}`,
+      languages: {
+        en: absoluteUrl(`/en/exams/${exam.slug}`),
+        hi: absoluteUrl(`/hi/exams/${exam.slug}`),
+      },
+    },
     openGraph: {
       title,
       description,

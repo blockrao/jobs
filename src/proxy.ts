@@ -22,7 +22,7 @@ const intlMiddleware = createMiddleware({
 // locale segment and land nowhere, 404ing pages that built and existed
 // fine. Scoping the matcher to just the locale-aware prefixes fixes
 // that without touching the rest of the site.
-const LOCALE_AWARE_PREFIXES = ['/articles/', '/exams/', '/organizations/'];
+const LOCALE_AWARE_PREFIXES = ['/articles/', '/exams/', '/organizations/', '/jobs/'];
 
 function isLocaleAwarePath(pathname: string): boolean {
   // Strip an explicit /en or /hi prefix before checking, since next-intl
