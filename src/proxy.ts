@@ -12,13 +12,29 @@ const intlMiddleware = createMiddleware({
   localePrefix: 'as-needed',
 });
 
+// Only these route families actually have a `[locale]` segment
+// (src/app/[locale]/articles|exams|organizations/[slug]). Every other
+// route (`/jobs`, `/exams`, `/categories`, `/commissions/[slug]`,
+// `/[exam_slug]`, etc.) is the plain, non-locale canonical page tree.
+// next-intl's middleware previously ran on *every* path (matcher only
+// excluded /api, /_next and static assets) — for a path with no
+// `[locale]` counterpart it would still try to route it through the
+// locale segment and land nowhere, 404ing pages that built and existed
+// fine. Scoping the matcher to just the locale-aware prefixes fixes
+// that without touching the rest of the site.
+const LOCALE_AWARE_PREFIXES = ['/articles/', '/exams/', '/organizations/'];
+
+function isLocaleAwarePath(pathname: string): boolean {
+  // Strip an explicit /en or /hi prefix before checking, since next-intl
+  // also needs to run on already-prefixed requests (e.g. /hi/exams/foo).
+  const stripped = pathname.replace(/^\/(en|hi)(?=\/|$)/, '') || '/';
+  return LOCALE_AWARE_PREFIXES.some((prefix) => stripped.startsWith(prefix));
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Handle i18n for all routes
-  const intlResponse = intlMiddleware(request);
-
-  // Handle admin authentication
+  // Handle admin authentication (applies everywhere under /admin)
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
     const token = await adminSessionToken();
     const cookie = request.cookies.get(COOKIE_NAME)?.value;
@@ -30,10 +46,16 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return intlResponse;
+  // Only run next-intl's routing on paths that actually have a
+  // `[locale]` page — everything else passes through untouched.
+  if (isLocaleAwarePath(pathname)) {
+    return intlMiddleware(request);
+  }
+
+  return NextResponse.next();
 }
 
-// Apply middleware to all routes except:
+// Apply proxy to all routes except:
 // - API routes (/api/*)
 // - Assets (_next, favicon, robots, sitemap, etc.)
 // - Public files
