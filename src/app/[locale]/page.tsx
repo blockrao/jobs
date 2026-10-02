@@ -3,15 +3,34 @@ import { JobPostingLink } from "@/components/job-posting-link";
 import { getExamBySlug, getExamBySlugLight, getPostingsByExam, listCommissionsWithExams } from "@/lib/queries";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
 
+// This file lives at src/app/[locale]/page.tsx — i.e. it shares a folder
+// (and therefore Next's dynamic-segment name, "locale") with layout.tsx and
+// the articles/exams/organizations/jobs subtrees below it, even though this
+// page itself has nothing to do with Hindi/English locale routing. It used
+// to be its own top-level route at src/app/[exam_slug]/page.tsx, with its
+// own differently-named dynamic segment — but Next.js's App Router
+// requires every dynamic folder at the same tree depth to share one
+// parameter name (two sibling folders like `[exam_slug]` and `[locale]`
+// under `src/app/` throw "You cannot use different slug names for the
+// same dynamic path" the moment a real request needs routing — this
+// doesn't show up in `next build`'s own output, only when `next dev` or
+// `next start` actually serves a request, which is why it went unnoticed).
+// Moving this page's file into the [locale] folder, and just renaming the
+// destructured param below, satisfies that constraint without changing
+// this route's URL, behavior, or content in any way — a request for
+// /ssc-cgl-2026 still renders this exact page; it simply arrives as
+// params.locale instead of params.exam_slug. See [locale]/layout.tsx for
+// the corresponding change needed there (it must NOT 404 real exam slugs
+// just because they aren't "en" or "hi").
 export const revalidate = 300;
 
 type Props = {
-  params: Promise<{ exam_slug: string }>;
+  params: Promise<{ locale: string }>;
 };
 
 export async function generateMetadata({ params }: Props) {
-  const { exam_slug } = await params;
-  const exam = await getExamBySlugLight(exam_slug);
+  const { locale: examSlug } = await params;
+  const exam = await getExamBySlugLight(examSlug);
   return {
     title: exam ? exam.label : "Exam Jobs",
     description: `Browse all open ${exam?.label || "job"} positions and apply online.`,
@@ -24,7 +43,7 @@ export async function generateStaticParams() {
     const params = [];
     for (const comm of commissions) {
       for (const exam of comm.exams) {
-        params.push({ exam_slug: exam.slug });
+        params.push({ locale: exam.slug });
       }
     }
     return params;
@@ -36,9 +55,9 @@ export async function generateStaticParams() {
 }
 
 export default async function ExamPage({ params }: Props) {
-  const { exam_slug } = await params;
-  const exam = await getExamBySlug(exam_slug);
-  const postings = await getPostingsByExam(exam_slug);
+  const { locale: examSlug } = await params;
+  const exam = await getExamBySlug(examSlug);
+  const postings = await getPostingsByExam(examSlug);
 
   if (!exam) {
     return (
@@ -93,7 +112,7 @@ export default async function ExamPage({ params }: Props) {
                 href={`/jobs/${posting.slug}`}
                 slug={posting.slug}
                 title={posting.title}
-                examSlug={exam_slug}
+                examSlug={examSlug}
                 className="text-base font-semibold hover:underline block"
               >
                 {posting.title}

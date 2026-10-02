@@ -1,17 +1,23 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { IntlProvider } from '@/components/intl-provider';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
-import { locales, type Locale, getMessages } from '@/i18n/request';
+import { locales, defaultLocale, type Locale, getMessages } from '@/i18n/request';
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }
 
-export async function generateStaticParams() {
-  return locales.map((locale) => ({ locale }));
-}
+// No generateStaticParams here anymore. This layout's dynamic segment
+// ("locale") is shared with two very different kinds of routes now — the
+// real en/hi locale pages (articles/exams/organizations/jobs subtrees)
+// AND the exam leaf page at [locale]/page.tsx, whose "locale" values are
+// actually exam slugs (see that file's comment for why they share a
+// folder name at all). A generateStaticParams here that only returned
+// ['en','hi'] would be actively wrong for the exam page's slugs, and
+// every route under this layout is already server-rendered on demand
+// (ƒ Dynamic, not statically generated — confirmed via `next build`), so
+// this was never achieving build-time prerendering in the first place.
 
 export async function generateMetadata(
   { params }: LocaleLayoutProps,
@@ -76,20 +82,31 @@ export async function generateMetadata(
 // WebSite schema blocks on every page. Fixed by having this layout do only
 // what's genuinely locale-specific — validate the locale and provide the
 // next-intl context — and nothing structural.
+//
+// This layout also wraps [locale]/page.tsx (the exam detail leaf — see its
+// own file comment for why it lives in this folder), whose "locale" param
+// value is actually an exam slug like "ssc-cgl-2026", never "en" or "hi".
+// It used to notFound() here whenever locale wasn't a recognized value,
+// which would have 404'd every single exam page. Falling back to
+// defaultLocale's messages instead is a no-op for that page (it doesn't
+// use next-intl translations at all) and, for the genuine /en or /hi
+// subtree pages, only changes behavior for a URL with an outright invalid
+// locale segment (e.g. /xx/articles/foo) — that now renders with English
+// text instead of 404ing, which is a strictly more forgiving fallback, not
+// a loss of real functionality.
 export default async function LocaleLayout({
   children,
   params,
 }: LocaleLayoutProps) {
   const { locale } = await params;
+  const resolvedLocale = locales.includes(locale as Locale)
+    ? (locale as Locale)
+    : defaultLocale;
 
-  if (!locales.includes(locale as Locale)) {
-    notFound();
-  }
-
-  const messages = await getMessages(locale as Locale);
+  const messages = await getMessages(resolvedLocale);
 
   return (
-    <IntlProvider locale={locale as Locale} messages={messages as Record<string, any>}>
+    <IntlProvider locale={resolvedLocale} messages={messages as Record<string, any>}>
       {children}
     </IntlProvider>
   );
