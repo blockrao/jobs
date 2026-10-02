@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/db";
-import { recruitments } from "@/db/schema";
+import { recruitments, postings } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { safeQuery } from "@/lib/safe-query";
 
 export const revalidate = 300; // 5 minutes
@@ -28,6 +28,27 @@ async function getRecruitmentBySlug(slug: string) {
   });
 
   return result || null;
+}
+
+// Each post can have a live, SEO-facing /jobs/[slug] page pointing back at
+// it via postings.inferredPostId — no reverse Drizzle relation exists for
+// that FK, so this resolves it with one extra query rather than teaching
+// the schema a relation just for this page.
+async function getPostingSlugsForPosts(postIds: number[]) {
+  if (postIds.length === 0) return new Map<number, { slug: string; title: string }>();
+  const db = getDb();
+  if (!db) return new Map<number, { slug: string; title: string }>();
+
+  const rows = await db
+    .select({ inferredPostId: postings.inferredPostId, slug: postings.slug, title: postings.title })
+    .from(postings)
+    .where(inArray(postings.inferredPostId, postIds));
+
+  const map = new Map<number, { slug: string; title: string }>();
+  for (const row of rows) {
+    if (row.inferredPostId != null) map.set(row.inferredPostId, { slug: row.slug, title: row.title });
+  }
+  return map;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -73,6 +94,10 @@ export default async function RecruitmentPage({ params }: Props) {
 
   const posts_data = recruitment.posts || [];
   const totalVacancies = posts_data.reduce((sum, p) => sum + (p.vacancyTotal || 0), 0);
+  const postingBySlotId = await safeQuery(
+    () => getPostingSlugsForPosts(posts_data.map((p) => p.id)),
+    new Map<number, { slug: string; title: string }>(),
+  );
 
   // Calculate days to closing from applicationEndDate
   const daysToClosing = recruitment.applicationEndDate
@@ -204,21 +229,47 @@ export default async function RecruitmentPage({ params }: Props) {
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold mb-6">Posts Available</h2>
           <div className="space-y-4">
-            {posts_data.map((post) => (
-              <div key={post.id} className="border border-gray-100 rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-blue-600">{post.name}</h3>
+            {posts_data.map((post) => {
+              const livePosting = postingBySlotId.get(post.id);
+              return (
+                <div key={post.id} className="border border-gray-100 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      {livePosting ? (
+                        <Link
+                          href={`/jobs/${livePosting.slug}`}
+                          className="font-semibold text-blue-600 hover:underline"
+                        >
+                          {post.name}
+                        </Link>
+                      ) : (
+                        <h3 className="font-semibold text-blue-600">{post.name}</h3>
+                      )}
+                      {(post as any).position?.name && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          <Link href={`/positions/${(post as any).position.slug}`} className="hover:underline">
+                            {(post as any).position.name}
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                    {post.vacancyTotal && (
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-green-600">{post.vacancyTotal}</div>
+                        <div className="text-xs text-gray-600">Vacancies</div>
+                      </div>
+                    )}
                   </div>
-                  {post.vacancyTotal && (
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">{post.vacancyTotal}</div>
-                      <div className="text-xs text-gray-600">Vacancies</div>
+                  {livePosting && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <Link href={`/jobs/${livePosting.slug}`} className="text-sm text-blue-600 hover:underline">
+                        View full details, eligibility & apply →
+                      </Link>
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
