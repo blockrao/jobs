@@ -29,7 +29,7 @@ function buildOrganizationSchema(org: any, locale: string): object {
     "@type": "Organization",
     name,
     description: description || `Government recruitment organization: ${name}`,
-    url: absoluteUrl(`/${locale}/organizations/${org.slug}`),
+    url: absoluteUrl(locale === "hi" ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`),
     ...(org.logoUrl && { logo: org.logoUrl }),
     ...(org.websiteUrl && { sameAs: org.websiteUrl }),
     inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
@@ -67,23 +67,29 @@ export async function generateMetadata({
   // duplicate-content signal rather than a genuine translation.
   const hasHindi = Boolean(nameHi);
 
+  // The default locale (en) is served unprefixed (/organizations/slug) via
+  // next-intl's "as-needed" rewrite — an explicit /en/organizations/slug
+  // actually 308-redirects to the unprefixed URL, so it must never be used
+  // as a canonical or hreflang target.
+  const canonicalPath = locale === "hi" ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
+
   return {
     title,
     description: metaDescription,
     alternates: {
-      canonical: `/${locale}/organizations/${org.slug}`,
+      canonical: canonicalPath,
       ...(hasHindi && {
         languages: {
-          en: absoluteUrl('/en/organizations/' + org.slug),
-          hi: absoluteUrl('/hi/organizations/' + org.slug),
-          "x-default": absoluteUrl('/organizations/' + org.slug),
+          en: absoluteUrl(`/organizations/${org.slug}`),
+          hi: absoluteUrl(`/hi/organizations/${org.slug}`),
+          "x-default": absoluteUrl(`/organizations/${org.slug}`),
         },
       }),
     },
     openGraph: {
       title,
       description: metaDescription,
-      url: absoluteUrl(`/${locale}/organizations/${org.slug}`),
+      url: absoluteUrl(canonicalPath),
       type: "website",
     },
   };
@@ -120,7 +126,7 @@ export default async function OrganizationPage({ params }: Props) {
     // schema at "/" directly rather than a /${locale} URL that just bounces
     // through proxy.ts's redirect.
     { name: locale === "hi" ? "होम" : "Home", path: "/" },
-    { name: displayName, path: `/${locale}/organizations/${org.slug}` },
+    { name: displayName, path: locale === "hi" ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}` },
   ], locale);
 
   const organizationSchema = buildOrganizationSchema(org, locale);
@@ -210,7 +216,7 @@ export default async function OrganizationPage({ params }: Props) {
             {exams.map((exam) => (
               <Link
                 key={exam.id}
-                href={`/${locale}/exams/${exam.slug}`}
+                href={locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`}
                 className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
               >
                 <div className="font-semibold text-blue-600 hover:underline">

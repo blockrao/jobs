@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { locales, type Locale } from '@/i18n/request';
+import { locales, defaultLocale, type Locale } from '@/i18n/request';
 import { isLocaleAwarePath } from '@/i18n/locale-aware-paths';
 import { readLocaleCookie, writeLocaleCookie } from '@/i18n/locale-cookie';
 import { useNavigationProgress } from '@/components/navigation-progress';
@@ -75,7 +75,12 @@ export function LanguageSwitcher() {
       return;
     }
 
-    const newPath = `/${newLocale}${pathWithoutLocale}`;
+    // The default locale is served unprefixed (next-intl's "as-needed"
+    // mode actively 308-redirects an explicit /en/... request back to the
+    // unprefixed URL) — pushing "/en/..." directly would still land on the
+    // right page, just after a wasted redirect round-trip. Skip it.
+    const newPath =
+      newLocale === defaultLocale ? pathWithoutLocale : `/${newLocale}${pathWithoutLocale}`;
     setPendingLocale(newLocale);
     start();
     startTransition(() => {

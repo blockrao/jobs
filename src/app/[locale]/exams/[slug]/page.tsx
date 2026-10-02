@@ -29,7 +29,7 @@ function buildExamSchema(exam: any, commission: any, locale: string): object {
     "@type": "EducationalOccupationalCredential",
     name,
     description: description || `${name} government exam`,
-    url: absoluteUrl(`/${locale}/exams/${exam.slug}`),
+    url: absoluteUrl(locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`),
     provider: {
       "@type": "Organization",
       name: locale === "hi" ? commission.nameHi || commission.name : commission.name,
@@ -63,21 +63,27 @@ export async function generateMetadata({
   const metaDescription = description ||
     `${name}: Eligibility, positions recruited, notification links, and all related government recruitment campaigns.`;
 
+  // The default locale (en) is served unprefixed (/exams/slug) via
+  // next-intl's "as-needed" rewrite — an explicit /en/exams/slug actually
+  // 308-redirects to the unprefixed URL, so it must never be used as a
+  // canonical or hreflang target.
+  const canonicalPath = locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`;
+
   return {
     title,
     description: metaDescription,
     alternates: {
-      canonical: `/${locale}/exams/${exam.slug}`,
+      canonical: canonicalPath,
       languages: {
-        en: `${absoluteUrl('/en/exams/' + exam.slug)}`,
-        hi: `${absoluteUrl('/hi/exams/' + exam.slug)}`,
-        "x-default": absoluteUrl('/exams/' + exam.slug),
+        en: absoluteUrl(`/exams/${exam.slug}`),
+        hi: absoluteUrl(`/hi/exams/${exam.slug}`),
+        "x-default": absoluteUrl(`/exams/${exam.slug}`),
       }
     },
     openGraph: {
       title,
       description: metaDescription,
-      url: absoluteUrl(`/${locale}/exams/${exam.slug}`),
+      url: absoluteUrl(canonicalPath),
       type: "website",
     },
   };
@@ -115,7 +121,7 @@ export default async function ExamPage({ params }: Props) {
     // breadcrumb schema at the real pages instead of ones that 404.
     { name: locale === "hi" ? "होम" : "Home", path: "/" },
     { name: displayCommissionName, path: `/commissions/${commission.slug}` },
-    { name: displayExamName, path: `/${locale}/exams/${exam.slug}` },
+    { name: displayExamName, path: locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}` },
   ], locale);
 
   const examSchema = buildExamSchema(exam, commission, locale);

@@ -25,11 +25,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const dek = locale === "hi" ? article.dekHi || article.dek : article.dek;
   const body = locale === "hi" ? article.bodyHi || article.body : article.body;
 
+  // The default locale (en) is served unprefixed (/articles/slug) via
+  // next-intl's "as-needed" rewrite — an explicit /en/articles/slug
+  // actually 308-redirects to the unprefixed URL, so it must never be used
+  // as a canonical or hreflang target (a redirecting hreflang target is
+  // discounted by Google, and a self-canonical that doesn't match the
+  // requested URL is a real Search Console flag).
+  const canonicalPath = locale === "hi" ? `/hi/articles/${article.slug}` : `/articles/${article.slug}`;
+
   return {
     title,
     description: dek ?? body.slice(0, 155),
     alternates: {
-      canonical: `/${locale}/articles/${article.slug}`,
+      canonical: canonicalPath,
       // Only advertise the Hindi alternate when real Hindi content exists —
       // otherwise /hi/articles/[slug] would just be a duplicate of the
       // English page under a Hindi URL, which misleads search engines
@@ -37,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // the jobs/exams/organizations [locale] pages).
       ...(hasHindi && {
         languages: {
-          en: absoluteUrl(`/en/articles/${article.slug}`),
+          en: absoluteUrl(`/articles/${article.slug}`),
           hi: absoluteUrl(`/hi/articles/${article.slug}`),
           "x-default": absoluteUrl(`/articles/${article.slug}`),
         },
@@ -51,7 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description: dek ?? undefined,
       type: "article",
-      url: absoluteUrl(`/${locale}/articles/${article.slug}`),
+      url: absoluteUrl(canonicalPath),
     },
   };
 }
@@ -70,7 +78,11 @@ export default async function ArticlePage({ params }: Props) {
     : null;
 
   const relatedPostings = article.postingArticles.map((pa) => pa.posting);
-  const aboutUrls = relatedPostings.map((p) => absoluteUrl(`/${locale}/jobs/${p.slug}`));
+  // buildJobPostingSchema always mints the JobPosting @id off the canonical
+  // unprefixed URL (absoluteUrl(`/jobs/${slug}`)) regardless of locale — the
+  // Article.about[] references must match that exact @id or the graph
+  // doesn't actually link up for a crawler walking it.
+  const aboutUrls = relatedPostings.map((p) => absoluteUrl(`/jobs/${p.slug}`));
 
   // No localized homepage or articles hub exists (only this [slug] detail
   // page is under [locale]/articles/ — see root layout.tsx) — point these
@@ -78,7 +90,7 @@ export default async function ArticlePage({ params }: Props) {
   const breadcrumbItems = [
     { name: locale === "hi" ? "होम" : "Home", path: "/" },
     { name: locale === "hi" ? "लेख" : "Articles", path: "/articles" },
-    { name: title, path: `/${locale}/articles/${article.slug}` },
+    { name: title, path: locale === "hi" ? `/hi/articles/${article.slug}` : `/articles/${article.slug}` },
   ];
 
   const schema = jsonLdGraph(

@@ -28,10 +28,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // content — see src/app/[locale]/jobs|articles|organizations|exams/
   // generateMetadata for the matching per-page logic. Advertising a hi URL
   // with no real Hindi content would mislead search engines, not help them.
+  //
+  // "en" must be the unprefixed URL, not /en/... — the default locale is
+  // served unprefixed via next-intl's "as-needed" rewrite, and an explicit
+  // /en/... request 308-redirects back to the unprefixed URL. A redirecting
+  // hreflang target is unreliable per Google's own guidance, and it would
+  // also mismatch the `url` field on this very sitemap entry.
   const hiAlternates = (slug: string, basePath: string) => ({
     alternates: {
       languages: {
-        en: `${SITE_URL}/en${basePath}/${slug}`,
+        en: `${SITE_URL}${basePath}/${slug}`,
         hi: `${SITE_URL}/hi${basePath}/${slug}`,
         "x-default": `${SITE_URL}${basePath}/${slug}`,
       },
