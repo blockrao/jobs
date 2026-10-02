@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { HtmlLangSync } from "@/components/html-lang-sync";
 import { IntlProvider } from "@/components/intl-provider";
 import { buildWebSiteSchema, jsonLdGraph } from "@/lib/structured-data";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
         />
         <IntlProvider locale={defaultLocale} messages={messages as Record<string, any>}>
+          <HtmlLangSync />
           <AnalyticsTracker />
           <Header />
           <main className="flex-1">{children}</main>

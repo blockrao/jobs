@@ -1,12 +1,8 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { IntlProvider } from '@/components/intl-provider';
-import { Header } from '@/components/header';
-import { Footer } from '@/components/footer';
-import { AnalyticsTracker } from '@/components/analytics-tracker';
-import { buildWebSiteSchema, jsonLdGraph } from '@/lib/structured-data';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import { locales, type Locale, getMessages } from '@/i18n/request';
-import '@/app/globals.css';
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
@@ -44,9 +40,11 @@ export async function generateMetadata(
     description: descriptions[locale as keyof typeof descriptions] || descriptions['en'],
     alternates: {
       // Fallback only — every page under this layout (articles/exams/
-      // organizations) sets its own correct alternates.canonical for its
-      // actual path, which replaces this. No languages/hreflang block: see
-      // the note in the <head> above.
+      // organizations/jobs) sets its own correct alternates.canonical for
+      // its actual path, which replaces this. No languages/hreflang block
+      // here: /en and /hi have no page of their own (see root layout.tsx) —
+      // each child page's generateMetadata sets the real hreflang pair once
+      // that page's translated counterpart exists.
       canonical: canonicalUrl.toString(),
     },
     openGraph: {
@@ -61,65 +59,38 @@ export async function generateMetadata(
   };
 }
 
+// NOTE: this layout is nested UNDER the root layout (src/app/layout.tsx),
+// which already renders the single <html>/<head>/<body> shell, Header,
+// Footer, AnalyticsTracker and the WebSite JSON-LD schema for every route in
+// the app — including everything under this [locale] segment. This layout
+// used to redeclare all of that itself, which meant every /en or /hi page
+// rendered TWO nested <html>/<body> trees (browsers silently merge the
+// second set into the first during HTML parsing, but React's virtual DOM
+// still thinks it rendered two independent trees). The visible symptom: two
+// separate Header/LanguageSwitcher component instances existed per page —
+// the outer one from root layout, permanently stuck on next-intl's
+// defaultLocale ('en') since root layout never knows this segment's locale
+// param. Clicking the switcher while it was actually the OUTER instance
+// (always believing the current locale was 'en') on an already-/hi/ page
+// produced /hi/hi/... links, plus duplicate GA page-view hits and duplicate
+// WebSite schema blocks on every page. Fixed by having this layout do only
+// what's genuinely locale-specific — validate the locale and provide the
+// next-intl context — and nothing structural.
 export default async function LocaleLayout({
   children,
   params,
 }: LocaleLayoutProps) {
   const { locale } = await params;
 
-  // Validate locale
   if (!locales.includes(locale as Locale)) {
-    return <div>Invalid locale</div>;
+    notFound();
   }
 
-  // Get messages for this locale
   const messages = await getMessages(locale as Locale);
 
-  const siteSchema = jsonLdGraph(buildWebSiteSchema());
-  const gaId = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
-
   return (
-    <html lang={locale} className="h-full antialiased">
-      <head>
-        {/* No manual hreflang <link> tags here: they previously pointed at
-            the bare /en and /hi roots (no page exists there — see
-            root layout.tsx) regardless of which actual page rendered them.
-            Each child page's own generateMetadata sets its correct
-            alternates.canonical; a real hreflang pair (this article/exam/org
-            page in the other language) can be added once that counterpart
-            page exists and both sides can link to each other. */}
-
-        {/* Google Analytics 4 */}
-        {gaId && (
-          <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${gaId}', {
-                    page_path: window.location.pathname,
-                  });
-                `,
-              }}
-            />
-          </>
-        )}
-      </head>
-      <body className="min-h-full flex flex-col">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
-        />
-        <IntlProvider locale={locale as Locale} messages={messages as Record<string, any>}>
-          <AnalyticsTracker />
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </IntlProvider>
-      </body>
-    </html>
+    <IntlProvider locale={locale as Locale} messages={messages as Record<string, any>}>
+      {children}
+    </IntlProvider>
   );
 }
