@@ -4,34 +4,16 @@ import { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { locales, type Locale } from '@/i18n/request';
 import { isLocaleAwarePath } from '@/i18n/locale-aware-paths';
+import { readLocaleCookie, writeLocaleCookie } from '@/i18n/locale-cookie';
 import { useNavigationProgress } from '@/components/navigation-progress';
 
 // Matches a leading /en or /hi segment only (not "/articles/english-exam"
 // or any other path that merely contains those letters).
 const LOCALE_PREFIX_RE = /^\/(en|hi)(?=\/|$)/;
 
-// Same cookie name next-intl's own middleware reads for locale detection
-// (src/proxy.ts's createMiddleware) — reusing it means a choice made here
-// on a page with no Hindi template (home, /jobs, /search, ...) still takes
-// effect automatically the next time the visitor lands on a page that does
-// have one (a job/exam/organization/article detail page), with no extra
-// wiring: next-intl's middleware already redirects an unprefixed
-// locale-aware URL to match this cookie.
-const COOKIE_NAME = 'NEXT_LOCALE';
-
 function localeFromPathname(pathname: string): Locale | null {
   const match = pathname.match(LOCALE_PREFIX_RE);
   return match ? (match[1] as Locale) : null;
-}
-
-function readLocaleCookie(): Locale | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=(en|hi)(?:;|$)/);
-  return match ? (match[1] as Locale) : null;
-}
-
-function writeLocaleCookie(locale: Locale) {
-  document.cookie = `${COOKIE_NAME}=${locale}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
 const LABELS: Record<Locale, string> = {
