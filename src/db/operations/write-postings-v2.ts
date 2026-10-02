@@ -250,8 +250,17 @@ export async function writePostingsToDB(
       currentStage,
       validThrough: norm.validThrough ?? null,
       postNames: norm.postNames ?? null,
-      isCanonical: deduped.sources.length === 1,
-      canonicalSlug: norm.slug,
+      // Dedup across portals already happened upstream (resolveRecruitment /
+      // the `deduped` merge below) — by the time a posting reaches this
+      // point it IS the one row representing that recruitment, so there is
+      // no separate "other" row for it to be a duplicate of. Passing
+      // canonicalSlug: norm.slug here (the row's own slug) meant the gate's
+      // duplicate check (`canonicalSlug !== slug`) could never fire —
+      // several postings were being marked Tier C on an earlier run under
+      // disqualified: "duplicate" that could never have been true. Fixed to
+      // reflect reality: this row is canonical, with no sibling to point at.
+      isCanonical: true,
+      canonicalSlug: null,
       slug: norm.slug,
     });
 
@@ -288,8 +297,11 @@ export async function writePostingsToDB(
       inferredPostId: postId,
       confidenceScore,
       confidence: Math.round(baseConfidence),
-      isCanonical: deduped.sources.length === 1,
-      canonicalSlug: norm.slug,
+      // See the matching comment on the gate call above — this row is the
+      // canonical record for its recruitment; it has no sibling duplicate
+      // row to point at.
+      isCanonical: true,
+      canonicalSlug: null,
       sourceId: source.id,
       sourceDocumentId,
       sourcePortals: deduped.sources.map((s) => s.portal),
