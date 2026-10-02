@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { getCommissionBySlug, getPostingsByCommission, listCommissionsWithExams } from "@/lib/queries";
+import { CommissionContent } from "@/components/commission-content";
 
 export const revalidate = 300;
 
@@ -42,107 +42,9 @@ export default async function CommissionPage({ params }: Props) {
     );
   }
 
-  // Count open positions per exam
-  const postingsByExam = new Map<number, number>();
-  allPostings.forEach((posting) => {
-    if (posting.exam) {
-      postingsByExam.set(
-        posting.exam.id,
-        (postingsByExam.get(posting.exam.id) || 0) + 1
-      );
-    }
-  });
-
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6">
-        <Link href="/exams" className="text-sm text-neutral-600 hover:underline">
-          ← Back to all exams
-        </Link>
-      </div>
-
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div
-            className="w-6 h-6 rounded-full"
-            style={{ backgroundColor: commission.color || "#000000" }}
-          />
-          <h1 className="text-3xl font-bold tracking-tight">{commission.name}</h1>
-        </div>
-        {commission.description && (
-          <p className="text-neutral-600">{commission.description}</p>
-        )}
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">
-          Exams ({commission.exams.length})
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {commission.exams.map((exam) => {
-            const openCount = postingsByExam.get(exam.id) || 0;
-            return (
-              <Link key={exam.id} href={`/exams/${exam.slug}`}>
-                <div className="p-4 border border-black/10 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <h3 className="font-semibold text-base mb-2">{exam.label}</h3>
-                  <div className="text-sm text-neutral-600 space-y-1">
-                    {openCount > 0 && (
-                      <p>
-                        <span className="font-medium text-green-600">
-                          {openCount} position{openCount !== 1 ? "s" : ""}
-                        </span>{" "}
-                        open
-                      </p>
-                    )}
-                    {exam.salaryMin && (
-                      <p>
-                        Salary: ₹{exam.salaryMin.toLocaleString("en-IN")} - ₹
-                        {exam.salaryMax?.toLocaleString("en-IN")}
-                      </p>
-                    )}
-                    {exam.eligibility && (
-                      <p className="text-xs">Eligibility: {exam.eligibility}</p>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold mb-4">
-          All Open Positions ({allPostings.length})
-        </h2>
-        {allPostings.length === 0 ? (
-          <div className="rounded-lg bg-neutral-50 border border-black/10 p-8 text-center">
-            <p className="text-neutral-600">
-              No open positions at the moment. Check back soon!
-            </p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-black/10">
-            {allPostings.map((posting) => (
-              <li key={posting.id} className="py-4">
-                <Link
-                  href={`/jobs/${posting.slug}`}
-                  className="text-base font-semibold hover:underline block"
-                >
-                  {posting.title}
-                </Link>
-                <p className="text-sm text-neutral-600 mt-1">
-                  {posting.organization.name}
-                  {posting.locationCity ? ` · ${posting.locationCity}` : ""} ·{" "}
-                  <span className="text-xs bg-neutral-100 px-2 py-1 rounded">
-                    {posting.exam?.label}
-                  </span>
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
+  // CommissionContent (client) decides how to render the fetched data based
+  // on the visitor's saved language cookie — same reasoning as
+  // home-content.tsx — keeping this page statically generated
+  // (generateStaticParams above, ● SSG per `next build`).
+  return <CommissionContent commission={commission} allPostings={allPostings} />;
 }
