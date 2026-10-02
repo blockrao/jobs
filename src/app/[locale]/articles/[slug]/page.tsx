@@ -120,16 +120,28 @@ export default async function ArticlePage({ params }: Props) {
             {locale === "hi" ? "संबंधित नौकरी पोस्टिंग" : "Related Job Postings"}
           </h2>
           <ul className="mt-2 space-y-1">
-            {relatedPostings.map((posting) => (
-              <li key={posting.id}>
-                <Link
-                  href={`/${locale}/jobs/${posting.slug}`}
-                  className="font-medium underline hover:no-underline"
-                >
-                  {locale === "hi" ? posting.titleHi || posting.title : posting.title}
-                </Link>
-              </li>
-            ))}
+            {relatedPostings.map((posting) => {
+              // Only link into the Hindi job page when this posting actually
+              // has Hindi content — otherwise the plain canonical page, same
+              // discipline used for job/article links elsewhere (e.g.
+              // home-content.tsx). This also means the English locale
+              // ("en") links straight to the canonical /jobs/{slug} instead
+              // of the non-canonical /en/jobs/{slug}.
+              const postingHref =
+                isHi && posting.titleHi
+                  ? `/hi/jobs/${posting.slug}`
+                  : `/jobs/${posting.slug}`;
+              return (
+                <li key={posting.id}>
+                  <Link
+                    href={postingHref}
+                    className="font-medium underline hover:no-underline"
+                  >
+                    {isHi ? posting.titleHi || posting.title : posting.title}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </aside>
       )}

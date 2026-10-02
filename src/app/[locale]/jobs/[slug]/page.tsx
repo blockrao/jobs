@@ -90,6 +90,13 @@ export default async function LocaleJobPage({ params }: Props) {
   const displayLocationCity = isHi && locationCityHi ? locationCityHi : posting.locationCity;
 
   const org = posting.organization;
+  const orgNameHi = (org as any).nameHi as string | null;
+  const displayOrgName = isHi && orgNameHi ? orgNameHi : org.name;
+  // Only link into the Hindi org page when it actually has Hindi content —
+  // otherwise the plain English org page, same discipline used elsewhere
+  // (home-content.tsx, jobs/page.tsx) for cross-entity links.
+  const orgHref =
+    isHi && orgNameHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
 
   const schema = jsonLdGraph(
@@ -98,7 +105,7 @@ export default async function LocaleJobPage({ params }: Props) {
       // No localized homepage exists (see root layout.tsx) — point at "/"
       // directly rather than a /${locale} URL that just redirects there.
       { name: isHi ? "होम" : "Home", path: "/" },
-      { name: org.name, path: `/organizations/${org.slug}` },
+      { name: displayOrgName, path: orgHref },
       { name: displayTitle, path: `/${locale}/jobs/${posting.slug}` },
     ]),
   );
@@ -139,13 +146,13 @@ export default async function LocaleJobPage({ params }: Props) {
         <Link href="/" className="hover:underline">
           {L.home}
         </Link>{" "}
-        / {org.name}
+        / {displayOrgName}
       </nav>
 
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{displayTitle}</h1>
       <p className="mt-1 text-neutral-600">
-        <Link href={`/organizations/${org.slug}`} className="hover:underline">
-          {org.name}
+        <Link href={orgHref} className="hover:underline">
+          {displayOrgName}
         </Link>
         {displayLocationCity ? ` · ${displayLocationCity}` : ""}
       </p>
