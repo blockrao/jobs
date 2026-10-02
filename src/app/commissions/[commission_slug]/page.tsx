@@ -82,7 +82,7 @@ export default async function CommissionPage({ params }: Props) {
           {commission.exams.map((exam) => {
             const openCount = postingsByExam.get(exam.id) || 0;
             return (
-              <Link key={exam.id} href={`/${exam.slug}`}>
+              <Link key={exam.id} href={`/exams/${exam.slug}`}>
                 <div className="p-4 border border-black/10 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
                   <h3 className="font-semibold text-base mb-2">{exam.label}</h3>
                   <div className="text-sm text-neutral-600 space-y-1">
