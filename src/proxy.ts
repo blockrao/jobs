@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from 'next-intl/middleware';
 import { adminSessionToken } from "@/lib/admin-token";
 import { locales, defaultLocale, type Locale } from "@/i18n/request";
+import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 
 const COOKIE_NAME = "admin_session";
 
@@ -12,24 +13,17 @@ const intlMiddleware = createMiddleware({
   localePrefix: 'as-needed',
 });
 
-// Only these route families actually have a `[locale]` segment
-// (src/app/[locale]/articles|exams|organizations/[slug]). Every other
-// route (`/jobs`, `/exams`, `/categories`, `/commissions/[slug]`,
-// `/[exam_slug]`, etc.) is the plain, non-locale canonical page tree.
-// next-intl's middleware previously ran on *every* path (matcher only
-// excluded /api, /_next and static assets) — for a path with no
-// `[locale]` counterpart it would still try to route it through the
-// locale segment and land nowhere, 404ing pages that built and existed
-// fine. Scoping the matcher to just the locale-aware prefixes fixes
-// that without touching the rest of the site.
-const LOCALE_AWARE_PREFIXES = ['/articles/', '/exams/', '/organizations/', '/jobs/'];
-
-function isLocaleAwarePath(pathname: string): boolean {
-  // Strip an explicit /en or /hi prefix before checking, since next-intl
-  // also needs to run on already-prefixed requests (e.g. /hi/exams/foo).
-  const stripped = pathname.replace(/^\/(en|hi)(?=\/|$)/, '') || '/';
-  return LOCALE_AWARE_PREFIXES.some((prefix) => stripped.startsWith(prefix));
-}
+// isLocaleAwarePath (src/i18n/locale-aware-paths.ts) tells us which route
+// families actually have a `[locale]` segment
+// (src/app/[locale]/articles|exams|organizations|jobs/[slug]). Every other
+// route (`/news`, `/categories`, `/commissions/[slug]`, `/[exam_slug]`,
+// etc.) is the plain, non-locale canonical page tree. next-intl's
+// middleware previously ran on *every* path (matcher only excluded /api,
+// /_next and static assets) — for a path with no `[locale]` counterpart it
+// would still try to route it through the locale segment and land
+// nowhere, 404ing pages that built and existed fine. Scoping the matcher
+// to just the locale-aware prefixes fixes that without touching the rest
+// of the site.
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -53,14 +47,26 @@ export async function proxy(request: NextRequest) {
   }
 
   // There is no src/app/[locale]/page.tsx — only articles/exams/
-  // organizations detail routes are localized, never a localized
-  // homepage. A bare /en or /hi (e.g. from the language switcher on
-  // the homepage) isn't locale-aware by the check above, so it would
-  // otherwise fall through to the top-level `/[exam_slug]` catch-all
-  // and render "Exam not found" for exam_slug="hi". Send it to the
-  // (non-localized) homepage instead.
+  // organizations/jobs detail routes are localized. A bare /en or /hi
+  // (e.g. from the language switcher on the homepage) isn't locale-aware
+  // by the check above, so it would otherwise fall through to the
+  // top-level `/[exam_slug]` catch-all and render "Exam not found" for
+  // exam_slug="hi". Send it to the (non-localized) homepage instead.
   if (/^\/(en|hi)\/?$/.test(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Any other /en/... or /hi/... path that isn't locale-aware (e.g.
+  // /en/news, /hi/categories/foo, /en/search) has no matching route at
+  // all — there's no [locale] segment for it and it's not the bare-root
+  // case above either, so Next would otherwise 404 it. These can reach a
+  // visitor via an old bookmark, a search engine that indexed a stray
+  // link, or simply typing a plausible-looking URL. Redirect to the
+  // equivalent canonical (non-prefixed) path rather than 404ing on a page
+  // that genuinely exists one segment away.
+  const localePrefixMatch = pathname.match(/^\/(en|hi)(\/.*)$/);
+  if (localePrefixMatch) {
+    return NextResponse.redirect(new URL(localePrefixMatch[2], request.url));
   }
 
   return NextResponse.next();

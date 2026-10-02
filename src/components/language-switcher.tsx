@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { locales, type Locale } from '@/i18n/request';
+import { isLocaleAwarePath } from '@/i18n/locale-aware-paths';
 import { useNavigationProgress } from '@/components/navigation-progress';
 
 // Matches a leading /en or /hi segment only (not "/articles/english-exam"
@@ -72,14 +73,19 @@ export function LanguageSwitcher() {
     // substring that happens to match.
     const pathWithoutLocale = pathname.replace(LOCALE_PREFIX_RE, '') || '/';
 
-    // No page is localized at the bare root — e.g. the homepage itself has
-    // no Hindi template (see root layout.tsx) — so there's nowhere to
-    // navigate to. The cookie write above is what makes the choice stick:
-    // it already applies the next time this visitor opens a page that does
-    // support it. Without this early return, clicking हिन्दी here used to
-    // bounce to /hi and immediately back to / with no visible effect at
-    // all, which is why the button looked unresponsive.
-    if (pathWithoutLocale === '/') return;
+    // Only articles/exams/organizations/jobs detail pages actually have a
+    // [locale] counterpart (src/i18n/locale-aware-paths.ts, shared with
+    // proxy.ts). Everywhere else — the homepage, /news, /search,
+    // /categories, /commissions/[slug], /positions, /recruitments, and
+    // every other top-level route — has no Hindi template to switch to,
+    // so there's nowhere to navigate. The cookie write above is what makes
+    // the choice stick regardless: it already applies the next time this
+    // visitor opens a page that does support it. Without this early
+    // return, clicking हिन्दी here used to build a dead /en/news- or
+    // /hi/categories/foo-style link that 404s (or, on the homepage,
+    // silently bounced back to / with no visible effect) — which is why
+    // the button looked unresponsive or broken.
+    if (!isLocaleAwarePath(pathWithoutLocale)) return;
 
     const newPath = `/${newLocale}${pathWithoutLocale}`;
     setPendingLocale(newLocale);
