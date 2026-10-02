@@ -16,9 +16,35 @@ export const STAGE_LABELS: Record<string, string> = {
   CLOSED: "Closed",
 };
 
+// Hindi labels for the same stage keys, for pages that render a posting's
+// stage outside the [locale] detail-page templates (which define their own
+// inline Hindi strings) — e.g. the /jobs listing page.
+export const STAGE_LABELS_HI: Record<string, string> = {
+  NOTIFICATION_OUT: "अधिसूचना जारी",
+  APPLICATION_OPEN: "आवेदन शुरू",
+  APPLICATION_CLOSED: "आवेदन बंद",
+  ADMIT_CARD_RELEASED: "प्रवेश पत्र जारी",
+  EXAM_SCHEDULED: "परीक्षा निर्धारित",
+  EXAM_CONDUCTED: "परीक्षा संपन्न",
+  ANSWER_KEY_OUT: "उत्तर कुंजी जारी",
+  OBJECTION_WINDOW: "आपत्ति विंडो खुली",
+  RESULT_OUT: "परिणाम घोषित",
+  MERIT_LIST_OUT: "मेरिट सूची जारी",
+  INTERVIEW_SCHEDULED: "साक्षात्कार निर्धारित",
+  FINAL_RESULT_OUT: "अंतिम परिणाम घोषित",
+  ACTIVE: "भर्ती जारी",
+  FILLED: "पद भरा गया",
+  CLOSED: "बंद",
+};
+
 export const KIND_LABELS: Record<string, string> = {
   GOVERNMENT: "Government",
   PRIVATE: "Private",
+};
+
+export const KIND_LABELS_HI: Record<string, string> = {
+  GOVERNMENT: "सरकारी",
+  PRIVATE: "निजी",
 };
 
 export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
@@ -51,10 +77,16 @@ export const ARTICLE_TYPE_LABELS: Record<string, string> = {
   COMPANY_REVIEW: "Company Review",
 };
 
-export function formatDate(date: Date | string | null | undefined) {
+// localeTag defaults to "en-IN" so every existing call site (none of which
+// pass a second argument) is unaffected; pages that know the visitor is in
+// Hindi mode can pass "hi-IN" to get Devanagari month names/digits.
+export function formatDate(
+  date: Date | string | null | undefined,
+  localeTag: "en-IN" | "hi-IN" = "en-IN",
+) {
   if (!date) return null;
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("en-IN", {
+  return d.toLocaleDateString(localeTag, {
     day: "2-digit",
     month: "short",
     year: "numeric",

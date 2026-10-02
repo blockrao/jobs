@@ -75,17 +75,23 @@ export function LanguageSwitcher() {
 
     // Only articles/exams/organizations/jobs detail pages actually have a
     // [locale] counterpart (src/i18n/locale-aware-paths.ts, shared with
-    // proxy.ts). Everywhere else — the homepage, /news, /search,
-    // /categories, /commissions/[slug], /positions, /recruitments, and
-    // every other top-level route — has no Hindi template to switch to,
-    // so there's nowhere to navigate. The cookie write above is what makes
-    // the choice stick regardless: it already applies the next time this
-    // visitor opens a page that does support it. Without this early
-    // return, clicking हिन्दी here used to build a dead /en/news- or
-    // /hi/categories/foo-style link that 404s (or, on the homepage,
-    // silently bounced back to / with no visible effect) — which is why
-    // the button looked unresponsive or broken.
-    if (!isLocaleAwarePath(pathWithoutLocale)) return;
+    // proxy.ts) — those get a real URL change via router.push below.
+    // Everywhere else (the homepage, /jobs, /news, /search, /categories,
+    // /commissions/[slug], /positions, /recruitments, ...) has no separate
+    // Hindi URL to navigate to, but some of them (e.g. /jobs) still render
+    // Hindi content server-side based on this same cookie once it's set.
+    // router.refresh() re-runs the current route's server components with
+    // the cookie we just wrote, so those pages visibly update in place
+    // instead of silently doing nothing until the next full navigation —
+    // which is what made the button look unresponsive or broken before.
+    if (!isLocaleAwarePath(pathWithoutLocale)) {
+      setPendingLocale(newLocale);
+      start();
+      startTransition(() => {
+        router.refresh();
+      });
+      return;
+    }
 
     const newPath = `/${newLocale}${pathWithoutLocale}`;
     setPendingLocale(newLocale);
