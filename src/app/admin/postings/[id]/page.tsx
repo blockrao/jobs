@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { postings, postingUpdates } from "@/db/schema";
 import { updatePostingStage } from "../../actions";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
+import { SubmitButton } from "@/components/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +75,9 @@ export default async function AdminPostingDetail({
             placeholder="Description (optional)"
             className="input col-span-2"
           />
-          <button className="btn col-span-2">Push Update</button>
+          <SubmitButton className="btn col-span-2" pendingText="Pushing…">
+            Push Update
+          </SubmitButton>
         </form>
       </section>
 

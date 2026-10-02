@@ -12,6 +12,7 @@ import {
   rejectPosting,
 } from "./actions";
 import { STAGE_LABELS } from "@/lib/labels";
+import { SubmitButton } from "@/components/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,9 @@ export default async function AdminDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
         <form action={logoutAction}>
-          <button className="text-sm underline">Log out</button>
+          <SubmitButton className="text-sm underline" pendingText="Logging out…">
+            Log out
+          </SubmitButton>
         </form>
       </div>
 
@@ -54,11 +57,21 @@ export default async function AdminDashboard() {
                 <div className="flex gap-1 flex-shrink-0">
                   <form action={approvePosting}>
                     <input type="hidden" name="postingId" value={p.id} />
-                    <button className="btn text-xs px-2 py-1 bg-green-600 hover:bg-green-700">✓</button>
+                    <SubmitButton
+                      className="btn text-xs px-2 py-1 bg-green-600 hover:bg-green-700"
+                      pendingText="…"
+                    >
+                      ✓
+                    </SubmitButton>
                   </form>
                   <form action={rejectPosting}>
                     <input type="hidden" name="postingId" value={p.id} />
-                    <button className="btn text-xs px-2 py-1 bg-red-600 hover:bg-red-700">✕</button>
+                    <SubmitButton
+                      className="btn text-xs px-2 py-1 bg-red-600 hover:bg-red-700"
+                      pendingText="…"
+                    >
+                      ✕
+                    </SubmitButton>
                   </form>
                 </div>
               </div>
@@ -84,7 +97,9 @@ export default async function AdminDashboard() {
           <input name="state" placeholder="State (if state govt)" className="input" />
           <input name="websiteUrl" placeholder="Website URL" className="input col-span-2" />
           <textarea name="description" placeholder="Description" className="input col-span-3" />
-          <button className="btn col-span-3 sm:col-span-1">Add Organization</button>
+          <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Adding…">
+            Add Organization
+          </SubmitButton>
         </form>
         <ul className="mt-3 divide-y divide-black/10 text-sm">
           {orgs.map((o) => (
@@ -101,7 +116,9 @@ export default async function AdminDashboard() {
           <input name="name" placeholder="Name *" required className="input" />
           <input name="slug" placeholder="Slug (auto if blank)" className="input" />
           <input name="description" placeholder="Description" className="input" />
-          <button className="btn col-span-3 sm:col-span-1">Add Category</button>
+          <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Adding…">
+            Add Category
+          </SubmitButton>
         </form>
         <ul className="mt-3 divide-y divide-black/10 text-sm">
           {cats.map((c) => (
@@ -150,7 +167,9 @@ export default async function AdminDashboard() {
           <input name="applyUrl" placeholder="Apply URL" className="input" />
           <textarea name="eligibility" placeholder="Eligibility" className="input col-span-3" />
           <textarea name="description" placeholder="Description *" required className="input col-span-3" rows={4} />
-          <button className="btn col-span-3 sm:col-span-1">Create Posting</button>
+          <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Creating…">
+            Create Posting
+          </SubmitButton>
         </form>
         <ul className="mt-3 divide-y divide-black/10 text-sm">
           {postingRows.map((p) => (
@@ -198,7 +217,9 @@ export default async function AdminDashboard() {
           <input name="authorName" placeholder="Author" className="input" />
           <input name="dek" placeholder="Short summary (dek)" className="input col-span-3" />
           <textarea name="body" placeholder="Body *" required className="input col-span-3" rows={6} />
-          <button className="btn col-span-3 sm:col-span-1">Publish Article</button>
+          <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Publishing…">
+            Publish Article
+          </SubmitButton>
         </form>
         <ul className="mt-3 divide-y divide-black/10 text-sm">
           {articleRows.map((a) => (

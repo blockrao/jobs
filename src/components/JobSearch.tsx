@@ -68,6 +68,41 @@ export function JobSearch({ onResultsChange, initialQuery = "" }: JobSearchProps
     return () => clearTimeout(timer);
   }, [query, announcementFilter, closingFilter, sortBy, performSearch]);
 
+  // Fetch autocomplete suggestions as the visitor types. Previously the
+  // suggestions dropdown below was fully built (state, rendering, click
+  // handling) but nothing ever called setSuggestions, so it could never
+  // show anything — /api/search/suggestions (backed by the already-working
+  // getSearchSuggestions query) now feeds it.
+  useEffect(() => {
+    if (query.trim().length <= 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/search/suggestions?${new URLSearchParams({ q: query }).toString()}`, {
+        signal: controller.signal,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setSuggestions(data.data);
+          }
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.error("Suggestions fetch failed:", err);
+          }
+        });
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
   const handleSortChange = (newSort: "relevance" | "newest" | "closing_soonest" | "most_urgent") => {
     setSortBy(newSort);
   };
