@@ -53,6 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         languages: {
           en: absoluteUrl(`/en/jobs/${posting.slug}`),
           hi: absoluteUrl(`/hi/jobs/${posting.slug}`),
+          "x-default": absoluteUrl(`/jobs/${posting.slug}`),
         },
       }),
     },
@@ -124,6 +125,7 @@ export default async function LocaleJobPage({ params }: Props) {
     payScale: isHi ? "वेतनमान" : "Pay Scale",
     postedOn: isHi ? "प्रकाशित तिथि" : "Posted On",
     lastDate: isHi ? "अंतिम तिथि" : "Last Date to Apply",
+    lastVerified: isHi ? "अंतिम सत्यापन" : "Last Verified",
     applyNow: isHi ? "अभी आवेदन करें" : "Apply Now",
     officialNotification: isHi ? "आधिकारिक अधिसूचना (PDF)" : "Official Notification (PDF)",
     overview: isHi ? "विवरण" : "Overview",
@@ -187,6 +189,14 @@ export default async function LocaleJobPage({ params }: Props) {
           <div>
             <dt className="text-neutral-500">{L.lastDate}</dt>
             <dd className="font-medium">{formatDate(posting.validThrough)}</dd>
+          </div>
+        )}
+        {(posting.lastVerifiedAt || posting.updatedAt) && (
+          <div>
+            <dt className="text-neutral-500">{L.lastVerified}</dt>
+            <dd className="font-medium">
+              {formatDate(posting.lastVerifiedAt ?? posting.updatedAt)}
+            </dd>
           </div>
         )}
       </dl>

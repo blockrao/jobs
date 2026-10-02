@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         languages: {
           en: absoluteUrl(`/en/articles/${article.slug}`),
           hi: absoluteUrl(`/hi/articles/${article.slug}`),
+          "x-default": absoluteUrl(`/articles/${article.slug}`),
         },
       }),
     },

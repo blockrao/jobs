@@ -71,6 +71,7 @@ export async function generateMetadata({
       languages: {
         en: absoluteUrl(`/en/exams/${exam.slug}`),
         hi: absoluteUrl(`/hi/exams/${exam.slug}`),
+        "x-default": absoluteUrl(`/exams/${exam.slug}`),
       },
     },
     openGraph: {

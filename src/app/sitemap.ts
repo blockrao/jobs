@@ -33,6 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       languages: {
         en: `${SITE_URL}/en${basePath}/${slug}`,
         hi: `${SITE_URL}/hi${basePath}/${slug}`,
+        "x-default": `${SITE_URL}${basePath}/${slug}`,
       },
     },
   });

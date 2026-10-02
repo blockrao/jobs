@@ -76,6 +76,7 @@ export async function generateMetadata({
         languages: {
           en: absoluteUrl('/en/organizations/' + org.slug),
           hi: absoluteUrl('/hi/organizations/' + org.slug),
+          "x-default": absoluteUrl('/organizations/' + org.slug),
         },
       }),
     },

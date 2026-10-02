@@ -69,6 +69,7 @@ export async function generateMetadata({
         languages: {
           en: absoluteUrl(`/en/jobs/${posting.slug}`),
           hi: absoluteUrl(`/hi/jobs/${posting.slug}`),
+          "x-default": absoluteUrl(`/jobs/${posting.slug}`),
         },
       }),
     },
@@ -279,6 +280,20 @@ export default async function JobPage({ params }: Props) {
           <div>
             <dt className="text-neutral-500">Exam Date</dt>
             <dd className="font-medium">{formatDate(posting.examDate)}</dd>
+          </div>
+        )}
+        {/* lastVerifiedAt exists on the postings table but was never shown
+            anywhere — government recruitment info changes often, and a
+            visible freshness signal is what lets a visitor (and a search
+            engine) trust the page without re-checking the official source
+            themselves. Falls back to updatedAt so every posting shows
+            something rather than only the ones explicitly re-verified. */}
+        {(posting.lastVerifiedAt || posting.updatedAt) && (
+          <div>
+            <dt className="text-neutral-500">Last Verified</dt>
+            <dd className="font-medium">
+              {formatDate(posting.lastVerifiedAt ?? posting.updatedAt)}
+            </dd>
           </div>
         )}
       </dl>
