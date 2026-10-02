@@ -17,5 +17,12 @@ const LOCALE_PREFIX_RE = /^\/(en|hi)(?=\/|$)/;
 
 export function isLocaleAwarePath(pathname: string): boolean {
   const stripped = pathname.replace(LOCALE_PREFIX_RE, '') || '/';
-  return LOCALE_AWARE_PREFIXES.some((prefix) => stripped.startsWith(prefix));
+  // Require a slug after the prefix, not just the prefix itself: "/jobs/"
+  // with nothing after it (a trailing slash on the *listing* page, which
+  // has no [locale] route — only /[locale]/jobs/[slug] does) would
+  // otherwise satisfy `startsWith('/jobs/')` and get incorrectly routed
+  // through next-intl's middleware, which has no match for it either.
+  return LOCALE_AWARE_PREFIXES.some(
+    (prefix) => stripped.startsWith(prefix) && stripped.length > prefix.length,
+  );
 }
