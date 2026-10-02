@@ -10,6 +10,7 @@ import {
   jsonLdGraph,
 } from "@/lib/structured-data";
 import { ARTICLE_TYPE_LABELS, formatDate } from "@/lib/labels";
+import { InfoCard } from "@/components/ui/info-card";
 
 export const revalidate = 300;
 
@@ -107,6 +108,16 @@ export default async function ArticlePage({ params }: Props) {
       <span className="inline-block rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700">
         {ARTICLE_TYPE_LABELS[article.type] ?? article.type}
       </span>
+      {article.coverImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- remote,
+        // scraped/CMS-supplied URLs; no next/image domain allowlist set up
+        // for these yet.
+        <img
+          src={article.coverImageUrl}
+          alt=""
+          className="mt-4 aspect-video w-full rounded-lg object-cover"
+        />
+      )}
       <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
         {title}
       </h1>
@@ -133,7 +144,7 @@ export default async function ArticlePage({ params }: Props) {
           <h2 className="text-sm font-semibold text-neutral-700">
             {locale === "hi" ? "संबंधित नौकरी पोस्टिंग" : "Related Job Postings"}
           </h2>
-          <ul className="mt-2 space-y-1">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {relatedPostings.map((posting) => {
               // Only link into the Hindi job page when this posting actually
               // has Hindi content — otherwise the plain canonical page, same
@@ -145,18 +156,25 @@ export default async function ArticlePage({ params }: Props) {
                 isHi && posting.titleHi
                   ? `/hi/jobs/${posting.slug}`
                   : `/jobs/${posting.slug}`;
+              const vacancySubtitle =
+                posting.totalVacancies != null
+                  ? isHi
+                    ? `${posting.totalVacancies} रिक्तियां`
+                    : `${posting.totalVacancies} vacancies`
+                  : isHi
+                    ? "विवरण देखें"
+                    : "View details";
               return (
-                <li key={posting.id}>
-                  <Link
-                    href={postingHref}
-                    className="font-medium underline hover:no-underline"
-                  >
-                    {isHi ? posting.titleHi || posting.title : posting.title}
-                  </Link>
-                </li>
+                <InfoCard
+                  key={posting.id}
+                  tone="brand"
+                  href={postingHref}
+                  title={isHi ? posting.titleHi || posting.title : posting.title}
+                  subtitle={vacancySubtitle}
+                />
               );
             })}
-          </ul>
+          </div>
         </aside>
       )}
 

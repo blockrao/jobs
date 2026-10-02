@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getOrganizationRecruitments, getOrganizationExams, getOrganizationStats } from "@/db/operations/get-organizations";
 import { absoluteUrl } from "@/lib/site";
 import { safeQuery } from "@/lib/safe-query";
+import { StatTile } from "@/components/ui/stat-tile";
+import { InfoCard } from "@/components/ui/info-card";
+import { Badge } from "@/components/ui/badge";
 
 function buildBreadcrumbSchema(items: { name: string; path: string }[], locale: string): object {
   return {
@@ -174,22 +177,25 @@ export default async function OrganizationPage({ params }: Props) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {stats.recruitmentCount > 0 && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
-            <div className="text-3xl font-bold text-blue-600">{stats.recruitmentCount}</div>
-            <div className="text-sm text-gray-600">{locale === "hi" ? "भर्ती अभियान" : "Recruitment Campaigns"}</div>
-          </div>
+          <StatTile
+            tone="brand"
+            value={stats.recruitmentCount}
+            label={locale === "hi" ? "भर्ती अभियान" : "Recruitment Campaigns"}
+          />
         )}
         {stats.examCount > 0 && (
-          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg text-center">
-            <div className="text-3xl font-bold text-purple-600">{stats.examCount}</div>
-            <div className="text-sm text-gray-600">{locale === "hi" ? "आयोजित परीक्षाएं" : "Exams Conducted"}</div>
-          </div>
+          <StatTile
+            tone="neutral"
+            value={stats.examCount}
+            label={locale === "hi" ? "आयोजित परीक्षाएं" : "Exams Conducted"}
+          />
         )}
         {stats.positionCount > 0 && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-            <div className="text-3xl font-bold text-green-600">{stats.positionCount}</div>
-            <div className="text-sm text-gray-600">{locale === "hi" ? "भर्ती पद" : "Positions Recruited"}</div>
-          </div>
+          <StatTile
+            tone="success"
+            value={stats.positionCount}
+            label={locale === "hi" ? "भर्ती पद" : "Positions Recruited"}
+          />
         )}
       </div>
 
@@ -214,15 +220,13 @@ export default async function OrganizationPage({ params }: Props) {
           <h2 className="text-2xl font-bold mb-4">{locale === "hi" ? "परीक्षाएं" : "Exams Recruited Through"}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {exams.map((exam) => (
-              <Link
+              <InfoCard
                 key={exam.id}
+                tone="neutral"
                 href={locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`}
-                className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
-              >
-                <div className="font-semibold text-blue-600 hover:underline">
-                  {locale === "hi" ? exam.labelHi || exam.label : exam.label}
-                </div>
-              </Link>
+                title={locale === "hi" ? exam.labelHi || exam.label : exam.label}
+                subtitle={locale === "hi" ? "परीक्षा विवरण देखें" : "View exam details"}
+              />
             ))}
           </div>
         </div>
@@ -241,22 +245,22 @@ export default async function OrganizationPage({ params }: Props) {
                 <Link
                   key={recruitment.id}
                   href={`/recruitments/${recruitment.slug}`}
-                  className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
+                  className="p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="font-semibold text-blue-600 hover:underline text-lg">
+                      <div className="font-semibold text-neutral-900 hover:underline text-lg">
                         {recruitment.name}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">
+                      <div className="text-sm text-neutral-600 mt-1">
                         {recruitment.totalVacancies && `${recruitment.totalVacancies} ${locale === "hi" ? "रिक्तियां" : "vacancies"}`}
                         {recruitment.totalVacancies && recruitment.year && " • "}
                         {recruitment.year}
                       </div>
                     </div>
-                    <div className="text-sm font-medium px-3 py-1 bg-green-100 text-green-800 rounded">
+                    <Badge tone={recruitment.status === "ACTIVE" ? "success" : "neutral"}>
                       {recruitment.status}
-                    </div>
+                    </Badge>
                   </div>
                 </Link>
               ))}

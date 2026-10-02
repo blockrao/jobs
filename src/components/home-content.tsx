@@ -6,6 +6,7 @@ import type { listArticles, listCategories, listPostings } from "@/lib/queries";
 import { STAGE_LABELS, STAGE_LABELS_HI, formatDate } from "@/lib/labels";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
+import { InfoCard } from "@/components/ui/info-card";
 
 type Postings = Awaited<ReturnType<typeof listPostings>>;
 type Categories = Awaited<ReturnType<typeof listCategories>>;
@@ -128,34 +129,10 @@ export function HomeContent({
       <section className="mt-12">
         <h2 className="text-lg font-semibold mb-4">{L.browseGovt}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-          <Link
-            href="/positions"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">{L.positions}</div>
-            <div className="text-xs text-neutral-600 mt-1">{L.careerPaths}</div>
-          </Link>
-          <Link
-            href="/exams"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">{L.exams}</div>
-            <div className="text-xs text-neutral-600 mt-1">{L.byCommission}</div>
-          </Link>
-          <Link
-            href="/recruitments"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">{L.campaigns}</div>
-            <div className="text-xs text-neutral-600 mt-1">{L.byYear}</div>
-          </Link>
-          <Link
-            href="/organizations"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">{L.organizations}</div>
-            <div className="text-xs text-neutral-600 mt-1">{L.allEmployers}</div>
-          </Link>
+          <InfoCard center tone="brand" href="/positions" title={L.positions} subtitle={L.careerPaths} />
+          <InfoCard center tone="neutral" href="/exams" title={L.exams} subtitle={L.byCommission} />
+          <InfoCard center tone="success" href="/recruitments" title={L.campaigns} subtitle={L.byYear} />
+          <InfoCard center tone="neutral" href="/organizations" title={L.organizations} subtitle={L.allEmployers} />
         </div>
       </section>
 

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { getExamBySlug, getExamRelatedPositions, getExamRecruitmentDetails } from "@/db/operations/get-exams";
 import { absoluteUrl } from "@/lib/site";
 import { safeQuery } from "@/lib/safe-query";
+import { InfoCard } from "@/components/ui/info-card";
+import { Badge } from "@/components/ui/badge";
 
 function buildBreadcrumbSchema(items: { name: string; path: string }[], locale: string): object {
   return {
@@ -183,18 +185,17 @@ export default async function ExamPage({ params }: Props) {
               {relatedPositions.map((position) => (
                 // /positions/[slug] has no [locale] counterpart — link to
                 // the real page rather than a 404ing /${locale}/... URL.
-                <Link
+                <InfoCard
                   key={position.id}
+                  tone="brand"
                   href={`/positions/${position.slug}`}
-                  className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
-                >
-                  <div className="font-semibold text-blue-600 hover:underline">{position.name}</div>
-                  {position.typicalSalaryMin && position.typicalSalaryMax && (
-                    <div className="text-sm text-gray-600 mt-2">
-                      {locale === "hi" ? "वेतन" : "Salary"}: ₹{(position.typicalSalaryMin / 1000).toFixed(0)}K - ₹{(position.typicalSalaryMax / 1000).toFixed(0)}K
-                    </div>
-                  )}
-                </Link>
+                  title={position.name}
+                  subtitle={
+                    position.typicalSalaryMin && position.typicalSalaryMax
+                      ? `${locale === "hi" ? "वेतन" : "Salary"}: ₹${(position.typicalSalaryMin / 1000).toFixed(0)}K - ₹${(position.typicalSalaryMax / 1000).toFixed(0)}K`
+                      : locale === "hi" ? "विवरण देखें" : "View details"
+                  }
+                />
               ))}
             </div>
           </div>
@@ -223,9 +224,9 @@ export default async function ExamPage({ params }: Props) {
                         </Link>
                         <div className="text-sm text-gray-600">{recruitment.year}</div>
                       </div>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      <Badge tone={recruitment.status === "ACTIVE" ? "success" : "neutral"}>
                         {recruitment.status}
-                      </span>
+                      </Badge>
                     </div>
 
                     {recruitment.description && (

@@ -22,6 +22,8 @@ import {
   formatCurrencyRange,
   formatDate,
 } from "@/lib/labels";
+import { Badge } from "@/components/ui/badge";
+import { InfoCard } from "@/components/ui/info-card";
 
 export const revalidate = 300;
 
@@ -293,12 +295,8 @@ export default async function LocaleJobPage({ params }: Props) {
       </nav>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white">
-          {kindLabels[posting.kind]}
-        </span>
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700">
-          {stageLabels[posting.currentStage] ?? posting.currentStage}
-        </span>
+        <Badge tone="brand">{kindLabels[posting.kind]}</Badge>
+        <Badge tone="neutral">{stageLabels[posting.currentStage] ?? posting.currentStage}</Badge>
       </div>
 
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{displayTitle}</h1>
@@ -413,6 +411,45 @@ export default async function LocaleJobPage({ params }: Props) {
         )}
       </div>
 
+      <section className="mt-8">
+        <h2 className="text-sm font-semibold text-neutral-500">{L.relatedInfo}</h2>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {posting.canonicalPosition && (
+              <InfoCard
+                tone="brand"
+                href={`/positions/${posting.canonicalPosition.slug}`}
+                title={posting.canonicalPosition.name}
+                subtitle={L.viewPositionHub}
+              />
+            )}
+
+            {posting.canonicalRecruitment && (
+              <InfoCard
+                tone="success"
+                href={`/recruitments/${posting.canonicalRecruitment.slug}`}
+                title={posting.canonicalRecruitment.name}
+                subtitle={L.viewRecruitmentHub}
+              />
+            )}
+
+            <InfoCard
+              tone="neutral"
+              href={orgHref}
+              title={displayOrgName}
+              subtitle={L.viewAllForOrg}
+            />
+
+            {posting.exam && (
+              <InfoCard
+                tone="neutral"
+                href={isHi ? `/hi/exams/${posting.exam.slug}` : `/exams/${posting.exam.slug}`}
+                title={isHi && posting.exam.labelHi ? posting.exam.labelHi : posting.exam.label}
+                subtitle={L.viewExamHub}
+              />
+            )}
+          </div>
+      </section>
+
       {timeline.length > 0 && (
         <section className="mt-10">
           <h2 className="text-lg font-semibold">{L.timeline}</h2>
@@ -499,48 +536,6 @@ export default async function LocaleJobPage({ params }: Props) {
           </ul>
         </section>
       )}
-
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">{L.relatedInfo}</h2>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {posting.canonicalPosition && (
-            <Link
-              href={`/positions/${posting.canonicalPosition.slug}`}
-              className="rounded-lg border border-blue-200 bg-blue-50 p-4 hover:bg-blue-100"
-            >
-              <div className="font-semibold text-blue-900">{posting.canonicalPosition.name}</div>
-              <div className="text-sm text-blue-700">{L.viewPositionHub}</div>
-            </Link>
-          )}
-
-          {posting.canonicalRecruitment && (
-            <Link
-              href={`/recruitments/${posting.canonicalRecruitment.slug}`}
-              className="rounded-lg border border-green-200 bg-green-50 p-4 hover:bg-green-100"
-            >
-              <div className="font-semibold text-green-900">{posting.canonicalRecruitment.name}</div>
-              <div className="text-sm text-green-700">{L.viewRecruitmentHub}</div>
-            </Link>
-          )}
-
-          <Link href={orgHref} className="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50">
-            <div className="font-semibold text-neutral-900">{displayOrgName}</div>
-            <div className="text-sm text-neutral-600">{L.viewAllForOrg}</div>
-          </Link>
-
-          {posting.exam && (
-            <Link
-              href={isHi ? `/hi/exams/${posting.exam.slug}` : `/exams/${posting.exam.slug}`}
-              className="rounded-lg border border-neutral-200 p-4 hover:bg-neutral-50"
-            >
-              <div className="font-semibold text-neutral-900">
-                {isHi && posting.exam.labelHi ? posting.exam.labelHi : posting.exam.label}
-              </div>
-              <div className="text-sm text-neutral-600">{L.viewExamHub}</div>
-            </Link>
-          )}
-        </div>
-      </section>
     </div>
   );
 }
