@@ -9,14 +9,14 @@ import type { Locale } from "@/i18n/request";
 const COPY: Record<Locale, { disclaimer: string; allJobs: string; categories: string; articles: string }> = {
   en: {
     disclaimer:
-      "Job and exam information is aggregated for informational purposes — always verify against the official notification before applying.",
+      "Job and exam information is aggregated for informational purposes — always verify against the official notification before applying. JobOye is an independent information platform and is not affiliated with, endorsed by, or operated by any government department, commission, or agency named on this site.",
     allJobs: "All Jobs",
     categories: "Categories",
     articles: "Articles",
   },
   hi: {
     disclaimer:
-      "नौकरी और परीक्षा संबंधी जानकारी सूचना के उद्देश्य से एकत्र की गई है — आवेदन करने से पहले हमेशा आधिकारिक अधिसूचना से पुष्टि करें।",
+      "नौकरी और परीक्षा संबंधी जानकारी सूचना के उद्देश्य से एकत्र की गई है — आवेदन करने से पहले हमेशा आधिकारिक अधिसूचना से पुष्टि करें। जॉबओए एक स्वतंत्र सूचना मंच है तथा इस साइट पर उल्लिखित किसी भी सरकारी विभाग, आयोग, अथवा एजेंसी से संबद्ध, अनुमोदित, अथवा संचालित नहीं है।",
     allJobs: "सभी नौकरियां",
     categories: "श्रेणियां",
     articles: "लेख",
