@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCategoryBySlug } from "@/lib/queries";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
+import { safeQuery } from "@/lib/safe-query";
 import { CategoryContent } from "@/components/category-content";
 
 export const revalidate = 300;
@@ -10,7 +11,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const result = await getCategoryBySlug(slug);
+  const result = await safeQuery(() => getCategoryBySlug(slug), null);
   if (!result) return {};
   return {
     title: result.category.name,
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
-  const result = await getCategoryBySlug(slug);
+  const result = await safeQuery(() => getCategoryBySlug(slug), null);
   if (!result) notFound();
   const { category } = result;
 

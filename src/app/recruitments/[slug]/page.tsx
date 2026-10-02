@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { recruitments } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { eq } from "drizzle-orm";
+import { safeQuery } from "@/lib/safe-query";
 
 export const revalidate = 300; // 5 minutes
 
@@ -31,7 +32,7 @@ async function getRecruitmentBySlug(slug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const recruitment = await getRecruitmentBySlug(slug);
+  const recruitment = await safeQuery(() => getRecruitmentBySlug(slug), null);
 
   if (!recruitment) return {};
 
@@ -64,7 +65,7 @@ function formatDate(date: Date | null | undefined): string {
 
 export default async function RecruitmentPage({ params }: Props) {
   const { slug } = await params;
-  const recruitment = await getRecruitmentBySlug(slug);
+  const recruitment = await safeQuery(() => getRecruitmentBySlug(slug), null);
 
   if (!recruitment) {
     notFound();

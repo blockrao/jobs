@@ -1,5 +1,6 @@
 import { getCommissionBySlug, getPostingsByCommission, listCommissionsWithExams } from "@/lib/queries";
 import { CommissionContent } from "@/components/commission-content";
+import { safeQuery } from "@/lib/safe-query";
 
 export const revalidate = 300;
 
@@ -9,7 +10,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { commission_slug } = await params;
-  const commission = await getCommissionBySlug(commission_slug);
+  const commission = await safeQuery(() => getCommissionBySlug(commission_slug), null);
   return {
     title: commission ? commission.name : "Commission",
     description: `Browse all open ${commission?.name || "government"} job exams and positions.`,
@@ -31,8 +32,11 @@ export async function generateStaticParams() {
 
 export default async function CommissionPage({ params }: Props) {
   const { commission_slug } = await params;
-  const commission = await getCommissionBySlug(commission_slug);
-  const allPostings = await getPostingsByCommission(commission_slug);
+  const commission = await safeQuery(() => getCommissionBySlug(commission_slug), null);
+  const allPostings = await safeQuery(
+    () => getPostingsByCommission(commission_slug),
+    [],
+  );
 
   if (!commission) {
     return (

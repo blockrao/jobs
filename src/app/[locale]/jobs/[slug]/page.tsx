@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostingBySlug } from "@/lib/queries";
+import { safeQuery } from "@/lib/safe-query";
 import {
   buildBreadcrumbSchema,
   buildJobPostingSchema,
@@ -23,7 +24,7 @@ function plainTextSnippet(html: string, maxLen = 155): string {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
-  const posting = await getPostingBySlug(slug);
+  const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) return {};
 
   const titleHi = (posting as any).titleHi as string | null;
@@ -67,7 +68,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
-  const posting = await getPostingBySlug(slug);
+  const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) notFound();
 
   const isHi = locale === "hi";

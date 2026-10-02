@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getOrganizationRecruitments, getOrganizationExams, getOrganizationStats } from "@/db/operations/get-organizations";
 import { absoluteUrl } from "@/lib/site";
+import { safeQuery } from "@/lib/safe-query";
 
 function buildBreadcrumbSchema(items: { name: string; path: string }[]): object {
   return {
@@ -38,7 +39,7 @@ export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const org = await getOrganizationBySlug(slug);
+  const org = await safeQuery(() => getOrganizationBySlug(slug), null);
 
   if (!org) return {};
 
@@ -75,16 +76,20 @@ export async function generateMetadata({
 
 export default async function OrganizationPage({ params }: Props) {
   const { slug } = await params;
-  const org = await getOrganizationBySlug(slug);
+  const org = await safeQuery(() => getOrganizationBySlug(slug), null);
 
   if (!org) {
     notFound();
   }
 
   const [recruitmentResults, examResults, stats] = await Promise.all([
-    getOrganizationRecruitments(org.id),
-    getOrganizationExams(org.id),
-    getOrganizationStats(org.id),
+    safeQuery(() => getOrganizationRecruitments(org.id), []),
+    safeQuery(() => getOrganizationExams(org.id), []),
+    safeQuery(() => getOrganizationStats(org.id), {
+      recruitmentCount: 0,
+      examCount: 0,
+      positionCount: 0,
+    }),
   ]);
 
   const recruitments = recruitmentResults.map((r) => r.recruitment);

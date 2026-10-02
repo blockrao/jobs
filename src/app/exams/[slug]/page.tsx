@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getExamBySlug, getExamRelatedPositions, getExamRecruitmentDetails } from "@/db/operations/get-exams";
 import { absoluteUrl } from "@/lib/site";
+import { safeQuery } from "@/lib/safe-query";
 
 interface BreadcrumbItem {
   "@type": "ListItem";
@@ -48,7 +49,7 @@ export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const examData = await getExamBySlug(slug);
+  const examData = await safeQuery(() => getExamBySlug(slug), null);
 
   if (!examData) return {};
 
@@ -83,7 +84,7 @@ export async function generateMetadata({
 
 export default async function ExamPage({ params }: Props) {
   const { slug } = await params;
-  const examData = await getExamBySlug(slug);
+  const examData = await safeQuery(() => getExamBySlug(slug), null);
 
   if (!examData) {
     notFound();
@@ -93,8 +94,8 @@ export default async function ExamPage({ params }: Props) {
   const commission = examData.commission;
 
   const [relatedPositions, recruitmentDetails] = await Promise.all([
-    getExamRelatedPositions(exam.id),
-    getExamRecruitmentDetails(exam.id),
+    safeQuery(() => getExamRelatedPositions(exam.id), []),
+    safeQuery(() => getExamRecruitmentDetails(exam.id), []),
   ]);
 
   const breadcrumbSchema = buildBreadcrumbSchema([

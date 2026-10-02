@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { positions, posts, recruitments } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { eq, inArray } from "drizzle-orm";
+import { safeQuery } from "@/lib/safe-query";
 
 export const revalidate = 3600; // 1 hour
 
@@ -45,7 +46,7 @@ export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const position = await getPositionBySlug(slug);
+  const position = await safeQuery(() => getPositionBySlug(slug), null);
 
   if (!position) return {};
 
@@ -68,13 +69,16 @@ export async function generateMetadata({
 
 export default async function PositionPage({ params }: Props) {
   const { slug } = await params;
-  const position = await getPositionBySlug(slug);
+  const position = await safeQuery(() => getPositionBySlug(slug), null);
 
   if (!position) {
     notFound();
   }
 
-  const recruitmentsList = await getRecruitmentsByPosition(position.id);
+  const recruitmentsList = await safeQuery(
+    () => getRecruitmentsByPosition(position.id),
+    [],
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

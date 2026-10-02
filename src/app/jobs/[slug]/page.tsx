@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostingBySlug } from "@/lib/queries";
+import { safeQuery } from "@/lib/safe-query";
 import {
   buildBreadcrumbSchema,
   buildExamEventSchema,
@@ -44,7 +45,7 @@ export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const posting = await getPostingBySlug(slug);
+  const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) return {};
 
   const title = `${posting.title} — ${posting.organization.name}`;
@@ -116,7 +117,7 @@ function buildFaqs(posting: NonNullable<Awaited<ReturnType<typeof getPostingBySl
 
 export default async function JobPage({ params }: Props) {
   const { slug } = await params;
-  const posting = await getPostingBySlug(slug);
+  const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) notFound();
 
   const org = posting.organization;

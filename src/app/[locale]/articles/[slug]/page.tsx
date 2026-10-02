@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArticleBySlug } from "@/lib/queries";
 import { absoluteUrl } from "@/lib/site";
+import { safeQuery } from "@/lib/safe-query";
 import {
   buildArticleSchema,
   buildBreadcrumbSchema,
@@ -16,7 +17,7 @@ type Props = { params: Promise<{ slug: string; locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
-  const article = await getArticleBySlug(slug);
+  const article = await safeQuery(() => getArticleBySlug(slug), null);
   if (!article) return {};
 
   const hasHindi = Boolean(article.titleHi);
@@ -56,7 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArticlePage({ params }: Props) {
   const { slug, locale } = await params;
-  const article = await getArticleBySlug(slug);
+  const article = await safeQuery(() => getArticleBySlug(slug), null);
   if (!article || article.status !== "PUBLISHED") notFound();
 
   const isHi = locale === "hi";
