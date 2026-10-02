@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticleBySlug(slug);
   if (!article) return {};
 
+  const hasHindi = Boolean(article.titleHi);
   const title = locale === "hi" ? article.titleHi || article.title : article.title;
   const dek = locale === "hi" ? article.dekHi || article.dek : article.dek;
   const body = locale === "hi" ? article.bodyHi || article.body : article.body;
@@ -28,11 +29,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: dek ?? body.slice(0, 155),
     alternates: {
       canonical: `/${locale}/articles/${article.slug}`,
-      languages: {
-        en: `${absoluteUrl('/en/articles/' + article.slug)}`,
-        hi: `${absoluteUrl('/hi/articles/' + article.slug)}`,
-      }
+      // Only advertise the Hindi alternate when real Hindi content exists —
+      // otherwise /hi/articles/[slug] would just be a duplicate of the
+      // English page under a Hindi URL, which misleads search engines
+      // rather than helping them find real Hindi content (same gating as
+      // the jobs/exams/organizations [locale] pages).
+      ...(hasHindi && {
+        languages: {
+          en: absoluteUrl(`/en/articles/${article.slug}`),
+          hi: absoluteUrl(`/hi/articles/${article.slug}`),
+        },
+      }),
     },
+    // A /hi page with no Hindi translation is just the English page under a
+    // Hindi URL — noindex it rather than let Google treat it as distinct,
+    // duplicate-looking content (same rule as the jobs [locale] page).
+    robots: locale === "hi" && !hasHindi ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description: dek ?? undefined,
@@ -47,9 +59,13 @@ export default async function ArticlePage({ params }: Props) {
   const article = await getArticleBySlug(slug);
   if (!article || article.status !== "PUBLISHED") notFound();
 
-  const title = locale === "hi" ? article.titleHi || article.title : article.title;
-  const dek = locale === "hi" ? article.dekHi || article.dek : article.dek;
-  const body = locale === "hi" ? article.bodyHi || article.body : article.body;
+  const isHi = locale === "hi";
+  const title = isHi ? article.titleHi || article.title : article.title;
+  const dek = isHi ? article.dekHi || article.dek : article.dek;
+  const body = isHi ? article.bodyHi || article.body : article.body;
+  const notTranslatedNotice = isHi && !article.titleHi
+    ? "इस लेख का पूरा हिंदी अनुवाद जल्द ही उपलब्ध होगा। नीचे अंग्रेज़ी में विवरण दिया गया है।"
+    : null;
 
   const relatedPostings = article.postingArticles.map((pa) => pa.posting);
   const aboutUrls = relatedPostings.map((p) => absoluteUrl(`/${locale}/jobs/${p.slug}`));
@@ -87,6 +103,12 @@ export default async function ArticlePage({ params }: Props) {
         {article.authorName ? `By ${article.authorName} · ` : ""}
         {formatDate(article.publishedAt)}
       </p>
+
+      {notTranslatedNotice && (
+        <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          {notTranslatedNotice}
+        </div>
+      )}
 
       <div className="prose prose-neutral mt-8 max-w-none whitespace-pre-line">
         {body}
