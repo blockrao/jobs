@@ -58,15 +58,25 @@ export async function generateMetadata({
   const metaDescription = description ||
     `${name}: View all recruitment campaigns, exams conducted, available positions, and application details.`;
 
+  // Only advertise the Hindi alternate when this organization actually has
+  // translated content (nameHi) — most don't yet (15/121 as of writing),
+  // matching the gating already applied on src/app/organizations/[slug].
+  // Without this, every English-only org page declares a /hi/... hreflang
+  // alternate that renders with the same English content, which is a
+  // duplicate-content signal rather than a genuine translation.
+  const hasHindi = Boolean(nameHi);
+
   return {
     title,
     description: metaDescription,
     alternates: {
       canonical: `/${locale}/organizations/${org.slug}`,
-      languages: {
-        en: `${absoluteUrl('/en/organizations/' + org.slug)}`,
-        hi: `${absoluteUrl('/hi/organizations/' + org.slug)}`,
-      }
+      ...(hasHindi && {
+        languages: {
+          en: absoluteUrl('/en/organizations/' + org.slug),
+          hi: absoluteUrl('/hi/organizations/' + org.slug),
+        },
+      }),
     },
     openGraph: {
       title,
