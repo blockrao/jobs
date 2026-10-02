@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/inter/wght-italic.css";
 import "./globals.css";
+
+// Replaces the previous Arial/Helvetica system-font fallback (the
+// unmodified Next.js starter default) with a real typeface. Uses
+// @fontsource (npm-installed static font files bundled into the build)
+// rather than next/font/google, which fetches from fonts.googleapis.com
+// at build time — that fetch isn't guaranteed to succeed in every build
+// environment (it failed outright in this sandbox's restricted-egress
+// shell), so self-hosting from npm removes that dependency entirely. The
+// font's own CSS sets `font-family: "Inter Variable", ...`, referenced by
+// globals.css's `body` rule.
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { AnalyticsTracker } from "@/components/analytics-tracker";

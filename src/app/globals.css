@@ -1,26 +1,48 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. The site is light-only for now: the rest of the codebase
+ * (every page/component) styles against a light background with Tailwind
+ * utilities like `bg-blue-50`, `border-black/10`, `text-neutral-600` and
+ * has zero `dark:` variants anywhere (confirmed by audit). Previously this
+ * file alone flipped `--background`/`--foreground` under
+ * `prefers-color-scheme: dark`, which left every other component's light-
+ * only colors (pastel card backgrounds, low-opacity borders) rendering
+ * broken — invisible dividers, badges floating on a near-black page — for
+ * any visitor on a dark-mode OS/browser. Re-enable dark mode only once the
+ * shared UI primitives (cards, badges, borders) have real `dark:` styling
+ * to go with it; until then, one consistent light theme beats a half-done
+ * dark one.
+ *
+ * --brand-* is the site's own accent color (used for primary buttons,
+ * active nav/language-switcher state, and primary links) — distinct from
+ * the semantic colors already in use across status badges and notices
+ * (blue = informational links, green = active/success, amber = warning).
+ * Swap --brand-600 to change the site's accent in one place.
+ */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --brand-50: #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-600: #4f46e5;
+  --brand-700: #4338ca;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 .input {
@@ -32,7 +54,7 @@ body {
 }
 
 .btn {
-  background: #171717;
+  background: var(--brand-600);
   color: white;
   border-radius: 0.375rem;
   padding: 0.5rem 1rem;

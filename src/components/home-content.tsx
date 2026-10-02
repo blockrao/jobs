@@ -95,7 +95,7 @@ export function HomeContent({
           />
           <button
             type="submit"
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
           >
             {L.search}
           </button>

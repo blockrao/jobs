@@ -396,7 +396,7 @@ export default async function LocaleJobPage({ params }: Props) {
             href={posting.applyUrl}
             target="_blank"
             rel="noopener nofollow"
-            className="rounded-md bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
+            className="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
             {L.applyNow}
           </a>

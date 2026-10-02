@@ -101,7 +101,7 @@ export function LanguageSwitcher() {
           title={lang === 'hi' ? 'हिन्दी में देखें' : 'View in English'}
           className={`inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold uppercase transition-colors disabled:cursor-wait disabled:opacity-70 ${
             locale === lang
-              ? 'bg-blue-600 text-white'
+              ? 'bg-brand-600 text-white'
               : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
           }`}
         >
