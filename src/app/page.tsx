@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { listArticles, listCategories, listPostings } from "@/lib/queries";
-import { STAGE_LABELS, formatDate } from "@/lib/labels";
+import { HomeContent } from "@/components/home-content";
 
 export const revalidate = 120;
 
@@ -24,162 +23,19 @@ export default async function Home() {
     articles = [];
   }
 
+  // All the actual rendering — including which language to show — lives in
+  // HomeContent, a client component that reads the visitor's saved
+  // language cookie. Doing it there instead of here keeps this page a
+  // plain static/ISR server component (○ Static per `next build`, same as
+  // before): the data fetched above already includes every row's Hindi
+  // fields regardless of locale, so there's nothing locale-specific about
+  // the fetch itself, only about how it's displayed.
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <section className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Govt & Private Job Notifications, Results, and Guides
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-neutral-600">
-          One permanent page per notification — from announcement to admit
-          card to result — plus in-depth guides on syllabus, exam pattern,
-          and salary.
-        </p>
-        <form action="/jobs" method="get" className="mx-auto mt-6 flex max-w-lg gap-2">
-          <input
-            type="search"
-            name="q"
-            placeholder="Search jobs, exams, departments..."
-            className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
-          />
-          <button
-            type="submit"
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
-          >
-            Search
-          </button>
-        </form>
-      </section>
-
-      <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <JobColumn
-          title="Latest Government Jobs"
-          href="/jobs?kind=GOVERNMENT"
-          postings={govtJobs}
-        />
-        <JobColumn
-          title="Latest Private Jobs"
-          href="/jobs?kind=PRIVATE"
-          postings={privateJobs}
-        />
-      </div>
-
-      <section className="mt-12">
-        <h2 className="text-lg font-semibold mb-4">Browse Government Jobs</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-          <Link
-            href="/positions"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">Positions</div>
-            <div className="text-xs text-neutral-600 mt-1">Career paths</div>
-          </Link>
-          <Link
-            href="/exams"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">Exams</div>
-            <div className="text-xs text-neutral-600 mt-1">By commission</div>
-          </Link>
-          <Link
-            href="/recruitments"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">Campaigns</div>
-            <div className="text-xs text-neutral-600 mt-1">By year</div>
-          </Link>
-          <Link
-            href="/organizations"
-            className="rounded-md border border-black/10 px-4 py-3 hover:bg-neutral-50 text-center"
-          >
-            <div className="font-semibold text-sm">Organizations</div>
-            <div className="text-xs text-neutral-600 mt-1">All employers</div>
-          </Link>
-        </div>
-      </section>
-
-      {categories.length > 0 && (
-        <section className="mt-12">
-          <h2 className="text-lg font-semibold">Browse by Category</h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/categories/${category.slug}`}
-                className="rounded-full border border-black/10 px-3 py-1.5 text-sm hover:border-black/30"
-              >
-                {category.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {articles.length > 0 && (
-        <section className="mt-12">
-          <h2 className="text-lg font-semibold">Guides & Articles</h2>
-          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {articles.map((article) => (
-              <li key={article.id}>
-                <Link
-                  href={`/articles/${article.slug}`}
-                  className="block rounded-md border border-black/10 px-4 py-3 hover:border-black/30"
-                >
-                  <span className="font-medium">{article.title}</span>
-                  {article.dek && (
-                    <p className="text-sm text-neutral-600">{article.dek}</p>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function JobColumn({
-  title,
-  href,
-  postings,
-}: {
-  title: string;
-  href: string;
-  postings: Awaited<ReturnType<typeof listPostings>>;
-}) {
-  return (
-    <section>
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <Link href={href} className="text-sm underline">
-          View all
-        </Link>
-      </div>
-      <ul className="mt-3 divide-y divide-black/10">
-        {postings.map((posting) => (
-          <li key={posting.id} className="py-3">
-            <Link
-              href={`/jobs/${posting.slug}`}
-              className="font-medium hover:underline"
-            >
-              {posting.title}
-            </Link>
-            <p className="text-sm text-neutral-600">
-              {posting.organization.name} ·{" "}
-              {STAGE_LABELS[posting.currentStage] ?? posting.currentStage}
-            </p>
-            <p className="text-xs text-neutral-400">
-              {formatDate(posting.datePosted)}
-            </p>
-          </li>
-        ))}
-        {postings.length === 0 && (
-          <li className="py-6 text-sm text-neutral-500">
-            No postings yet — check back soon.
-          </li>
-        )}
-      </ul>
-    </section>
+    <HomeContent
+      govtJobs={govtJobs}
+      privateJobs={privateJobs}
+      categories={categories}
+      articles={articles}
+    />
   );
 }
