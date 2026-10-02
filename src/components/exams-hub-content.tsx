@@ -70,6 +70,7 @@ export function ExamsHubContent({
                 <div className="p-6 border border-black/10 rounded-lg hover:shadow-lg transition-shadow cursor-pointer h-full">
                   <div className="flex items-start gap-3 mb-3">
                     <div
+                      aria-hidden="true"
                       className="w-4 h-4 rounded-full flex-shrink-0 mt-1"
                       style={{ backgroundColor: comm.color || "#000000" }}
                     />

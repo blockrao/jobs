@@ -17,6 +17,7 @@ export default async function AdminLoginPage({
         <input
           type="password"
           name="password"
+          aria-label="Password"
           placeholder="Password"
           required
           className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"

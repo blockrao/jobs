@@ -24,6 +24,7 @@ export function JobSearch({ onResultsChange, initialQuery = "" }: JobSearchProps
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
 
   // Execute search
   const performSearch = useCallback(
@@ -88,6 +89,7 @@ export function JobSearch({ onResultsChange, initialQuery = "" }: JobSearchProps
         .then((data) => {
           if (data.success) {
             setSuggestions(data.data);
+            setActiveSuggestion(-1);
           }
         })
         .catch((err) => {
@@ -120,12 +122,24 @@ export function JobSearch({ onResultsChange, initialQuery = "" }: JobSearchProps
     <div className="w-full space-y-6">
       {/* Search Input */}
       <div className="relative">
+        <label htmlFor="job-search-input" className="sr-only">
+          Search jobs by title, organization, position, or location
+        </label>
         <input
+          id="job-search-input"
           type="text"
           placeholder="Search jobs by title, organization, position, or location..."
           value={query}
+          role="combobox"
+          aria-expanded={showSuggestions && suggestions.length > 0}
+          aria-controls="job-search-suggestions"
+          aria-autocomplete="list"
+          aria-activedescendant={
+            activeSuggestion >= 0 ? `job-search-suggestion-${activeSuggestion}` : undefined
+          }
           onChange={(e) => {
             setQuery(e.target.value);
+            setActiveSuggestion(-1);
             if (e.target.value.length > 2) {
               setShowSuggestions(true);
             } else {
@@ -133,20 +147,49 @@ export function JobSearch({ onResultsChange, initialQuery = "" }: JobSearchProps
             }
           }}
           onFocus={() => query.length > 2 && setShowSuggestions(true)}
+          onKeyDown={(e) => {
+            if (!showSuggestions || suggestions.length === 0) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActiveSuggestion((i) => (i + 1) % suggestions.length);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActiveSuggestion((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+            } else if (e.key === "Enter" && activeSuggestion >= 0) {
+              e.preventDefault();
+              setQuery(suggestions[activeSuggestion]);
+              setShowSuggestions(false);
+              setActiveSuggestion(-1);
+            } else if (e.key === "Escape") {
+              setShowSuggestions(false);
+              setActiveSuggestion(-1);
+            }
+          }}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
         {/* Autocomplete suggestions */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-            {suggestions.map((suggestion) => (
+          <div
+            id="job-search-suggestions"
+            role="listbox"
+            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+          >
+            {suggestions.map((suggestion, i) => (
               <button
                 key={suggestion}
+                id={`job-search-suggestion-${i}`}
+                type="button"
+                role="option"
+                aria-selected={i === activeSuggestion}
                 onClick={() => {
                   setQuery(suggestion);
                   setShowSuggestions(false);
+                  setActiveSuggestion(-1);
                 }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                className={`w-full text-left px-4 py-2 hover:bg-gray-100 text-sm ${
+                  i === activeSuggestion ? "bg-gray-100" : ""
+                }`}
               >
                 {suggestion}
               </button>
@@ -292,10 +335,26 @@ function JobResultCard({ result }: JobResultCardProps) {
     NORMAL: "border-l-4 border-gray-300",
   };
 
+  const PRIORITY_LABELS: Record<string, string> = {
+    CRITICAL: "Critical",
+    HOT: "Hot",
+    URGENT: "Urgent",
+    HIGH: "High",
+    MEDIUM: "Medium",
+    NORMAL: "Normal",
+  };
+
   return (
     <div
       className={`p-4 border rounded-lg hover:shadow-md transition-shadow ${priorityColors[result.priorityLevel]}`}
     >
+      {/* The border color above conveys priority visually but has no text
+          equivalent anywhere on the card — a screen reader user gets no
+          priority signal at all. This stays visually hidden since
+          urgencyBadge below already shows a similar signal as visible
+          text; this just makes the finer-grained priorityLevel available
+          to assistive tech too. */}
+      <span className="sr-only">Priority: {PRIORITY_LABELS[result.priorityLevel] ?? result.priorityLevel}</span>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <a href={`/jobs/${result.slug}`} className="hover:underline">

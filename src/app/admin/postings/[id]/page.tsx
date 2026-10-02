@@ -55,7 +55,7 @@ export default async function AdminPostingDetail({
           action={updatePostingStageWithId}
           className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-black/10 p-4"
         >
-          <select name="stage" required className="input col-span-2">
+          <select name="stage" aria-label="Stage" required className="input col-span-2">
             {Object.entries(STAGE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -64,14 +64,16 @@ export default async function AdminPostingDetail({
           </select>
           <input
             name="updateTitle"
+            aria-label="Update title"
             placeholder="Update title (e.g. Admit card released)"
             required
             className="input col-span-2"
           />
-          <input name="eventDate" type="date" className="input" />
-          <input name="updateLink" placeholder="Link (optional)" className="input" />
+          <input name="eventDate" type="date" aria-label="Event date" className="input" />
+          <input name="updateLink" aria-label="Link" placeholder="Link (optional)" className="input" />
           <textarea
             name="updateDescription"
+            aria-label="Description"
             placeholder="Description (optional)"
             className="input col-span-2"
           />

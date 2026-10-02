@@ -83,9 +83,9 @@ export default async function AdminDashboard() {
       <section>
         <h2 className="text-lg font-semibold">Organizations</h2>
         <form action={createOrganization} className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-black/10 p-4 sm:grid-cols-3">
-          <input name="name" placeholder="Name *" required className="input" />
-          <input name="slug" placeholder="Slug (auto if blank)" className="input" />
-          <select name="sector" className="input">
+          <input name="name" aria-label="Name" placeholder="Name *" required className="input" />
+          <input name="slug" aria-label="Slug" placeholder="Slug (auto if blank)" className="input" />
+          <select name="sector" aria-label="Sector" className="input">
             <option value="GOVERNMENT_CENTRAL">Govt — Central</option>
             <option value="GOVERNMENT_STATE">Govt — State</option>
             <option value="PSU">PSU</option>
@@ -94,9 +94,9 @@ export default async function AdminDashboard() {
             <option value="RAILWAY">Railway</option>
             <option value="PRIVATE">Private</option>
           </select>
-          <input name="state" placeholder="State (if state govt)" className="input" />
-          <input name="websiteUrl" placeholder="Website URL" className="input col-span-2" />
-          <textarea name="description" placeholder="Description" className="input col-span-3" />
+          <input name="state" aria-label="State (if state govt)" placeholder="State (if state govt)" className="input" />
+          <input name="websiteUrl" aria-label="Website URL" placeholder="Website URL" className="input col-span-2" />
+          <textarea name="description" aria-label="Description" placeholder="Description" className="input col-span-3" />
           <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Adding…">
             Add Organization
           </SubmitButton>
@@ -113,9 +113,9 @@ export default async function AdminDashboard() {
       <section>
         <h2 className="text-lg font-semibold">Categories</h2>
         <form action={createCategory} className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-black/10 p-4 sm:grid-cols-3">
-          <input name="name" placeholder="Name *" required className="input" />
-          <input name="slug" placeholder="Slug (auto if blank)" className="input" />
-          <input name="description" placeholder="Description" className="input" />
+          <input name="name" aria-label="Name" placeholder="Name *" required className="input" />
+          <input name="slug" aria-label="Slug" placeholder="Slug (auto if blank)" className="input" />
+          <input name="description" aria-label="Description" placeholder="Description" className="input" />
           <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Adding…">
             Add Category
           </SubmitButton>
@@ -132,8 +132,8 @@ export default async function AdminDashboard() {
       <section>
         <h2 className="text-lg font-semibold">Postings</h2>
         <form action={createPosting} className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-black/10 p-4 sm:grid-cols-3">
-          <input name="title" placeholder="Title *" required className="input col-span-2" />
-          <select name="organizationId" required className="input">
+          <input name="title" aria-label="Title" placeholder="Title *" required className="input col-span-2" />
+          <select name="organizationId" aria-label="Organization" required className="input">
             <option value="">Organization *</option>
             {orgs.map((o) => (
               <option key={o.id} value={o.id}>
@@ -141,32 +141,32 @@ export default async function AdminDashboard() {
               </option>
             ))}
           </select>
-          <select name="kind" className="input">
+          <select name="kind" aria-label="Kind" className="input">
             <option value="GOVERNMENT">Government</option>
             <option value="PRIVATE">Private</option>
           </select>
-          <select name="currentStage" className="input">
+          <select name="currentStage" aria-label="Current stage" className="input">
             {Object.entries(STAGE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
-          <input name="totalVacancies" type="number" placeholder="Vacancies" className="input" />
-          <input name="locationCity" placeholder="City" className="input" />
-          <input name="locationRegion" placeholder="State/Region" className="input" />
-          <input name="ageLimitMin" type="number" placeholder="Min Age" className="input" />
-          <input name="ageLimitMax" type="number" placeholder="Max Age" className="input" />
-          <input name="applicationFeeGeneral" type="number" placeholder="Fee (General)" className="input" />
-          <input name="applicationFeeReserved" type="number" placeholder="Fee (Reserved)" className="input" />
-          <input name="salaryMin" type="number" placeholder="Salary/Pay Min" className="input" />
-          <input name="salaryMax" type="number" placeholder="Salary/Pay Max" className="input" />
-          <input name="validThrough" type="date" placeholder="Last Date" className="input" />
-          <input name="examDate" type="date" placeholder="Exam Date" className="input" />
-          <input name="officialNotificationUrl" placeholder="Official Notification URL" className="input col-span-2" />
-          <input name="applyUrl" placeholder="Apply URL" className="input" />
-          <textarea name="eligibility" placeholder="Eligibility" className="input col-span-3" />
-          <textarea name="description" placeholder="Description *" required className="input col-span-3" rows={4} />
+          <input name="totalVacancies" type="number" aria-label="Vacancies" placeholder="Vacancies" className="input" />
+          <input name="locationCity" aria-label="City" placeholder="City" className="input" />
+          <input name="locationRegion" aria-label="State/Region" placeholder="State/Region" className="input" />
+          <input name="ageLimitMin" type="number" aria-label="Min age" placeholder="Min Age" className="input" />
+          <input name="ageLimitMax" type="number" aria-label="Max age" placeholder="Max Age" className="input" />
+          <input name="applicationFeeGeneral" type="number" aria-label="Fee (general)" placeholder="Fee (General)" className="input" />
+          <input name="applicationFeeReserved" type="number" aria-label="Fee (reserved)" placeholder="Fee (Reserved)" className="input" />
+          <input name="salaryMin" type="number" aria-label="Salary/pay min" placeholder="Salary/Pay Min" className="input" />
+          <input name="salaryMax" type="number" aria-label="Salary/pay max" placeholder="Salary/Pay Max" className="input" />
+          <input name="validThrough" type="date" aria-label="Last date" placeholder="Last Date" className="input" />
+          <input name="examDate" type="date" aria-label="Exam date" placeholder="Exam Date" className="input" />
+          <input name="officialNotificationUrl" aria-label="Official notification URL" placeholder="Official Notification URL" className="input col-span-2" />
+          <input name="applyUrl" aria-label="Apply URL" placeholder="Apply URL" className="input" />
+          <textarea name="eligibility" aria-label="Eligibility" placeholder="Eligibility" className="input col-span-3" />
+          <textarea name="description" aria-label="Description" placeholder="Description *" required className="input col-span-3" rows={4} />
           <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Creating…">
             Create Posting
           </SubmitButton>
@@ -191,8 +191,8 @@ export default async function AdminDashboard() {
       <section>
         <h2 className="text-lg font-semibold">Articles</h2>
         <form action={createArticle} className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-black/10 p-4 sm:grid-cols-3">
-          <input name="title" placeholder="Title *" required className="input col-span-2" />
-          <select name="type" className="input">
+          <input name="title" aria-label="Title" placeholder="Title *" required className="input col-span-2" />
+          <select name="type" aria-label="Type" className="input">
             <option value="GUIDE">Guide</option>
             <option value="SYLLABUS">Syllabus</option>
             <option value="EXAM_PATTERN">Exam Pattern</option>
@@ -206,7 +206,7 @@ export default async function AdminDashboard() {
             <option value="NEWS">News</option>
             <option value="COMPANY_REVIEW">Company Review</option>
           </select>
-          <select name="postingId" className="input">
+          <select name="postingId" aria-label="Link to posting" className="input">
             <option value="">Link to posting (optional)</option>
             {postingRows.map((p) => (
               <option key={p.id} value={p.id}>
@@ -214,9 +214,9 @@ export default async function AdminDashboard() {
               </option>
             ))}
           </select>
-          <input name="authorName" placeholder="Author" className="input" />
-          <input name="dek" placeholder="Short summary (dek)" className="input col-span-3" />
-          <textarea name="body" placeholder="Body *" required className="input col-span-3" rows={6} />
+          <input name="authorName" aria-label="Author" placeholder="Author" className="input" />
+          <input name="dek" aria-label="Short summary" placeholder="Short summary (dek)" className="input col-span-3" />
+          <textarea name="body" aria-label="Body" placeholder="Body *" required className="input col-span-3" rows={6} />
           <SubmitButton className="btn col-span-3 sm:col-span-1" pendingText="Publishing…">
             Publish Article
           </SubmitButton>

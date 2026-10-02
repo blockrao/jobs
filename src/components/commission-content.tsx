@@ -83,6 +83,7 @@ export function CommissionContent({
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div
+            aria-hidden="true"
             className="w-6 h-6 rounded-full"
             style={{ backgroundColor: commission.color || "#000000" }}
           />
