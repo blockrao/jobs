@@ -52,6 +52,17 @@ export async function proxy(request: NextRequest) {
     return intlMiddleware(request);
   }
 
+  // There is no src/app/[locale]/page.tsx — only articles/exams/
+  // organizations detail routes are localized, never a localized
+  // homepage. A bare /en or /hi (e.g. from the language switcher on
+  // the homepage) isn't locale-aware by the check above, so it would
+  // otherwise fall through to the top-level `/[exam_slug]` catch-all
+  // and render "Exam not found" for exam_slug="hi". Send it to the
+  // (non-localized) homepage instead.
+  if (/^\/(en|hi)\/?$/.test(pathname)) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   return NextResponse.next();
 }
 
