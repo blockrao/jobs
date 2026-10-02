@@ -14,6 +14,7 @@ import {
   scoreConfidence,
   sleep,
 } from "./util";
+import { findLink } from "./sarkari-detail";
 
 const SOURCE = "sarkarinaukri";
 const BASE = "https://www.sarkari-naukri.in";
@@ -43,7 +44,7 @@ function isJobUrl(u: URL): boolean {
 
 // Detail pages are prose (no field tables); the Yoast meta description carries
 // the structured summary: "<...> Last Date <date> (<City>, <State>), For <qual>".
-function parseDetail(html: string): Partial<RawPosting> {
+function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
   const $ = cheerio.load(html);
   const metaDesc =
     $('meta[name="description"]').attr("content") ||
@@ -79,6 +80,15 @@ function parseDetail(html: string): Partial<RawPosting> {
   const { salaryMin, salaryMax } = parseSalary(bag.find(/salary|pay scale|pay/i));
   out.salaryMin = salaryMin;
   out.salaryMax = salaryMax;
+  // findLink only looks at anchor text, not any particular table markup, so
+  // it works on this portal's prose-style detail pages too — these still
+  // link out to "Apply Online" / the notification PDF inline in the body.
+  out.applyUrl = findLink($, /apply online|apply now|registration/i, baseUrl);
+  out.officialNotificationUrl = findLink(
+    $,
+    /notification|advertisement|download notice|official notice/i,
+    baseUrl,
+  );
   return out;
 }
 
@@ -113,6 +123,8 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     datePosted: detail.datePosted,
     validThrough: detail.validThrough,
     examDate: detail.examDate,
+    applyUrl: detail.applyUrl,
+    officialNotificationUrl: detail.officialNotificationUrl,
   };
   p.confidence = scoreConfidence(p);
   return p;
@@ -160,7 +172,7 @@ async function fetchRaw(): Promise<RawPosting[]> {
     try {
       const html = await fetchHtml(item.url, { ua: BROWSER_UA, retries: 3, retryDelayMs: 1500 });
       await sleep(300); // increased delay between detail requests
-      return build(item, parseDetail(html));
+      return build(item, parseDetail(html, item.url));
     } catch (err) {
       console.warn(`  [${SOURCE}] detail ${item.url} failed: ${(err as Error).message}`);
       return build(item, {});

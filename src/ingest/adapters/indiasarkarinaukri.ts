@@ -67,6 +67,7 @@ function build(item: ListItem, detail: DetailFields): RawPosting {
     organizationName: org.organizationName,
     organizationSector: org.organizationSector,
     organizationState: org.organizationState,
+    postNames: detail.postNames,
     description:
       detail.description ||
       `${title} — recruitment notification via India Sarkari Naukri.`,

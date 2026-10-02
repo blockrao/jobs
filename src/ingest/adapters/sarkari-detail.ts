@@ -26,8 +26,29 @@ export type DetailFields = Partial<
   | "applicationFeeReserved"
   | "officialNotificationUrl"
     | "applyUrl"
+    | "postNames"
   >
 >;
+
+/**
+ * Split a "Name of Post" / "Post Name" table value into individual post
+ * names. These fields are almost always a short delimited list ("Office
+ * Assistant, Officer Scale I, II, III" / "LDC / Clerk & Typist"), never
+ * free prose — so a plain delimiter split is safe here in a way it would
+ * not be for, say, a page headline. Only call this on a value that actually
+ * came from a "Name/Post" labelled field — never on a generic title/h1
+ * fallback, which is the page headline, not a list of post names (see the
+ * gate's own "headline ≠ job title" distinction in content-quality/gate.ts).
+ */
+export function splitPostNames(raw: string | undefined): string[] | undefined {
+  if (!raw) return undefined;
+  const parts = raw
+    .split(/\s*(?:,|\/|&|\bAND\b)\s*/i)
+    .map((s) => collapse(s))
+    .filter((s) => s.length >= 2);
+  const deduped = [...new Set(parts)];
+  return deduped.length > 0 ? deduped : undefined;
+}
 
 /** Decode loose %XX URL-encoding (used inside indiasarkarinaukri's RSC stream). */
 export function urlDecodeLoose(s: string): string {
@@ -75,10 +96,12 @@ function pickFields(
   bag: LabelBag,
   baseUrl: string,
 ): DetailFields {
-  const title =
-    bag.find(/^name of post$/i, /^post name$/i) ||
-    collapse($("h1").first().text()) ||
-    undefined;
+  // Keep the raw "Name of Post" value separate from the title fallback below:
+  // only a genuine Name-of-Post label is safe to split into postNames — the
+  // h1 fallback is the page headline, not a post-names list.
+  const namedPosts = bag.find(/^name of post$/i, /^post name$/i);
+  const title = namedPosts || collapse($("h1").first().text()) || undefined;
+  const postNames = splitPostNames(namedPosts);
 
   const datePosted = parseIndianDate(
     bag.find(/post date/i, /update/i, /notification date/i),
@@ -121,6 +144,7 @@ function pickFields(
 
   return {
     title,
+    postNames,
     description: shortInfo,
     eligibility,
     totalVacancies,
@@ -142,7 +166,13 @@ function intOrUndef(v: string | undefined): number | undefined {
   return m ? parseInt(m[0], 10) : undefined;
 }
 
-function findLink(
+/**
+ * Find the first anchor whose visible text matches labelRe, resolved to an
+ * absolute URL. Generic across portals — it only looks at anchor text, not
+ * any particular table/card markup — so it is safe to reuse for a portal
+ * that doesn't use the "Important Dates" table layout.
+ */
+export function findLink(
   $: cheerio.CheerioAPI,
   labelRe: RegExp,
   baseUrl: string,

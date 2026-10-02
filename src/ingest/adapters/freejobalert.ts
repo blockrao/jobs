@@ -13,7 +13,7 @@ import {
   scoreConfidence,
   sleep,
 } from "./util";
-import { buildTableBag } from "./sarkari-detail";
+import { buildTableBag, findLink, splitPostNames } from "./sarkari-detail";
 
 const SOURCE = "freejobalert";
 const BASE = "https://www.freejobalert.com";
@@ -58,11 +58,23 @@ function extractListing(html: string): ListItem[] {
   return [...out.values()];
 }
 
-function parseDetail(html: string): Partial<RawPosting> {
+function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
   const { $, bag } = buildTableBag(html);
   const recruiting = bag.find(/recruiting body/i, /organi[sz]ation/i, /department/i);
   const vacancies = extractVacancies(
     bag.find(/total vacan/i, /no\.? of (post|vacan)/i, /vacancies/i),
+  );
+  // Same "Name of Post" label these table-based portals all use — see
+  // sarkari-detail.ts's splitPostNames for why only a genuine Name-of-Post
+  // match (never the page headline) is safe to split into an array.
+  const postNames = splitPostNames(
+    bag.find(/^name of post$/i, /^post name$/i, /post name\(s\)/i),
+  );
+  const applyUrl = findLink($, /apply online|apply now|registration/i, baseUrl);
+  const officialNotificationUrl = findLink(
+    $,
+    /notification|advertisement|download notice|official notice/i,
+    baseUrl,
   );
   const datePosted = parseIndianDate(
     bag.find(/notification date/i, /application start/i, /start of online/i, /post date/i),
@@ -96,6 +108,9 @@ function parseDetail(html: string): Partial<RawPosting> {
     salaryMin,
     salaryMax,
     description: description || undefined,
+    postNames,
+    applyUrl,
+    officialNotificationUrl,
   };
 }
 
@@ -122,6 +137,9 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     datePosted: detail.datePosted,
     validThrough: detail.validThrough,
     examDate: detail.examDate,
+    postNames: detail.postNames,
+    applyUrl: detail.applyUrl,
+    officialNotificationUrl: detail.officialNotificationUrl,
   };
   p.confidence = scoreConfidence(p);
   return p;
@@ -152,7 +170,7 @@ async function fetchRaw(): Promise<RawPosting[]> {
       // Retries with exponential backoff (FreeJobAlert allows ClaudeBot, but doesn't hurt)
       const html = await fetchHtml(item.url, { ua: CLAUDE_UA, retries: 3, retryDelayMs: 1500 });
       await sleep(250); // increased delay between detail requests
-      return build(item, parseDetail(html));
+      return build(item, parseDetail(html, item.url));
     } catch (err) {
       console.warn(`  [${SOURCE}] detail ${item.url} failed: ${(err as Error).message}`);
       return build(item, {});
