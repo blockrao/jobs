@@ -32,7 +32,10 @@ function buildExamSchema(exam: any, commission: any, locale: string): object {
     provider: {
       "@type": "Organization",
       name: locale === "hi" ? commission.nameHi || commission.name : commission.name,
-      url: absoluteUrl(`/${locale}/commissions/${commission.slug}`),
+      // /commissions/[slug] has no [locale] counterpart — link to the real
+      // (non-localized) page rather than a /${locale}/commissions/... URL
+      // that 404s.
+      url: absoluteUrl(`/commissions/${commission.slug}`),
     },
     inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
   };
@@ -105,8 +108,11 @@ export default async function ExamPage({ params }: Props) {
   ]);
 
   const breadcrumbSchema = buildBreadcrumbSchema([
-    { name: locale === "hi" ? "होम" : "Home", path: `/${locale}` },
-    { name: displayCommissionName, path: `/${locale}/commissions/${commission.slug}` },
+    // No localized homepage or /commissions page exists (see root
+    // layout.tsx and the note on the commission link below) — point
+    // breadcrumb schema at the real pages instead of ones that 404.
+    { name: locale === "hi" ? "होम" : "Home", path: "/" },
+    { name: displayCommissionName, path: `/commissions/${commission.slug}` },
     { name: displayExamName, path: `/${locale}/exams/${exam.slug}` },
   ], locale);
 
@@ -128,8 +134,11 @@ export default async function ExamPage({ params }: Props) {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">{displayExamName}</h1>
         <div className="flex flex-wrap gap-4 text-sm">
+          {/* /commissions/[slug] has no [locale] counterpart (see
+              src/app/[locale]/layout.tsx) — link to the real page rather
+              than a /${locale}/commissions/... URL that 404s. */}
           <Link
-            href={`/${locale}/commissions/${commission.slug}`}
+            href={`/commissions/${commission.slug}`}
             className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full hover:underline"
           >
             {displayCommissionName}
@@ -164,9 +173,11 @@ export default async function ExamPage({ params }: Props) {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {relatedPositions.map((position) => (
+                // /positions/[slug] has no [locale] counterpart — link to
+                // the real page rather than a 404ing /${locale}/... URL.
                 <Link
                   key={position.id}
-                  href={`/${locale}/positions/${position.slug}`}
+                  href={`/positions/${position.slug}`}
                   className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
                 >
                   <div className="font-semibold text-blue-600 hover:underline">{position.name}</div>
@@ -194,8 +205,10 @@ export default async function ExamPage({ params }: Props) {
                   <div key={recruitment.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
+                        {/* /recruitments/[slug] has no [locale] counterpart
+                            — link to the real page, not a 404ing one. */}
                         <Link
-                          href={`/${locale}/recruitments/${recruitment.slug}`}
+                          href={`/recruitments/${recruitment.slug}`}
                           className="text-lg font-semibold text-blue-600 hover:underline"
                         >
                           {recruitment.name}
@@ -220,7 +233,7 @@ export default async function ExamPage({ params }: Props) {
                           {recruitment.posts.map((item: any) => (
                             <Link
                               key={item.post.id}
-                              href={`/${locale}/positions/${item.position.slug}`}
+                              href={`/positions/${item.position.slug}`}
                               className="text-sm text-blue-600 hover:underline block"
                             >
                               • {item.post.name}
@@ -238,7 +251,9 @@ export default async function ExamPage({ params }: Props) {
 
       {/* Breadcrumb */}
       <div className="mt-12 pt-6 border-t text-sm text-gray-600">
-        <Link href={`/${locale}`} className="hover:underline">
+        {/* No localized homepage exists (see root layout.tsx) — /${locale}
+            would just bounce through proxy.ts's redirect back to "/". */}
+        <Link href="/" className="hover:underline">
           {locale === "hi" ? "होम" : "Home"}
         </Link>
         {" / "}

@@ -95,7 +95,9 @@ export default async function LocaleJobPage({ params }: Props) {
   const schema = jsonLdGraph(
     buildJobPostingSchema(posting as any, org as any),
     buildBreadcrumbSchema([
-      { name: isHi ? "होम" : "Home", path: `/${locale}` },
+      // No localized homepage exists (see root layout.tsx) — point at "/"
+      // directly rather than a /${locale} URL that just redirects there.
+      { name: isHi ? "होम" : "Home", path: "/" },
       { name: org.name, path: `/organizations/${org.slug}` },
       { name: displayTitle, path: `/${locale}/jobs/${posting.slug}` },
     ]),
@@ -134,7 +136,7 @@ export default async function LocaleJobPage({ params }: Props) {
       />
 
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-500">
-        <Link href={`/${locale}`} className="hover:underline">
+        <Link href="/" className="hover:underline">
           {L.home}
         </Link>{" "}
         / {org.name}

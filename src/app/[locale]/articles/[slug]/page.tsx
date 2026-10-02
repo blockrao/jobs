@@ -54,9 +54,12 @@ export default async function ArticlePage({ params }: Props) {
   const relatedPostings = article.postingArticles.map((pa) => pa.posting);
   const aboutUrls = relatedPostings.map((p) => absoluteUrl(`/${locale}/jobs/${p.slug}`));
 
+  // No localized homepage or articles hub exists (only this [slug] detail
+  // page is under [locale]/articles/ — see root layout.tsx) — point these
+  // at the real pages rather than /${locale} URLs that 404 or redirect.
   const breadcrumbItems = [
-    { name: locale === "hi" ? "होम" : "Home", path: `/${locale}` },
-    { name: locale === "hi" ? "लेख" : "Articles", path: `/${locale}/articles` },
+    { name: locale === "hi" ? "होम" : "Home", path: "/" },
+    { name: locale === "hi" ? "लेख" : "Articles", path: "/articles" },
     { name: title, path: `/${locale}/articles/${article.slug}` },
   ];
 
@@ -111,11 +114,11 @@ export default async function ArticlePage({ params }: Props) {
 
       {/* Breadcrumb Navigation */}
       <nav className="mt-12 pt-6 border-t text-sm text-neutral-600">
-        <Link href={`/${locale}`} className="hover:underline">
+        <Link href="/" className="hover:underline">
           {locale === "hi" ? "होम" : "Home"}
         </Link>
         {" / "}
-        <Link href={`/${locale}/articles`} className="hover:underline">
+        <Link href="/articles" className="hover:underline">
           {locale === "hi" ? "लेख" : "Articles"}
         </Link>
         {" / "}

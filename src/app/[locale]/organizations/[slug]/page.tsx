@@ -100,7 +100,10 @@ export default async function OrganizationPage({ params }: Props) {
   const displayDescription = locale === "hi" ? descriptionHi : org.description;
 
   const breadcrumbSchema = buildBreadcrumbSchema([
-    { name: locale === "hi" ? "होम" : "Home", path: `/${locale}` },
+    // No localized homepage exists (see root layout.tsx) — point breadcrumb
+    // schema at "/" directly rather than a /${locale} URL that just bounces
+    // through proxy.ts's redirect.
+    { name: locale === "hi" ? "होम" : "Home", path: "/" },
     { name: displayName, path: `/${locale}/organizations/${org.slug}` },
   ], locale);
 
@@ -211,9 +214,11 @@ export default async function OrganizationPage({ params }: Props) {
             {recruitments
               .sort((a, b) => b.year - a.year)
               .map((recruitment) => (
+                // /recruitments/[slug] has no [locale] counterpart — link to
+                // the real page rather than a /${locale}/... URL that 404s.
                 <Link
                   key={recruitment.id}
-                  href={`/${locale}/recruitments/${recruitment.slug}`}
+                  href={`/recruitments/${recruitment.slug}`}
                   className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
                 >
                   <div className="flex items-center justify-between">
@@ -250,7 +255,7 @@ export default async function OrganizationPage({ params }: Props) {
 
       {/* Breadcrumb */}
       <div className="mt-12 pt-6 border-t text-sm text-gray-600">
-        <Link href={`/${locale}`} className="hover:underline">
+        <Link href="/" className="hover:underline">
           {locale === "hi" ? "होम" : "Home"}
         </Link>
         {" / "}
