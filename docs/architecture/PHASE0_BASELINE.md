@@ -69,8 +69,11 @@ Uniqueness actually enforced live on the canonical layer:
 `content_quality_gate`, `platform_rebuild_canonical_layer`.
 
 **Repository:** 18 SQL files across three directories — `drizzle/` (8),
-`migrations/` (5), `src/db/migrations/` (5). None of the nine applied names
-matches a repository filename one-to-one. Drizzle's tracking table
+`migrations/` (5), `src/db/migrations/` (5). Three of the eight distinct
+applied names have a same-named repository file (`phase4e_lifecycle_automation`,
+`phase4f_search_urgency`, `0001_add_hindi_content`); their contents were not
+compared. The other five applied names have no repository file, and fifteen
+repository files have no applied record. Drizzle's tracking table
 (`drizzle.__drizzle_migrations`) does not exist, so `npm run db:migrate` has
 never run against this database. `drizzle/meta` holds snapshots for only
 `0000` and `0001`.
