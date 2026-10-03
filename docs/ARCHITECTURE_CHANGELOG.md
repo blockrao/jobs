@@ -689,6 +689,38 @@ SEO-001 closure.
 
 ---
 
+## SEO-001 Step 3 — pre-check (NOT STARTED; decision needed)
+
+**Date.** 2026-10-03. No code changed.
+
+Step 2 is deployed (`main` = `f75c325`). Before touching the layouts the
+framework's own guide was read, as the plan requires. Findings:
+
+1. The page language can be set in the served HTML only if the root layout
+   sits inside the locale segment. With today's structure (one root layout
+   above `[locale]`) the root layout cannot see the locale. The supported
+   route is two root layouts: one for the unprefixed English tree, one inside
+   `[locale]`. That means moving every non-locale route folder into a route
+   group and giving `[locale]/layout.tsx` its own page shell. URLs do not
+   change and pages stay static, but navigating between an English and a
+   Hindi page becomes a full page load, and a previous duplicate-shell bug in
+   exactly this place (`/hi/hi/…` links) is documented in the code.
+2. Contract LOC-01b requires removing the client-side language correction
+   entirely. That component also sets `lang="hi"` on the cookie-switched
+   listings (`/`, `/jobs`, …) when a visitor chooses Hindi. Under decision D3
+   those pages are English pages for search engines, but removing the
+   correction would leave Hindi text marked as English for screen-reader
+   users who switched language.
+
+**Options.** (a) Do the two-root-layout change and keep a narrowed client
+correction for cookie-switched listings only (LOC-01b then needs rewording);
+(b) do the change and remove the correction as written; (c) defer Step 3 and
+close SEO-001 on Steps 1–2 with LOC-01/LOC-01b recorded as open.
+
+**Recommendation.** (a).
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
