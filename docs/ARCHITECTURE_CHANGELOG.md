@@ -573,6 +573,43 @@ block SEO-001; SEO-001 Step 1 authorized.
 
 ---
 
+## SEO-001 Step 1 — shared structured data for organization and exam pages (RESULT: verification incomplete)
+
+**Date.** 2026-10-03. **Type.** APPLICATION. **Ledger.** A-007, A-009, A-050.
+**Commit.** `ede423c` on branch `seo-001/step-1`. **Not merged to `main`; not
+in production.**
+
+**Changed.** `src/lib/structured-data.ts` (two builders added:
+`buildOrganizationPageSchema`, `buildExamSchema`);
+`src/app/[locale]/organizations/[slug]/page.tsx` and
+`src/app/[locale]/exams/[slug]/page.tsx` (private builders removed; one
+`jsonLdGraph` script); `tests/contracts/unit/structured-data.test.ts` (SD-09a,
+SD-09b, SD-10 added). Nothing else: no sitemap, metadata, route, schema or
+data change.
+
+**Markup differences, all intended.** (1) Each page emits one script holding
+an `@graph` of two nodes instead of two scripts with one node each. (2) The
+Organization node gains `@id` `…/organizations/{slug}#org`, the identifier
+job pages already use for the same entity, identical in both languages.
+Every other field is unchanged and pinned by SD-09a, SD-09b and SD-10.
+
+| Check | Result |
+| --- | --- |
+| V1 contract suite | PASS: 13 failed, 70 passed, 28 skipped of 111 (was 15 / 65 / 28 of 108). SD-03 and SD-04 now pass; 3 new tests pass; the 13 remaining failures are the same named tests as before |
+| V2 type-check and production build | PASS |
+| V3 rendered `<head>`/markup, before and after | **NOT DONE.** This workspace cannot reach the database, so entity pages do not render locally; preview deployments sit behind the host's login. Field-level equivalence is covered by the pinning tests only |
+| V4 sitemap URL list | No change possible: `src/app/sitemap.ts` untouched (not re-generated) |
+| V5 preview deployment | PASS: all four projects built `ede423c` |
+
+**Rollback.** Revert `ede423c`.
+
+**Status.** Step 1 implemented, not closed. V3 remains to be run against a
+rendered page before Step 2 starts.
+
+**Architectural deviations: None.**
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
