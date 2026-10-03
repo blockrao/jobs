@@ -473,6 +473,51 @@ Which deployment project serves the public domain is not established
 
 ---
 
+## ARC-001 — Technology-independent logical architecture (CLOSED)
+
+**Date.** 2026-10-03. **Type.** ARCHITECTURAL (documentation only).
+**Ledger.** A-047 (new, authoritative reference), A-048, A-049 (new); A-014,
+A-020, A-021, A-034, A-035, A-036, A-042, A-026 (status updated); U-01, U-02,
+U-03, U-08 closed; U-07 model closed, validation deferred by design.
+
+**What changed.** Added `docs/architecture/ARC001_LOGICAL_ARCHITECTURE.md`.
+Ledger and this changelog updated. Nothing else.
+
+**What did not change.** No code, schema, data, test, route or configuration.
+`git diff --stat` for this change lists only files under `docs/`.
+
+**Approval.** Pre-change report reviewed by the owner 2026-10-03: approved
+with three bounded textual corrections, all applied —
+
+1. Post candidate wording (§7 rule 3): a weak source may generate a candidate
+   with evidence and confidence; it never creates a canonical Post by itself.
+2. Source Document version semantics (§5): immutable versions linked to one
+   external-document identity; no new entity.
+3. Lifecycle wording (§6 rule 4): events append-only; state derived from the
+   complete ordered event set; never edited outside event processing.
+
+**Decisions.**
+
+| ID | Outcome |
+| --- | --- |
+| U-01 | CLOSED — bare identifier is a Level 2 key, with issuer and notification date |
+| U-02 | CLOSED — orphan lifecycle notice held, retried, creates nothing |
+| U-03 | CLOSED — seven states including UNKNOWN |
+| U-07 | Model CLOSED; validation DEFERRED BY DESIGN to increment 8, gating increment 10 |
+| U-08 | CLOSED — not Recruitments; exam cycle deferred (A-049) |
+
+**Remaining deferred decisions.** U-04 (SEO-001); U-07 validation
+(increment 8).
+
+**SEC-001.** Still in final verification; unaffected by this change.
+
+**Architectural deviations: None.** No accepted decision was silently
+changed; A-042 is explicitly not adopted.
+
+**Next.** SEO-001 pre-change report.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.

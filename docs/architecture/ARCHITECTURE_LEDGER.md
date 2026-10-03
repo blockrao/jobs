@@ -33,19 +33,19 @@ Every implementation change must cite a ledger item or create one.
 | A-011 | Migration history | Historical migrations cannot be reconstructed faithfully | DATA/OPERATIONAL | Accepted | Gate 2 | Establish boundary |
 | A-012 | Vercel | Current deployment platform is not architectural | INFRASTRUCTURE | Deferred | Current discussion | Do not drive design |
 | A-013 | Supabase | Current database provider is not architectural | INFRASTRUCTURE | Deferred | Current discussion | Do not drive design |
-| A-014 | Organization roles | A Recruitment has an issuing organization; a Post may have a different employing organization. One `organizationId` must not carry both meanings | ARCHITECTURAL | Accepted direction; validation pending | Gate 2 §22, §24: UPSC Advt 12/2026 stored as four recruitments under four departments | Validate against representative official notifications before any schema change |
+| A-014 | Organization roles | A Recruitment has an issuing organization; a Post may have a different employing organization. One `organizationId` must not carry both meanings | ARCHITECTURAL | **Accepted 2026-10-03** (ARC-001 §4): three roles — issuing on Recruitment, employing on Post, conducting on Exam. Empirical validation deferred by design (U-07) | Gate 2 §22, §24: UPSC Advt 12/2026 stored as four recruitments under four departments | No physical change for employing organization before the U-07 check passes (increment 8, gating increment 10) |
 | A-015 | Posting classification | Every raw posting is one of: recruitment notification, lifecycle notice, non-recruitment, unclear. Only the first may create a Recruitment | ARCHITECTURAL | Accepted | Gate 2 §23: 57 of 183 recruitment rows are not recruitments | Design |
 | A-016 | Document vs event | A source document is not automatically a lifecycle event | ARCHITECTURAL | Accepted | Gate 1 decision D3 | Design |
 | A-017 | Evidence | Evidence is a first-class link from a source document to a canonical fact, entity or event | ARCHITECTURAL | Accepted; nothing implements it | Governance Reset §8; Gate 2 §27: no structure records which fact came from which document | Design |
 | A-018 | Lifecycle derivation | Canonical state is derived Evidence → Event → State machine → State. `postings.current_stage` is not the canonical lifecycle. No status backfill | ARCHITECTURAL | Accepted | Gate 2 §26: all 47 status/stage contradictions are misclassified rows | Design |
 | A-019 | Lifecycle layering | Trigger → job → lifecycle domain service → state machine → event. The scheduler is replaceable and holds no lifecycle rule | ARCHITECTURAL | Accepted | Governance Reset §3 | Design; supersedes S-01 below |
-| A-020 | Notification identity | Level-1 identity is the issuing organization plus the identifier exactly as the body writes it, including series prefix and year. Year is not a separate key component | ARCHITECTURAL | Proposed; bare-number case open (U-01) | Gate 2 §24: RRB `CEN 01/2024` vs `CEN RPF 01/2024` | Collect official examples; no constraint change |
-| A-021 | Post candidates | Extraction produces evidence-backed candidates; no placeholder Post; a title-only candidate cannot become a Post | ARCHITECTURAL | Accepted | Gate 2 §25: 5 of 201 postings have post names; source text is a snippet | Design |
+| A-020 | Notification identity | Level-1 identity is the issuing organization plus the identifier exactly as the body writes it, including series prefix and year. Year is not a separate key component | ARCHITECTURAL | **Accepted 2026-10-03** (ARC-001 §3). Bare-number case closed by U-01 | Gate 2 §24: RRB `CEN 01/2024` vs `CEN RPF 01/2024` | Implement in increment 9; no constraint change before then |
+| A-021 | Post candidates | Extraction produces evidence-backed candidates; no placeholder Post; a title-only candidate cannot become a Post | ARCHITECTURAL | Accepted; wording fixed by ARC-001 §7 rule 3: a weak source may yield a candidate with evidence and confidence, never a canonical Post by itself | Gate 2 §25: 5 of 201 postings have post names; source text is a snippet | Design |
 | A-022 | Trust boundary | The public has no write path to canonical data and reads only through a public read model or approved API. Writes belong to privileged ingestion, resolution and administration services | ARCHITECTURAL | Accepted | Governance Reset §10 | Preserve; implement in current stack |
 | A-023 | Trust boundary, current state | The current physical implementation violates A-022: 12 tables are writable by the public database role | DATA/MIGRATION | **CLOSED 2026-10-03** by SEC-001, migration `20261003104615` | Gate 2 evidence S1–S5, S14; SEC-01–SEC-04 = 0 violations | Guarded by contract tests SEC-01–SEC-04 |
 | A-024 | Application authorization | Admin actions carry no authorization check of their own; cron endpoints do not fail closed; one unauthenticated endpoint calls a paid API | APPLICATION | Cron endpoints and admin actions fixed by SEC-001 (commit `cd3fa2d`), **deployed 2026-10-03** (`main` = `50317d2`). The paid-API endpoint remains open as A-039 | Gate 2 evidence S10–S12; SEC-05, SEC-06 pass | V7, and the rest of V8, from a machine with access |
 | A-025 | Migration boundary | Baseline snapshot of the live schema, historical files preserved as artifacts, one authoritative reproducible path forward, boundary and checksum recorded, nothing fabricated | DATA/OPERATIONAL | Accepted (extends A-011) | Gate 2 §21; Governance Reset §9 | Implement (MIG-001) |
-| A-026 | Schema contract | The application schema must intentionally represent the real database contract. The 18 live-only columns are to be classified REQUIRED / INTENTIONAL DB-ONLY / LEGACY / UNKNOWN / REMOVE LATER, not copied | DATA/MIGRATION | Classification delivered by MIG-001 (`MIG001_COLUMN_CLASSIFICATION.md`): 8 DB-only, 3 legacy, 2 remove later, 5 unknown → ARC-001 | Gate 1 §10; Phase 0 baseline §2 | Deliver with MIG-001 |
+| A-026 | Schema contract | The application schema must intentionally represent the real database contract. The 18 live-only columns are to be classified REQUIRED / INTENTIONAL DB-ONLY / LEGACY / UNKNOWN / REMOVE LATER, not copied | DATA/MIGRATION | Classification delivered by MIG-001 (`MIG001_COLUMN_CLASSIFICATION.md`): 8 DB-only, 3 legacy, 2 remove later, 5 unknown. ARC-001 §5 rule 5 settles the 5 unknown as derived from the evidence chain → REMOVE LATER (no column dropped) | Gate 1 §10; Phase 0 baseline §2 | Deliver with MIG-001 |
 | A-027 | Indexability contract | Per page type: index, canonical, sitemap and primary schema. Search and filter views are noindex, out of the sitemap, without JobPosting or hreflang; canonical behaviour is set by the central policy | ARCHITECTURAL | Accepted | Gate 1 decision D4 | Implement with A-007 |
 | A-028 | Sitemap | Eligibility and `lastmod` derive from the domain model; freshness is a stated SLA. The generation mechanism is not architectural | ARCHITECTURAL (contract) / APPLICATION (mechanism) | SLA open (U-04) | Gate 2 §29 | Decide SLA; mechanism later |
 | A-029 | Authority vocabulary | `source.authority` is the single authority vocabulary; `postings.source_type` duplicates it | ARCHITECTURAL | Accepted | Governance Reset §8; Gate 2 §27 | Retire the duplicate later, separately |
@@ -53,19 +53,22 @@ Every implementation change must cite a ledger item or create one.
 | A-031 | Invariant enforcement | Contract suite baseline: 61 pass, 15 fail, 24 skipped | APPLICATION | Accepted baseline (frozen) | W1A-001 | Preserve; failures close as their wave lands |
 | A-032 | Scheduler configuration | The lifecycle endpoint accepts only POST; ingestion has not written on its schedule; secret handling is weak | INFRASTRUCTURE/OPERATIONAL | Deferred — not forgotten | Gate 2 §28 | Operational correction outside the core workstream |
 | A-033 | Governance fields | Review, publishing, quality, verification and index-tier fields need an explicit owner before `postings` becomes a raw layer | ARCHITECTURAL/DATA | Accepted; mapping open | Protocol §16 | Map before legacy retirement |
-| A-034 | Eligibility and selection process | Both are in the ontology; their tables exist and are empty; neither has been analysed | ARCHITECTURAL | Open | Phase 0 baseline §1 | Analyse in the logical-model specification |
-| A-035 | Lifecycle vocabulary | Final enum, including whether an explicit unknown state exists | ARCHITECTURAL | Open (U-03) | Gate 2 §26: 74 rows have an open stage and no deadline | Decide in the logical-model specification |
-| A-036 | Orphan lifecycle notice | A lifecycle notice never creates a Recruitment by itself | ARCHITECTURAL | Direction accepted; handling detail open (U-02) | Governance Reset §8; Gate 2 §23 | Decide |
+| A-034 | Eligibility and selection process | Both are in the ontology; their tables exist and are empty; neither has been analysed | ARCHITECTURAL | **Accepted 2026-10-03** (ARC-001 §2 rule 4): value structures owned by a Post, with Recruitment-level defaults | Phase 0 baseline §1 | Implement with increment 10 |
+| A-035 | Lifecycle vocabulary | Final enum, including whether an explicit unknown state exists | ARCHITECTURAL | **Accepted 2026-10-03** (ARC-001 §6): seven states including UNKNOWN; milestones are events | Gate 2 §26: 74 rows have an open stage and no deadline | Implement in increment 11 |
+| A-036 | Orphan lifecycle notice | A lifecycle notice never creates a Recruitment by itself | ARCHITECTURAL | **Accepted 2026-10-03** (ARC-001 §7, U-02): held UNRESOLVED, retried, creates nothing | Governance Reset §8; Gate 2 §23 | Implement in increments 7 and 11 |
 | A-037 | Unverified items | Deployment of commit `704725e`, and the HTTP contract suite, have never been verified against production | OPERATIONAL | Partly resolved 2026-10-03: the repository host records successful production deployments of `704725e` (2026-10-02) and `50317d2` (2026-10-03). Which deployment project serves the public domain is not established from here (A-046). HTTP suite still not run | Phase 0 report §12; deployment records | Run once from a machine with access |
 | A-038 | Default privileges | Root cause of A-023: the schema's default privileges grant the public roles full rights on every new table, sequence and function, so each new object is born open | DATA/MIGRATION | **CLOSED 2026-10-03** by SEC-001 for the migration owner role | SEC-04 = 0 violations | Objects created by any other role are outside this protection: see A-040 |
 | A-039 | Unauthenticated paid-API endpoint | `/api/query/normalize` calls a paid API with no authentication or rate limit | APPLICATION | Open — P2 | Gate 2 evidence | Later; not in SEC-001 |
 | A-040 | Migration authority | All future production schema changes occur through the authoritative migration path and the approved ownership/privilege model. Direct production DDL or object creation outside that path is not an accepted production mechanism | DATA/OPERATIONAL | Accepted — in force from MIG-001 | SEC-001 approval §4; `supabase/migrations/README.md` | Preserve |
 | A-041 | Broken database function | `refresh_posting_urgency_states()` reads a table that does not exist, so search and urgency values are populated on only 5 postings | DATA/MIGRATION | Open — P1 | MIG-001 baseline `functions/refresh_posting_urgency_states.sql` | Schedule; not in SEC-001 |
-| A-042 | Unused organization-role enum | An enum `organization_role` (EXAM_AUTHORITY, RECRUITING_BODY, EMPLOYER) exists live and is used by no column. Relevant prior art for A-014 | ARCHITECTURAL (input) | Noted | MIG-001 baseline `02_objects.txt` | Consider in ARC-001 |
+| A-042 | Unused organization-role enum | An enum `organization_role` (EXAM_AUTHORITY, RECRUITING_BODY, EMPLOYER) exists live and is used by no column. Relevant prior art for A-014 | ARCHITECTURAL (input) | Not adopted (ARC-001 §4): roles sit on relationships | MIG-001 baseline `02_objects.txt` | Remove at legacy retirement |
 | A-043 | Function search path | All 9 database functions have a mutable `search_path` (provider linter warning) | DATA/MIGRATION | Open — P2 | Security advisor after SEC-001 | Later; fold into the lifecycle increment, which retires several of them |
 | A-044 | Lifecycle endpoint method | The lifecycle endpoint accepts only POST while the scheduler issues GET, so it is not invoked successfully regardless of SEC-001 | INFRASTRUCTURE | Deferred (with A-032) | Gate 2 §28; local check during SEC-001 | Operational correction outside the core workstream |
 | A-045 | Organizations hub renders empty | After the 2026-10-03 deployment `/organizations` loads but lists no organizations, while the database holds 125. The page swallows data errors and renders an empty list. Not caused by the database change in SEC-001 as far as evidence shows (application connects as the owner role; no database error logged since the migration); whether it pre-dates the deployment is unknown | APPLICATION | Open — P1, cause not established | External fetch 2026-10-03; database log query | Establish cause before SEC-001 closes; fix in its own increment |
 | A-046 | Deployment target ambiguity | Four deployment projects build every commit of this repository. The owner reports the account was changed; which project serves the public domain is not recorded | INFRASTRUCTURE / OPERATIONAL | Open — P2 | Deployment records for `50317d2` | Owner to confirm the serving project; retire the others later |
+| A-047 | Logical architecture | `ARC001_LOGICAL_ARCHITECTURE.md` is the authoritative, technology-independent logical reference: ontology, identity, organization roles, provenance, lifecycle, ingestion and resolution | ARCHITECTURAL | **Accepted and frozen 2026-10-03** (ARC-001 CLOSED) | Owner approval with three textual corrections, 2026-10-03 | Preserve; change only on concrete contradictory evidence |
+| A-048 | Source Document versions | A retrieved version is immutable; a changed re-retrieval is a new immutable version linked to the same external-document identity where that can be established. Versioning is a property of Source Document, not a separate entity | ARCHITECTURAL | Accepted 2026-10-03 (ARC-001 §5) | ARC-001 review correction 2 | Implement in increment 8 |
+| A-049 | Exam cycle | A qualifying test is an Exam; its yearly cycle is not modelled. A possible "exam cycle" entity | ARCHITECTURAL | DEFERRED BY DESIGN until after legacy retirement | ARC-001 §8, U-08 | Revisit after increment 14 |
 
 ## Frozen baselines
 
@@ -103,14 +106,14 @@ named increment.
 
 | ID | Decision | Status |
 | --- | --- | --- |
-| U-01 | Notification identity where a body publishes a bare number with no year | DEFERRED BY DESIGN → ARC-001 |
-| U-02 | Lifecycle notice whose parent recruitment was never ingested | DEFERRED BY DESIGN → ARC-001 |
-| U-03 | Final lifecycle vocabulary, including an explicit unknown state | DEFERRED BY DESIGN → ARC-001 |
+| U-01 | Notification identity where a body publishes a bare number with no year | **CLOSED 2026-10-03** (ARC-001 §8): a bare identifier is a Level 2 key; decides with issuing organization + notification date; stored as printed |
+| U-02 | Lifecycle notice whose parent recruitment was never ingested | **CLOSED 2026-10-03** (ARC-001 §8): held as UNRESOLVED source document, retried, creates no Recruitment or Event. Public visibility of an unattached notice → SEO-001 |
+| U-03 | Final lifecycle vocabulary, including an explicit unknown state | **CLOSED 2026-10-03** (ARC-001 §6): seven states including UNKNOWN |
 | U-04 | Sitemap freshness SLA; 24 hours proposed | DEFERRED BY DESIGN → SEO-001 |
 | U-05 | May SEC-001 precede the migration boundary | **CLOSED 2026-10-03**: no. MIG-001 first (Execution Reset §5) |
 | U-06 | Migration directory name | **CLOSED 2026-10-03**: `supabase/migrations/`, per Gate 1 D1; a physical location holding portable SQL |
-| U-07 | Validation of issuing vs employing organization against official examples | DEFERRED BY DESIGN → ARC-001 |
-| U-08 | Scope of admissions, scholarships and qualifying tests | DEFERRED BY DESIGN → ARC-001 |
+| U-07 | Validation of issuing vs employing organization against official examples | Model **CLOSED 2026-10-03** (ARC-001 §4). Empirical validation DEFERRED BY DESIGN → increment 8, gating increment 10 |
+| U-08 | Scope of admissions, scholarships and qualifying tests | **CLOSED 2026-10-03** (ARC-001 §8): none is a Recruitment; admissions and scholarships are outside the canonical model; exam cycle deferred (A-049) |
 
 ## Implementation sequence
 
@@ -123,7 +126,7 @@ dependency.
 | 1 | SEC-001 pre-change report | A-022–A-024, A-038 | Approved 2026-10-03 |
 | 2 | MIG-001 migration boundary, baseline snapshot, 18-column classification | A-025, A-026, A-040 | CLOSED 2026-10-03 |
 | 3 | SEC-001 implementation, then verification | A-022–A-024, A-038 | Database part live and verified 2026-10-03. Application part deployed 2026-10-03 (`50317d2`). V8: homepage PASS, job page PASS, organization page NOT PASSED (A-045), admin login and admin mutation pending. V7 pending. **Not closed** |
-| 4 | ARC-001 logical architecture specification | A-001–A-005, A-014–A-021, A-034–A-036 | |
+| 4 | ARC-001 logical architecture specification | A-001–A-005, A-014–A-021, A-034–A-036, A-047–A-049 | **CLOSED 2026-10-03**. Documentation only; no code, schema or data changed |
 | 5 | SEO-001 central SEO and locale policy | A-007, A-008, A-027, A-028 | |
 | 6 | Organization registry | A-003, A-014 | |
 | 7 | Posting classification | A-015, A-016 | |
@@ -143,10 +146,10 @@ HTTP test and `704725e` verification (A-037), branch push, scheduler details
 
 ## Scorecard
 
-| Metric | After SEC-001 pre-change | After MIG-001 + SEC-001 |
-| --- | --- | --- |
-| Contract test failures | 15 | 15 (same set; 8 new SEC tests pass) |
-| Open P0s | 1 | 0 |
-| Unresolved decisions | 6 (all deferred by design) | 6 (all deferred by design) |
-| Implementation increments complete | 0 | 1 closed (MIG-001); SEC-001 deployed, awaiting V7 and remaining V8 |
-| Architecture decisions reopened | 0 | 0 |
+| Metric | After SEC-001 pre-change | After MIG-001 + SEC-001 | After ARC-001 |
+| --- | --- | --- | --- |
+| Contract test failures | 15 | 15 (same set; 8 new SEC tests pass) | 15 |
+| Open P0s | 1 | 0 | 0 at database level |
+| Unresolved decisions | 6 (all deferred by design) | 6 (all deferred by design) | 2 (U-04 → SEO-001; U-07 validation → increment 8), both deferred by design |
+| Implementation increments complete | 0 | 1 closed (MIG-001); SEC-001 deployed, awaiting V7 and remaining V8 | 2 closed (MIG-001, ARC-001); SEC-001 in final verification |
+| Architecture decisions reopened | 0 | 0 | 0 |
