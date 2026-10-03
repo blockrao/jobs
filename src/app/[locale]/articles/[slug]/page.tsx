@@ -1,3 +1,4 @@
+import { entitySeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,41 +27,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const dek = locale === "hi" ? article.dekHi || article.dek : article.dek;
   const body = locale === "hi" ? article.bodyHi || article.body : article.body;
 
-  // The default locale (en) is served unprefixed (/articles/slug) via
-  // next-intl's "as-needed" rewrite — an explicit /en/articles/slug
-  // actually 308-redirects to the unprefixed URL, so it must never be used
-  // as a canonical or hreflang target (a redirecting hreflang target is
-  // discounted by Google, and a self-canonical that doesn't match the
-  // requested URL is a real Search Console flag).
-  const canonicalPath = locale === "hi" ? `/hi/articles/${article.slug}` : `/articles/${article.slug}`;
+  const seo = entitySeo({ base: "/articles", slug: article.slug, locale, hasHindi });
 
   return {
     title,
     description: dek ?? body.slice(0, 155),
-    alternates: {
-      canonical: canonicalPath,
-      // Only advertise the Hindi alternate when real Hindi content exists —
-      // otherwise /hi/articles/[slug] would just be a duplicate of the
-      // English page under a Hindi URL, which misleads search engines
-      // rather than helping them find real Hindi content (same gating as
-      // the jobs/exams/organizations [locale] pages).
-      ...(hasHindi && {
-        languages: {
-          en: absoluteUrl(`/articles/${article.slug}`),
-          hi: absoluteUrl(`/hi/articles/${article.slug}`),
-          "x-default": absoluteUrl(`/articles/${article.slug}`),
-        },
-      }),
-    },
-    // A /hi page with no Hindi translation is just the English page under a
-    // Hindi URL — noindex it rather than let Google treat it as distinct,
-    // duplicate-looking content (same rule as the jobs [locale] page).
-    robots: locale === "hi" && !hasHindi ? { index: false, follow: true } : undefined,
+    alternates: seo.alternates,
+    robots: seo.robots,
     openGraph: {
       title,
       description: dek ?? undefined,
       type: "article",
-      url: absoluteUrl(canonicalPath),
+      url: seo.url,
     },
   };
 }

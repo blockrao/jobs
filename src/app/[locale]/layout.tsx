@@ -44,15 +44,8 @@ export async function generateMetadata(
       template: `%s | ${SITE_NAME}`,
     },
     description: descriptions[locale as keyof typeof descriptions] || descriptions['en'],
-    alternates: {
-      // Fallback only — every page under this layout (articles/exams/
-      // organizations/jobs) sets its own correct alternates.canonical for
-      // its actual path, which replaces this. No languages/hreflang block
-      // here: /en and /hi have no page of their own (see root layout.tsx) —
-      // each child page's generateMetadata sets the real hreflang pair once
-      // that page's translated counterpart exists.
-      canonical: canonicalUrl.toString(),
-    },
+    // No canonical here: each page under this layout sets its own through
+    // src/lib/seo.
     openGraph: {
       title: translations[locale as keyof typeof translations] || translations['en'],
       description: descriptions[locale as keyof typeof descriptions] || descriptions['en'],

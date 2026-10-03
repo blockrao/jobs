@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import { getDb } from "@/db";
 import { organizations, recruitments } from "@/db/schema";
@@ -10,7 +11,7 @@ export const revalidate = 3600; // 1 hour
 export const metadata: Metadata = {
   title: "Government Organizations - Recruitment Agencies",
   description: "Browse all government recruitment organizations including SSC, UPSC, Banking, Railways, State, and other recruitment authorities.",
-  alternates: { canonical: "/organizations" },
+  ...pageSeo("/organizations"),
   openGraph: {
     title: "Government Organizations",
     description: "Explore government recruitment organizations and their job openings",

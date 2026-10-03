@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import Link from "next/link";
 import { listArticles } from "@/lib/queries";
 import { formatDate } from "@/lib/labels";
@@ -7,6 +8,7 @@ export const revalidate = 300;
 export const metadata = {
   title: "Latest Job News",
   description: "Stay updated with the latest government job notifications and news.",
+  ...pageSeo("/news"),
 };
 
 export default async function NewsPage() {

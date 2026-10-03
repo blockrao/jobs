@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCategoryBySlug } from "@/lib/queries";
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description:
       result.category.description ??
       `Latest ${result.category.name} openings and related guides.`,
-    alternates: { canonical: `/categories/${result.category.slug}` },
+    ...pageSeo(`/categories/${result.category.slug}`),
   };
 }
 

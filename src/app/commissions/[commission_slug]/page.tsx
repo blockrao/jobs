@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import { getCommissionBySlug, getPostingsByCommission, listCommissionsWithExams } from "@/lib/queries";
 import { CommissionContent } from "@/components/commission-content";
 import { safeQuery } from "@/lib/safe-query";
@@ -14,6 +15,7 @@ export async function generateMetadata({ params }: Props) {
   return {
     title: commission ? commission.name : "Commission",
     description: `Browse all open ${commission?.name || "government"} job exams and positions.`,
+    ...(commission ? pageSeo(`/commissions/${commission.slug}`) : {}),
   };
 }
 

@@ -1,3 +1,4 @@
+import { listingSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -32,7 +33,7 @@ type Props = {
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  const { kind } = await searchParams;
+  const { kind, q } = await searchParams;
   let label = "All Jobs";
   if (kind === "GOVERNMENT") label = "Government Jobs";
   else if (kind === "PRIVATE") label = "Private Jobs";
@@ -43,7 +44,9 @@ export async function generateMetadata({
     // No `languages` alternate here on purpose — this URL never changes by
     // locale (see the file-level comment above), so there's nothing to
     // cross-link.
-    alternates: { canonical: kind ? `/jobs?kind=${kind}` : "/jobs" },
+    // Filter and search views are noindex and canonical to the unfiltered
+    // listing (SEO-001 section 4).
+    ...listingSeo("/jobs", { kind, q }),
   };
 }
 

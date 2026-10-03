@@ -1,8 +1,8 @@
+import { entitySeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getExamBySlug, getExamRelatedPositions, getExamRecruitmentDetails } from "@/db/operations/get-exams";
-import { absoluteUrl } from "@/lib/site";
 import { buildBreadcrumbSchema, buildExamSchema, jsonLdGraph } from "@/lib/structured-data";
 import { safeQuery } from "@/lib/safe-query";
 import { InfoCard } from "@/components/ui/info-card";
@@ -29,27 +29,18 @@ export async function generateMetadata({
   const metaDescription = description ||
     `${name}: Eligibility, positions recruited, notification links, and all related government recruitment campaigns.`;
 
-  // The default locale (en) is served unprefixed (/exams/slug) via
-  // next-intl's "as-needed" rewrite — an explicit /en/exams/slug actually
-  // 308-redirects to the unprefixed URL, so it must never be used as a
-  // canonical or hreflang target.
-  const canonicalPath = locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`;
+  // A Hindi version exists only when the exam has a Hindi name.
+  const seo = entitySeo({ base: "/exams", slug: exam.slug, locale, hasHindi: Boolean(labelHi) });
 
   return {
     title,
     description: metaDescription,
-    alternates: {
-      canonical: canonicalPath,
-      languages: {
-        en: absoluteUrl(`/exams/${exam.slug}`),
-        hi: absoluteUrl(`/hi/exams/${exam.slug}`),
-        "x-default": absoluteUrl(`/exams/${exam.slug}`),
-      }
-    },
+    alternates: seo.alternates,
+    robots: seo.robots,
     openGraph: {
       title,
       description: metaDescription,
-      url: absoluteUrl(canonicalPath),
+      url: seo.url,
       type: "website",
     },
   };

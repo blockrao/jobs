@@ -6,7 +6,9 @@ import {
   getAllExamSlugsForSitemap,
   getAllOrganizationSlugsForSitemap,
   getPostingSlugsPageForSitemap,
+  listCommissionsWithExams,
 } from "@/lib/queries";
+import { sitemapAlternates } from "@/lib/seo";
 
 // Single sitemap at /sitemap.xml — clean canonical URL that robots.txt and
 // search engines expect. Google allows up to 50,000 URLs / 50 MB per
@@ -15,40 +17,29 @@ import {
 // /sitemap/{id}.xml) and update the robots.txt Sitemap reference.
 const MAX_POSTING_URLS = 45000;
 
+// Freshness (SEO-001 D1, ledger A-028): the sitemap is regenerated at most
+// one hour after a change, with no application deployment needed. The
+// requirement is 24 hours; the interval is an implementation detail.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows, examRows] = await Promise.all([
+  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
     getAllCategorySlugsForSitemap().catch(() => []),
     getAllOrganizationSlugsForSitemap().catch(() => []),
     getAllExamSlugsForSitemap().catch(() => []),
+    listCommissionsWithExams().catch(() => []),
   ]);
-
-  // Only emit a hi alternate for rows that actually have translated
-  // content — see src/app/[locale]/jobs|articles|organizations|exams/
-  // generateMetadata for the matching per-page logic. Advertising a hi URL
-  // with no real Hindi content would mislead search engines, not help them.
-  //
-  // "en" must be the unprefixed URL, not /en/... — the default locale is
-  // served unprefixed via next-intl's "as-needed" rewrite, and an explicit
-  // /en/... request 308-redirects back to the unprefixed URL. A redirecting
-  // hreflang target is unreliable per Google's own guidance, and it would
-  // also mismatch the `url` field on this very sitemap entry.
-  const hiAlternates = (slug: string, basePath: string) => ({
-    alternates: {
-      languages: {
-        en: `${SITE_URL}${basePath}/${slug}`,
-        hi: `${SITE_URL}/hi${basePath}/${slug}`,
-        "x-default": `${SITE_URL}${basePath}/${slug}`,
-      },
-    },
-  });
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/jobs`, changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE_URL}/categories`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/articles`, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE_URL}/organizations`, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE_URL}/exams`, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE_URL}/news`, changeFrequency: "daily", priority: 0.5 },
   ];
 
   const postingEntries: MetadataRoute.Sitemap = postingRows.map((row) => ({
@@ -56,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: row.updatedAt,
     changeFrequency: "daily",
     priority: 0.8,
-    ...((row as any).titleHi ? hiAlternates(row.slug, "/jobs") : {}),
+    ...sitemapAlternates("/jobs", row.slug, Boolean((row as any).titleHi)),
   }));
 
   const articleEntries: MetadataRoute.Sitemap = articleRows.map((row) => ({
@@ -64,7 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: row.updatedAt,
     changeFrequency: "weekly",
     priority: 0.6,
-    ...((row as any).titleHi ? hiAlternates(row.slug, "/articles") : {}),
+    ...sitemapAlternates("/articles", row.slug, Boolean((row as any).titleHi)),
   }));
 
   const categoryEntries: MetadataRoute.Sitemap = categoryRows.map((row) => ({
@@ -77,16 +68,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/organizations/${row.slug}`,
     changeFrequency: "weekly",
     priority: 0.4,
-    ...((row as any).nameHi ? hiAlternates(row.slug, "/organizations") : {}),
+    ...sitemapAlternates("/organizations", row.slug, Boolean((row as any).nameHi)),
   }));
 
-  // Exams were never in the sitemap at all before this — all 68 have
-  // labelHi, so every one gets the hi alternate.
   const examEntries: MetadataRoute.Sitemap = examRows.map((row) => ({
     url: `${SITE_URL}/exams/${row.slug}`,
     changeFrequency: "weekly",
     priority: 0.5,
-    ...hiAlternates(row.slug, "/exams"),
+    ...sitemapAlternates("/exams", row.slug, Boolean(row.labelHi)),
+  }));
+
+  const commissionEntries: MetadataRoute.Sitemap = commissionRows.map((row) => ({
+    url: `${SITE_URL}/commissions/${row.slug}`,
+    changeFrequency: "weekly",
+    priority: 0.4,
   }));
 
   return [
@@ -96,5 +91,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryEntries,
     ...orgEntries,
     ...examEntries,
+    ...commissionEntries,
   ];
 }

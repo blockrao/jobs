@@ -1,8 +1,8 @@
+import { entitySeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getOrganizationRecruitments, getOrganizationExams, getOrganizationStats } from "@/db/operations/get-organizations";
-import { absoluteUrl } from "@/lib/site";
 import { buildBreadcrumbSchema, buildOrganizationPageSchema, jsonLdGraph } from "@/lib/structured-data";
 import { safeQuery } from "@/lib/safe-query";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -40,29 +40,17 @@ export async function generateMetadata({
   // duplicate-content signal rather than a genuine translation.
   const hasHindi = Boolean(nameHi);
 
-  // The default locale (en) is served unprefixed (/organizations/slug) via
-  // next-intl's "as-needed" rewrite — an explicit /en/organizations/slug
-  // actually 308-redirects to the unprefixed URL, so it must never be used
-  // as a canonical or hreflang target.
-  const canonicalPath = locale === "hi" ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
+  const seo = entitySeo({ base: "/organizations", slug: org.slug, locale, hasHindi });
 
   return {
     title,
     description: metaDescription,
-    alternates: {
-      canonical: canonicalPath,
-      ...(hasHindi && {
-        languages: {
-          en: absoluteUrl(`/organizations/${org.slug}`),
-          hi: absoluteUrl(`/hi/organizations/${org.slug}`),
-          "x-default": absoluteUrl(`/organizations/${org.slug}`),
-        },
-      }),
-    },
+    alternates: seo.alternates,
+    robots: seo.robots,
     openGraph: {
       title,
       description: metaDescription,
-      url: absoluteUrl(canonicalPath),
+      url: seo.url,
       type: "website",
     },
   };

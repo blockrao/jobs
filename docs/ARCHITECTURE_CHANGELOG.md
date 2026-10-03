@@ -609,6 +609,86 @@ Every other field is unchanged and pinned by SD-09a, SD-09b and SD-10.
 
 ---
 
+## SEO-001 Step 2 — central policy module; routes and sitemap migrated (RESULT: PASS V1–V5)
+
+**Date.** 2026-10-03. **Type.** APPLICATION, implementing ARCHITECTURAL
+policy. **Ledger.** A-007, A-027, A-028, A-050. **Branch.**
+`seo-001/step-2`. Step 1 (`ede423c`) was deployed to production first
+(`main` = `58c508c`, four production deployments recorded successful).
+
+**Changed.**
+
+- New `src/lib/seo/index.ts`: `entitySeo`, `pageSeo`, `listingSeo`,
+  `sitemapAlternates`.
+- 17 route files now take canonical, hreflang and robots from it: the four
+  localized entity pages; `/jobs`; hubs `/organizations`, `/exams`,
+  `/articles`, `/categories`, `/categories/{slug}`, `/news`,
+  `/commissions/{slug}`; `/search`; `/recruitments`, `/recruitments/{slug}`,
+  `/positions`, `/positions/{slug}`; the home page.
+- The root layout and the locale layout no longer set a canonical.
+- `src/app/sitemap.ts`: alternates from the policy module; hubs
+  `/organizations`, `/exams`, `/news` and commission pages added;
+  regenerates hourly (`revalidate = 3600`).
+- New `docs/architecture/SEO001_PUBLIC_REPRESENTATION.md` (the approved
+  policy).
+- New tests `unit/seo-policy.test.ts` (POL-01 to POL-09).
+
+**Defect found and fixed within scope.** The root layout's `canonical: "/"`
+was inherited by every page that set none, so `/search`, `/news`, `/exams`
+and commission pages declared the home page as their canonical. Each now
+declares its own.
+
+**Before / after (V3, V4).** Each page's real metadata function and the real
+sitemap handler were run with fixed fixture data on `58c508c` (before) and on
+this change (after). Every difference:
+
+| Page | Before | After |
+| --- | --- | --- |
+| Untranslated `/hi` organization and exam page | indexable; self-canonical; exam advertises hreflang | noindex, follow; canonical to English; no hreflang |
+| Untranslated `/hi` job and article page | noindex; self-canonical | noindex; canonical to English |
+| English-only exam page | advertises a Hindi alternate | no hreflang |
+| Job below the quality tier, with Hindi | noindex but advertises hreflang | noindex; no hreflang |
+| `/jobs?kind=…` | indexable; canonical keeps the query | noindex, follow; canonical `/jobs` |
+| `/jobs?q=…` | indexable | noindex, follow |
+| `/search` | indexable; canonical inherited `/` | noindex, follow; canonical `/search` |
+| `/news`, `/exams` | canonical inherited `/` | self-canonical |
+| `/recruitments`, `/positions` (and detail pages) | indexable | noindex, follow (D2) |
+| Home | canonical `/` from the layout | canonical `/` from the page |
+
+Unchanged: all translated pairs (job, article, organization, exam, both
+languages); English-only job, article and organization pages; unfiltered
+`/jobs`; `/organizations`, `/articles`, `/categories`.
+
+Sitemap, same fixture rows: removed — the Hindi alternate on an exam with no
+Hindi name; added — `/organizations`, `/exams`, `/news`, commission pages.
+No entity URL removed.
+
+| Check | Result |
+| --- | --- |
+| V1 contract suite | PASS: 4 failed, 92 passed, 28 skipped of 124. Closed: CAN-05, CAN-01, IDX-01, IDX-02a, IDX-02b, LOC-02 ×2, LOC-03a, LOC-05. Remaining: LOC-01, LOC-01b (Step 3), ENT-07 (Recruitment Identity), IDX-06 (Canonical Read Migration). No regression |
+| V2 type-check and production build | PASS |
+| V3 metadata before/after | PASS, table above. Fixture data, not live pages |
+| V4 sitemap before/after | PASS, above |
+| V5 preview deployment | recorded below |
+
+**IDX-06 note.** That contract expects recruitment and position pages in the
+sitemap. Under decision D2 they are noindex until Canonical Read Migration,
+so it stays failing by design until then.
+
+**Expected search effect.** Untranslated Hindi pages, search and filter
+views, and recruitment/position pages leave the index over the following
+weeks. This is intended.
+
+**Rollback.** Revert the Step 2 commit; Step 1 is independent.
+
+**Not verified.** No live page has been observed after either step. V6
+(production HTTP suite) and V7 (structured-data validation) remain for
+SEO-001 closure.
+
+**Architectural deviations: None.**
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.

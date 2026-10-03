@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/db";
@@ -10,7 +11,8 @@ export const revalidate = 3600; // 1 hour
 export const metadata: Metadata = {
   title: "Browse All Government Job Positions - Evergreen Roles",
   description: "Explore evergreen government job positions by category: Administrative, Banking, Police, Defence, Railway, Teaching, and Engineering. Find salary ranges, age requirements, and qualification details.",
-  alternates: { canonical: "/positions" },
+  // SEO-001 D2: noindex, follow until Canonical Read Migration.
+  ...pageSeo("/positions", { index: false }),
   openGraph: {
     title: "Government Job Positions",
     description: "Browse evergreen government positions across multiple sectors",

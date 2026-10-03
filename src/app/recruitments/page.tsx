@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/db";
@@ -10,7 +11,8 @@ export const revalidate = 3600; // 1 hour
 export const metadata: Metadata = {
   title: "Recruitment Campaigns - Government Jobs Timeline",
   description: "Browse all government recruitment campaigns with notification dates, application windows, exam schedules, and vacancy details.",
-  alternates: { canonical: "/recruitments" },
+  // SEO-001 D2: noindex, follow until Canonical Read Migration.
+  ...pageSeo("/recruitments", { index: false }),
   openGraph: {
     title: "Recruitment Campaigns",
     description: "Explore government recruitment campaigns and apply for positions",

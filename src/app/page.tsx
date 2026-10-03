@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
+import { pageSeo } from "@/lib/seo";
 import { listArticles, listCategories, listPostings } from "@/lib/queries";
 import { HomeContent } from "@/components/home-content";
 
 export const revalidate = 120;
+
+// The home page is an English page at "/" (SEO-001 D3).
+export const metadata: Metadata = { ...pageSeo("/") };
 
 export default async function Home() {
   let govtJobs: Awaited<ReturnType<typeof listPostings>> = [];

@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -57,7 +58,8 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/positions/${position.slug}` },
+    // SEO-001 D2: noindex, follow until Canonical Read Migration.
+    ...pageSeo(`/positions/${position.slug}`, { index: false }),
     openGraph: {
       title,
       description,

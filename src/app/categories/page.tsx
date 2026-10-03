@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import { listCategories } from "@/lib/queries";
 import { CategoriesContent } from "@/components/categories-content";
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   title: "Job Categories",
   description:
     "Browse government and private job openings by category, sector, and state.",
-  alternates: { canonical: "/categories" },
+  ...pageSeo("/categories"),
 };
 
 export default async function CategoriesPage() {

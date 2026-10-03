@@ -1,3 +1,4 @@
+import { entitySeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -11,7 +12,6 @@ import {
   isHiringOpen,
   jsonLdGraph,
 } from "@/lib/structured-data";
-import { absoluteUrl } from "@/lib/site";
 import {
   EMPLOYMENT_TYPE_LABELS,
   KIND_LABELS,
@@ -60,35 +60,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // gate.ts) — this is independent of whether Hindi content exists. A
   // Tier-A English page must stay indexable even when no hi translation
   // exists yet; only the /hi/ page itself needs hasHindi to be indexable.
-  const tierAIndexable = posting.indexTier === "A";
-  const indexable = isHi ? tierAIndexable && hasHindi : tierAIndexable;
-
-  // Canonical/hreflang: the default locale (en) is served unprefixed
-  // (/jobs/slug) via next-intl's "as-needed" rewrite — /en/jobs/slug
-  // actually 308-redirects to the unprefixed URL, so it must never be used
-  // as a canonical or hreflang target (Google discounts redirecting
-  // hreflang targets, and a self-canonical that doesn't match the
-  // requested URL is a real Search Console flag).
-  const canonicalPath = isHi ? `/hi/jobs/${posting.slug}` : `/jobs/${posting.slug}`;
+  const seo = entitySeo({
+    base: "/jobs",
+    slug: posting.slug,
+    locale,
+    hasHindi,
+    eligible: posting.indexTier === "A",
+  });
 
   return {
     title,
     description,
-    alternates: {
-      canonical: canonicalPath,
-      ...(hasHindi && {
-        languages: {
-          en: absoluteUrl(`/jobs/${posting.slug}`),
-          hi: absoluteUrl(`/hi/jobs/${posting.slug}`),
-          "x-default": absoluteUrl(`/jobs/${posting.slug}`),
-        },
-      }),
-    },
-    robots: indexable ? undefined : { index: false, follow: true },
+    alternates: seo.alternates,
+    robots: seo.robots,
     openGraph: {
       title,
       description,
-      url: absoluteUrl(canonicalPath),
+      url: seo.url,
       type: "article",
     },
   };

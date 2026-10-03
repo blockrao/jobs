@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listArticles } from "@/lib/queries";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: "Guides & Articles",
   description:
     "Syllabus breakdowns, exam patterns, previous papers, salary reports, and interview guides for government and private jobs in India.",
-  alternates: { canonical: "/articles" },
+  ...pageSeo("/articles"),
 };
 
 export default async function ArticlesPage() {

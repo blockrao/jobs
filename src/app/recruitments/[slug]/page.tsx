@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -65,7 +66,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: `/recruitments/${recruitment.slug}` },
+    // Not a canonical public projection until Canonical Read Migration
+    // (SEO-001 D2): noindex, follow.
+    ...pageSeo(`/recruitments/${recruitment.slug}`, { index: false }),
     openGraph: {
       title,
       description,

@@ -9,6 +9,7 @@
  * P1 #11-12: Search as first-class feature + strong job filters
  */
 
+import { pageSeo } from "@/lib/seo";
 import { Metadata } from "next";
 import { JobSearch } from "@/components/JobSearch";
 import { DiscoverySections } from "@/components/DiscoverySections";
@@ -16,6 +17,8 @@ import { DiscoverySections } from "@/components/DiscoverySections";
 export const metadata: Metadata = {
   title: "Search Jobs",
   description: "Search and discover government and public sector job opportunities with advanced filtering and urgency indicators.",
+  // Search is a utility view: never indexed.
+  ...pageSeo("/search", { index: false }),
 };
 
 export default function SearchPage({

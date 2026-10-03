@@ -30,14 +30,9 @@ export const metadata: Metadata = {
   },
   description:
     "Latest government and private job notifications across India — admit cards, exam dates, answer keys, results, and in-depth guides, all in one place.",
-  alternates: {
-    canonical: "/",
-    // No hreflang languages block here: /en and /hi have no page of their
-    // own (only /en/articles/[slug], /en/exams/[slug], etc. under
-    // src/app/[locale]/ resolve). A broken hreflang target is worse than
-    // none — add this back once a root page exists per locale, or scope it
-    // per-route in each [locale] segment that actually has one.
-  },
+  // No canonical here: a layout-level canonical is inherited by every page
+  // that does not set its own. Each page sets its canonical through
+  // src/lib/seo (the home page in src/app/page.tsx).
   openGraph: {
     title: `${SITE_NAME} — Govt & Private Job Notifications, Results, Guides`,
     description: "Latest government and private job notifications across India — admit cards, exam dates, answer keys, results, and in-depth guides, all in one place.",

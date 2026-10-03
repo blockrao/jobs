@@ -1,3 +1,4 @@
+import { pageSeo } from "@/lib/seo";
 import { listCommissionsWithExams, getPostingsByCommission } from "@/lib/queries";
 import { ExamsHubContent } from "@/components/exams-hub-content";
 
@@ -6,6 +7,7 @@ export const revalidate = 300;
 export const metadata = {
   title: "Browse by Exam",
   description: "Discover government job exams by commission: SSC, UPSC, Banking, Railways, State, Teaching, Defence, and more.",
+  ...pageSeo("/exams"),
 };
 
 export default async function ExamsPage() {
