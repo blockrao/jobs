@@ -926,6 +926,21 @@ A-052 and A-053 live.
 
 ---
 
+## A-052 / A-053 — preview verification on the serving project (2026-10-03, 15:00 UTC)
+
+Docs only; local, not pushed. The owner checked the `asdf` preview built
+from `5681e2c` (Step 3 plus both middleware fixes), on a real job page:
+
+| Check | Result |
+| --- | --- |
+| Entity page renders with real data on the preview | PASS (English job page) |
+| A-052: no hreflang in the HTTP `Link` header | PASS — console check returned `false` |
+| A-053: request for the English URL is not redirected | PASS for a visitor with no Hindi preference (`redirected: false`). Not yet shown with Hindi selected: the screenshot has English active |
+
+Production re-check still required after `main` is deployed on `asdf`.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
