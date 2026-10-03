@@ -172,6 +172,34 @@ not pulled forward to improve today's data.
 - Lifecycle is not redesigned from currently stored stages.
 - Public reads are not migrated before Shadow Validation.
 
+**Pre-data safety gate (owner direction 2026-10-03; not a roadmap increment).**
+Before Organization Registry or Posting Classification modifies production
+data, backup and restore must be tested, not merely exist: a recoverable
+production snapshot exists; a restoration is actually performed; the
+procedure is documented; the recovery point suits the first data mutation.
+The same discipline applies to every later data-rewriting increment.
+
+**Standard requirement for every data-reconstruction increment (owner
+direction 2026-10-03).** The increment must explicitly account for both the
+existing baseline dataset and postings arriving while the increment is being
+executed, without creating competing sources of truth. The live-ingestion
+solution is established within the relevant increments and proven at Shadow
+Validation.
+
+**Bounded maintenance after SEO-001 closes, before the data sequence (owner
+direction 2026-10-03; not roadmap increments, SEC-001 not reopened).** Each
+is a small isolated change with its own verification: (1) A-039 — secure the
+unauthenticated paid-API endpoint so an uncontrolled external caller cannot
+generate third-party API expenditure; (2) A-041 — assess the database
+function reading a missing table and fix it if bounded.
+
+**Editorial fields (A-033).** Mapped to their future home in the migration
+preparation before Canonical Read Migration; not a separate increment.
+
+**Multilingual product work (A-054, A-055, A-056).** Deferred. Dedicated
+Hindi listing and category URLs are product work and do not enter the
+architecture sequence now.
+
 **Official Document Acquisition** is a bounded technical/product increment.
 Its reports must give explicit evidence on: source discovery; retrieval
 reliability; document preservation and versioning; hashes; retrieval
@@ -184,8 +212,10 @@ informal increment is created for these. After SEO-001 the owner decides
 whether to handle them as bounded maintenance/security work before the data
 sequence. In priority order:
 
-1. A-039 unauthenticated paid-API endpoint (operational/security; highest).
-2. A-041 database function reading a missing table (search/urgency values).
+1. A-039 unauthenticated paid-API endpoint — now scheduled as bounded
+   maintenance (above).
+2. A-041 database function reading a missing table — now scheduled as
+   bounded maintenance (above).
 3. A-045 organizations listing observed empty once after a deployment.
 4. A-032, A-044 scheduler and cron implementation, including the scheduler
    secret.

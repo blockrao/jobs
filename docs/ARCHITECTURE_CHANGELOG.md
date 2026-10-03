@@ -941,6 +941,22 @@ Production re-check still required after `main` is deployed on `asdf`.
 
 ---
 
+## Programme direction confirmed (2026-10-03, evening)
+
+Ledger only; local, not pushed. Owner review: in sync, no architecture reset
+or roadmap redesign. Recorded: SEO-001 closes on one deployment of `main`
+and a live re-check of A-052 and A-053, and is not expanded; the early
+production deployment of Step 3 is a recorded deviation; a pre-data safety
+gate (tested backup and restore) precedes the first data-writing increment;
+A-039 and A-041 become bounded maintenance after SEO-001 closes; every data
+increment must account for postings arriving during execution; the
+organization-role validation stays in Official Document Acquisition;
+multilingual product work stays deferred; editorial fields are mapped before
+Canonical Read Migration. Next formal pre-change report: Organization
+Registry.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
