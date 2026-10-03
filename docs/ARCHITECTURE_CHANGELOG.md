@@ -895,6 +895,37 @@ and the language redirect.
 
 ---
 
+## SEO-001 — V6 and V7 results (2026-10-03, evening)
+
+Docs only; committed locally, not pushed (deployment limit, A-059).
+
+**V7 structured-data validation — PASS.** Run by the owner in Google's Rich
+Results Test on the live site, about 14:45 UTC.
+
+| Page | Result |
+| --- | --- |
+| `/jobs/upsc-junior-technical-officer-sugar-technology-2026-k9p2` | 1 valid JobPosting, no errors, 2 non-critical issues (not yet identified) |
+| `/organizations/ssc` | 1 valid item (Breadcrumbs), no errors |
+| `/exams/ssc-cgl` | 1 valid item (Breadcrumbs), no errors |
+
+Organization and exam nodes are not rich-result types, so the tool reports
+only the breadcrumb for those pages; that is expected.
+
+**V6 production HTTP checks — PASS except two items.** The HTTP suite's
+assertions were run from a browser against the live site (the suite itself
+cannot reach production from the workspace): 10 entity pages sampled from the
+sitemap in both languages, 7 hubs, 5 utility views, 5 unknown addresses.
+Canonical, served language, reciprocal hreflang in the page, one shell,
+JobPosting placement, noindex rules, 404s, `/en` redirect and sitemap
+contents all pass. Failing: hreflang in the HTTP `Link` header (A-052) and
+redirect by detected language (A-053) — both fixed in `main`, not live
+because the serving project cannot deploy until the daily limit resets.
+
+**SEO-001 stays OPEN** on one item: deploy `main` on `asdf`, then re-check
+A-052 and A-053 live.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
