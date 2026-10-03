@@ -483,6 +483,8 @@ Run from a browser on the public internet. No credential appears here.
 | Admin login; one authorized admin mutation | Needs the admin password, which is not entered by the assistant | **PENDING — owner** |
 | Scheduler secret configured in production | 401 responses cannot distinguish "set" from "unset" | **PENDING — owner** |
 
+**Closure gate amended by the owner (2026-10-03).** The scheduler-secret check is removed from the gate and recorded as operational (A-032); A-044 stays deferred. Remaining closure checks: (1) admin login and one legitimate approve/reject; (2) which deployment project serves the public domain, and that it carries the SEC-001 application changes.
+
 The 401 results do not by themselves prove the new code is serving: the
 previous code also returns 401 when a secret is configured. SEC-001 stays
 OPEN until the three owner items are done.
