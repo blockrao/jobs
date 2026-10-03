@@ -904,7 +904,7 @@ Results Test on the live site, about 14:45 UTC.
 
 | Page | Result |
 | --- | --- |
-| `/jobs/upsc-junior-technical-officer-sugar-technology-2026-k9p2` | 1 valid JobPosting, no errors, 2 non-critical issues (not yet identified) |
+| `/jobs/upsc-junior-technical-officer-sugar-technology-2026-k9p2` | 1 valid JobPosting, no errors, 2 non-critical issues: optional `streetAddress` and `postalCode` missing from the job location |
 | `/organizations/ssc` | 1 valid item (Breadcrumbs), no errors |
 | `/exams/ssc-cgl` | 1 valid item (Breadcrumbs), no errors |
 
