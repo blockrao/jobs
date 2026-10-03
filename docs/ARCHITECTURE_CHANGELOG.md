@@ -242,6 +242,52 @@ logs and environment variables; the live `sitemap.xml`.
 
 ---
 
+## GOV-001 — Governance reset: infrastructure independence and cumulative ledger
+
+| Field | Value |
+| --- | --- |
+| Change ID | GOV-001 |
+| Classification | OPERATIONAL (governance documentation) |
+| Date | 2026-10-03 |
+| Status | Complete — awaiting review |
+| Commit SHA | see "Commit record" |
+
+**Objective.** Record the governing principle that the current stack is an
+implementation environment and not an architectural constraint, and reconcile
+all earlier findings into one cumulative ledger.
+
+**Current state → proposed state.** Decisions were spread across the Phase 1
+and 2 documents, three reports and this changelog. They are now also indexed
+in `docs/architecture/ARCHITECTURE_LEDGER.md` (A-001 to A-037), with
+superseded recommendations (S-01 to S-09), unresolved decisions (U-01 to
+U-08) and the implementation sequence.
+
+**Architectural rationale.** None of the accepted decisions depends on
+Supabase, Vercel or Next.js. Two earlier recommendations did lean on the
+stack (lifecycle rules in a database function; a framework-specific sitemap
+mechanism) and are recorded as superseded.
+
+**Data impact.** None. **Code impact.** None. **Migration impact.** No.
+
+**Files changed.** `docs/architecture/ARCHITECTURE_LEDGER.md` (added),
+`docs/ARCHITECTURE_CHANGELOG.md`.
+
+**Reversibility.** Revert the commit.
+
+**Verification.** `git diff --stat` for this change lists only files under
+`docs/`. No database call was made.
+
+**Result.** PASS.
+
+**Architectural deviations: None.**
+
+**From this entry onward** every changelog entry carries a Classification
+(ARCHITECTURAL / APPLICATION / INFRASTRUCTURE / DATA-MIGRATION /
+OPERATIONAL) and a ledger reference. The open-decision table below is kept
+for history; the live list is the ledger's "Unresolved decisions".
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
