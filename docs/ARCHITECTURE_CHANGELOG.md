@@ -269,3 +269,4 @@ D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferre
 | --- | --- |
 | P0-001 | `888ef6f40b8f3a8b6bdc25370ef2ee6ed1d4bdf7` |
 | W1A-001 | `888ef6f40b8f3a8b6bdc25370ef2ee6ed1d4bdf7` |
+| GATE-1, G2-001 | `1f3f29e18a0dfcbbce559936afe2614141bb2aa1` |
