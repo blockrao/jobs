@@ -785,6 +785,19 @@ local server; every result above was re-taken against a fresh one.
 
 ---
 
+## Multilingual review — findings recorded (2026-10-03)
+
+Ledger only; no code changed. At the owner's request the multilingual
+implementation was reviewed afresh against compliant practice. Five ledger
+items added: A-052 (hreflang emitted in HTTP headers outside the policy —
+missed by Step 2 verification, which checked metadata only), A-053
+(automatic language redirect), A-054 (English navigation in the served HTML
+of Hindi pages), A-055 (Hindi existence judged by title only), A-056
+(product gaps). None is implemented. A-052 is recommended before SEO-001
+closes and awaits approval.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
