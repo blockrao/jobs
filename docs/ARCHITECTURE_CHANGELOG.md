@@ -573,7 +573,7 @@ block SEO-001; SEO-001 Step 1 authorized.
 
 ---
 
-## SEO-001 Step 1 — shared structured data for organization and exam pages (RESULT: verification incomplete)
+## SEO-001 Step 1 — shared structured data for organization and exam pages (RESULT: PASS)
 
 **Date.** 2026-10-03. **Type.** APPLICATION. **Ledger.** A-007, A-009, A-050.
 **Commit.** `ede423c` on branch `seo-001/step-1`. **Not merged to `main`; not
@@ -595,16 +595,15 @@ Every other field is unchanged and pinned by SD-09a, SD-09b and SD-10.
 
 | Check | Result |
 | --- | --- |
-| V1 contract suite | PASS: 13 failed, 70 passed, 28 skipped of 111 (was 15 / 65 / 28 of 108). SD-03 and SD-04 now pass; 3 new tests pass; the 13 remaining failures are the same named tests as before |
+| V1 contract suite | PASS: 13 failed, 74 passed, 28 skipped of 115 (was 15 / 65 / 28 of 108). SD-03 and SD-04 now pass; 7 new tests pass (SD-09a/b, SD-10, SD-11 ×4); the 13 remaining failures are the same named tests as before |
 | V2 type-check and production build | PASS |
-| V3 rendered `<head>`/markup, before and after | **NOT DONE.** This workspace cannot reach the database, so entity pages do not render locally; preview deployments sit behind the host's login. Field-level equivalence is covered by the pinning tests only |
+| V3 rendered markup, before and after | PASS. Both real page components rendered to HTML with the data layer mocked, on the commit before (`1591f30`) and after, English and Hindi. Differences found: two scripts → one script; Organization gains `@id`. Breadcrumb and exam nodes: no field differences. Head tags are not touched by this step. Now a permanent test (SD-11, `unit/rendered-structured-data.test.ts`). Not yet observed on a live page |
 | V4 sitemap URL list | No change possible: `src/app/sitemap.ts` untouched (not re-generated) |
 | V5 preview deployment | PASS: all four projects built `ede423c` |
 
 **Rollback.** Revert `ede423c`.
 
-**Status.** Step 1 implemented, not closed. V3 remains to be run against a
-rendered page before Step 2 starts.
+**Status.** Step 1 passes V1–V5. Live-page observation follows deployment and is recorded under V6/V7 at SEO-001 closure.
 
 **Architectural deviations: None.**
 
