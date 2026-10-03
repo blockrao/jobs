@@ -189,24 +189,24 @@ describe("job page quality gate", () => {
 
 describe("utility pages", () => {
   test("IDX-01 /search is noindex", async () => {
-    const mod = await import("@/app/search/page");
+    const mod = await import("@/app/(default)/search/page");
     expect(isNoindex(mod.metadata)).toBe(true);
   });
 
   test("IDX-02a /jobs filter views (?kind=) are noindex", async () => {
-    const mod = await import("@/app/jobs/page");
+    const mod = await import("@/app/(default)/jobs/page");
     const meta = await mod.generateMetadata({ searchParams: Promise.resolve({ kind: "GOVERNMENT" }) });
     expect(isNoindex(meta)).toBe(true);
   });
 
   test("IDX-02b /jobs search views (?q=) are noindex", async () => {
-    const mod = await import("@/app/jobs/page");
+    const mod = await import("@/app/(default)/jobs/page");
     const meta = await mod.generateMetadata({ searchParams: Promise.resolve({ q: "clerk" }) });
     expect(isNoindex(meta)).toBe(true);
   });
 
   test("CAN-01 /jobs canonical never carries a query string, filtered or not", async () => {
-    const mod = await import("@/app/jobs/page");
+    const mod = await import("@/app/(default)/jobs/page");
     for (const sp of [{}, { kind: "GOVERNMENT" }, { kind: "PRIVATE" }, { q: "clerk" }]) {
       const meta = await mod.generateMetadata({ searchParams: Promise.resolve(sp) });
       expect(canonicalOf(meta)!.search, JSON.stringify(sp)).toBe("");
@@ -214,7 +214,7 @@ describe("utility pages", () => {
   });
 
   test("IDX-03c the unfiltered /jobs listing is indexable", async () => {
-    const mod = await import("@/app/jobs/page");
+    const mod = await import("@/app/(default)/jobs/page");
     expect(isNoindex(await mod.generateMetadata({ searchParams: Promise.resolve({}) }))).toBe(false);
   });
 });

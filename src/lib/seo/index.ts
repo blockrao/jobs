@@ -67,6 +67,11 @@ export function entitySeo(opts: {
   };
 }
 
+/** Robots value for a page with no address of its own to canonicalize (a 404). */
+export function noindexRobots(): Metadata["robots"] {
+  return NOINDEX_FOLLOW;
+}
+
 /** A single-language page at a fixed path (hub, static page, detail page). */
 export function pageSeo(path: string, opts: { index?: boolean } = {}): Seo {
   return {
@@ -91,4 +96,14 @@ export function sitemapAlternates(
   hasHindi: boolean,
 ): Pick<MetadataRoute.Sitemap[number], "alternates"> {
   return hasHindi ? { alternates: { languages: languagesFor(`${base}/${slug}`) } } : {};
+}
+
+/**
+ * The language declared in the server-rendered <html lang> for a page under
+ * the locale segment. Only the "hi" segment is Hindi; every other value
+ * (including "en" and the legacy single-segment exam addresses that share
+ * this segment) is English. Decided on the server, never by a script.
+ */
+export function htmlLang(localeSegment: string): "en" | "hi" {
+  return localeSegment === "hi" ? "hi" : "en";
 }

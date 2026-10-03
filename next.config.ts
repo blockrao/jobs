@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Required by src/app/global-not-found.tsx: the app has two root layouts
+  // (src/app/(default) and src/app/[locale]) and no layout above them.
+  experimental: {
+    globalNotFound: true,
+  },
   headers: async () => [
     {
       source: "/(.*)",

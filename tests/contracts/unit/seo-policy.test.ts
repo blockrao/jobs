@@ -59,10 +59,10 @@ describe("listings and fixed pages", () => {
   test("POL-07 recruitment and position pages are noindex until they are canonical public projections (D2)", async () => {
     const { readSource, stripComments } = await import("../helpers/source");
     for (const f of [
-      "src/app/recruitments/page.tsx",
-      "src/app/recruitments/[slug]/page.tsx",
-      "src/app/positions/page.tsx",
-      "src/app/positions/[slug]/page.tsx",
+      "src/app/(default)/recruitments/page.tsx",
+      "src/app/(default)/recruitments/[slug]/page.tsx",
+      "src/app/(default)/positions/page.tsx",
+      "src/app/(default)/positions/[slug]/page.tsx",
     ]) {
       expect(stripComments(readSource(f)), f).toMatch(/pageSeo\([^)]*\{ index: false \}\)/);
     }

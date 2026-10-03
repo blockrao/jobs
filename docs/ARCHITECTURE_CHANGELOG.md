@@ -721,6 +721,70 @@ close SEO-001 on Steps 1–2 with LOC-01/LOC-01b recorded as open.
 
 ---
 
+## SEO-001 Step 3 — server-rendered page language (RESULT: PASS V1–V5)
+
+**Date.** 2026-10-03. **Type.** APPLICATION. **Ledger.** A-008, A-050, A-051.
+Owner decision: option (a) — structural move plus a narrowed accessibility
+assist for cookie-switched listings.
+
+**Changed.**
+
+- Two root layouts and no layout above them: `src/app/(default)/layout.tsx`
+  (unprefixed tree, `lang="en"`) and `src/app/[locale]/layout.tsx` (language
+  from the URL segment via `htmlLang()` in `src/lib/seo`). Both render the
+  one shell, new `src/components/root-shell.tsx`.
+- Every unprefixed route folder moved into the `(default)` route group. A
+  route group does not appear in URLs: **no URL changed.**
+- `src/components/html-lang-sync.tsx` deleted. New
+  `src/components/listing-language-assist.tsx`: mounted only by the
+  unprefixed root layout; acts only on `/`, `/jobs`, `/organizations`,
+  `/exams`, `/articles`, `/categories`; sets the document language for
+  assistive technology when the visitor's saved preference is Hindi. It does
+  not run on `/hi` entity pages and touches no SEO signal.
+- 404 pages: one `not-found.tsx` per root layout (rendered inside that
+  tree's shell) and `src/app/global-not-found.tsx` for addresses that match
+  no route, with `experimental.globalNotFound` in `next.config.ts` — the
+  framework's documented mechanism for an app with several root layouts.
+  The old root `not-found.tsx` rendered its own `<html>` inside the shell
+  (two documents); that is gone.
+- `src/app/[locale]/error.tsx` added (each root layout needs its own).
+- Contracts revised as the owner specified: LOC-01, LOC-01a, LOC-01b,
+  LOC-01c (static) and LOC-06, LOC-07, LOC-08 (rendered root layouts). The
+  entity-page requirement is stricter than before, not weaker: the language
+  must come from the server, and exactly one shell may exist.
+
+**Verification (local production build, fresh server each time).**
+
+| Control | Result |
+| --- | --- |
+| English routes | 13 routes: one `<html lang="en">`, one header, one footer; canonical and robots identical to Step 2 |
+| Hindi entity routes | `/hi/jobs/…` in a browser: `lang="hi"`, one shell. Only the 404 path could be exercised locally (no database here); LOC-06 renders the real locale layout for `hi`, `en` and a legacy exam segment |
+| Cookie-switched listings | Hindi-preference visitor on the six listings: `lang="hi"` after load, canonical unchanged, no hreflang. English visitor: `lang="en"` |
+| Navigation | Hindi-preference visitor, client-side `/jobs` → `/search`: language returns to `en`. English ↔ `/hi` navigation is a full page load by construction; not exercised with real entity pages locally |
+| Duplicate shell | None: one `<html>`, `<body>`, header, footer on every page checked, in served HTML and in the browser DOM. No page errors |
+| Redirects | `/hi` → `/`; `/en/jobs/x` → `/jobs/x`; `/hi/categories` → `/categories`; legacy `/{exam}` → `/exams/{exam}`; `/admin` → login. Unchanged |
+| V1 contract suite | 2 failed (ENT-07, IDX-06 — owned by later increments), 101 passed, 28 skipped of 131 |
+| V2 type-check and build | PASS |
+| V3 / V4 | Entity metadata, `/jobs` variants, home and sitemap: no difference from deployed Step 2 |
+
+**Known limits, recorded not fixed.**
+
+- An untranslated `/hi` entity page is served `lang="hi"` although its main
+  text is English: the layout knows the URL, not the entity. It is already
+  noindex with an English canonical and no hreflang (A-051).
+- A page that calls `notFound()` is delivered as the framework's error
+  shell and completed in the browser; that behaviour predates this change.
+- `globalNotFound` is an experimental framework flag.
+
+**Process note.** Part of the first verification pass ran against a stale
+local server; every result above was re-taken against a fresh one.
+
+**Rollback.** Revert the Step 3 commit; Steps 1 and 2 are independent.
+
+**Architectural deviations: None.**
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.

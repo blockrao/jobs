@@ -68,14 +68,53 @@ describe("SEO policy is centralized", () => {
     expect(offenders).toEqual([]);
   });
 
-  // Fails until W1-D: <html lang="en"> is a literal, repaired client-side.
-  test("LOC-01 the root layout does not hardcode <html lang>", () => {
-    const layout = stripComments(readSource("src/app/layout.tsx"));
-    expect(layout).not.toMatch(/<html[^>]*\blang=["'][a-zA-Z-]+["']/);
+  // Language of the served HTML (SEO-001 step 3, owner decision 2026-10-03).
+  //
+  // Entity/canonical pages: the server-rendered language is authoritative.
+  // Cookie-switched listings: the visitor's language is a presentation
+  // preference at one English address, so a client-side accessibility
+  // assist is allowed there and only there.
+  const SHELL = "src/components/root-shell.tsx";
+  const LOCALE_ROOT = "src/app/[locale]/layout.tsx";
+  const DEFAULT_ROOT = "src/app/(default)/layout.tsx";
+  const ASSIST = "src/components/listing-language-assist.tsx";
+  // The whole-document 404 for an address that matches no route. It has no
+  // locale and no layout, so it is the one place a literal language is right.
+  const GLOBAL_404 = "src/app/global-not-found.tsx";
+
+  test("LOC-01 <html lang> is never a hardcoded literal; the shell takes it from its root layout", () => {
+    const offenders = listFiles("src")
+      .filter((f) => f !== GLOBAL_404)
+      .filter((f) => /<html[^>]*\blang=["'][a-zA-Z-]+["']/.test(stripComments(readSource(f))));
+    expect(offenders).toEqual([]);
+    expect(stripComments(readSource(SHELL))).toMatch(/<html lang=\{lang\}/);
   });
 
-  test("LOC-01b no client component is responsible for correcting <html lang> after hydration", () => {
-    expect(filesMatching("src", /document\.documentElement\.lang\s*=/)).toEqual([]);
+  test("LOC-01a one shell renders <html> for every page, and no layout sits above the two root layouts", () => {
+    expect(filesMatching("src", /<html[\s>]/).sort()).toEqual([GLOBAL_404, SHELL].sort());
+    expect(listFiles("src/app").filter((f) => f === "src/app/layout.tsx")).toEqual([]);
+    const shellUsers = filesMatching("src", /<RootShell[\s>]/).sort();
+    expect(shellUsers).toEqual([DEFAULT_ROOT, LOCALE_ROOT].sort());
+  });
+
+  test("LOC-01c entity pages under the locale segment get their language from the URL, on the server", async () => {
+    expect(stripComments(readSource(LOCALE_ROOT))).toMatch(/<RootShell lang=\{htmlLang\(locale\)\}>/);
+    const { htmlLang } = await import("@/lib/seo");
+    expect(htmlLang("hi")).toBe("hi");
+    expect(htmlLang("en")).toBe("en");
+    expect(htmlLang("ssc-cgl")).toBe("en");
+  });
+
+  test("LOC-01b the only client-side language write is the listing accessibility assist, and entity pages never load it", () => {
+    expect(filesMatching("src", /document\.documentElement\.lang\s*=/)).toEqual([ASSIST]);
+    // Mounted by the shell only when the unprefixed root layout asks for it.
+    expect(filesMatching("src", /<ListingLanguageAssist[\s/]/)).toEqual([SHELL]);
+    expect(stripComments(readSource(LOCALE_ROOT))).not.toMatch(/listingLanguageAssist/);
+    expect(stripComments(readSource(DEFAULT_ROOT))).toMatch(/listingLanguageAssist/);
+    // It acts on the cookie-switched listings only and cannot touch SEO signals.
+    const assist = stripComments(readSource(ASSIST));
+    expect(assist).toMatch(/COOKIE_SWITCHED_LISTINGS\.has\(pathname\)/);
+    expect(assist).not.toMatch(/canonical|hreflang|robots|sitemap|querySelector|createElement/i);
   });
 });
 
@@ -144,7 +183,7 @@ describe("trust boundary in application code (SEC-001)", () => {
   // Server actions are reachable as public endpoints, so a path guard is not
   // enough: each mutating action must check the admin session itself.
   test("SEC-06 every mutating admin action verifies the admin session itself", () => {
-    const src = stripComments(readSource("src/app/admin/actions.ts"));
+    const src = stripComments(readSource("src/app/(default)/admin/actions.ts"));
     const exempt = new Set(["loginAction", "logoutAction"]);
     const parts = src.split(/\nexport async function /).slice(1);
     const unguarded = parts

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { IntlProvider } from '@/components/intl-provider';
+import { RootShell } from '@/components/root-shell';
+import { htmlLang } from '@/lib/seo';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import { locales, defaultLocale, type Locale, getMessages } from '@/i18n/request';
 
@@ -58,23 +60,21 @@ export async function generateMetadata(
   };
 }
 
-// NOTE: this layout is nested UNDER the root layout (src/app/layout.tsx),
-// which already renders the single <html>/<head>/<body> shell, Header,
-// Footer, AnalyticsTracker and the WebSite JSON-LD schema for every route in
-// the app — including everything under this [locale] segment. This layout
-// used to redeclare all of that itself, which meant every /en or /hi page
-// rendered TWO nested <html>/<body> trees (browsers silently merge the
-// second set into the first during HTML parsing, but React's virtual DOM
-// still thinks it rendered two independent trees). The visible symptom: two
-// separate Header/LanguageSwitcher component instances existed per page —
-// the outer one from root layout, permanently stuck on next-intl's
-// defaultLocale ('en') since root layout never knows this segment's locale
-// param. Clicking the switcher while it was actually the OUTER instance
-// (always believing the current locale was 'en') on an already-/hi/ page
-// produced /hi/hi/... links, plus duplicate GA page-view hits and duplicate
-// WebSite schema blocks on every page. Fixed by having this layout do only
-// what's genuinely locale-specific — validate the locale and provide the
-// next-intl context — and nothing structural.
+// This is a ROOT layout (SEO-001 step 3): there is no layout above it, and
+// it renders the one page shell through RootShell so that the server sends
+// the correct <html lang> for /hi pages. The unprefixed tree has its own
+// root layout in src/app/(default)/layout.tsx. Each page is wrapped by
+// exactly one shell.
+//
+// History: an earlier version rendered a second shell here while a root
+// layout above it rendered the first, producing two Header/LanguageSwitcher
+// instances per page, /hi/hi/... links and duplicate analytics hits. That
+// cannot recur while no layout sits above this one — do not add an
+// src/app/layout.tsx.
+//
+// The header and footer inside the shell keep the default-locale message
+// context they had before; only the page content below gets this segment's
+// locale, exactly as before the move.
 //
 // This layout also wraps [locale]/page.tsx (the exam detail leaf — see its
 // own file comment for why it lives in this folder), whose "locale" param
@@ -99,8 +99,10 @@ export default async function LocaleLayout({
   const messages = await getMessages(resolvedLocale);
 
   return (
-    <IntlProvider locale={resolvedLocale} messages={messages as Record<string, any>}>
-      {children}
-    </IntlProvider>
+    <RootShell lang={htmlLang(locale)}>
+      <IntlProvider locale={resolvedLocale} messages={messages as Record<string, any>}>
+        {children}
+      </IntlProvider>
+    </RootShell>
   );
 }
