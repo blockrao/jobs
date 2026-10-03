@@ -935,7 +935,7 @@ from `5681e2c` (Step 3 plus both middleware fixes), on a real job page:
 | --- | --- |
 | Entity page renders with real data on the preview | PASS (English job page) |
 | A-052: no hreflang in the HTTP `Link` header | PASS — console check returned `false` |
-| A-053: request for the English URL is not redirected | PASS for a visitor with no Hindi preference (`redirected: false`). Not yet shown with Hindi selected: the screenshot has English active |
+| A-053: request for the English URL is not redirected | PASS for a visitor with no Hindi preference (`redirected: false`) and, in a second check at 15:07 UTC, with Hindi selected: the address stayed on `/jobs/…` and the English page was served (navigation labels in Hindi, as expected) |
 
 Production re-check still required after `main` is deployed on `asdf`.
 
