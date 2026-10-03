@@ -323,6 +323,70 @@ to SEC-06.
 
 ---
 
+## MIG-001 — Migration boundary and live schema baseline
+
+| Field | Value |
+| --- | --- |
+| Change ID | MIG-001 |
+| Classification | DATA/MIGRATION + OPERATIONAL |
+| Ledger | A-011, A-025, A-026, A-040 |
+| Date | 2026-10-03 |
+| Status | CLOSED |
+| Commit SHA | see "Commit record" |
+
+**Objective.** Establish one authoritative, reproducible path for changing
+the physical schema, starting from a recorded baseline.
+
+**Current state → resulting state.** Three unrelated migration directories
+and an unreconstructable history → a checksummed snapshot of the live schema
+(`supabase/baseline/`), the old files archived unchanged
+(`docs/legacy-migrations/`), and one forward path (`supabase/migrations/`)
+with its rules and the migration-authority invariant.
+
+**Architectural rationale.** The requirement is reproducibility from a known
+point, independent of tooling. The directory and the applying tool are
+implementation details.
+
+**Data impact.** None. No database object or row was changed. Every database
+call was a `SELECT`.
+
+**Code impact.** `package.json`: `db:generate` and `db:migrate` disabled so
+there is no second path. No application source changed.
+
+**Files.** Added `supabase/baseline/` (17 snapshot files, `MD5SUMS`,
+`README.md`, `snapshot-queries.sql`), `supabase/migrations/README.md`,
+`docs/legacy-migrations/README.md` and `SHA256SUMS`,
+`docs/architecture/MIG001_COLUMN_CLASSIFICATION.md`. Moved, unchanged:
+21 files from `drizzle/`, `migrations/`, `src/db/migrations/`.
+
+**Migration impact.** None applied. No historical migration was written or
+altered.
+
+**Reversibility.** Revert the commit; the directories return to their old
+locations.
+
+**Verification.**
+
+- Each of the 17 snapshot files matches the md5 the database computed over
+  the same text (byte-identical).
+- The 21 archived files have identical sha256 before and after the move.
+- Boundary: last applied migration `20261001090748`; boundary checksum
+  `350d3056738fb04dd61f3a7a14a6a0cf913bde83118cd449875fe2506c6d11c2`.
+- `next build`, type-check and the contract suite are unchanged (run with
+  SEC-001).
+
+**18-column classification.** 0 required, 8 intentional DB-only, 3 legacy,
+2 remove later, 5 unknown (deferred to ARC-001). Nothing added to
+`schema.ts`.
+
+**New findings (ledger, not scope).** A-041, A-042.
+
+**Result.** PASS.
+
+**Architectural deviations: None.**
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.

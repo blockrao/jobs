@@ -1,0 +1,269 @@
+# constraints
+article_categories article_categories_article_id_articles_id_fk FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+article_categories article_categories_category_id_categories_id_fk FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+articles articles_pkey PRIMARY KEY (id)
+categories categories_pkey PRIMARY KEY (id)
+commissions commissions_pkey PRIMARY KEY (id)
+commissions commissions_slug_key UNIQUE (slug)
+eligibilities eligibilities_pkey PRIMARY KEY (id)
+eligibilities eligibilities_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+eligibilities eligibilities_qualification_id_fkey FOREIGN KEY (qualification_id) REFERENCES qualifications(id)
+exams exams_commission_id_fkey FOREIGN KEY (commission_id) REFERENCES commissions(id)
+exams exams_pkey PRIMARY KEY (id)
+exams exams_slug_key UNIQUE (slug)
+locations locations_pkey PRIMARY KEY (id)
+locations locations_slug_unique UNIQUE (slug)
+organizations organizations_pkey PRIMARY KEY (id)
+positions positions_pkey PRIMARY KEY (id)
+positions positions_slug_unique UNIQUE (slug)
+positions positions_typical_qualification_id_fkey FOREIGN KEY (typical_qualification_id) REFERENCES qualifications(id)
+posting_articles posting_articles_article_id_articles_id_fk FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+posting_articles posting_articles_posting_id_postings_id_fk FOREIGN KEY (posting_id) REFERENCES postings(id) ON DELETE CASCADE
+posting_categories posting_categories_category_id_categories_id_fk FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+posting_categories posting_categories_posting_id_postings_id_fk FOREIGN KEY (posting_id) REFERENCES postings(id) ON DELETE CASCADE
+posting_updates posting_updates_pkey PRIMARY KEY (id)
+posting_updates posting_updates_posting_id_postings_id_fk FOREIGN KEY (posting_id) REFERENCES postings(id) ON DELETE CASCADE
+postings postings_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES exams(id)
+postings postings_inferred_post_id_fkey FOREIGN KEY (inferred_post_id) REFERENCES posts(id)
+postings postings_inferred_recruitment_id_fkey FOREIGN KEY (inferred_recruitment_id) REFERENCES recruitments(id)
+postings postings_organization_id_organizations_id_fk FOREIGN KEY (organization_id) REFERENCES organizations(id)
+postings postings_pkey PRIMARY KEY (id)
+postings postings_source_document_id_fkey FOREIGN KEY (source_document_id) REFERENCES source_documents(id)
+postings postings_source_id_fkey FOREIGN KEY (source_id) REFERENCES sources(id)
+posts posts_pkey PRIMARY KEY (id)
+posts posts_position_id_fkey FOREIGN KEY (position_id) REFERENCES positions(id)
+posts posts_recruitment_id_fkey FOREIGN KEY (recruitment_id) REFERENCES recruitments(id) ON DELETE CASCADE
+posts posts_recruitment_slug_unique UNIQUE (recruitment_id, slug)
+qualifications qualifications_pkey PRIMARY KEY (id)
+qualifications qualifications_slug_unique UNIQUE (slug)
+recruitments recruitments_exam_id_fkey FOREIGN KEY (exam_id) REFERENCES exams(id)
+recruitments recruitments_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id)
+recruitments recruitments_pkey PRIMARY KEY (id)
+recruitments recruitments_slug_unique UNIQUE (slug)
+selection_processes selection_processes_pkey PRIMARY KEY (id)
+selection_processes selection_processes_recruitment_id_fkey FOREIGN KEY (recruitment_id) REFERENCES recruitments(id) ON DELETE CASCADE
+source_documents source_documents_pkey PRIMARY KEY (id)
+source_documents source_documents_source_id_fkey FOREIGN KEY (source_id) REFERENCES sources(id)
+sources sources_pkey PRIMARY KEY (id)
+vacancies vacancies_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations(id)
+vacancies vacancies_pkey PRIMARY KEY (id)
+vacancies vacancies_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+vacancies vacancies_unique UNIQUE (post_id, location_id, category_type, gender)
+# indexes
+CREATE INDEX eligibilities_post_idx ON public.eligibilities USING btree (post_id)
+CREATE INDEX exams_commission_idx ON public.exams USING btree (commission_id)
+CREATE INDEX idx_postings_announcement_state ON public.postings USING btree (announcement_state) WHERE (review_status = 'APPROVED'::review_status)
+CREATE INDEX idx_postings_closing_state ON public.postings USING btree (closing_state) WHERE (review_status = 'APPROVED'::review_status)
+CREATE INDEX idx_postings_created_at ON public.postings USING btree (created_at DESC) WHERE (review_status = 'APPROVED'::review_status)
+CREATE INDEX idx_postings_days_to_closing ON public.postings USING btree (days_to_closing DESC) WHERE ((review_status = 'APPROVED'::review_status) AND (days_to_closing IS NOT NULL))
+CREATE INDEX idx_postings_location_org ON public.postings USING btree (location_region, organization_id) WHERE (review_status = 'APPROVED'::review_status)
+CREATE INDEX idx_postings_search_text ON public.postings USING gin (search_text)
+CREATE INDEX idx_postings_urgency_score ON public.postings USING btree (urgency_score DESC) WHERE (review_status = 'APPROVED'::review_status)
+CREATE INDEX locations_slug_idx ON public.locations USING btree (slug)
+CREATE INDEX positions_category_idx ON public.positions USING btree (category)
+CREATE INDEX positions_slug_idx ON public.positions USING btree (slug)
+CREATE INDEX posting_updates_posting_idx ON public.posting_updates USING btree (posting_id)
+CREATE INDEX postings_confidence_idx ON public.postings USING btree (confidence_score)
+CREATE INDEX postings_date_posted_idx ON public.postings USING btree (date_posted DESC)
+CREATE INDEX postings_exam_idx ON public.postings USING btree (exam_id)
+CREATE INDEX postings_fts_hi_idx ON public.postings USING gin (to_tsvector('hindi'::regconfig, (((COALESCE(title_hi, ''::character varying))::text || ' '::text) || COALESCE(description_hi, ''::text))))
+CREATE INDEX postings_fts_idx ON public.postings USING gin (to_tsvector('english'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text))))
+CREATE INDEX postings_index_tier_idx ON public.postings USING btree (index_tier)
+CREATE INDEX postings_inferred_post_idx ON public.postings USING btree (inferred_post_id)
+CREATE INDEX postings_inferred_recruitment_idx ON public.postings USING btree (inferred_recruitment_id)
+CREATE INDEX postings_kind_idx ON public.postings USING btree (kind)
+CREATE INDEX postings_language_idx ON public.postings USING btree (language_default)
+CREATE INDEX postings_org_idx ON public.postings USING btree (organization_id)
+CREATE INDEX postings_review_idx ON public.postings USING btree (review_status)
+CREATE INDEX postings_stage_idx ON public.postings USING btree (current_stage)
+CREATE INDEX postings_status_idx ON public.postings USING btree (status)
+CREATE INDEX postings_valid_through_idx ON public.postings USING btree (valid_through)
+CREATE INDEX posts_position_idx ON public.posts USING btree (position_id)
+CREATE INDEX posts_recruitment_idx ON public.posts USING btree (recruitment_id)
+CREATE INDEX qualifications_slug_idx ON public.qualifications USING btree (slug)
+CREATE INDEX recruitments_exam_idx ON public.recruitments USING btree (exam_id)
+CREATE INDEX recruitments_organization_idx ON public.recruitments USING btree (organization_id)
+CREATE INDEX recruitments_slug_idx ON public.recruitments USING btree (slug)
+CREATE INDEX recruitments_status_idx ON public.recruitments USING btree (status)
+CREATE INDEX selection_processes_recruitment_idx ON public.selection_processes USING btree (recruitment_id)
+CREATE INDEX source_documents_content_hash_idx ON public.source_documents USING btree (content_hash)
+CREATE INDEX vacancies_location_idx ON public.vacancies USING btree (location_id)
+CREATE INDEX vacancies_post_idx ON public.vacancies USING btree (post_id)
+CREATE UNIQUE INDEX article_categories_pk ON public.article_categories USING btree (article_id, category_id)
+CREATE UNIQUE INDEX articles_pkey ON public.articles USING btree (id)
+CREATE UNIQUE INDEX articles_slug_idx ON public.articles USING btree (slug)
+CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)
+CREATE UNIQUE INDEX categories_slug_idx ON public.categories USING btree (slug)
+CREATE UNIQUE INDEX commissions_pkey ON public.commissions USING btree (id)
+CREATE UNIQUE INDEX commissions_slug_key ON public.commissions USING btree (slug)
+CREATE UNIQUE INDEX eligibilities_pkey ON public.eligibilities USING btree (id)
+CREATE UNIQUE INDEX exams_pkey ON public.exams USING btree (id)
+CREATE UNIQUE INDEX exams_slug_key ON public.exams USING btree (slug)
+CREATE UNIQUE INDEX locations_pkey ON public.locations USING btree (id)
+CREATE UNIQUE INDEX locations_slug_unique ON public.locations USING btree (slug)
+CREATE UNIQUE INDEX organizations_pkey ON public.organizations USING btree (id)
+CREATE UNIQUE INDEX organizations_slug_idx ON public.organizations USING btree (slug)
+CREATE UNIQUE INDEX positions_pkey ON public.positions USING btree (id)
+CREATE UNIQUE INDEX positions_slug_unique ON public.positions USING btree (slug)
+CREATE UNIQUE INDEX posting_articles_pk ON public.posting_articles USING btree (posting_id, article_id)
+CREATE UNIQUE INDEX posting_categories_pk ON public.posting_categories USING btree (posting_id, category_id)
+CREATE UNIQUE INDEX posting_updates_pkey ON public.posting_updates USING btree (id)
+CREATE UNIQUE INDEX postings_pkey ON public.postings USING btree (id)
+CREATE UNIQUE INDEX postings_slug_idx ON public.postings USING btree (slug)
+CREATE UNIQUE INDEX postings_source_external_idx ON public.postings USING btree (source, external_id) WHERE (external_id IS NOT NULL)
+CREATE UNIQUE INDEX posts_pkey ON public.posts USING btree (id)
+CREATE UNIQUE INDEX posts_recruitment_name_idx ON public.posts USING btree (recruitment_id, lower((name)::text))
+CREATE UNIQUE INDEX posts_recruitment_slug_unique ON public.posts USING btree (recruitment_id, slug)
+CREATE UNIQUE INDEX qualifications_pkey ON public.qualifications USING btree (id)
+CREATE UNIQUE INDEX qualifications_slug_unique ON public.qualifications USING btree (slug)
+CREATE UNIQUE INDEX recruitments_org_notification_idx ON public.recruitments USING btree (organization_id, official_notification_number) WHERE (official_notification_number IS NOT NULL)
+CREATE UNIQUE INDEX recruitments_pkey ON public.recruitments USING btree (id)
+CREATE UNIQUE INDEX recruitments_slug_unique ON public.recruitments USING btree (slug)
+CREATE UNIQUE INDEX selection_processes_pkey ON public.selection_processes USING btree (id)
+CREATE UNIQUE INDEX source_documents_pkey ON public.source_documents USING btree (id)
+CREATE UNIQUE INDEX source_documents_source_external_idx ON public.source_documents USING btree (source_id, external_id)
+CREATE UNIQUE INDEX sources_pkey ON public.sources USING btree (id)
+CREATE UNIQUE INDEX sources_slug_idx ON public.sources USING btree (slug)
+CREATE UNIQUE INDEX vacancies_pkey ON public.vacancies USING btree (id)
+CREATE UNIQUE INDEX vacancies_unique ON public.vacancies USING btree (post_id, location_id, category_type, gender)
+# sequences
+articles_id_seq integer owned_by=articles.id
+categories_id_seq integer owned_by=categories.id
+commissions_id_seq integer owned_by=commissions.id
+eligibilities_id_seq integer owned_by=eligibilities.id
+exams_id_seq integer owned_by=exams.id
+locations_id_seq integer owned_by=locations.id
+organizations_id_seq integer owned_by=organizations.id
+positions_id_seq integer owned_by=positions.id
+posting_updates_id_seq integer owned_by=posting_updates.id
+postings_id_seq integer owned_by=postings.id
+posts_id_seq integer owned_by=posts.id
+qualifications_id_seq integer owned_by=qualifications.id
+recruitments_id_seq integer owned_by=recruitments.id
+selection_processes_id_seq integer owned_by=selection_processes.id
+source_documents_id_seq integer owned_by=source_documents.id
+sources_id_seq integer owned_by=sources.id
+vacancies_id_seq integer owned_by=vacancies.id
+# enums
+article_status = DRAFT,PUBLISHED
+article_type = GUIDE,SYLLABUS,EXAM_PATTERN,PREVIOUS_PAPERS,ADMIT_CARD_GUIDE,RESULT_GUIDE,CUTOFF,SALARY_REPORT,INTERVIEW_PREP,COMPARISON,NEWS,COMPANY_REVIEW
+citizenship = INDIAN,ANY
+domicile_type = ANY,STATE,DISTRICT,UNION_TERRITORY,SPECIFIC
+employment_type = FULL_TIME,PART_TIME,CONTRACTOR,INTERN,TEMPORARY,OTHER
+gender = MALE,FEMALE,ANY
+org_sector = GOVERNMENT_CENTRAL,GOVERNMENT_STATE,PSU,BANKING,DEFENCE,RAILWAY,PRIVATE
+organization_role = EXAM_AUTHORITY,RECRUITING_BODY,EMPLOYER
+position_category = POLICE,ADMINISTRATIVE,BANKING,TEACHING,ENGINEERING,MEDICAL,DEFENCE,RAILWAY,POSTAL,CUSTOMS,TAX,JUDICIAL,LEGAL,PSU,OTHER
+posting_kind = GOVERNMENT,PRIVATE
+posting_stage = NOTIFICATION_OUT,APPLICATION_OPEN,APPLICATION_CLOSED,ADMIT_CARD_RELEASED,EXAM_SCHEDULED,EXAM_CONDUCTED,ANSWER_KEY_OUT,OBJECTION_WINDOW,RESULT_OUT,MERIT_LIST_OUT,INTERVIEW_SCHEDULED,FINAL_RESULT_OUT,ACTIVE,FILLED,CLOSED
+posting_status = ACTIVE,ARCHIVED,INACTIVE
+qualification_level = SECONDARY,SENIOR_SECONDARY,BACHELOR,MASTER,PHD
+recruitment_status = UPCOMING,ACTIVE,RESULTS,ARCHIVED
+review_status = PENDING,APPROVED,REJECTED
+salary_period = HOUR,DAY,WEEK,MONTH,YEAR
+selection_process_type = EXAM,DIRECT,INTERVIEW,PHYSICAL_TEST,SKILL_TEST,MERIT,MEDICAL,DOCUMENT_VERIFICATION,HYBRID
+source_authority = OFFICIAL,TRUSTED_SECONDARY,AGGREGATED
+vacancy_category_type = GENERAL,OBC,SC,ST,EWS
+workplace_type = REMOTE,HYBRID,ONSITE
+# extensions
+pg_stat_statements 1.11 schema=extensions
+pgcrypto 1.3 schema=extensions
+plpgsql 1.0 schema=pg_catalog
+supabase_vault 0.3.1 schema=vault
+uuid-ossp 1.1 schema=extensions
+# triggers
+CREATE TRIGGER trg_recruitment_status_changed AFTER UPDATE ON public.recruitments FOR EACH ROW EXECUTE FUNCTION trigger_recruitment_status_changed()
+# row_level_security (table rls force policies owner)
+article_categories rls=true force=false policies=0 owner=postgres
+articles rls=true force=false policies=0 owner=postgres
+categories rls=true force=false policies=0 owner=postgres
+commissions rls=false force=false policies=0 owner=postgres
+eligibilities rls=false force=false policies=0 owner=postgres
+exams rls=false force=false policies=0 owner=postgres
+locations rls=false force=false policies=0 owner=postgres
+organizations rls=true force=false policies=0 owner=postgres
+positions rls=false force=false policies=0 owner=postgres
+posting_articles rls=true force=false policies=0 owner=postgres
+posting_categories rls=true force=false policies=0 owner=postgres
+posting_updates rls=true force=false policies=0 owner=postgres
+postings rls=true force=false policies=0 owner=postgres
+posts rls=false force=false policies=0 owner=postgres
+qualifications rls=false force=false policies=0 owner=postgres
+recruitments rls=false force=false policies=0 owner=postgres
+selection_processes rls=false force=false policies=0 owner=postgres
+source_documents rls=false force=false policies=0 owner=postgres
+sources rls=false force=false policies=0 owner=postgres
+vacancies rls=false force=false policies=0 owner=postgres
+# grants (object kind acl)
+active_postings_display v postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+article_categories r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+articles r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+articles_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+categories r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+categories_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+closing_this_week v postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+commissions r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+commissions_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+eligibilities r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+eligibilities_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+exams r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+exams_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+expired_postings v postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+locations r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+locations_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+newly_announced v postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+organizations r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+organizations_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+positions r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+positions_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+posting_articles r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+posting_categories r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+posting_updates r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+posting_updates_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+postings r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+postings_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+posts r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+posts_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+qualifications r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+qualifications_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+recruitments r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+recruitments_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+searchable_postings v postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+selection_processes r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+selection_processes_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+source_documents r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+source_documents_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+sources r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+sources_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+urgent_opportunities v postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+vacancies r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+vacancies_id_seq S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+# function grants
+calculate_recruitment_status(p_recruitment_id integer, p_application_start_date timestamp with time zone, p_application_end_date timestamp with time zone, p_exam_date timestamp with time zone, p_result_date timestamp with time zone, p_current_status text) secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+calculate_recruitment_status(p_recruitment_id integer, p_application_start_date timestamp without time zone, p_application_end_date timestamp without time zone, p_exam_date timestamp without time zone, p_admit_card_date timestamp without time zone, p_result_date timestamp without time zone, p_current_status character varying) secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+calculate_urgency_score(p_announced_date timestamp with time zone, p_closing_date date) secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+generate_posting_search_text(p_title text, p_organization_name text, p_position_name text, p_eligibility text, p_location text) secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+get_announcement_state(posted_date timestamp with time zone) secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+get_closing_state(closing_date date) secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+refresh_posting_urgency_states() secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+refresh_recruitment_lifecycle() secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+trigger_recruitment_status_changed() secdef=false =X/postgres postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+# default privileges
+postgres public S postgres=rwU/postgres anon=rwU/postgres authenticated=rwU/postgres service_role=rwU/postgres
+postgres public f postgres=X/postgres anon=X/postgres authenticated=X/postgres service_role=X/postgres
+postgres public r postgres=arwdDxtm/postgres anon=arwdDxtm/postgres authenticated=arwdDxtm/postgres service_role=arwdDxtm/postgres
+supabase_admin public S postgres=rwU/supabase_admin anon=rwU/supabase_admin authenticated=rwU/supabase_admin service_role=rwU/supabase_admin
+supabase_admin public f postgres=X/supabase_admin anon=X/supabase_admin authenticated=X/supabase_admin service_role=X/supabase_admin
+supabase_admin public r postgres=arwdDxtm/supabase_admin anon=arwdDxtm/supabase_admin authenticated=arwdDxtm/supabase_admin service_role=arwdDxtm/supabase_admin
+# schema acl
+pg_database_owner=UC/pg_database_owner =U/pg_database_owner postgres=U/pg_database_owner anon=U/pg_database_owner authenticated=U/pg_database_owner service_role=U/pg_database_owner
+# applied migration history (version name md5-of-statements)
+20260930142925 init_jobs_schema 62d4539bc7acd0b034a4dd88915cd611
+20260930143158 enable_rls_lockdown_public_api 0ac3044a3a0ef36fa691e38722477cfc
+20260930150350 0001_ingestion_provenance_moderation 83d51349b434bc311e1902282dc2e6bb
+20261001061959 phase4e_lifecycle_automation 2e9a826392660be84c37ed8a5017b7ee
+20261001062700 phase4f_search_urgency 805e8444893d8ce815d3df62093d84a6
+20261001072127 0001_add_hindi_content ce3762152bf3b33f0b56f3b8acccfe22
+20261001081403 0001_add_hindi_content ce3762152bf3b33f0b56f3b8acccfe22
+20261001084638 content_quality_gate 4494a2f76809ffd58203783e3053c1de
+20261001090748 platform_rebuild_canonical_layer bab0a04cfb5d836a3c71223ae131b7ec

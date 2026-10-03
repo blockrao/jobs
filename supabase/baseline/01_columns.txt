@@ -1,0 +1,264 @@
+article_categories.article_id integer not null
+article_categories.category_id integer not null
+articles.id integer not null default nextval('articles_id_seq'::regclass)
+articles.slug varchar(220) not null
+articles.title varchar(220) not null
+articles.dek text
+articles.body text not null
+articles.type article_type not null default 'GUIDE'::article_type
+articles.author_name varchar(120)
+articles.cover_image_url text
+articles.status article_status not null default 'DRAFT'::article_status
+articles.published_at timestamp with time zone
+articles.created_at timestamp with time zone not null default now()
+articles.updated_at timestamp with time zone not null default now()
+articles.title_hi varchar(220)
+articles.dek_hi text
+articles.body_hi text
+categories.id integer not null default nextval('categories_id_seq'::regclass)
+categories.slug varchar(160) not null
+categories.name varchar(160) not null
+categories.description text
+categories.created_at timestamp with time zone not null default now()
+categories.name_hi varchar(160)
+categories.description_hi text
+commissions.id integer not null default nextval('commissions_id_seq'::regclass)
+commissions.slug varchar(80) not null
+commissions.name varchar(160) not null
+commissions.description text
+commissions.color varchar(7) default '#000000'::character varying
+commissions.created_at timestamp with time zone not null default now()
+commissions.name_hi varchar(160)
+commissions.description_hi text
+eligibilities.id integer not null default nextval('eligibilities_id_seq'::regclass)
+eligibilities.post_id integer not null
+eligibilities.qualification_id integer
+eligibilities.age_min smallint
+eligibilities.age_max smallint
+eligibilities.experience_years_min smallint
+eligibilities.experience_years_max smallint
+eligibilities.domicile_type domicile_type default 'ANY'::domicile_type
+eligibilities.domicile_value jsonb
+eligibilities.physical_requirements text
+eligibilities.skills_required jsonb
+eligibilities.citizenship citizenship default 'INDIAN'::citizenship
+eligibilities.other_conditions jsonb
+eligibilities.created_at timestamp with time zone not null default now()
+eligibilities.updated_at timestamp with time zone not null default now()
+exams.id integer not null default nextval('exams_id_seq'::regclass)
+exams.commission_id integer not null
+exams.slug varchar(80) not null
+exams.label varchar(160) not null
+exams.description text
+exams.eligibility text
+exams.salary_min integer
+exams.salary_max integer
+exams.created_at timestamp with time zone not null default now()
+exams.label_hi varchar(160)
+exams.description_hi text
+exams.eligibility_hi text
+locations.id integer not null default nextval('locations_id_seq'::regclass)
+locations.name varchar(120) not null
+locations.slug varchar(120) not null
+locations.type varchar(60) not null
+locations.created_at timestamp with time zone not null default now()
+locations.state_name_hi varchar(80)
+locations.district_name_hi varchar(100)
+locations.city_name_hi varchar(100)
+organizations.id integer not null default nextval('organizations_id_seq'::regclass)
+organizations.slug varchar(160) not null
+organizations.name varchar(200) not null
+organizations.sector org_sector not null default 'PRIVATE'::org_sector
+organizations.state varchar(80)
+organizations.logo_url text
+organizations.website_url text
+organizations.description text
+organizations.headquarters varchar(160)
+organizations.created_at timestamp with time zone not null default now()
+organizations.updated_at timestamp with time zone not null default now()
+organizations.name_hi varchar(200)
+organizations.description_hi text
+positions.id integer not null default nextval('positions_id_seq'::regclass)
+positions.name varchar(200) not null
+positions.slug varchar(120) not null
+positions.category position_category not null
+positions.description text
+positions.typical_qualification_id integer
+positions.typical_age_min smallint
+positions.typical_age_max smallint
+positions.typical_salary_min integer
+positions.typical_salary_max integer
+positions.career_path jsonb
+positions.created_at timestamp with time zone not null default now()
+positions.updated_at timestamp with time zone not null default now()
+posting_articles.posting_id integer not null
+posting_articles.article_id integer not null
+posting_articles.relation_type varchar(60) not null default 'RELATED'::character varying
+posting_categories.posting_id integer not null
+posting_categories.category_id integer not null
+posting_updates.id integer not null default nextval('posting_updates_id_seq'::regclass)
+posting_updates.posting_id integer not null
+posting_updates.stage posting_stage not null
+posting_updates.title varchar(220) not null
+posting_updates.description text
+posting_updates.event_date timestamp with time zone not null default now()
+posting_updates.link_url text
+posting_updates.created_at timestamp with time zone not null default now()
+posting_updates.title_hi varchar(220)
+posting_updates.description_hi text
+postings.id integer not null default nextval('postings_id_seq'::regclass)
+postings.slug varchar(220) not null
+postings.title varchar(220) not null
+postings.kind posting_kind not null default 'GOVERNMENT'::posting_kind
+postings.organization_id integer not null
+postings.post_names jsonb default '[]'::jsonb
+postings.description text not null
+postings.eligibility text
+postings.responsibilities text
+postings.requirements text
+postings.total_vacancies integer
+postings.age_limit_min integer
+postings.age_limit_max integer
+postings.age_relaxation_notes text
+postings.application_fee_general integer
+postings.application_fee_reserved integer
+postings.employment_type employment_type not null default 'FULL_TIME'::employment_type
+postings.workplace_type workplace_type not null default 'ONSITE'::workplace_type
+postings.location_city varchar(120)
+postings.location_region varchar(120)
+postings.location_country varchar(120) default 'India'::character varying
+postings.salary_min integer
+postings.salary_max integer
+postings.salary_currency varchar(8) default 'INR'::character varying
+postings.salary_period salary_period default 'MONTH'::salary_period
+postings.seniority_level varchar(60)
+postings.skills jsonb default '[]'::jsonb
+postings.official_notification_url text
+postings.apply_url text
+postings.current_stage posting_stage not null default 'NOTIFICATION_OUT'::posting_stage
+postings.date_posted timestamp with time zone not null default now()
+postings.valid_through timestamp with time zone
+postings.exam_date timestamp with time zone
+postings.closed_at timestamp with time zone
+postings.view_count integer not null default 0
+postings.created_at timestamp with time zone not null default now()
+postings.updated_at timestamp with time zone not null default now()
+postings.source varchar(60) not null default 'manual'::character varying
+postings.external_id varchar(200)
+postings.source_url text
+postings.ingested_at timestamp with time zone
+postings.confidence integer
+postings.review_status review_status not null default 'APPROVED'::review_status
+postings.exam_id integer
+postings.inferred_recruitment_id integer
+postings.inferred_post_id integer
+postings.confidence_score smallint
+postings.is_canonical boolean default false
+postings.canonical_slug varchar(220)
+postings.status posting_status default 'ACTIVE'::posting_status
+postings.source_portals jsonb not null default '[]'::jsonb
+postings.source_id integer
+postings.source_document_id integer
+postings.data_completeness_status varchar(50) default 'UNKNOWN'::character varying
+postings.official_application_url text
+postings.source_type varchar(50) default 'UNKNOWN'::character varying
+postings.verification_status varchar(50) default 'UNVERIFIED'::character varying
+postings.last_verified_at timestamp with time zone
+postings.source_confidence smallint default 0
+postings.publishing_status varchar(50) default 'DRAFT'::character varying
+postings.flagged_for_review boolean default false
+postings.review_notes text
+postings.is_expired boolean default false
+postings.expiration_reason varchar(255)
+postings.expired_at timestamp with time zone
+postings.search_text tsvector
+postings.announcement_state varchar(50)
+postings.closing_state varchar(50)
+postings.urgency_score smallint default 0
+postings.days_to_closing integer
+postings.title_hi varchar(220)
+postings.description_hi text
+postings.eligibility_hi text
+postings.responsibilities_hi text
+postings.requirements_hi text
+postings.age_relaxation_notes_hi text
+postings.location_city_hi varchar(120)
+postings.language_default varchar(10) default 'en'::character varying
+postings.index_tier varchar(1) not null default 'C'::character varying
+postings.quality_missing jsonb not null default '[]'::jsonb
+postings.quality_evaluated_at timestamp with time zone
+posts.id integer not null default nextval('posts_id_seq'::regclass)
+posts.recruitment_id integer not null
+posts.position_id integer not null
+posts.name varchar(200) not null
+posts.slug varchar(200) not null
+posts.description text
+posts.salary_min integer
+posts.salary_max integer
+posts.pay_level jsonb
+posts.vacancy_total integer
+posts.created_at timestamp with time zone not null default now()
+posts.updated_at timestamp with time zone not null default now()
+qualifications.id integer not null default nextval('qualifications_id_seq'::regclass)
+qualifications.name varchar(160) not null
+qualifications.slug varchar(120) not null
+qualifications.level qualification_level not null
+qualifications.description text
+qualifications.created_at timestamp with time zone not null default now()
+recruitments.id integer not null default nextval('recruitments_id_seq'::regclass)
+recruitments.organization_id integer not null
+recruitments.exam_id integer
+recruitments.year smallint not null
+recruitments.name varchar(220) not null
+recruitments.slug varchar(220) not null
+recruitments.status recruitment_status not null default 'UPCOMING'::recruitment_status
+recruitments.notification_date timestamp with time zone
+recruitments.application_start_date timestamp with time zone
+recruitments.application_end_date timestamp with time zone
+recruitments.exam_date timestamp with time zone
+recruitments.result_date timestamp with time zone
+recruitments.total_vacancies integer
+recruitments.description text
+recruitments.notification_url text
+recruitments.created_at timestamp with time zone not null default now()
+recruitments.updated_at timestamp with time zone not null default now()
+recruitments.calculated_status varchar(50)
+recruitments.status_last_calculated timestamp without time zone
+recruitments.days_to_closing integer
+recruitments.source_url text
+recruitments.official_notification_url text
+recruitments.official_application_url text
+recruitments.verification_status varchar(50) default 'UNVERIFIED'::character varying
+recruitments.last_verified_at timestamp with time zone
+recruitments.official_notification_number varchar(200)
+selection_processes.id integer not null default nextval('selection_processes_id_seq'::regclass)
+selection_processes.recruitment_id integer not null
+selection_processes.process_type selection_process_type not null
+selection_processes.stages jsonb
+selection_processes.details jsonb
+selection_processes.created_at timestamp with time zone not null default now()
+source_documents.id integer not null default nextval('source_documents_id_seq'::regclass)
+source_documents.source_id integer not null
+source_documents.source_url text
+source_documents.document_type varchar(40)
+source_documents.external_id varchar(200)
+source_documents.content_hash varchar(64)
+source_documents.published_at timestamp with time zone
+source_documents.created_at timestamp with time zone not null default now()
+source_documents.raw_content text
+source_documents.extracted_at timestamp with time zone
+source_documents.extraction_method varchar(80)
+sources.id integer not null default nextval('sources_id_seq'::regclass)
+sources.slug varchar(120) not null
+sources.name varchar(200) not null
+sources.url text not null
+sources.authority source_authority not null default 'AGGREGATED'::source_authority
+sources.is_official boolean not null default false
+sources.created_at timestamp with time zone not null default now()
+vacancies.id integer not null default nextval('vacancies_id_seq'::regclass)
+vacancies.post_id integer not null
+vacancies.location_id integer
+vacancies.category_type vacancy_category_type not null
+vacancies.gender gender default 'ANY'::gender
+vacancies.count integer not null default 0
+vacancies.created_at timestamp with time zone not null default now()

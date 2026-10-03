@@ -45,7 +45,7 @@ Every implementation change must cite a ledger item or create one.
 | A-023 | Trust boundary, current state | The current physical implementation violates A-022: 12 tables are writable by the public database role | DATA/MIGRATION | Open — P0 | Gate 2 evidence S1–S5, S14 | Remediate (proposed increment SEC-001) |
 | A-024 | Application authorization | Admin actions carry no authorization check of their own; cron endpoints do not fail closed; one unauthenticated endpoint calls a paid API | APPLICATION | Open | Gate 2 evidence S10–S12 | Remediate after SEC-001 |
 | A-025 | Migration boundary | Baseline snapshot of the live schema, historical files preserved as artifacts, one authoritative reproducible path forward, boundary and checksum recorded, nothing fabricated | DATA/OPERATIONAL | Accepted (extends A-011) | Gate 2 §21; Governance Reset §9 | Implement (MIG-001) |
-| A-026 | Schema contract | The application schema must intentionally represent the real database contract. The 18 live-only columns are to be classified REQUIRED / INTENTIONAL DB-ONLY / LEGACY / UNKNOWN / REMOVE LATER, not copied | DATA/MIGRATION | Open — **classification not yet delivered** | Gate 1 §10; Phase 0 baseline §2 | Deliver with MIG-001 |
+| A-026 | Schema contract | The application schema must intentionally represent the real database contract. The 18 live-only columns are to be classified REQUIRED / INTENTIONAL DB-ONLY / LEGACY / UNKNOWN / REMOVE LATER, not copied | DATA/MIGRATION | Classification delivered by MIG-001 (`MIG001_COLUMN_CLASSIFICATION.md`): 8 DB-only, 3 legacy, 2 remove later, 5 unknown → ARC-001 | Gate 1 §10; Phase 0 baseline §2 | Deliver with MIG-001 |
 | A-027 | Indexability contract | Per page type: index, canonical, sitemap and primary schema. Search and filter views are noindex, out of the sitemap, without JobPosting or hreflang; canonical behaviour is set by the central policy | ARCHITECTURAL | Accepted | Gate 1 decision D4 | Implement with A-007 |
 | A-028 | Sitemap | Eligibility and `lastmod` derive from the domain model; freshness is a stated SLA. The generation mechanism is not architectural | ARCHITECTURAL (contract) / APPLICATION (mechanism) | SLA open (U-04) | Gate 2 §29 | Decide SLA; mechanism later |
 | A-029 | Authority vocabulary | `source.authority` is the single authority vocabulary; `postings.source_type` duplicates it | ARCHITECTURAL | Accepted | Governance Reset §8; Gate 2 §27 | Retire the duplicate later, separately |
@@ -59,6 +59,9 @@ Every implementation change must cite a ledger item or create one.
 | A-037 | Unverified items | Deployment of commit `704725e`, and the HTTP contract suite, have never been verified against production | OPERATIONAL | Open | Phase 0 report §12 | Run once from a machine with access |
 | A-038 | Default privileges | Root cause of A-023: the schema's default privileges grant the public roles full rights on every new table, sequence and function, so each new object is born open | DATA/MIGRATION | Open — P0 (part of SEC-001) | SEC-001 pre-change report §1: `pg_default_acl` | Fix in SEC-001; guard with contract test SEC-04 |
 | A-039 | Unauthenticated paid-API endpoint | `/api/query/normalize` calls a paid API with no authentication or rate limit | APPLICATION | Open — P2 | Gate 2 evidence | Later; not in SEC-001 |
+| A-040 | Migration authority | All future production schema changes occur through the authoritative migration path and the approved ownership/privilege model. Direct production DDL or object creation outside that path is not an accepted production mechanism | DATA/OPERATIONAL | Accepted — in force from MIG-001 | SEC-001 approval §4; `supabase/migrations/README.md` | Preserve |
+| A-041 | Broken database function | `refresh_posting_urgency_states()` reads a table that does not exist, so search and urgency values are populated on only 5 postings | DATA/MIGRATION | Open — P1 | MIG-001 baseline `functions/refresh_posting_urgency_states.sql` | Schedule; not in SEC-001 |
+| A-042 | Unused organization-role enum | An enum `organization_role` (EXAM_AUTHORITY, RECRUITING_BODY, EMPLOYER) exists live and is used by no column. Relevant prior art for A-014 | ARCHITECTURAL (input) | Noted | MIG-001 baseline `02_objects.txt` | Consider in ARC-001 |
 
 ## Frozen baselines
 
@@ -114,7 +117,7 @@ dependency.
 | # | Increment | Ledger | Status |
 | --- | --- | --- | --- |
 | 1 | SEC-001 pre-change report | A-022–A-024, A-038 | Done — awaiting approval |
-| 2 | MIG-001 migration boundary, baseline snapshot, 18-column classification | A-025, A-026 | Next |
+| 2 | MIG-001 migration boundary, baseline snapshot, 18-column classification | A-025, A-026, A-040 | CLOSED 2026-10-03 |
 | 3 | SEC-001 implementation, then verification | A-022–A-024, A-038 | After MIG-001 |
 | 4 | ARC-001 logical architecture specification | A-001–A-005, A-014–A-021, A-034–A-036 | |
 | 5 | SEO-001 central SEO and locale policy | A-007, A-008, A-027, A-028 | |
