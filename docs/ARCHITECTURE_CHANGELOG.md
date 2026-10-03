@@ -552,6 +552,8 @@ the no-unrelated-deployment acceptance condition.
 
 Decisions: D1 approved, D2 approved, D3 deferred, D4 recorded (A-050).
 
+**Approved 2026-10-03** after one wording refinement (job-page indexability row refers to the existing public/indexability criteria, no new editorial concept). Step 1 is authorized once SEC-001 is formally CLOSED; sequence Step 1 → V1–V5 → Step 2 → V1–V5 → Step 3 → V1–V5 → V6/V7 → closure.
+
 **No implementation.** No code changed for SEO-001. Steps 1–3 start only
 after SEC-001 is formally closed.
 

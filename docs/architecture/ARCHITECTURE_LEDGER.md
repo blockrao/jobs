@@ -128,7 +128,7 @@ dependency.
 | 2 | MIG-001 migration boundary, baseline snapshot, 18-column classification | A-025, A-026, A-040 | CLOSED 2026-10-03 |
 | 3 | SEC-001 implementation, then verification | A-022–A-024, A-038 | Database part live and verified 2026-10-03. Application part deployed 2026-10-03 (`50317d2`). V7 PASS. Live homepage, job page, organization page PASS. Unauthenticated admin access and unauthenticated scheduler calls rejected: PASS. Pending owner: admin login, one admin mutation, scheduler secret configured, serving-project confirmation. **Not closed** |
 | 4 | ARC-001 logical architecture specification | A-001–A-005, A-014–A-021, A-034–A-036, A-047–A-049 | **CLOSED 2026-10-03**. Documentation only; no code, schema or data changed |
-| 5 | SEO-001 central SEO and locale policy | A-007, A-008, A-027, A-028, A-050 | Pre-change report approved in principle 2026-10-03 with four corrections (applied) and decisions D1–D4. Implementation waits for SEC-001 closure (sequencing decision, not an architectural dependency) |
+| 5 | SEO-001 central SEO and locale policy | A-007, A-008, A-027, A-028, A-050 | Pre-change report **APPROVED 2026-10-03** (four corrections and one wording refinement applied; decisions D1–D4). Implementation waits for SEC-001 closure (sequencing decision, not an architectural dependency) |
 | 6 | Organization registry | A-003, A-014 | |
 | 7 | Posting classification | A-015, A-016 | |
 | 8 | Official document acquisition | A-005, A-017, A-030 | |
