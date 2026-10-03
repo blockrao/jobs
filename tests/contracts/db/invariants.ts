@@ -86,6 +86,36 @@ export const DB_INVARIANTS: DbInvariant[] = [
                + (select count(*) from (select 1 from exams group by slug having count(*)>1) d)
                + (select count(*) from (select 1 from posts group by recruitment_id, slug having count(*)>1) e) as violations`,
   },
+  // --- Trust boundary (SEC-001, ledger A-022). An untrusted caller reaches the
+  // database only as one of the public roles; these prove those roles can do
+  // nothing, and that new objects are closed by default.
+  {
+    id: "SEC-01",
+    title: "every table in the public schema has row-level security on",
+    sql: `select count(*) as violations from pg_class where relnamespace='public'::regnamespace and relkind='r' and not relrowsecurity`,
+  },
+  {
+    id: "SEC-02",
+    title: "the public roles hold no privilege on any table, view or sequence",
+    sql: `select (select count(*) from pg_class c, unnest(array['anon','authenticated']) r, unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) p
+                  where c.relnamespace='public'::regnamespace and c.relkind in ('r','v') and has_table_privilege(r, c.oid, p))
+               + (select count(*) from (select oid from pg_class where relnamespace='public'::regnamespace and relkind='S' offset 0) s, unnest(array['anon','authenticated']) r, unnest(array['USAGE','SELECT','UPDATE']) p
+                  where has_sequence_privilege(r, s.oid, p)) as violations`,
+  },
+  {
+    id: "SEC-03",
+    title: "neither the public roles nor PUBLIC can execute any function",
+    sql: `select (select count(*) from pg_proc f, unnest(array['anon','authenticated']) r where f.pronamespace='public'::regnamespace and has_function_privilege(r, f.oid, 'EXECUTE'))
+               + (select count(*) from pg_proc f where f.pronamespace='public'::regnamespace and (f.proacl is null or exists (select 1 from aclexplode(f.proacl) a where a.grantee=0))) as violations`,
+  },
+  {
+    id: "SEC-04",
+    title: "objects created by the migration owner are closed to the public roles by default",
+    sql: `select (select count(*) from pg_default_acl d, aclexplode(d.defaclacl) a
+                  where d.defaclrole='postgres'::regrole and d.defaclnamespace='public'::regnamespace and a.grantee in ('anon'::regrole, 'authenticated'::regrole))
+               + (case when exists (select 1 from pg_default_acl d where d.defaclrole='postgres'::regrole and d.defaclnamespace=0 and d.defaclobjtype='f'
+                                    and not exists (select 1 from aclexplode(d.defaclacl) a where a.grantee=0)) then 0 else 1 end) as violations`,
+  },
 ];
 
 /** Columns present live but absent from src/db/schema.ts, per table (SCH-01). */
