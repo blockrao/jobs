@@ -669,7 +669,7 @@ No entity URL removed.
 | V2 type-check and production build | PASS |
 | V3 metadata before/after | PASS, table above. Fixture data, not live pages |
 | V4 sitemap before/after | PASS, above |
-| V5 preview deployment | recorded below |
+| V5 preview deployment | PASS: all four projects built `dc5c9ce` |
 
 **IDX-06 note.** That contract expects recruitment and position pages in the
 sitemap. Under decision D2 they are noindex until Canonical Read Migration,
