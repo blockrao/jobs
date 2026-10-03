@@ -113,3 +113,47 @@ describe("shared builders", () => {
     expect(JSON.stringify(graph)).not.toContain("JobPosting");
   });
 });
+
+// SEO-001 step 1: the organization and exam page nodes moved into the shared
+// library. These pin the markup the pages emitted before the move, plus the
+// one intended addition (Organization @id, shared with job pages).
+describe("entity page nodes (SEO-001 step 1)", () => {
+  const org = { slug: "upsc", name: "UPSC", nameHi: "संघ लोक सेवा आयोग", description: null, descriptionHi: null, logoUrl: null, websiteUrl: "https://upsc.gov.in" };
+
+  test("SD-09a organization page node keeps its pre-move fields in English", async () => {
+    const { buildOrganizationPageSchema } = await import("@/lib/structured-data");
+    const node = buildOrganizationPageSchema(org, "en") as Record<string, unknown>;
+    const { ["@id"]: id, ...rest } = node;
+    expect(rest).toEqual({
+      "@type": "Organization",
+      name: "UPSC",
+      description: "Government recruitment organization: UPSC",
+      url: expect.stringMatching(/\/organizations\/upsc$/),
+      sameAs: "https://upsc.gov.in",
+      inLanguage: "en-IN",
+    });
+    expect(id).toMatch(/\/organizations\/upsc#org$/);
+  });
+
+  test("SD-09b the Hindi organization node is the same entity (@id) at the /hi address", async () => {
+    const { buildOrganizationPageSchema, buildOrganizationSchema } = await import("@/lib/structured-data");
+    const hi = buildOrganizationPageSchema(org, "hi") as Record<string, unknown>;
+    expect(hi.name).toBe("संघ लोक सेवा आयोग");
+    expect(hi.url).toMatch(/\/hi\/organizations\/upsc$/);
+    expect(hi["@id"]).toBe((buildOrganizationPageSchema(org, "en") as Record<string, unknown>)["@id"]);
+    expect(hi["@id"]).toBe(buildOrganizationSchema(org as never)["@id"]);
+  });
+
+  test("SD-10 exam page node keeps its pre-move fields", async () => {
+    const { buildExamSchema } = await import("@/lib/structured-data");
+    const node = buildExamSchema({ slug: "cgl", label: "SSC CGL", description: null }, { slug: "ssc", name: "SSC" }, "en");
+    expect(node).toEqual({
+      "@type": "EducationalOccupationalCredential",
+      name: "SSC CGL",
+      description: "SSC CGL government exam",
+      url: expect.stringMatching(/\/exams\/cgl$/),
+      provider: { "@type": "Organization", name: "SSC", url: expect.stringMatching(/\/commissions\/ssc$/) },
+      inLanguage: "en-IN",
+    });
+  });
+});

@@ -3,46 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getExamBySlug, getExamRelatedPositions, getExamRecruitmentDetails } from "@/db/operations/get-exams";
 import { absoluteUrl } from "@/lib/site";
+import { buildBreadcrumbSchema, buildExamSchema, jsonLdGraph } from "@/lib/structured-data";
 import { safeQuery } from "@/lib/safe-query";
 import { InfoCard } from "@/components/ui/info-card";
 import { Badge } from "@/components/ui/badge";
-
-function buildBreadcrumbSchema(items: { name: string; path: string }[], locale: string): object {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: items.map((item, idx) => ({
-      "@type": "ListItem",
-      position: idx + 1,
-      name: item.name,
-      item: absoluteUrl(item.path),
-    })),
-  };
-}
-
-function buildExamSchema(exam: any, commission: any, locale: string): object {
-  const labelHi = (exam as any).labelHi;
-  const descriptionHi = (exam as any).descriptionHi;
-  const name = locale === "hi" ? labelHi || exam.label : exam.label;
-  const description = locale === "hi" ? descriptionHi || exam.description : exam.description;
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "EducationalOccupationalCredential",
-    name,
-    description: description || `${name} government exam`,
-    url: absoluteUrl(locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`),
-    provider: {
-      "@type": "Organization",
-      name: locale === "hi" ? commission.nameHi || commission.name : commission.name,
-      // /commissions/[slug] has no [locale] counterpart — link to the real
-      // (non-localized) page rather than a /${locale}/commissions/... URL
-      // that 404s.
-      url: absoluteUrl(`/commissions/${commission.slug}`),
-    },
-    inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
-  };
-}
 
 export const revalidate = 3600;
 
@@ -124,21 +88,18 @@ export default async function ExamPage({ params }: Props) {
     { name: locale === "hi" ? "होम" : "Home", path: "/" },
     { name: displayCommissionName, path: `/commissions/${commission.slug}` },
     { name: displayExamName, path: locale === "hi" ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}` },
-  ], locale);
+  ]);
 
   const examSchema = buildExamSchema(exam, commission, locale);
 
-  const jsonLdScripts = [breadcrumbSchema, examSchema];
+  const schema = jsonLdGraph(breadcrumbSchema, examSchema);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      {jsonLdScripts.map((schema, idx) => (
-        <script
-          key={idx}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-        />
-      ))}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
 
       {/* Header */}
       <div className="mb-8">

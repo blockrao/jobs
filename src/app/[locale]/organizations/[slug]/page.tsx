@@ -3,41 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getOrganizationRecruitments, getOrganizationExams, getOrganizationStats } from "@/db/operations/get-organizations";
 import { absoluteUrl } from "@/lib/site";
+import { buildBreadcrumbSchema, buildOrganizationPageSchema, jsonLdGraph } from "@/lib/structured-data";
 import { safeQuery } from "@/lib/safe-query";
 import { StatTile } from "@/components/ui/stat-tile";
 import { InfoCard } from "@/components/ui/info-card";
 import { Badge } from "@/components/ui/badge";
-
-function buildBreadcrumbSchema(items: { name: string; path: string }[], locale: string): object {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: items.map((item, idx) => ({
-      "@type": "ListItem",
-      position: idx + 1,
-      name: item.name,
-      item: absoluteUrl(item.path),
-    })),
-  };
-}
-
-function buildOrganizationSchema(org: any, locale: string): object {
-  const nameHi = (org as any).nameHi;
-  const descriptionHi = (org as any).descriptionHi;
-  const name = locale === "hi" ? nameHi || org.name : org.name;
-  const description = locale === "hi" ? descriptionHi || org.description : org.description;
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name,
-    description: description || `Government recruitment organization: ${name}`,
-    url: absoluteUrl(locale === "hi" ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`),
-    ...(org.logoUrl && { logo: org.logoUrl }),
-    ...(org.websiteUrl && { sameAs: org.websiteUrl }),
-    inLanguage: locale === "hi" ? "hi-IN" : "en-IN",
-  };
-}
 
 export const revalidate = 3600;
 
@@ -130,21 +100,18 @@ export default async function OrganizationPage({ params }: Props) {
     // through proxy.ts's redirect.
     { name: locale === "hi" ? "होम" : "Home", path: "/" },
     { name: displayName, path: locale === "hi" ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}` },
-  ], locale);
+  ]);
 
-  const organizationSchema = buildOrganizationSchema(org, locale);
+  const organizationSchema = buildOrganizationPageSchema(org, locale);
 
-  const jsonLdScripts = [breadcrumbSchema, organizationSchema];
+  const schema = jsonLdGraph(breadcrumbSchema, organizationSchema);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      {jsonLdScripts.map((schema, idx) => (
-        <script
-          key={idx}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-        />
-      ))}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
 
       {/* Header */}
       <div className="mb-8">

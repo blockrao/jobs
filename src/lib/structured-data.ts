@@ -47,6 +47,66 @@ export function buildOrganizationSchema(org: Organization) {
   };
 }
 
+// Organization node for the organization's own page. Same @id as
+// buildOrganizationSchema (one node per entity, the same identifier in every
+// language), with the page-language name/description and the page URL.
+export function buildOrganizationPageSchema(
+  org: {
+    slug: string;
+    name: string;
+    nameHi?: string | null;
+    description?: string | null;
+    descriptionHi?: string | null;
+    logoUrl?: string | null;
+    websiteUrl?: string | null;
+  },
+  locale: string,
+) {
+  const hi = locale === "hi";
+  const name = hi ? org.nameHi || org.name : org.name;
+  const description = hi ? org.descriptionHi || org.description : org.description;
+  return {
+    "@type": "Organization",
+    "@id": absoluteUrl(`/organizations/${org.slug}#org`),
+    name,
+    description: description || `Government recruitment organization: ${name}`,
+    url: absoluteUrl(hi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`),
+    ...(org.logoUrl && { logo: org.logoUrl }),
+    ...(org.websiteUrl && { sameAs: org.websiteUrl }),
+    inLanguage: hi ? "hi-IN" : "en-IN",
+  };
+}
+
+// Exam node for the exam's own page. The conducting body links to its real,
+// non-localized /commissions page.
+export function buildExamSchema(
+  exam: {
+    slug: string;
+    label: string;
+    labelHi?: string | null;
+    description?: string | null;
+    descriptionHi?: string | null;
+  },
+  commission: { slug: string; name: string; nameHi?: string | null },
+  locale: string,
+) {
+  const hi = locale === "hi";
+  const name = hi ? exam.labelHi || exam.label : exam.label;
+  const description = hi ? exam.descriptionHi || exam.description : exam.description;
+  return {
+    "@type": "EducationalOccupationalCredential",
+    name,
+    description: description || `${name} government exam`,
+    url: absoluteUrl(hi ? `/hi/exams/${exam.slug}` : `/exams/${exam.slug}`),
+    provider: {
+      "@type": "Organization",
+      name: hi ? commission.nameHi || commission.name : commission.name,
+      url: absoluteUrl(`/commissions/${commission.slug}`),
+    },
+    inLanguage: hi ? "hi-IN" : "en-IN",
+  };
+}
+
 export function buildJobPostingSchema(
   posting: Posting,
   org: Organization,
