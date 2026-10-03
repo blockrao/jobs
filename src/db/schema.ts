@@ -107,6 +107,11 @@ export const articleStatusEnum = pgEnum("article_status", [
 
 // ---------- Organizations (govt bodies + private companies) ----------
 
+// Row-level security is on for every table (SEC-001, ledger A-022): the
+// public database roles have no access at all, and the application connects
+// as the owning role, which is exempt. `.enableRLS()` below states that
+// contract in the application schema; the migration that enforces it is in
+// supabase/migrations/.
 export const organizations = pgTable(
   "organizations",
   {
@@ -131,7 +136,7 @@ export const organizations = pgTable(
       .defaultNow(),
   },
   (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
-);
+).enableRLS();
 
 // ---------- Commissions (SSC, UPSC, Banking, Railways, etc.) ----------
 
@@ -151,7 +156,7 @@ export const commissions = pgTable(
       .defaultNow(),
   },
   (table) => [uniqueIndex("commissions_slug_idx").on(table.slug)],
-);
+).enableRLS();
 
 // ---------- Exams (CGL, CHSL, MTS under SSC; IAS, IPS under UPSC; etc.) ----------
 
@@ -180,7 +185,7 @@ export const exams = pgTable(
     uniqueIndex("exams_slug_idx").on(table.slug),
     index("exams_commission_idx").on(table.commissionId),
   ],
-);
+).enableRLS();
 
 // ---------- Categories (role / sector / state taxonomy for hub pages) ----------
 
@@ -199,7 +204,7 @@ export const categories = pgTable(
       .defaultNow(),
   },
   (table) => [uniqueIndex("categories_slug_idx").on(table.slug)],
-);
+).enableRLS();
 
 // ---------- Locations (flat state/UT/national reference list) ----------
 //
@@ -235,7 +240,7 @@ export const locations = pgTable(
     uniqueIndex("locations_slug_idx").on(table.slug),
     index("locations_type_idx").on(table.type),
   ],
-);
+).enableRLS();
 
 // ---------- Postings (the permanent canonical entity) ----------
 
@@ -418,7 +423,7 @@ export const postings = pgTable(
       sql`to_tsvector('english', coalesce(${table.title}, '') || ' ' || coalesce(${table.description}, ''))`,
     ),
   ],
-);
+).enableRLS();
 
 // Timeline of lifecycle events on a posting's canonical page. Each row is
 // both a UI timeline entry and a fresh-content signal on an otherwise
@@ -445,7 +450,7 @@ export const postingUpdates = pgTable(
       .defaultNow(),
   },
   (table) => [index("posting_updates_posting_idx").on(table.postingId)],
-);
+).enableRLS();
 
 export const postingCategories = pgTable(
   "posting_categories",
@@ -463,7 +468,7 @@ export const postingCategories = pgTable(
       table.categoryId,
     ),
   ],
-);
+).enableRLS();
 
 // ---------- Articles ----------
 
@@ -492,7 +497,7 @@ export const articles = pgTable(
       .defaultNow(),
   },
   (table) => [uniqueIndex("articles_slug_idx").on(table.slug)],
-);
+).enableRLS();
 
 export const postingArticles = pgTable(
   "posting_articles",
@@ -510,7 +515,7 @@ export const postingArticles = pgTable(
   (table) => [
     uniqueIndex("posting_articles_pk").on(table.postingId, table.articleId),
   ],
-);
+).enableRLS();
 
 export const articleCategories = pgTable(
   "article_categories",
@@ -528,7 +533,7 @@ export const articleCategories = pgTable(
       table.categoryId,
     ),
   ],
-);
+).enableRLS();
 
 // ---------- Relations ----------
 
@@ -743,7 +748,7 @@ export const sources = pgTable("sources", {
   authority: sourceAuthorityEnum("authority").notNull(),
   isOfficial: boolean("is_official").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const sourceDocuments = pgTable("source_documents", {
   id: serial("id").primaryKey(),
@@ -760,7 +765,7 @@ export const sourceDocuments = pgTable("source_documents", {
   rawContent: text("raw_content"),
   extractedAt: timestamp("extracted_at", { withTimezone: true }),
   extractionMethod: varchar("extraction_method", { length: 80 }),
-});
+}).enableRLS();
 
 export const qualifications = pgTable("qualifications", {
   id: serial("id").primaryKey(),
@@ -769,7 +774,7 @@ export const qualifications = pgTable("qualifications", {
   level: qualificationLevelEnum("level").notNull(),
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const positions = pgTable("positions", {
   id: serial("id").primaryKey(),
@@ -785,7 +790,7 @@ export const positions = pgTable("positions", {
   careerPath: jsonb("career_path").$type<Array<{ level: number; title: string }>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 // THE canonical hiring-round entity — one row per actual announced
 // recruitment. Identity key for resolution (see src/ingest/resolve.ts):
@@ -829,7 +834,7 @@ export const recruitments = pgTable(
       .on(table.organizationId, table.officialNotificationNumber)
       .where(sql`${table.officialNotificationNumber} is not null`),
   ],
-);
+).enableRLS();
 
 // One specific role inside a recruitment — this is where the real job
 // title lives (e.g. "Research Associate III"), never the scraped headline.
@@ -853,7 +858,7 @@ export const posts = pgTable(
   (table) => [
     uniqueIndex("posts_recruitment_name_idx").on(table.recruitmentId, sql`lower(${table.name})`),
   ],
-);
+).enableRLS();
 
 // Structured eligibility, child of Post — NOT a prose blob. Live FK is
 // post_id (the old schema-v2.ts declared positionId, which doesn't exist
@@ -874,7 +879,7 @@ export const eligibilities = pgTable("eligibilities", {
   otherConditions: jsonb("other_conditions"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const selectionProcessTypeEnum = pgEnum("selection_process_type", [
   "EXAM",
@@ -895,7 +900,7 @@ export const selectionProcesses = pgTable("selection_processes", {
   stages: jsonb("stages").$type<string[]>(),
   details: jsonb("details"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const vacancies = pgTable("vacancies", {
   id: serial("id").primaryKey(),
@@ -905,7 +910,7 @@ export const vacancies = pgTable("vacancies", {
   gender: genderEnum("gender"),
   count: integer("count").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}).enableRLS();
 
 export const sourcesRelations = relations(sources, ({ many }) => ({
   documents: many(sourceDocuments),
