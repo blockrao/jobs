@@ -843,6 +843,46 @@ endpoints fail closed ✓ · 3 application still works ✓ · 4 SEC-01–SEC-06 
 
 ---
 
+## SEO-001 Step 3 — production state and real-data verification (2026-10-03, about 14:00 UTC)
+
+**Finding.** Step 3 reached production outside the preview gate. The owner's
+deployment list shows three production redeploys made directly in the
+hosting dashboard (not from `main`, not by the assistant), the first about
+35 minutes before 13:50 UTC. The live site confirms it: `/hi` pages are
+served with `lang="hi"` and unmatched addresses return the Step 3 global
+404 — both exist only in Step 3. The build that is live is Step 3 **without**
+the A-052/A-053 middleware fixes: the hreflang `Link` header is still
+emitted and an English job URL still redirects a Hindi-preference visitor.
+
+**Preview.** On the Step 3 preview the Hindi job URL returned "page not
+found" for the owner. Cause not established; the same code serves the page
+in production, so a missing database setting in the preview environment is
+the likely explanation (inference).
+
+**Verification on the live site, real data, from a browser.**
+
+| Gate check | Result |
+| --- | --- |
+| 1–2 real `/hi/jobs/…` page; served HTML language | PASS: `lang="hi"` in the HTML as served, before hydration |
+| 3 one shell | PASS: one `<html>`, one header, one footer, served and in the DOM, on the Hindi and English job pages and the Hindi and English organization pages |
+| 4 English → Hindi | PASS: switcher goes `/jobs/{slug}` → `/hi/jobs/{slug}`; language `hi`; one shell |
+| 5 Hindi → English | PASS: `/hi/jobs/{slug}` → `/jobs/{slug}`; language `en`; one shell |
+| 6 no duplicate shell during navigation | PASS |
+| 7 canonical, hreflang, robots | PASS in the page: each language self-canonical; en/hi/x-default; `/jobs?kind=`, `/search`, `/recruitments` noindex, follow; `/exams` self-canonical. **FAIL in HTTP headers** until A-052 is live |
+| 8 untranslated Hindi entity page | Not available: every approved job and every organization has a Hindi name |
+| 9 cookie-switched listing | PASS: `/jobs` served `lang="en"` with or without the preference; DOM language `hi` and Hindi heading for a Hindi-preference visitor; canonical `/jobs`; no hreflang |
+| Sitemap | 222 URLs, 198 with a Hindi alternate, hubs present, no recruitment URLs |
+
+**Deployment problem, open.** `main` was fast-forwarded to `5681e2c` (Step 3
+plus the A-052/A-053 fixes and ledger updates) at about 13:52 UTC. No
+production deployment was created for it and the live site still runs the
+earlier Step 3 build. Production is therefore not following `main`. Not
+resolved from this workspace: needs the hosting dashboard.
+
+**SEO-001 stays OPEN.** V6 and V7 not run.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
