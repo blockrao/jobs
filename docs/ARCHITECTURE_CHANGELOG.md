@@ -883,6 +883,18 @@ resolved from this workspace: needs the hosting dashboard.
 
 ---
 
+## Correction — serving project (2026-10-03, about 14:30 UTC)
+
+Docs only. Earlier entries name `jobing` as the project serving
+www.joboye.com, on the owner's word. The owner has since said that was
+uncertain. Deployment records and live behaviour indicate `asdf` (ledger
+A-046). SEC-001's closure is unaffected: the security commits were deployed
+to production on all four projects. The A-052/A-053 fixes are live on
+`jobing` only, which is why the public site still shows the hreflang header
+and the language redirect.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
