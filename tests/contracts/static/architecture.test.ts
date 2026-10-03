@@ -128,3 +128,39 @@ describe("entity model shape (application schema)", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe("trust boundary in application code (SEC-001)", () => {
+  const CRON_ENDPOINTS = ["src/pages/api/ingest.ts", "src/app/api/cron/update-recruitment-lifecycle/route.ts"];
+
+  // A privileged endpoint must refuse when its secret is not configured. A
+  // literal fallback secret, or a comparison that passes when both sides are
+  // undefined, leaves it open.
+  test.each(CRON_ENDPOINTS)("SEC-05 %s fails closed when CRON_SECRET is unset", (file) => {
+    const src = stripComments(readSource(file));
+    expect(src, "no fallback secret").not.toMatch(/CRON_SECRET\s*(\|\||\?\?)/);
+    expect(src, "explicit refusal when the secret is missing").toMatch(/if\s*\(\s*!\s*\w*[sS]ecret\w*\s*\|\|/);
+  });
+
+  // Server actions are reachable as public endpoints, so a path guard is not
+  // enough: each mutating action must check the admin session itself.
+  test("SEC-06 every mutating admin action verifies the admin session itself", () => {
+    const src = stripComments(readSource("src/app/admin/actions.ts"));
+    const exempt = new Set(["loginAction", "logoutAction"]);
+    const parts = src.split(/\nexport async function /).slice(1);
+    const unguarded = parts
+      .map((part) => ({ name: part.match(/^\w+/)![0], body: part.split(/\n(?:async )?function /)[0] }))
+      .filter(({ name }) => !exempt.has(name))
+      .filter(({ body }) => !/await requireAdmin\(\)/.test(body))
+      .map(({ name }) => name);
+    expect(parts.length).toBeGreaterThan(2);
+    expect(unguarded).toEqual([]);
+  });
+
+  test("SEC-07 the application schema declares row-level security on every table", () => {
+    const src = stripComments(readSource("src/db/schema.ts"));
+    const tables = (src.match(/=\s*pgTable\(/g) ?? []).length;
+    const declared = (src.match(/\.enableRLS\(\)/g) ?? []).length;
+    expect(tables).toBeGreaterThan(0);
+    expect(declared).toBe(tables);
+  });
+});

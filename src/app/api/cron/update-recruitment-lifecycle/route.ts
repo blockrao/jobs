@@ -13,13 +13,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbV2 } from "@/db";
 
-// Verify cron secret to prevent unauthorized access
-const CRON_SECRET = process.env.CRON_SECRET || "placeholder";
-
 export async function POST(request: NextRequest) {
+  // Fail closed (SEC-001): no configured secret means no access. There is
+  // deliberately no fallback value.
+  const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
 
-  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

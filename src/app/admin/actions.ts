@@ -34,6 +34,21 @@ function slugify(input: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+// Server actions are callable as public HTTP endpoints, independently of the
+// page that renders them, so the /admin path guard in src/proxy.ts does not
+// protect them. Every mutating action therefore verifies the admin session
+// itself (SEC-001). Same check the proxy makes: the session cookie must equal
+// the token derived from ADMIN_PASSWORD, and an unset password matches
+// nothing.
+async function requireAdmin() {
+  const token = await adminSessionToken();
+  const store = await cookies();
+  const cookie = store.get(COOKIE_NAME)?.value;
+  if (!token || cookie !== token) {
+    redirect("/admin/login");
+  }
+}
+
 export async function loginAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   if (!(await checkAdminPassword(password))) {
@@ -58,6 +73,7 @@ export async function logoutAction() {
 }
 
 export async function createOrganization(formData: FormData) {
+  await requireAdmin();
   const db = getDb();
   const name = str(formData, "name");
   if (!name) return;
@@ -74,6 +90,7 @@ export async function createOrganization(formData: FormData) {
 }
 
 export async function createCategory(formData: FormData) {
+  await requireAdmin();
   const db = getDb();
   const name = str(formData, "name");
   if (!name) return;
@@ -88,6 +105,7 @@ export async function createCategory(formData: FormData) {
 }
 
 export async function createPosting(formData: FormData) {
+  await requireAdmin();
   const db = getDb();
   const title = str(formData, "title");
   const organizationId = num(formData, "organizationId");
@@ -136,6 +154,7 @@ export async function createPosting(formData: FormData) {
 }
 
 export async function updatePostingStage(postingId: number, formData: FormData) {
+  await requireAdmin();
   const db = getDb();
   const stage = str(formData, "stage");
   if (!stage) return;
@@ -231,18 +250,21 @@ async function rejectPostingDirect(postingId: number) {
 }
 
 export async function approvePosting(formData: FormData) {
+  await requireAdmin();
   const postingId = num(formData, "postingId");
   if (!postingId) return;
   await approvePostingDirect(postingId);
 }
 
 export async function rejectPosting(formData: FormData) {
+  await requireAdmin();
   const postingId = num(formData, "postingId");
   if (!postingId) return;
   await rejectPostingDirect(postingId);
 }
 
 export async function createArticle(formData: FormData) {
+  await requireAdmin();
   const db = getDb();
   const title = str(formData, "title");
   const body = str(formData, "body");

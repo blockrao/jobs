@@ -8,9 +8,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Validate cron secret
-  const secret = req.headers.authorization?.replace("Bearer ", "");
-  if (secret !== process.env.CRON_SECRET) {
+  // Fail closed (SEC-001): with no configured secret this endpoint refuses
+  // every request. Previously an unset secret compared equal to a missing
+  // Authorization header (undefined === undefined) and let anyone in.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
