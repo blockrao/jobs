@@ -57,6 +57,8 @@ Every implementation change must cite a ledger item or create one.
 | A-035 | Lifecycle vocabulary | Final enum, including whether an explicit unknown state exists | ARCHITECTURAL | Open (U-03) | Gate 2 §26: 74 rows have an open stage and no deadline | Decide in the logical-model specification |
 | A-036 | Orphan lifecycle notice | A lifecycle notice never creates a Recruitment by itself | ARCHITECTURAL | Direction accepted; handling detail open (U-02) | Governance Reset §8; Gate 2 §23 | Decide |
 | A-037 | Unverified items | Deployment of commit `704725e`, and the HTTP contract suite, have never been verified against production | OPERATIONAL | Open | Phase 0 report §12 | Run once from a machine with access |
+| A-038 | Default privileges | Root cause of A-023: the schema's default privileges grant the public roles full rights on every new table, sequence and function, so each new object is born open | DATA/MIGRATION | Open — P0 (part of SEC-001) | SEC-001 pre-change report §1: `pg_default_acl` | Fix in SEC-001; guard with contract test SEC-04 |
+| A-039 | Unauthenticated paid-API endpoint | `/api/query/normalize` calls a paid API with no authentication or rate limit | APPLICATION | Open — P2 | Gate 2 evidence | Later; not in SEC-001 |
 
 ## Frozen baselines
 
@@ -89,33 +91,55 @@ record of what replaced it.
 
 ## Unresolved decisions
 
-| ID | Decision | Blocks |
+No decision is left simply "open". Each is closed or deferred by design to a
+named increment.
+
+| ID | Decision | Status |
 | --- | --- | --- |
-| U-01 | Notification identity where a body publishes a bare number with no year (was D5) | A-020 |
-| U-02 | Handling of a lifecycle notice whose parent recruitment was never ingested: hold unattached, or allow a reviewed minimal parent (was D9) | A-036 |
-| U-03 | Final lifecycle vocabulary, including an explicit unknown state (was D10) | A-035 |
-| U-04 | Sitemap freshness SLA; 24 hours proposed (was D11) | A-028 |
-| U-05 | Go-ahead for SEC-001, and whether it may precede the migration boundary (was D7) | A-023 |
-| U-06 | Whether the migration directory keeps the name `supabase/migrations/` given A-013, or takes a provider-neutral name | A-025 |
-| U-07 | Validation of issuing vs employing organization against official examples | A-014 |
-| U-08 | Scope of admissions, scholarships and qualifying tests: raw only for now; a separate ontology later or never | A-015 |
+| U-01 | Notification identity where a body publishes a bare number with no year | DEFERRED BY DESIGN → ARC-001 |
+| U-02 | Lifecycle notice whose parent recruitment was never ingested | DEFERRED BY DESIGN → ARC-001 |
+| U-03 | Final lifecycle vocabulary, including an explicit unknown state | DEFERRED BY DESIGN → ARC-001 |
+| U-04 | Sitemap freshness SLA; 24 hours proposed | DEFERRED BY DESIGN → SEO-001 |
+| U-05 | May SEC-001 precede the migration boundary | **CLOSED 2026-10-03**: no. MIG-001 first (Execution Reset §5) |
+| U-06 | Migration directory name | **CLOSED 2026-10-03**: `supabase/migrations/`, per Gate 1 D1; a physical location holding portable SQL |
+| U-07 | Validation of issuing vs employing organization against official examples | DEFERRED BY DESIGN → ARC-001 |
+| U-08 | Scope of admissions, scholarships and qualifying tests | DEFERRED BY DESIGN → ARC-001 |
 
 ## Implementation sequence
 
-Each line is one independently verifiable increment with its own pre-change
-report. None has started.
+As fixed by the Execution Reset of 2026-10-03. Each increment has one
+pre-change report and one result report. Not reordered without a concrete
+dependency.
 
-| # | Increment | Type | Ledger | Depends on |
-| --- | --- | --- | --- | --- |
-| 1 | SEC-001 — close the public write path in the current implementation | DATA/MIGRATION | A-022, A-023 | U-05 |
-| 2 | MIG-001 — migration boundary, baseline snapshot, 18-column classification | DATA/OPERATIONAL | A-025, A-026 | U-06 |
-| 3 | ARC-001 — logical-model specification, technology-independent: ontology, cardinality, identity, organization roles, evidence, events, lifecycle state machine, classification, access contract | ARCHITECTURAL | A-001–A-005, A-014–A-021, A-034–A-036 | U-01–U-03, U-07 |
-| 4 | SEO-001 — central SEO, canonical, locale and indexability policy (closes 13 of the 15 failing contract tests) | APPLICATION | A-007, A-008, A-027 | none; independent of the data track |
-| 5 | ORG-001 — organization registry: design, reviewed content, then schema | ARCHITECTURAL → DATA | A-003, A-014 | 2, 3 |
-| 6 | CLS-001 — posting classification | DATA/MIGRATION | A-015, A-016 | 3 |
-| 7 | PRV-001 — official-document retrieval and evidence | ARCHITECTURAL → APPLICATION | A-005, A-017, A-030 | 3 |
-| 8 | REC-001 — recruitment identity and resolution | DATA/MIGRATION | A-002, A-020 | 5, 6, 7 |
-| 9 | PST-001 — post candidates, post resolution, position resolution | DATA/MIGRATION | A-006, A-021 | 7, 8 |
-| 10 | LIF-001 — recruitment events and lifecycle state machine | ARCHITECTURAL → APPLICATION | A-004, A-018, A-019 | 3, 7, 8 |
-| 11 | Shadow validation → canonical read path → legacy retirement | DATA/MIGRATION | A-010, A-033 | 5–10 |
-| — | Deferred: scheduler correction, sitemap mechanism, application authorization hardening | INFRASTRUCTURE / APPLICATION | A-024, A-028, A-032 | — |
+| # | Increment | Ledger | Status |
+| --- | --- | --- | --- |
+| 1 | SEC-001 pre-change report | A-022–A-024, A-038 | Done — awaiting approval |
+| 2 | MIG-001 migration boundary, baseline snapshot, 18-column classification | A-025, A-026 | Next |
+| 3 | SEC-001 implementation, then verification | A-022–A-024, A-038 | After MIG-001 |
+| 4 | ARC-001 logical architecture specification | A-001–A-005, A-014–A-021, A-034–A-036 | |
+| 5 | SEO-001 central SEO and locale policy | A-007, A-008, A-027, A-028 | |
+| 6 | Organization registry | A-003, A-014 | |
+| 7 | Posting classification | A-015, A-016 | |
+| 8 | Official document acquisition | A-005, A-017, A-030 | |
+| 9 | Recruitment identity resolution | A-002, A-020 | |
+| 10 | Post extraction and resolution | A-006, A-021 | |
+| 11 | Lifecycle and recruitment events | A-004, A-018, A-019 | |
+| 12 | Shadow validation | A-010 | |
+| 13 | Canonical read migration | A-010 | |
+| 14 | Legacy retirement | A-010, A-033 | |
+| 15 | Final launch / readiness gate | — | |
+
+Tracked, not blocking: 18-column classification (with MIG-001), production
+HTTP test and `704725e` verification (A-037), branch push, scheduler details
+(A-032), sitemap mechanism (A-028), application hardening beyond SEC-001
+(A-039).
+
+## Scorecard
+
+| Metric | 2026-10-03, after SEC-001 pre-change |
+| --- | --- |
+| Contract test failures | 15 |
+| Open P0s | 1 |
+| Unresolved decisions | 6 (all deferred by design) |
+| Implementation increments complete | 0 |
+| Architecture decisions reopened | 0 |

@@ -288,6 +288,41 @@ for history; the live list is the ledger's "Unresolved decisions".
 
 ---
 
+## SEC-001 — Public trust boundary (PRE-CHANGE)
+
+| Field | Value |
+| --- | --- |
+| Change ID | SEC-001 |
+| Classification | DATA/MIGRATION (part A) + APPLICATION (part B) |
+| Ledger | A-022, A-023, A-024, A-038 |
+| Date | 2026-10-03 |
+| Status | PRE-CHANGE — awaiting approval. Nothing implemented |
+
+**Objective.** Untrusted callers cannot change canonical data or invoke
+privileged operations; authorized services keep working.
+
+**Proposed state.** Part A, one migration: row-level security on the 12 open
+tables; all privileges on tables, views, sequences and functions revoked from
+the public roles; default privileges changed so new objects are closed by
+default. Part B: both cron endpoints fail closed; every admin action checks
+the session itself.
+
+**Dependencies.** MIG-001 (migration boundary) before part A.
+
+**Data impact.** No rows. Access metadata only.
+
+**Reversibility.** Rollback script committed beside the migration (part A);
+commit revert (part B).
+
+**Verification.** V1–V8 in the pre-change report; new contract tests SEC-01
+to SEC-06.
+
+**Decisions closed.** U-05, U-06. Remaining six deferred by design.
+
+**Result.** Pending approval.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
