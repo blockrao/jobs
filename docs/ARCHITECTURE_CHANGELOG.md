@@ -812,6 +812,37 @@ Step 3 through the preview gate.
 
 ---
 
+## SEC-001 — Public trust boundary (CLOSED)
+
+**Date.** 2026-10-03. Final closure report.
+
+| Area | Result | Evidence |
+| --- | --- | --- |
+| DB security migration | **PASS** | Migration `20261003104615`; SEC-01–SEC-04 = 0 violations; public-role write and function probes denied |
+| Application security deployment | **PASS** | Commit `cd3fa2d` (fail-closed ingestion and lifecycle endpoints, no placeholder secret, session check in all seven mutating admin actions). The owner identified `jobing` as the project serving www.joboye.com; the repository host records successful production deployments on `jobing` for `50317d2` (10:58 UTC), `58c508c` and `f75c325` |
+| External — public data API | **PASS** | Both public keys: 401, permission denied, no rows |
+| External — live pages | **PASS** | Homepage, a job page, an organization page |
+| External — unauthorized access | **PASS** | `/admin` without a session redirects to login; ingestion and lifecycle endpoints return 401 without a valid secret |
+| External — admin positive path | **PASS** | Owner, on www.joboye.com: dashboard loads (review queue shown), approve and reject both succeed |
+
+**Removed from the gate by the owner.** Whether the scheduler secret is
+configured in production — operational (A-032). The owner reports it is now
+set in the hosting environment. It is not stored in the repository.
+
+**Incident during verification.** The owner first saw the error page on
+`/admin`; on retry it worked. Not reproduced, cause not established (A-057).
+
+**Closure list (approval §7).** 1 database boundary verified ✓ · 2 privileged
+endpoints fail closed ✓ · 3 application still works ✓ · 4 SEC-01–SEC-06 pass
+✓ · 5 production checks completed ✓ · 6 migration recorded ✓ · 7 ledger ✓ ·
+8 changelog ✓ · 9 no unrelated changes in the increment ✓.
+
+**Not part of SEC-001, still open.** A-039, A-041, A-043, A-044, A-045.
+
+**SEC-001 = CLOSED.**
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
