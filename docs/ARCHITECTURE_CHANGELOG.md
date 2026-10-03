@@ -561,6 +561,18 @@ after SEC-001 is formally closed.
 
 ---
 
+## Roadmap bookkeeping (2026-10-03)
+
+Ledger only; no code. Implementation-sequence numbering normalized to 14
+increments, one number each (old-to-new mapping recorded in the ledger;
+frozen documents keep their old numbers). Live-site risk notes added per
+increment. Dependency guardrails, the evidence list for Official Document
+Acquisition, and the parked-issue priority order recorded. A-039 raised to
+P1, above A-041. Owner direction: SEC-001's two remaining owner checks do not
+block SEO-001; SEO-001 Step 1 authorized.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
