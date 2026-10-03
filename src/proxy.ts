@@ -11,6 +11,16 @@ const intlMiddleware = createMiddleware({
   locales: locales as any,
   defaultLocale: defaultLocale,
   localePrefix: 'as-needed',
+  // SEO-001 (ledger A-052): hreflang is decided per page by src/lib/seo and
+  // emitted in the page <head> and the sitemap only. The middleware's own
+  // HTTP `Link` header would declare en/hi alternates on every URL,
+  // including pages the policy says must carry none.
+  alternateLinks: false,
+  // Ledger A-053 (owner decision 2026-10-03): the language of a page is the
+  // language of its URL. A request is never redirected to another language
+  // because of the browser's Accept-Language header or a saved preference.
+  // Visitors change language with the language switcher.
+  localeDetection: false,
 });
 
 // isLocaleAwarePath (src/i18n/locale-aware-paths.ts) tells us which route

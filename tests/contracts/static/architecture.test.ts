@@ -118,6 +118,22 @@ describe("SEO policy is centralized", () => {
   });
 });
 
+describe("language routing does not override the policy", () => {
+  const proxy = () => stripComments(readSource("src/proxy.ts"));
+
+  // hreflang comes from src/lib/seo only (page head and sitemap). The
+  // routing middleware must not add its own alternates in HTTP headers.
+  test("LOC-09 the routing middleware emits no hreflang Link header (A-052)", () => {
+    expect(proxy()).toMatch(/alternateLinks:\s*false/);
+  });
+
+  // The language of a page is the language of its URL: no redirect by
+  // Accept-Language or saved preference.
+  test("LOC-10 the routing middleware never redirects by detected language (A-053)", () => {
+    expect(proxy()).toMatch(/localeDetection:\s*false/);
+  });
+});
+
 describe("entity model shape (application schema)", () => {
   test("ENT-01 a Recruitment always has an Organization", () => {
     const line = columnLine(tableColumns("recruitments"), "organization_id");

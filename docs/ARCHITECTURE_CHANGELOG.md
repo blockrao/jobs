@@ -798,6 +798,20 @@ closes and awaits approval.
 
 ---
 
+## SEO-001 Step 3 addendum — language routing (A-052, A-053)
+
+**Date.** 2026-10-03. Owner approved both. One file: `src/proxy.ts`
+(`alternateLinks: false`, `localeDetection: false`); contracts LOC-09,
+LOC-10 added. Suite: 2 failed (ENT-07, IDX-06), 103 passed, 28 skipped of
+133. Type-check and build pass. Local production build: no hreflang `Link`
+header on entity URLs; no redirect for a Hindi `Accept-Language` header or
+the Hindi cookie; existing redirects (`/hi` → `/`, `/en/…` → unprefixed,
+legacy exam addresses, admin login) unchanged; cookie-switched listings and
+shell counts unchanged in a headless browser. Not in production; rides with
+Step 3 through the preview gate.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
