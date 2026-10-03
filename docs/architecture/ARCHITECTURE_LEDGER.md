@@ -80,6 +80,12 @@ Every implementation change must cite a ledger item or create one.
 | A-058 | Production is not following `main` | Step 3 was put into production by redeploys made directly in the hosting dashboard, outside the preview gate. A later push of `main` (`5681e2c`) created no production deployment; the live site runs Step 3 without the A-052/A-053 fixes | OPERATIONAL / INFRASTRUCTURE | **Open — P1** | Owner's deployment list; live-site checks 2026-10-03 14:00 UTC | Owner: restore production deployment from `main` in the hosting dashboard; then verify A-052/A-053 live |
 | A-059 | Daily deployment limit reached | The hosting plan allows 100 deployments per day. Four projects built every push, including documentation-only commits, and the limit was hit on 2026-10-03. The serving project (`asdf`) cannot deploy until the limit resets, so the A-052/A-053 fixes (in `main`) are not live. This also explains A-058 | OPERATIONAL | **Open until the limit resets** (about 24 hours). Working rule from now: no push while the limit is exhausted; afterwards one push per verified step, documentation batched with code, one connected project | Owner report 2026-10-03 | Owner: remove the three unused projects. After reset: deploy `main` on `asdf` once, verify, then V7 and SEO-001 closure |
 | A-060 | JobPosting optional address fields | Google's validator reports two optional fields missing on job pages: `streetAddress` and `postalCode`. Not errors; the page is eligible. They can only be filled from an official document, never guessed | DATA | Open — backlog | Rich Results Test, 2026-10-03 | Supply from evidence in the Post Extraction increment; do not fabricate values |
+| A-061 | Data Foundation track | The next phase runs two separate tracks: acquisition and canonical architecture. ARC-001 remains the architectural authority and is not reopened. DATA-000 is a bounded evidence audit (not a census, not a new architecture audit). DATA-001 is canonical data gap resolution and freeze: it compares findings with the frozen architecture and records only genuine gaps or contradictions, through the existing change-control process. DATA-000 authorizes no production data migration or canonical rewrite. A-039, A-041 and the pre-data safety gate stay on their own track: DATA-000 does not wait for them, DATA-004 cannot bypass the safety gate | ARCHITECTURAL (programme) | **Accepted 2026-10-03** (owner decision on the Team Alignment review) | Owner response "Architecture Response & Decisions", §1, §3, §5 | Execute DATA-000 once its plan is approved |
+| A-062 | Organization Registry split | ORG-001A (registry contract and primitives: identity, immutable IDs, aliases, resolution outcomes, merge rules, relationships and hierarchy, identity contract) proceeds independently. ORG-001B (population: discovery, candidates, normalization, resolution, seeding, coverage measurement) waits for DATA-005. Replaces the single "Organization Registry" increment. The ORG-001 specification remains the contract for both parts. Proposed, not yet decided, for the ORG-001A pre-change report: the "shadow comparison" in the specification is comparison-only and switches no reads (SHADOW-001 owns Shadow Validation); the employing-organization link stays design-only until U-07 (A-014); schema is additive before the safety gate, and no foreign-key rewrite or merge happens before it | ARCHITECTURAL | **Accepted 2026-10-03** (split); proposed items open | Owner response §2; ORG-001 specification | ORG-001A pre-change report |
+| A-063 | Acquisition path | One acquisition path: DATA-002 (acquisition architecture and source adapter contract) → DOC-001 (official document acquisition pilot, the former Official Document Acquisition increment, keeping its evidence requirements) → DATA-003 (ingestion and resolution contract) → DATA-004 (multi-source real-data integration pilot). DATA-004 is not a second document-acquisition exercise. Any production write by DOC-001 or DATA-004 requires the pre-data safety gate | ARCHITECTURAL / OPERATIONAL | **Accepted 2026-10-03** | Owner response §3, §4 | Design in DATA-002 |
+| A-064 | Discovery source is not authority source | Aggregator data is discovery evidence, not automatically republishable content and not authority. Audit and acquisition architecture record per source: provenance, terms and usage restrictions, copyright and republication considerations, discovery-only suitability, whether it can be transformed into canonical facts, and what must be verified against authoritative documents | ARCHITECTURAL / OPERATIONAL | **Accepted 2026-10-03** | Owner response §8 | Apply in DATA-000 and DATA-002 |
+| A-065 | Raw storage and volumes | DATA-002 establishes expected volumes of raw observations, source documents, document versions, extracted content, hashes and metadata, and evidence, then decides what belongs in the transactional database and what in object or document storage. The current database arrangement must not become an accidental architectural constraint. Owner constraint (no plan upgrade) is an input | ARCHITECTURAL / INFRASTRUCTURE | **Accepted 2026-10-03**; decision due in DATA-002 | Owner response §7 | Decide in DATA-002 |
+| A-066 | Evidence grading; "knowledge graph" | External research is not unrestricted crawling. Audit findings are graded observed / sampled / inferred / unknown; a sample count is never presented as an estimate of the ecosystem or of coverage. "Knowledge graph" names the product and domain objective, not a technology: relational Postgres stays appropriate if it represents entities, relationships, evidence, temporal events, identity, provenance and projections | ARCHITECTURAL | **Accepted 2026-10-03** | Owner response §6, §9 | Apply in DATA-000 onward |
 
 ## Frozen baselines
 
@@ -109,6 +115,8 @@ record of what replaced it.
 | S-07 | Add unique indexes on `sources.slug` and `source_documents(source_id, external_id)` | Phase 1 audit; Phase 2 response §7 | Withdrawn at P0-001: both already exist |
 | S-08 | `/search` client-side rendering rated a P1 defect | Phase 1 audit | Phase 2 specification §42: search is intentionally non-indexable |
 | S-09 | Add `year` to the notification uniqueness key | Phase 2 response §5 | A-020 (proposed): year is part of the identifier as written |
+| S-10 | Organization Registry as one increment immediately after SEO-001 | Implementation sequence row 5; HANDOFF item 4 | A-062: split into ORG-001A (independent) and ORG-001B (after DATA-005) |
+| S-11 | Official Document Acquisition as a separate late increment (row 7) | Implementation sequence row 7 | A-063: DOC-001 inside the single acquisition path DATA-002 → DOC-001 → DATA-003 → DATA-004 |
 
 ## Unresolved decisions
 
@@ -152,9 +160,9 @@ Each increment follows PRE-CHANGE → APPROVAL → IMPLEMENTATION → VERIFICATI
 | 2 | SEC-001 public trust boundary (pre-change, implementation, verification) | A-022–A-024, A-038 | Low; done | **CLOSED 2026-10-03.** Database migration `20261003104615` live and verified. Application changes (`cd3fa2d`) in production: `50317d2`, `58c508c` and `f75c325` were each deployed to production on all four projects, so the closure holds whichever one serves the domain (see A-046 correction). External: public data API denied; live pages load; unauthenticated admin and scheduler calls rejected; owner confirmed admin login and approve/reject on www.joboye.com |
 | 3 | ARC-001 logical architecture | A-001–A-005, A-014–A-021, A-034–A-036, A-047–A-049 | None | **CLOSED 2026-10-03**. Documentation only |
 | 4 | SEO-001 public representation policy | A-007, A-008, A-027, A-028, A-050 | **Controlled public representation and indexing changes**; no data or URL change; each step reversible | Pre-change report **APPROVED 2026-10-03** (four corrections and one wording refinement applied; decisions D1–D4). Owner direction 2026-10-03: SEC-001's two remaining owner checks do not block SEO-001; Step 1 authorized. Step 2 only after Step 1 passes V1–V5. **Step 1 implemented 2026-10-03** (`ede423c`), deployed to production (`58c508c`): V1–V5 pass. **Step 2 implemented and deployed 2026-10-03** (`main` = `f75c325`; four production deployments recorded successful): V1–V5 pass; contract failures 13 → 4. Policy recorded in `SEO001_PUBLIC_REPRESENTATION.md`. **Step 3 implemented 2026-10-03** (option (a), owner decision): V1–V5 pass; contract failures 4 → 2 (both owned by later increments). Step 3 is live in production (via dashboard redeploys, A-058) and its gate checks pass on real data except hreflang in HTTP headers, fixed in `8ca4e93` but not yet live. V6, V7 outstanding. SEO-001 OPEN |
-| 5 | Organization Registry | A-003, A-014 | Low: canonical layer only | |
+| 5 | Organization Registry | A-003, A-014 | Low: canonical layer only | **Split 2026-10-03 (A-062):** ORG-001A registry contract and primitives (independent, pre-change report next); ORG-001B registry population after DATA-005 |
 | 6 | Posting Classification | A-015, A-016 | Low | |
-| 7 | Official Document Acquisition | A-005, A-017, A-030, A-048 | Low; **largest uncertainty** (see note) | |
+| 7 | Official Document Acquisition | A-005, A-017, A-030, A-048 | Low; **largest uncertainty** (see note) | **Renamed DOC-001 and moved into the acquisition path 2026-10-03 (A-063)**, after DATA-002 |
 | 8 | Recruitment Identity | A-002, A-020 | Low | |
 | 9 | Post Extraction | A-006, A-021 | Low | |
 | 10 | Lifecycle and Events | A-004, A-018, A-019 | Low | |
@@ -221,6 +229,52 @@ sequence. In priority order:
    secret.
 5. A-046 four deployment projects for one repository.
 6. A-037 production HTTP suite never run; A-043 function search path.
+
+## Programme direction: Data Foundation track (owner decision 2026-10-03, night)
+
+Governing interpretation of the implementation sequence (A-061 to A-066).
+The numbered table above is kept as written; this section is the current
+order and the mapping from the earlier names.
+
+**Under review (owner, 2026-10-03, later that night).** The owner challenged
+the scope of the data track as an endless-cycle risk. The sequence below is
+on hold and DATA-000 must not be started; the real-work items (SEO-001
+closure, A-039, A-041, tested backup and restore) are the open items. The
+principles in A-061 (ARC-001 stays authoritative), A-064, A-065 and A-066
+stand. A smaller replacement is proposed in `HANDOFF.md` and awaits the
+owner's decision.
+
+**Independent of the data track (own verification, unchanged):** SEO-001
+closure; A-039; A-041; pre-data safety gate; ORG-001A.
+
+**Data foundation:** DATA-000 bounded data foundation audit → DATA-001
+canonical data gap resolution and freeze → DATA-002 acquisition architecture
+and source adapter contract → DOC-001 official document acquisition pilot →
+DATA-003 ingestion and resolution contract → DATA-004 multi-source real-data
+integration pilot → DATA-005 architecture stress test.
+
+**Canonical reconstruction:** ORG-001B registry population → CLASS-001 →
+REC-001 → POST-001 → LIFE-001 → SHADOW-001 → READ-001 → RET-001 → GATE-001.
+
+| Earlier name (table above) | Current name |
+| --- | --- |
+| 5 Organization Registry | ORG-001A (primitives), ORG-001B (population) |
+| 6 Posting Classification | CLASS-001 |
+| 7 Official Document Acquisition | DOC-001 |
+| 8 Recruitment Identity | REC-001 |
+| 9 Post Extraction | POST-001 (Post and Vacancy Resolution) |
+| 10 Lifecycle and Events | LIFE-001 |
+| 11 Shadow Validation | SHADOW-001 |
+| 12 Canonical Read Migration | READ-001 |
+| 13 Legacy Retirement | RET-001 |
+| 14 Final Readiness Gate | GATE-001 |
+
+Discipline (owner): evidence → bounded decision → implementation →
+measurement → close. No broad audit without a concrete output; no schema
+change without evidence; no canonical data rewrite before the relevant
+contract is frozen; no acquisition system that writes directly into
+canonical data; no irreversible migration before shadow validation; no
+closed architecture decision reopened without a genuine contradiction.
 
 ## Scorecard
 

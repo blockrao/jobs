@@ -957,6 +957,44 @@ Registry.
 
 ---
 
+## Data Foundation track and revised sequence (2026-10-03, night)
+
+Ledger and handoff only; committed locally, not pushed (deployment limit,
+A-059). Owner decisions on the Team Alignment review (A-061 to A-066):
+
+- ARC-001 remains the architectural authority and is not reopened. DATA-000
+  is a bounded evidence audit, not a census and not a new architecture audit.
+  DATA-001 is gap resolution and freeze: only genuine gaps or contradictions
+  against ARC-001, through the existing change-control process.
+- The Organization Registry splits: ORG-001A (registry contract and
+  primitives) proceeds independently; ORG-001B (population) waits for
+  DATA-005.
+- One acquisition path: DATA-002, then DOC-001 (the former Official Document
+  Acquisition), then DATA-003, then DATA-004 (multi-source integration pilot,
+  not a second document-acquisition exercise).
+- A-039, A-041 and the pre-data safety gate stay on their own track. DATA-000
+  does not wait for them; DATA-004 cannot bypass the safety gate.
+- Aggregator data is discovery evidence, not authority and not automatically
+  republishable. External findings are graded observed / sampled / inferred /
+  unknown. Raw storage is decided in DATA-002.
+- No production data migration or canonical rewrite is authorized by
+  DATA-000.
+
+New increment names replace the numbered list from here on: ORG-001A/B,
+CLASS-001, REC-001, POST-001, LIFE-001, SHADOW-001, READ-001, RET-001,
+GATE-001. Mapping to the earlier names is in the ledger.
+
+DATA-000 execution plan: `docs/architecture/DATA000_EXECUTION_PLAN.md`.
+Later the same night the owner challenged the scope of the whole data track
+as an endless-cycle risk: the plan is ON HOLD and not approved, the
+real-work items (SEO-001 closure, A-039, A-041, tested backup and restore)
+are the open items, and a smaller replacement is proposed in the handoff.
+The principles in A-061, A-064, A-065 and A-066 stand; the sequence is under
+review. No audit work has started. SEO-001 status unchanged: open on one
+deployment and a live re-check.
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
