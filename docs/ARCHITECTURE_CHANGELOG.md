@@ -161,9 +161,90 @@ files is touched.
 
 ---
 
+## GATE-1 — Verification gate decision on Phase 0 + W1-A
+
+Recorded 2026-10-03 from the reviewer's written decision. No change to code,
+schema or data was approved.
+
+| Item | Decision |
+| --- | --- |
+| Phase 0 baseline, W1-A tests, branch isolation | Approved |
+| D1 Migration authority | Approved with refinement: Supabase history is the applied record; one repository authority at `supabase/migrations/`; reconcile first; do not fabricate history; no `recruitment_events` until the boundary exists |
+| D2 Organization before Recruitment | Approved; explicit evidence levels and AUTO_RESOLVED / REVIEW_REQUIRED / UNRESOLVED; no merge on name similarity alone |
+| D3 Recruitment classification | Approved with correction: a source document is not automatically a lifecycle event; admissions and scholarships stay raw |
+| D4 Search / filter URLs | Approved with refinement: noindex, no sitemap, no JobPosting, no hreflang; canonical behaviour defined explicitly by the central policy, not assumed |
+| D5 Notification number + year | Deferred pending official-source analysis; no constraint change |
+| D6 Post extraction before resolution | Approved; W1-E split into E0 extraction analysis, E1 candidates, E2 post resolution, E3 position resolution; no placeholder Posts |
+| D7 RLS / security | Elevated to a P0 security gate; analyse before enabling anything |
+| Lifecycle migration, `recruitment_events`, new constraints, canonical writes, destructive migrations | Not approved |
+
+---
+
+## G2-001 — Gate 2 analysis (migration, security, identity, lifecycle, provenance, cron, sitemap)
+
+| Field | Value |
+| --- | --- |
+| Change ID | G2-001 |
+| Date | 2026-10-03 |
+| Wave | Gate 2 — analysis only |
+| Status | Complete — awaiting review |
+| Commit SHA | see "Commit record" |
+
+**Objective.** Answer analysis items A–J of the gate decision before any
+data is changed.
+
+**Architectural decision affected.** None changed. New open decisions D8–D12
+raised below.
+
+**Files changed.** `docs/ARCHITECTURE_CHANGELOG.md`,
+`docs/architecture/GATE2_EVIDENCE.md`. Nothing under `src/` or `tests/`.
+
+**Database migrations.** None. **Schema changes.** None.
+**Data / backfill changes.** None. **API / application changes.** None.
+
+**SEO impact.** None. **URL impact.** None. **Locale impact.** None.
+
+**Tests added / changed.** None.
+
+**Validation performed.** Read-only queries against the live database,
+Supabase migration history, security advisors and 24-hour logs; source
+reading; two official web pages. One `EXPLAIN INSERT` was run as role `anon`
+inside a rolled-back transaction to test permission without executing a
+write.
+
+**Before / after metrics.** No change. Measurements are in
+`docs/architecture/GATE2_EVIDENCE.md`.
+
+**Headline findings.**
+
+1. P0: the 12 canonical-layer tables have RLS off and full `anon` grants; a
+   request with only the publishable key is permitted to mutate them.
+2. The applied migration history cannot be reconstructed: the canonical
+   tables have no recorded migration, and repository files create objects
+   that do not exist live. A clean boundary is recommended.
+3. Organization defects touch about 108 of 201 postings: 54 in buckets, 44
+   under title-derived names, about 10 misfiled under keyword-matched bodies.
+4. 57 of 183 recruitment rows are not recruitments; all 47 lifecycle
+   contradictions are among them.
+5. Stored source text is a listing snippet (median 292 characters); post
+   names and notification numbers cannot be extracted from it.
+6. The lifecycle cron has left no trace in the database, and the ingest cron
+   has not written data on its schedule.
+
+**Not verified.** A live HTTP request to the Supabase data API; Vercel cron
+logs and environment variables; the live `sitemap.xml`.
+
+**Risks.** Finding 1 is a present exposure independent of this programme.
+
+**Rollback method.** Revert the documentation commit.
+
+**Architectural deviations: None.**
+
+---
+
 ## Open decisions
 
-Raised by Phase 0. None has been decided or acted on.
+D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
 
 | # | Decision needed | Why it cannot be decided silently |
 | --- | --- | --- |
@@ -174,6 +255,11 @@ Raised by Phase 0. None has been decided or acted on.
 | D5 | Whether the Level-1 key includes year | Adding `year` to a unique index loosens it. It is correct where a body restarts numbering each year and harmful where a mis-parsed year would let a duplicate through. |
 | D6 | Source of Post names for W1-E | Only 5 of 201 postings carry extracted post names (7 names in total). Post resolution has nothing to resolve from until extraction exists. |
 | D7 | Row-level security on the canonical tables | Outside the protocol's scope, but the `anon` role can write to `recruitments`, `posts`, `positions`, `exams`, `sources` and `source_documents`. Fixing it is a schema change and needs its own migration and approval. |
+| D8 | Issuing body versus employing body | UPSC Advertisement 12/2026 is stored as four recruitments under four departments. The frozen model calls it one Recruitment with four Posts. Raised by G2-001. |
+| D9 | Lifecycle notice with no ingested parent recruitment | Most of the 48 notices are the only record of their recruitment. Raised by G2-001. |
+| D10 | Explicit unknown lifecycle state | 74 linked rows have an open stage and no deadline. Raised by G2-001. |
+| D11 | Sitemap freshness SLA | 24 hours proposed. Raised by G2-001. |
+| D12 | How migrations are applied after the boundary | Supabase CLI or the Supabase connector. Raised by G2-001. |
 
 ---
 
