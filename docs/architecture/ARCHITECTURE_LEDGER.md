@@ -42,8 +42,8 @@ Every implementation change must cite a ledger item or create one.
 | A-020 | Notification identity | Level-1 identity is the issuing organization plus the identifier exactly as the body writes it, including series prefix and year. Year is not a separate key component | ARCHITECTURAL | Proposed; bare-number case open (U-01) | Gate 2 §24: RRB `CEN 01/2024` vs `CEN RPF 01/2024` | Collect official examples; no constraint change |
 | A-021 | Post candidates | Extraction produces evidence-backed candidates; no placeholder Post; a title-only candidate cannot become a Post | ARCHITECTURAL | Accepted | Gate 2 §25: 5 of 201 postings have post names; source text is a snippet | Design |
 | A-022 | Trust boundary | The public has no write path to canonical data and reads only through a public read model or approved API. Writes belong to privileged ingestion, resolution and administration services | ARCHITECTURAL | Accepted | Governance Reset §10 | Preserve; implement in current stack |
-| A-023 | Trust boundary, current state | The current physical implementation violates A-022: 12 tables are writable by the public database role | DATA/MIGRATION | Open — P0 | Gate 2 evidence S1–S5, S14 | Remediate (proposed increment SEC-001) |
-| A-024 | Application authorization | Admin actions carry no authorization check of their own; cron endpoints do not fail closed; one unauthenticated endpoint calls a paid API | APPLICATION | Open | Gate 2 evidence S10–S12 | Remediate after SEC-001 |
+| A-023 | Trust boundary, current state | The current physical implementation violates A-022: 12 tables are writable by the public database role | DATA/MIGRATION | **CLOSED 2026-10-03** by SEC-001, migration `20261003104615` | Gate 2 evidence S1–S5, S14; SEC-01–SEC-04 = 0 violations | Guarded by contract tests SEC-01–SEC-04 |
+| A-024 | Application authorization | Admin actions carry no authorization check of their own; cron endpoints do not fail closed; one unauthenticated endpoint calls a paid API | APPLICATION | Cron endpoints and admin actions fixed by SEC-001 (commit `cd3fa2d`), **not yet deployed**. The paid-API endpoint remains open as A-039 | Gate 2 evidence S10–S12; SEC-05, SEC-06 pass | Deploy; then V8 |
 | A-025 | Migration boundary | Baseline snapshot of the live schema, historical files preserved as artifacts, one authoritative reproducible path forward, boundary and checksum recorded, nothing fabricated | DATA/OPERATIONAL | Accepted (extends A-011) | Gate 2 §21; Governance Reset §9 | Implement (MIG-001) |
 | A-026 | Schema contract | The application schema must intentionally represent the real database contract. The 18 live-only columns are to be classified REQUIRED / INTENTIONAL DB-ONLY / LEGACY / UNKNOWN / REMOVE LATER, not copied | DATA/MIGRATION | Classification delivered by MIG-001 (`MIG001_COLUMN_CLASSIFICATION.md`): 8 DB-only, 3 legacy, 2 remove later, 5 unknown → ARC-001 | Gate 1 §10; Phase 0 baseline §2 | Deliver with MIG-001 |
 | A-027 | Indexability contract | Per page type: index, canonical, sitemap and primary schema. Search and filter views are noindex, out of the sitemap, without JobPosting or hreflang; canonical behaviour is set by the central policy | ARCHITECTURAL | Accepted | Gate 1 decision D4 | Implement with A-007 |
@@ -57,11 +57,13 @@ Every implementation change must cite a ledger item or create one.
 | A-035 | Lifecycle vocabulary | Final enum, including whether an explicit unknown state exists | ARCHITECTURAL | Open (U-03) | Gate 2 §26: 74 rows have an open stage and no deadline | Decide in the logical-model specification |
 | A-036 | Orphan lifecycle notice | A lifecycle notice never creates a Recruitment by itself | ARCHITECTURAL | Direction accepted; handling detail open (U-02) | Governance Reset §8; Gate 2 §23 | Decide |
 | A-037 | Unverified items | Deployment of commit `704725e`, and the HTTP contract suite, have never been verified against production | OPERATIONAL | Open | Phase 0 report §12 | Run once from a machine with access |
-| A-038 | Default privileges | Root cause of A-023: the schema's default privileges grant the public roles full rights on every new table, sequence and function, so each new object is born open | DATA/MIGRATION | Open — P0 (part of SEC-001) | SEC-001 pre-change report §1: `pg_default_acl` | Fix in SEC-001; guard with contract test SEC-04 |
+| A-038 | Default privileges | Root cause of A-023: the schema's default privileges grant the public roles full rights on every new table, sequence and function, so each new object is born open | DATA/MIGRATION | **CLOSED 2026-10-03** by SEC-001 for the migration owner role | SEC-04 = 0 violations | Objects created by any other role are outside this protection: see A-040 |
 | A-039 | Unauthenticated paid-API endpoint | `/api/query/normalize` calls a paid API with no authentication or rate limit | APPLICATION | Open — P2 | Gate 2 evidence | Later; not in SEC-001 |
 | A-040 | Migration authority | All future production schema changes occur through the authoritative migration path and the approved ownership/privilege model. Direct production DDL or object creation outside that path is not an accepted production mechanism | DATA/OPERATIONAL | Accepted — in force from MIG-001 | SEC-001 approval §4; `supabase/migrations/README.md` | Preserve |
 | A-041 | Broken database function | `refresh_posting_urgency_states()` reads a table that does not exist, so search and urgency values are populated on only 5 postings | DATA/MIGRATION | Open — P1 | MIG-001 baseline `functions/refresh_posting_urgency_states.sql` | Schedule; not in SEC-001 |
 | A-042 | Unused organization-role enum | An enum `organization_role` (EXAM_AUTHORITY, RECRUITING_BODY, EMPLOYER) exists live and is used by no column. Relevant prior art for A-014 | ARCHITECTURAL (input) | Noted | MIG-001 baseline `02_objects.txt` | Consider in ARC-001 |
+| A-043 | Function search path | All 9 database functions have a mutable `search_path` (provider linter warning) | DATA/MIGRATION | Open — P2 | Security advisor after SEC-001 | Later; fold into the lifecycle increment, which retires several of them |
+| A-044 | Lifecycle endpoint method | The lifecycle endpoint accepts only POST while the scheduler issues GET, so it is not invoked successfully regardless of SEC-001 | INFRASTRUCTURE | Deferred (with A-032) | Gate 2 §28; local check during SEC-001 | Operational correction outside the core workstream |
 
 ## Frozen baselines
 
@@ -116,9 +118,9 @@ dependency.
 
 | # | Increment | Ledger | Status |
 | --- | --- | --- | --- |
-| 1 | SEC-001 pre-change report | A-022–A-024, A-038 | Done — awaiting approval |
+| 1 | SEC-001 pre-change report | A-022–A-024, A-038 | Approved 2026-10-03 |
 | 2 | MIG-001 migration boundary, baseline snapshot, 18-column classification | A-025, A-026, A-040 | CLOSED 2026-10-03 |
-| 3 | SEC-001 implementation, then verification | A-022–A-024, A-038 | After MIG-001 |
+| 3 | SEC-001 implementation, then verification | A-022–A-024, A-038 | Database part live and verified 2026-10-03. Application part committed, pending deployment and external checks V7/V8 |
 | 4 | ARC-001 logical architecture specification | A-001–A-005, A-014–A-021, A-034–A-036 | |
 | 5 | SEO-001 central SEO and locale policy | A-007, A-008, A-027, A-028 | |
 | 6 | Organization registry | A-003, A-014 | |
@@ -139,10 +141,10 @@ HTTP test and `704725e` verification (A-037), branch push, scheduler details
 
 ## Scorecard
 
-| Metric | 2026-10-03, after SEC-001 pre-change |
-| --- | --- |
-| Contract test failures | 15 |
-| Open P0s | 1 |
-| Unresolved decisions | 6 (all deferred by design) |
-| Implementation increments complete | 0 |
-| Architecture decisions reopened | 0 |
+| Metric | After SEC-001 pre-change | After MIG-001 + SEC-001 |
+| --- | --- | --- |
+| Contract test failures | 15 | 15 (same set; 8 new SEC tests pass) |
+| Open P0s | 1 | 0 |
+| Unresolved decisions | 6 (all deferred by design) | 6 (all deferred by design) |
+| Implementation increments complete | 0 | 2 (MIG-001 closed; SEC-001 pending deployment checks) |
+| Architecture decisions reopened | 0 | 0 |

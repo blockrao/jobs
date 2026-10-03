@@ -296,7 +296,7 @@ for history; the live list is the ledger's "Unresolved decisions".
 | Classification | DATA/MIGRATION (part A) + APPLICATION (part B) |
 | Ledger | A-022, A-023, A-024, A-038 |
 | Date | 2026-10-03 |
-| Status | PRE-CHANGE — awaiting approval. Nothing implemented |
+| Status | PRE-CHANGE — approved 2026-10-03. See the RESULT entry below |
 
 **Objective.** Untrusted callers cannot change canonical data or invoke
 privileged operations; authorized services keep working.
@@ -387,6 +387,75 @@ locations.
 
 ---
 
+## SEC-001 — Public trust boundary (RESULT)
+
+| Field | Value |
+| --- | --- |
+| Change ID | SEC-001 |
+| Classification | DATA/MIGRATION (part A) + APPLICATION (part B) |
+| Ledger | A-022, A-023, A-024, A-038, A-040 |
+| Date | 2026-10-03 |
+| Status | Part A: applied to production and verified. Part B: committed, **not yet deployed**. Closure pending V7 and V8 |
+| Migration | `20261003104615_sec_001_public_trust_boundary` |
+| Commits | `b8e05f1` (migration, rollback, tests — before applying), `bba968c` (part A record), `cd3fa2d` (part B) |
+
+**What changed in production (part A).** Row-level security enabled on the
+12 previously open tables; every table, view, sequence and function
+privilege revoked from the public roles and from PUBLIC; default privileges
+of the migration owner changed so new objects are closed. No row, table,
+column, index or constraint changed.
+
+**What changed in code (part B, not deployed).**
+`src/pages/api/ingest.ts` and the lifecycle route refuse every request when
+`CRON_SECRET` is unset (the `placeholder` fallback is gone);
+`src/app/admin/actions.ts` checks the admin session inside each of the seven
+mutating actions; `src/db/schema.ts` declares row-level security on all 20
+tables.
+
+**Verification.**
+
+| # | Check | Before | After |
+| --- | --- | --- | --- |
+| V1 | Insert planned as the public role | plan returned | `permission denied for table recruitments` |
+| V2 | Lifecycle function planned as the public role | allowed | `permission denied for function refresh_recruitment_lifecycle` |
+| V3 | SEC-01 tables without row-level security | 12 | 0 |
+| V3 | SEC-02 public-role privileges on tables, views, sequences | 466 | 0 |
+| V3 | SEC-03 public execute rights on functions | 27 | 0 |
+| V3 | SEC-04 open default privileges | 25 | 0 |
+| V4 | Owning role reads: recruitments / postings / search view | 183 / 201 / 6 | 183 / 201 / 6 |
+| V4 | Owning role may select, insert, update, delete, run the lifecycle function | yes | yes |
+| V5 | Security advisor, error-level findings | 18 (12 tables, 6 views) | 0 |
+| V6 | Build, both type-checks, lint on changed files | clean | clean |
+| V6 | Contract suite | 61 pass / 15 fail / 24 skipped | 65 pass / 15 fail / 28 skipped (same 15) |
+| — | Local run, secret unset: both cron endpoints, incl. `Bearer placeholder` | — | 401 |
+| — | Local run, secret set: wrong secret 401; right secret passes authorization | — | as expected |
+| V7 | Data API request with the publishable key from outside | — | **PENDING external verification** |
+| V8 | Production smoke: site, admin login, one admin action | — | **PENDING deployment and external verification** |
+
+The applied statements recorded in the migration history have md5
+`5a5a8f49218c03ad3dedf6a5b7d5b434`, identical to the committed file: the
+migration was applied unmodified. The file was renamed from the timestamp it
+was committed under (`20261003104545`) to the version the history recorded.
+
+**Scope note.** `schema.ts` declares row-level security on all 20 tables,
+not only the 12 changed: the other 8 were already protected in the database
+and the declaration states that existing fact.
+
+**New findings (ledger, not scope).** A-043, A-044.
+
+**Risks remaining.** Part B is not live until deployed. After deployment
+both cron endpoints return 401 unless `CRON_SECRET` is set in production.
+
+**Rollback.** `supabase/rollback/sec_001_public_trust_boundary.down.sql`
+(emergency only); revert `cd3fa2d` for part B.
+
+**Result.** PASS for implementation and database verification. Not yet
+CLOSED: conditions 2 and 5 of the closure list wait on deployment, V7 and V8.
+
+**Architectural deviations: None.**
+
+---
+
 ## Open decisions
 
 D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferred, D7 elevated). D8–D12 were raised by G2-001 and are undecided.
@@ -416,3 +485,5 @@ D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferre
 | W1A-001 | `888ef6f40b8f3a8b6bdc25370ef2ee6ed1d4bdf7` |
 | GATE-1, G2-001 | `1f3f29e18a0dfcbbce559936afe2614141bb2aa1` |
 | GOV-001 | `33ddc955c5f17e9df992928f7db7d4e7240bd935` |
+| MIG-001 | `210444b` |
+| SEC-001 | `b8e05f1`, `bba968c`, `cd3fa2d` |
