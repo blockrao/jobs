@@ -1,0 +1,119 @@
+/**
+ * Sitemap and robots.txt contracts, asserted against the real route
+ * handlers with the data layer mocked.
+ */
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { SITE } from "../helpers/metadata";
+
+const rows = {
+  postings: [] as unknown[],
+  articles: [] as unknown[],
+  categories: [] as unknown[],
+  organizations: [] as unknown[],
+  exams: [] as unknown[],
+};
+
+vi.mock("@/lib/queries", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getPostingSlugsPageForSitemap: async () => rows.postings,
+  getAllArticleSlugsForSitemap: async () => rows.articles,
+  getAllCategorySlugsForSitemap: async () => rows.categories,
+  getAllOrganizationSlugsForSitemap: async () => rows.organizations,
+  getAllExamSlugsForSitemap: async () => rows.exams,
+}));
+
+const now = new Date("2026-10-01T00:00:00Z");
+
+beforeEach(() => {
+  rows.postings = [
+    { slug: "job-translated", updatedAt: now, titleHi: "हिंदी" },
+    { slug: "job-english-only", updatedAt: now, titleHi: null },
+  ];
+  rows.articles = [{ slug: "guide", updatedAt: now, titleHi: null }];
+  rows.categories = [{ slug: "banking" }];
+  rows.organizations = [
+    { slug: "org-translated", nameHi: "संगठन" },
+    { slug: "org-english-only", nameHi: null },
+  ];
+  rows.exams = [
+    { slug: "exam-translated", labelHi: "परीक्षा" },
+    { slug: "exam-english-only", labelHi: null },
+  ];
+});
+
+async function entries() {
+  const mod = await import("@/app/sitemap");
+  return mod.default();
+}
+
+const hiAlternate = (e: { alternates?: { languages?: { hi?: string } } }) => e.alternates?.languages?.hi;
+
+describe("sitemap", () => {
+  test("IDX-04a every URL is an absolute, unprefixed, query-free canonical URL on the site origin", async () => {
+    for (const e of await entries()) {
+      const url = new URL(e.url);
+      expect(url.origin).toBe(SITE);
+      expect(url.search, e.url).toBe("");
+      expect(url.pathname, e.url).not.toMatch(/^\/(en|hi)(\/|$)/);
+    }
+  });
+
+  test("IDX-04b utility and non-indexable routes are never listed", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    for (const p of paths) expect(p).not.toMatch(/^\/(search|admin|api)(\/|$)/);
+  });
+
+  test("IDX-04c no URL is listed twice", async () => {
+    const urls = (await entries()).map((e) => e.url);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
+    const byPath = new Map((await entries()).map((e) => [new URL(e.url).pathname, e]));
+    const expectations: [string, boolean][] = [
+      ["/jobs/job-translated", true],
+      ["/jobs/job-english-only", false],
+      ["/organizations/org-translated", true],
+      ["/organizations/org-english-only", false],
+      ["/exams/exam-translated", true],
+      ["/exams/exam-english-only", false],
+    ];
+    const actual = expectations.map(([p]) => [p, Boolean(hiAlternate(byPath.get(p)!))]);
+    expect(actual).toEqual(expectations);
+  });
+
+  test("LOC-05b listed hreflang alternates never use the redirecting /en/ prefix", async () => {
+    for (const e of await entries()) {
+      for (const target of Object.values(e.alternates?.languages ?? {})) {
+        expect(new URL(target as string).pathname).not.toMatch(/^\/en(\/|$)/);
+      }
+    }
+  });
+
+  // Recruitment and Position are indexable entity types in the frozen
+  // indexability contract but have no sitemap entries today. Do NOT fix this
+  // by simply adding them: the recruitments table is currently a 1:1 mirror
+  // of raw postings (Phase 0 baseline) and must pass W1-B identity cleanup
+  // before any of it is advertised to search engines.
+  test("IDX-06 every indexable entity type in the indexability contract has a sitemap source", async () => {
+    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
+    const covered = ["jobs", "organizations", "exams", "articles", "recruitments", "positions"].filter((t) =>
+      src.includes(`/${t}/`),
+    );
+    expect(covered).toEqual(["jobs", "organizations", "exams", "articles", "recruitments", "positions"]);
+  });
+});
+
+describe("robots.txt", () => {
+  test("IDX-05 private technical paths are disallowed and nothing indexable is blocked", async () => {
+    const mod = await import("@/app/robots");
+    const robots = mod.default();
+    const rule = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
+    const disallow = ([] as string[]).concat(rule.disallow ?? []);
+    expect(disallow).toEqual(expect.arrayContaining(["/admin", "/api/"]));
+    for (const indexable of ["/jobs", "/organizations", "/exams", "/positions", "/recruitments", "/articles", "/hi"]) {
+      expect(disallow.some((d) => indexable.startsWith(d.replace(/\/$/, "")))).toBe(false);
+    }
+    expect(robots.sitemap).toBe(`${SITE}/sitemap.xml`);
+  });
+});
