@@ -452,6 +452,23 @@ both cron endpoints return 401 unless `CRON_SECRET` is set in production.
 **Result.** PASS for implementation and database verification. Not yet
 CLOSED: conditions 2 and 5 of the closure list wait on deployment, V7 and V8.
 
+**Deployment and external checks (2026-10-03, appended).**
+
+| Item | Result | Evidence |
+| --- | --- | --- |
+| A. Application changes deployed | DONE | `main` fast-forwarded `704725e` → `50317d2`; four production deployments recorded successful 10:58–11:00 UTC |
+| Database identity | CONFIRMED | The three job slugs on the public homepage exist in the database the migration was applied to; application sessions connect as the owner role |
+| Database errors since migration | NONE | Only the two deliberate permission-denied probes at 10:46 UTC |
+| V8 homepage | PASS | Loads, lists jobs |
+| V8 job page | PASS | Loads with title, organization and last date. May be a cached render |
+| V8 organization page | NOT PASSED | `/organizations` loads but lists none (A-045). A detail page could not be fetched from this workspace |
+| V8 admin login, admin mutation | PENDING | Needs the owner |
+| V7 public Data API | PENDING | Needs a machine with access |
+| Scheduler secret set in production | UNKNOWN | Needs the owner |
+
+Which deployment project serves the public domain is not established
+(A-046). SEC-001 stays OPEN.
+
 **Architectural deviations: None.**
 
 ---
