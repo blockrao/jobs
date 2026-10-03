@@ -469,6 +469,24 @@ CLOSED: conditions 2 and 5 of the closure list wait on deployment, V7 and V8.
 Which deployment project serves the public domain is not established
 (A-046). SEC-001 stays OPEN.
 
+**Final verification, second pass (2026-10-03, about 11:20 UTC, appended).**
+Run from a browser on the public internet. No credential appears here.
+
+| Area | Check | Result |
+| --- | --- | --- |
+| DB security migration | SEC-01–SEC-04; anon write and function probes | **PASS** (unchanged) |
+| External — V7 Data API | Six tables read with the publishable key and with the legacy public key | **PASS**: every request 401, `permission denied for table …`, no rows. Schema listing refused |
+| External — live site | Homepage, one job page, one organization page, organizations listing | **PASS**: all load with data (listing shows 125) |
+| External — unauthorized admin | `/admin`, `/admin/postings` without a session | **PASS**: redirected to the login page |
+| External — scheduler endpoints | Ingestion and lifecycle endpoints with no header, `Bearer placeholder`, `Bearer undefined` | **PASS**: 401 in all six cases |
+| Application security deployment | Repository host records successful production deployments of `50317d2` and later for all four projects | **PASS on record; serving project not confirmed** (A-046) |
+| Admin login; one authorized admin mutation | Needs the admin password, which is not entered by the assistant | **PENDING — owner** |
+| Scheduler secret configured in production | 401 responses cannot distinguish "set" from "unset" | **PENDING — owner** |
+
+The 401 results do not by themselves prove the new code is serving: the
+previous code also returns 401 when a secret is configured. SEC-001 stays
+OPEN until the three owner items are done.
+
 **Architectural deviations: None.**
 
 ---
@@ -515,6 +533,27 @@ with three bounded textual corrections, all applied —
 changed; A-042 is explicitly not adopted.
 
 **Next.** SEO-001 pre-change report.
+
+---
+
+## SEO-001 — Public representation policy (PRE-CHANGE, approved in principle)
+
+**Date.** 2026-10-03. **Type.** ARCHITECTURAL (policy) + APPLICATION
+(implementation, not started). **Ledger.** A-007, A-008, A-009, A-027, A-028,
+A-050; U-04 closed.
+
+Pre-change report reviewed by the owner: approved in principle with four
+corrections, all applied to the report — (1) waiting for SEC-001 is a
+sequencing decision, not an architectural dependency; (2) recruitment and
+position pages are noindex because they are not canonical public projections
+yet; (3) JobPosting eligibility consumes the ARC-001 lifecycle and public
+representation, no lifecycle rule in SEO; (4) 24-hour sitemap freshness with
+the no-unrelated-deployment acceptance condition.
+
+Decisions: D1 approved, D2 approved, D3 deferred, D4 recorded (A-050).
+
+**No implementation.** No code changed for SEO-001. Steps 1–3 start only
+after SEC-001 is formally closed.
 
 ---
 
