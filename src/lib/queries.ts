@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   articleCategories,
@@ -77,7 +77,9 @@ export async function listPostings(opts?: {
   const db = getDb();
   const limit = opts?.limit ?? 30;
 
-  const conditions: any[] = [eq(postings.reviewStatus, "APPROVED")];
+  // `is_expired` is maintained by refresh_recruitment_lifecycle(). Search already honours it; the
+  // listing must too, or an expired opening stays on /jobs and the home page after its last date.
+  const conditions: any[] = [eq(postings.reviewStatus, "APPROVED"), sql`${postings.isExpired} IS NOT TRUE`];
   if (opts?.kind) conditions.push(eq(postings.kind, opts.kind));
   if (opts?.search) {
     conditions.push(

@@ -1033,3 +1033,11 @@ After the owner deployed `main` on `asdf`, checked on https://www.joboye.com wit
 - A-052: HTTP `Link` header carries only preconnect/preload entries, no `hreflang`. PASS.
 - A-053: `Accept-Language: hi` and the `NEXT_LOCALE=hi` cookie both return 200 with no redirect. PASS.
 Grade: observed on one URL in production. SEO-001 recorded CLOSED; not expanded. A-058/A-059 follow-ups: none from this check. Local, unpushed: this entry.
+
+## 2026-10-04 — WP-001 readiness gate (local, unpushed, unapplied)
+
+Architect direction received: Data → platform readiness → data flow; no production migration, no load, no push until readiness, backup and dry-run gates pass.
+- Built locally: observation / candidate / alias migration (not applied), fill-only re-ingestion with reviewed-value protection, PENDING-only ingestion with a separate promotion step, organization resolution (no canonical organization from a scraped string), file loader on the real ingestion path, `is_expired` in the `/jobs` listing, 17 contract tests (WP1-01..12, S1..S5). Suite: 120 pass, 28 skipped, 2 known failures (ENT-07, IDX-06).
+- Readiness findings R1–R8 recorded in `WP001_READINESS.md`; R1, R2, R7, R8 fixed locally; R3 (posts, vacancies, employing organization), R4 (recruitment dates), R5 (listing pagination), R6 (recruitment lifecycle) open.
+- Dry run result: `WP001_READINESS_RESULT.md`. DATA-000 remains on hold.
+- Not run: backup gate (owner), full-fidelity dry run on a restore.

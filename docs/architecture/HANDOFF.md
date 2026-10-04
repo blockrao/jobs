@@ -36,6 +36,21 @@ Contract suite (`npm run test:contracts`): 2 failed (ENT-07 → REC-001;
 IDX-06 → READ-001), 103 passed, 28 skipped of 133. Open architecture
 decisions: 0. Deferred empirical validation: 1 (U-07).
 
+## WP-001 readiness gate (2026-10-04, local only)
+
+Architect approved the sequence data → platform readiness → data flow. The
+local readiness implementation and dry run are done and recorded in
+`WP001_READINESS_RESULT.md` (evidence in `evidence/`). Nothing is applied to
+production and nothing is pushed: the migration
+`20261004060000_wp_001_observation_candidate_boundary.sql`, the write-path
+rewrite, the promotion step and the file loader ride with the next deliberate
+deployment. Unpushed commits: f3b6445, 34957cc and the readiness commit.
+Blocking before any production load: tested backup and restore
+(`WP001_BACKUP_GATE.md`, owner action), a full-fidelity dry run on the
+restored copy, owner and architect review of the result. Next increment is
+chosen from the result (alias seed list, posts and vacancies as rows,
+recruitment dates, `/jobs` pagination). DATA-000 stays on hold.
+
 ## Immediate pending items (items 1–3 are the real work; do these first)
 
 1. **Close SEO-001.** The hosting plan's daily deployment limit was hit on

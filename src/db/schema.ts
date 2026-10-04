@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   index,
   boolean,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -357,6 +358,9 @@ export const postings = pgTable(
     verificationStatus: varchar("verification_status", { length: 40 }),
     flaggedForReview: boolean("flagged_for_review"),
     reviewNotes: text("review_notes"),
+    // Live column (default false) maintained by refresh_recruitment_lifecycle(); declared here so the
+    // public listing queries can honour it (WP-001 readiness R8).
+    isExpired: boolean("is_expired").default(false),
     sourceConfidence: smallint("source_confidence"),
     lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
 
@@ -766,6 +770,74 @@ export const sourceDocuments = pgTable("source_documents", {
   extractedAt: timestamp("extracted_at", { withTimezone: true }),
   extractionMethod: varchar("extraction_method", { length: 80 }),
 }).enableRLS();
+
+// ---------- WP-001: observation / candidate boundary ----------
+// Added by supabase/migrations/20261004060000_wp_001_observation_candidate_boundary.sql
+
+/** Known aliases of canonical organizations (normalized form is unique). */
+export const organizationAliases = pgTable(
+  "organization_aliases",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    aliasNormalized: varchar("alias_normalized", { length: 200 }).notNull(),
+    aliasRaw: varchar("alias_raw", { length: 300 }),
+    source: varchar("source", { length: 80 }).notNull().default("manual"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("organization_aliases_alias_idx").on(t.aliasNormalized),
+    index("organization_aliases_org_idx").on(t.organizationId),
+  ],
+).enableRLS();
+
+/** "Recognizable but not sufficiently resolved". Not a canonical organization. */
+export const organizationCandidates = pgTable(
+  "organization_candidates",
+  {
+    id: serial("id").primaryKey(),
+    rawName: varchar("raw_name", { length: 300 }).notNull(),
+    normalizedName: varchar("normalized_name", { length: 200 }).notNull(),
+    source: varchar("source", { length: 80 }).notNull(),
+    sourceUrl: text("source_url"),
+    evidence: jsonb("evidence"),
+    confidence: smallint("confidence"),
+    reason: varchar("reason", { length: 60 }).notNull(),
+    proposedOrganizationId: integer("proposed_organization_id").references(() => organizations.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 20 }).notNull().default("OPEN"),
+    observationCount: integer("observation_count").notNull().default(1),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("organization_candidates_name_source_idx").on(t.normalizedName, t.source)],
+).enableRLS();
+
+/** What the source told us at ingestion time. Append-only, one row per distinct content. */
+export const sourceObservations = pgTable(
+  "source_observations",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    source: varchar("source", { length: 80 }).notNull(),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    sourceUrl: text("source_url"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+    contentHash: varchar("content_hash", { length: 64 }).notNull(),
+    facts: jsonb("facts").notNull(),
+    links: jsonb("links"),
+    raw: jsonb("raw"),
+    runId: varchar("run_id", { length: 80 }),
+    outcome: varchar("outcome", { length: 30 }).notNull().default("RECEIVED"),
+    outcomeReason: text("outcome_reason"),
+    postingId: integer("posting_id").references(() => postings.id, { onDelete: "set null" }),
+    candidateId: integer("candidate_id").references(() => organizationCandidates.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("source_observations_content_idx").on(t.source, t.externalId, t.contentHash),
+    index("source_observations_identity_idx").on(t.source, t.externalId, t.observedAt),
+    index("source_observations_posting_idx").on(t.postingId),
+  ],
+).enableRLS();
 
 export const qualifications = pgTable("qualifications", {
   id: serial("id").primaryKey(),

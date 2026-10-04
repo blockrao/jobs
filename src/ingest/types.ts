@@ -62,8 +62,29 @@ export interface RawPosting {
   // Used for auto-linking jobs to exam pages. Detected from title/description.
   examSlug?: string;
 
-  // 0–100. Below the publish threshold the row lands as PENDING for review.
+  // 0–100. Confidence is a data-quality signal only. It never publishes: ingestion
+  // always lands rows as PENDING (WP-001, "ingestion is not publication").
   confidence?: number;
+
+  // ---- WP-001 additions (all optional; existing adapters are unaffected) ----
+  /** True when organizationName came from the source's labelled organization field, not a headline guess. */
+  organizationFromLabel?: boolean;
+  /** Notification / advertisement number as stated by the source. */
+  advertisementNumber?: string;
+  /** Application start date as stated by the source. */
+  applicationStartDate?: Date;
+  /** Posts with per-post vacancy counts, as parsed from the source's post table. */
+  postTable?: Array<{ name: string; vacancies?: number }>;
+  /** Issuing body's own website, if the source lists one (never an aggregator link). */
+  websiteUrl?: string;
+  /** Facts the source stated, verbatim, for the raw observation. */
+  observationFacts?: Record<string, unknown>;
+  /** Raw reference/payload for the observation (kept lightweight). */
+  observationRaw?: unknown;
+  /** Links as listed on the source page, aggregator-internal links removed. */
+  observationLinks?: Array<{ label: string; url: string }>;
+  /** When the source page was retrieved. */
+  observedAt?: Date;
 }
 
 export interface SourceAdapter {

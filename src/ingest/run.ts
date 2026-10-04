@@ -7,9 +7,7 @@ import { indiasarkarinaukriAdapter } from "./adapters/indiasarkarinaukri";
 import { sarkarinaukriAdapter } from "./adapters/sarkarinaukri";
 import { sahisarkarijobsAdapter } from "./adapters/sahisarkarijobs";
 import { freejobalertAdapter } from "./adapters/freejobalert";
-import { deduplicate } from "./deduplicate";
-import { normalize } from "./normalize";
-import { writePostingsToDB } from "../db/operations/write-postings-v2";
+import { prepare, processRaw } from "./pipeline";
 
 const adapters: SourceAdapter[] = [
   sarkariresultAdapter,
@@ -92,61 +90,28 @@ export async function main(opts?: { dryRun?: boolean }) {
   console.log("-".repeat(60));
   console.log(`  TOTAL raw postings: ${total}  (${withFields} with deadline/vacancy detail)`);
 
-  // Step 3: Deduplicate
-  console.log(`\n📊 Phase 2: Deduplicating (earliest deadline strategy)...`);
-  const dedupedPostings = deduplicate(allRaw);
-  console.log(`✅ Deduplicated to ${dedupedPostings.length} unique postings`);
-
-  // Step 4: Normalize
-  console.log(`\n🔧 Phase 3: Normalizing (exam codes, stages, slugs)...`);
-  const normalizedPostings = normalize(dedupedPostings);
-  const withExamDetection = normalizedPostings.filter((p) => p.examSlug).length;
-  console.log(`✅ Normalized ${normalizedPostings.length} postings (${withExamDetection} linked to exams)`);
-
-  // Step 5: Write to database (or simulate in dry-run)
-  console.log(`\n💾 Phase 4: ${dryRun ? "Simulating" : "Writing to"} database...`);
-  let dbResult: { inserted: number; updated: number; skipped: number; resolved: number; total: number };
-
+  // Steps 3-5: dedupe -> normalize -> write, through the shared pipeline
+  // (src/ingest/pipeline.ts). Ingestion is not publication: every new row lands
+  // PENDING; unresolved organizations are held as candidates (WP-001).
+  console.log(`\n📊 Phase 2-4: dedupe, normalize, ${dryRun ? "simulate" : "write"}...`);
   if (dryRun) {
-    // Count what would be inserted/skipped
-    let wouldInsert = 0, wouldSkip = 0;
-    for (let i = 0; i < dedupedPostings.length; i++) {
-      const deduped = dedupedPostings[i];
-      if ((deduped.primary.confidence || 0) < 40) {
-        wouldSkip++;
-      } else {
-        wouldInsert++;
-      }
-    }
-    dbResult = { inserted: wouldInsert, updated: 0, skipped: wouldSkip, resolved: 0, total: dedupedPostings.length };
+    const { deduped, normalized } = prepare(allRaw);
+    const wouldSkip = deduped.filter((d) => (d.primary.confidence || 0) < 40).length;
     console.log(`
-✅ Database write simulation:
-   • Would insert: ${dbResult.inserted} new postings
-   • Skipped (low confidence < 0.4): ${dbResult.skipped}
-   • Total processed: ${dbResult.total}
-   • Exams detected: ${withExamDetection} postings will auto-link to exam pages
-
-   ℹ️  Run with DRY_RUN=false to actually write to Supabase
+✅ Database write simulation (no database access):
+   • Deduplicated to ${deduped.length} unique postings
+   • Would process: ${deduped.length - wouldSkip}; skipped (low confidence): ${wouldSkip}
+   • Exams detected: ${normalized.filter((p) => p.examSlug).length}
+   ℹ️  Run with DRY_RUN=false to write. New rows are PENDING; they are not published by ingestion.
     `);
   } else {
-    try {
-      dbResult = await writePostingsToDB(dedupedPostings, normalizedPostings);
-      const resolvedPct = (dbResult.inserted + dbResult.updated) > 0
-        ? ((dbResult.resolved / (dbResult.inserted + dbResult.updated)) * 100).toFixed(1)
-        : "0";
-      console.log(`
+    const { write } = await processRaw(allRaw, { runId: `ingest-${new Date().toISOString()}` });
+    console.log(`
 ✅ Database write complete:
-   • Inserted: ${dbResult.inserted} new postings
-   • Updated: ${dbResult.updated} existing postings
-   • Resolved onto Recruitment/Post: ${dbResult.resolved} postings (${resolvedPct}%)
-   • Skipped (low confidence < 0.4, or no matching organization): ${dbResult.skipped}
-   • Total processed: ${dbResult.total}
-   • Exams linked: ${withExamDetection} postings automatically linked to exam pages
-      `);
-    } catch (dbErr) {
-      console.error("❌ Database write failed:", dbErr);
-      throw dbErr;
-    }
+   • Inserted (PENDING): ${write.inserted}   Updated: ${write.updated}   Flagged: ${write.flagged}   Unchanged: ${write.unchanged}
+   • Held as organization candidates: ${write.heldCandidates}   Rejected: ${write.rejected}   Skipped: ${write.skipped}
+   • Total processed: ${write.total}
+    `);
   }
 
   // Step 6: Dump raw postings for audit

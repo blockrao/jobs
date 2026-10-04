@@ -1,0 +1,247 @@
+{
+  "generatedAt": "2026-10-04T05:35:13.035Z",
+  "input": {
+    "file": "fja_listings.jsonl",
+    "records": 980,
+    "recruitments": 950,
+    "notRecruitment": 30,
+    "processed": 950,
+    "openOnly": false,
+    "open": 751
+  },
+  "coverage": {
+    "loadedAsPending": 898,
+    "inserted": 898,
+    "updatedExisting": 0,
+    "flaggedExistingReviewed": 0,
+    "unchangedExisting": 0,
+    "heldAsOrganizationCandidates": 1,
+    "rejected": 20,
+    "rejectedReasons": {
+      "NO_ORGANIZATION_NAME": 20
+    },
+    "skipped": 0,
+    "publishedByIngestion": 0,
+    "publishableUnderPromotionRule": 466
+  },
+  "organization": {
+    "resolution": {
+      "ALIAS": 898,
+      "NONE": 20,
+      "CANDIDATE": 1
+    },
+    "existingAmbiguous": 0,
+    "candidateNotices": 1,
+    "distinctCandidateNames": 1,
+    "candidateReasons": {
+      "TOO_LONG": 1
+    },
+    "candidateCoverage": {
+      "top10": 1,
+      "top25": 1,
+      "top100": 1,
+      "top200": 1,
+      "namesWithTwoOrMoreNotices": 0,
+      "singletons": 1
+    },
+    "candidatesWithProposedOrg": 0,
+    "newlyEstablishedCanonicalOrganizations": 0,
+    "legacyWouldCreateNewOrgRows": 884,
+    "legacyBadNamesPrevented": 189,
+    "legacyBadReasons": {
+      "POST_TITLE_LIKE": 147,
+      "BUCKET_NAME": 29,
+      "AMBIGUOUS_ABBREVIATION": 13
+    }
+  },
+  "recruitment": {
+    "newRecruitmentRows": 898,
+    "identifiedForLoaded": 898,
+    "unresolved": 21,
+    "recruitmentOrganizationDiffersFromResolved": 0,
+    "withAdvertisementNumber": 560
+  },
+  "postsAndVacancies": {
+    "noticesWithVacancyCount": 864,
+    "noticesWithPostTable": 725,
+    "noticesWithMultiplePosts": 287,
+    "postsInSourceTablesForLoaded": 1698,
+    "postRowsCreated": 686,
+    "vacancyRowsCreated": 0,
+    "postTableSumDisagreesWithTotal": 13,
+    "vacanciesButNoPostTable": 146,
+    "examples": [
+      {
+        "externalId": "3070765",
+        "title": "MECON FTFT Recruitment 2026 - Apply Online for 159 Jr. Engineer, Asst. Engineer and More P",
+        "organization": "MECON Limited (A PSU under the Ministry of Steel, Govt. of India)",
+        "statedTotal": 159,
+        "postsInSourceTable": 59,
+        "postsStoredAsPostRows": 1,
+        "tableSum": 159
+      },
+      {
+        "externalId": "3066997",
+        "title": "CIHTS Teaching Recruitment 2026 - Apply Online for 59 Assistant Professor, Associate Profe",
+        "organization": "",
+        "statedTotal": 59,
+        "postsInSourceTable": 40,
+        "postsStoredAsPostRows": 1,
+        "tableSum": 59
+      },
+      {
+        "externalId": "3070469",
+        "title": "ESIC Lucknow Recruitment 2026 - Walkin for 45 Specialists, Senior Residents and More Posts",
+        "organization": "Employees State Insurance Corporation Lucknow",
+        "statedTotal": 45,
+        "postsInSourceTable": 30,
+        "postsStoredAsPostRows": 1,
+        "tableSum": 45
+      },
+      {
+        "externalId": "3069708",
+        "title": "CSJMU Teaching Recruitment 2026 - Apply Online for 36 Professor, Associate and Assistant P",
+        "organization": "Chhatrapati Shahu Ji Maharaj University, Kanpur",
+        "statedTotal": 36,
+        "postsInSourceTable": 29,
+        "postsStoredAsPostRows": 1,
+        "tableSum": 33
+      },
+      {
+        "externalId": "3070096",
+        "title": "ITBP Sports Quota Recruitment 2026 Notification Out - Apply Online for 126 Constable GD Po",
+        "organization": "Indo-Tibetan Border Police Force (ITBPF), Ministry of Home Affairs, Govt. of India",
+        "statedTotal": 126,
+        "postsInSourceTable": 28,
+        "postsStoredAsPostRows": 1,
+        "tableSum": 126
+      }
+    ]
+  },
+  "dates": {
+    "withLastDate": 756,
+    "missingLastDate": 194,
+    "withStartDate": 145,
+    "startAfterEnd": 3,
+    "openAtRunDate": 751,
+    "closedAtRunDate": 5,
+    "existingPostingsWithChangedMaterialField": 0,
+    "existingReviewedPostingsFlagged": 0,
+    "filledMissingFieldsOnExisting": 0
+  },
+  "provenance": {
+    "notificationLink": {
+      "official-style": 681,
+      "other-domain": 198,
+      "none": 71
+    },
+    "noticesWithApplyLink": 127,
+    "noticesWithIssuerWebsite": 941,
+    "observationsRecorded": 919,
+    "observationsNew": 919
+  },
+  "quality": {
+    "indexTiers": {
+      "A": 5,
+      "B": 861,
+      "C": 32
+    },
+    "missingFieldsForIndexing": {
+      "location": 762,
+      "extracted_job_title": 206,
+      "eligibility": 177,
+      "vacancies": 80,
+      "application_mechanism": 60,
+      "description": 19
+    },
+    "requiringReview": 898,
+    "heldOrRejected": 21,
+    "promotionFailReasons": {
+      "NO_LAST_DATE": 185,
+      "LINK_NOT_ISSUER_DOMAIN": 191,
+      "NO_VACANCIES": 81,
+      "POST_COUNT_MISMATCH": 12,
+      "NO_OFFICIAL_LINK": 62,
+      "LAST_DATE_PASSED": 4
+    },
+    "promotionConsidered": 898
+  },
+  "countsBefore": {
+    "organizations": 755,
+    "recruitments": 0,
+    "posts": 0,
+    "vacancies": 0,
+    "postings": 0,
+    "source_observations": 0,
+    "organization_candidates": 0,
+    "organization_aliases": 711
+  },
+  "countsAfter": {
+    "organizations": 755,
+    "recruitments": 898,
+    "posts": 686,
+    "vacancies": 0,
+    "postings": 898,
+    "source_observations": 919,
+    "organization_candidates": 1,
+    "organization_aliases": 711
+  },
+  "secondRun": {
+    "inserted": 0,
+    "updated": 0,
+    "flagged": 0,
+    "unchanged": 898,
+    "held": 1,
+    "rejected": 20,
+    "countsAfterSecondRun": {
+      "organizations": 755,
+      "recruitments": 898,
+      "posts": 686,
+      "vacancies": 0,
+      "postings": 898,
+      "source_observations": 919,
+      "organization_candidates": 1,
+      "organization_aliases": 711
+    }
+  },
+  "probe": {
+    "afterTimeTravel": {
+      "lifecycleFunctionResult": {
+        "expired_postings": 465,
+        "archived_recruitments": 0,
+        "last_refreshed": "2026-10-04 11:05:36.712163+05:30"
+      },
+      "expiredPostings": 465,
+      "listingVisible": 1,
+      "listingVisibleButExpiredBeforeFix": 465,
+      "searchVisible": 1
+    },
+    "simulatedResolvedOrganizations": 711,
+    "listingPageSize": 50,
+    "beforePromo": {
+      "listingVisible": 0,
+      "searchVisible": 0
+    },
+    "promoted": 466,
+    "afterPromo": {
+      "listingVisible": 466,
+      "searchVisible": 466,
+      "sitemapTierA": 2,
+      "organizationsWithPublicPosting": 380,
+      "promotedWithPastLastDate": 0
+    },
+    "lifecycleFunctionResult": {
+      "expired_postings": 0,
+      "archived_recruitments": 0,
+      "last_refreshed": "2026-10-04 11:05:36.636168+05:30"
+    },
+    "afterLifecycle": {
+      "expiredPostings": 0,
+      "listingVisible": 466,
+      "listingVisibleButExpiredBeforeFix": 0,
+      "searchVisible": 466,
+      "recruitmentsWithApplicationEndDate": 0,
+      "recruitmentsTotal": 898
+    }
+  }
+}
