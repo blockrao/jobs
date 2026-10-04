@@ -196,6 +196,15 @@ describe("trust boundary in application code (SEC-001)", () => {
     expect(src, "explicit refusal when the secret is missing").toMatch(/if\s*\(\s*!\s*\w*[sS]ecret\w*\s*\|\|/);
   });
 
+  // A-039: the paid (LLM) path of the public normalize endpoint needs the server secret.
+  test("SEC-08 the normalize endpoint passes the paid API key on only after a secret check, with no fallback value", () => {
+    const src = stripComments(readSource("src/app/api/query/normalize/route.ts"));
+    expect(src, "no fallback secret").not.toMatch(/QUERY_NORMALIZE_SECRET\s*(\|\||\?\?)/);
+    expect(src, "refuses when the secret is missing").toMatch(/if\s*\(\s*!\s*secret\s*\)\s*return false/);
+    expect(src, "the LLM flag depends on the authorization check").toMatch(/useLLM\s*=[\s\S]*paidPathAuthorized\(request\)/);
+    expect(src, "constant-time comparison").toMatch(/timingSafeEqual/);
+  });
+
   // Server actions are reachable as public endpoints, so a path guard is not
   // enough: each mutating action must check the admin session itself.
   test("SEC-06 every mutating admin action verifies the admin session itself", () => {

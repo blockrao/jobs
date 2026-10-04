@@ -9,6 +9,7 @@
  * Phase 1 Foundation: Rules-based + LLM intent extraction
  */
 
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeQuery, normalizeQueryQuick } from "@/lib/query-engine/query-normalizer";
 
@@ -17,6 +18,20 @@ interface NormalizeRequestBody {
   language?: "auto-detect" | "english" | "hindi" | "hinglish";
   source?: "web" | "voice" | "chatbot";
   useLLM?: boolean;
+}
+
+/**
+ * The paid (LLM) path is reachable only with the server-side secret (A-039).
+ * No configured secret means the paid path is off for everyone; there is
+ * deliberately no fallback value. The public rules-based path costs nothing.
+ */
+function paidPathAuthorized(request: NextRequest): boolean {
+  const secret = process.env.QUERY_NORMALIZE_SECRET;
+  if (!secret) return false;
+  const header = request.headers.get("authorization") ?? "";
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const given = Buffer.from(header);
+  return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
 export async function POST(request: NextRequest) {
@@ -60,7 +75,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine whether to use LLM
-    const useLLM = body.useLLM !== false && process.env.NODE_ENV === "production";
+    const useLLM =
+      body.useLLM !== false && process.env.NODE_ENV === "production" && paidPathAuthorized(request);
     const llmApiKey = process.env.ANTHROPIC_API_KEY;
 
     // Normalize query
