@@ -111,7 +111,7 @@ export async function promotePending(db: Db, opts: { apply?: boolean; now?: Date
       if (opts.apply) {
         await db
           .update(postings)
-          .set({ reviewStatus: "APPROVED", publishingStatus: "AUTOMATED_VALIDATION_PASS", lastVerifiedAt: now, updatedAt: now })
+          .set({ reviewStatus: "APPROVED", publishingStatus: "AUTOMATED_VALIDATION_PASS", updatedAt: now })
           .where(eq(postings.id, row.id));
         report.promoted++;
       }

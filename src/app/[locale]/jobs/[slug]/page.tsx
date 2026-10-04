@@ -373,11 +373,11 @@ export default async function LocaleJobPage({ params }: Props) {
             <dd className="font-medium">{formatDate(posting.examDate, dateLocale)}</dd>
           </div>
         )}
-        {(posting.lastVerifiedAt || posting.updatedAt) && (
+        {posting.lastVerifiedAt && (
           <div>
             <dt className="text-neutral-500">{L.lastVerified}</dt>
             <dd className="font-medium">
-              {formatDate(posting.lastVerifiedAt ?? posting.updatedAt, dateLocale)}
+              {formatDate(posting.lastVerifiedAt, dateLocale)}
             </dd>
           </div>
         )}

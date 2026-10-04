@@ -27,7 +27,7 @@ Date: 2026-10-05. Status: applied to production (A-070, A-071), pending architec
 ## Deviations to be ruled on
 A-040 (applied before migration file), S-01/S-02 and "no lifecycle from stored stages" (lifecycle v2), A-064 (aggregator-discovered links on recruitments, flagged by provenance), backup gate (not a tested restore).
 
-## PRE-CHANGE (A-072, no implementation until approved)
+## A-072 (approved by owner 2026-10-05 00:30 IST, implemented; was PRE-CHANGE)
 1. `src/app/[locale]/jobs/[slug]/page.tsx` (~376): render the "Last Verified" row only when `posting.lastVerifiedAt` is set; remove the `?? posting.updatedAt` fallback. Effect: pages without a real verification show no verified date.
 2. `src/ingest/promotion.ts:114`: remove `lastVerifiedAt: now` from automated promotion (keep `updatedAt`). Manual approval in `publishing-queries.ts` keeps its stamp. Effect: automated promotion no longer claims verification.
 Verification: contract/unit test for both; live check of a promoted posting. Both ride with the next deployment; no push before the backup gate.
