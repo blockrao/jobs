@@ -133,3 +133,24 @@ contract test; needs the architect's approval like any change.
 The workspace cannot reach the database or run pg_dump; the dump, the restore
 and the dashboard check are the owner's. This section is completed when that
 evidence arrives.
+
+## Backup gate update (owner, 2026-10-04 12:52 IST)
+
+Reported by the owner; not independently verified by the agent (the workspace
+has no database route).
+
+| Item | Status |
+| --- | --- |
+| Full production dump (`pg_dump`, custom format, direct from Supabase) | Created, reported by owner |
+| Structural check (`pg_restore --list`) | 1,396 TOC entries, reported by owner |
+| SHA-256 of the dump | Generated, reported by owner (value not recorded here) |
+| Production unchanged during the exercise | Reported by owner; the agent's own read-only check at 11:26 IST matched the baseline |
+| Restore into a scratch Postgres and count/checksum comparison | **NOT PERFORMED.** Owner decision: the dump contains Supabase-managed schemas that vanilla Postgres lacks; the dump is kept as an offline recovery artifact |
+| Supabase managed backups | Not reported |
+| Owner-declared gate status | PASS (a dump with a verified table of contents, not a tested restore) |
+| DB password exposed during the exercise | Owner to rotate before deployment; not yet confirmed rotated |
+
+Note: the earlier gate wording required a *tested* restore with a count and
+checksum comparison. This is a narrower gate accepted by the owner, so the
+recovery point is "the dump exists and lists correctly", not "a restore was
+shown to work".
