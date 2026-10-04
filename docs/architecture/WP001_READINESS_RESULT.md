@@ -119,3 +119,17 @@ description and location enrichment → re-measure JobPosting eligibility.
 Open point to settle with the deployment: expired Tier A pages can stay in the
 sitemap until their tier changes. Fix is one filter in the sitemap query plus a
 contract test; needs the architect's approval like any change.
+
+## Backup / restore gate: status as of 2026-10-04 11:27 IST
+
+| Item | Status |
+| --- | --- |
+| Backup (pg_dump) | NOT RUN: owner action, no terminal output yet |
+| Restore verification | NOT RUN: awaiting the scratch-restore output of `WP001_BACKUP_VERIFY.sql` |
+| Supabase Backups status | NOT CHECKED: owner to read Dashboard > Database > Backups; not inferred |
+| Production unchanged | CONFIRMED (read-only connector, 11:26 IST): organizations 125, postings 201, recruitments 183, source_documents 208, sources 10, all five md5 checksums identical to the baseline in `WP001_BACKUP_GATE.md`; the three WP-001 tables do not exist in production |
+| Overall readiness | **NO-GO: do not push.** Seven local commits held for one controlled deployment |
+
+The workspace cannot reach the database or run pg_dump; the dump, the restore
+and the dashboard check are the owner's. This section is completed when that
+evidence arrives.
