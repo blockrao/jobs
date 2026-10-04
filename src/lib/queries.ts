@@ -364,3 +364,18 @@ export async function getPostingsByCommission(commissionSlug: string) {
     limit: 200,
   });
 }
+
+/** Current (approved, not expired, not past last date) postings per commission, in one query. Capped at 200 like getPostingsByCommission. */
+export async function countCurrentPostingsByCommission(): Promise<Record<number, number>> {
+  if (!hasDb()) return {};
+  const db = getDb();
+  const rows = await db
+    .select({ commissionId: exams.commissionId, n: sql<number>`count(*)::int` })
+    .from(postings)
+    .innerJoin(exams, eq(exams.id, postings.examId))
+    .where(and(eq(postings.reviewStatus, "APPROVED"), ...currentOnly))
+    .groupBy(exams.commissionId);
+  const out: Record<number, number> = {};
+  for (const r of rows) if (r.commissionId != null) out[r.commissionId] = Math.min(r.n, 200);
+  return out;
+}

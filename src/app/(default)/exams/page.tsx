@@ -1,5 +1,5 @@
 import { pageSeo } from "@/lib/seo";
-import { listCommissionsWithExams, getPostingsByCommission } from "@/lib/queries";
+import { listCommissionsWithExams, countCurrentPostingsByCommission } from "@/lib/queries";
 import { ExamsHubContent } from "@/components/exams-hub-content";
 
 export const revalidate = 300;
@@ -18,16 +18,14 @@ export default async function ExamsPage() {
     commissions = [];
   }
 
-  // Get open count per commission
-  const postingsByComm: Record<number, number> = {};
-  for (const comm of commissions) {
-    try {
-      const posts = await getPostingsByCommission(comm.slug);
-      postingsByComm[comm.id] = posts.length;
-    } catch {
-      postingsByComm[comm.id] = 0;
-    }
+  // Open count per commission: one grouped query (same rule as the commission page, capped at 200 as before).
+  let postingsByComm: Record<number, number> = {};
+  try {
+    postingsByComm = await countCurrentPostingsByCommission();
+  } catch {
+    postingsByComm = {};
   }
+  for (const comm of commissions) postingsByComm[comm.id] ??= 0;
 
   // ExamsHubContent (client) decides how to render based on the visitor's
   // saved language cookie — same reasoning as home-content.tsx — keeping

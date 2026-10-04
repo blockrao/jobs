@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getDb } from "@/db";
 import { recruitments, posts, vacancies } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 export const revalidate = 3600; // 1 hour
 
@@ -33,26 +33,22 @@ async function getAllRecruitments() {
   });
 }
 
-async function getRecruitmentStats(recruitmentId: number) {
+/** One grouped query for every recruitment (the per-recruitment loop was 2 queries each and made the build time out). */
+async function getAllRecruitmentStats(): Promise<Map<number, { postCount: number; totalVacancies: number }>> {
   const db = getDb();
-  if (!db) return { postCount: 0, totalVacancies: 0 };
-
-  const postsList = await db.query.posts.findMany({
-    where: eq(posts.recruitmentId, recruitmentId),
-  });
-
-  if (postsList.length === 0) {
-    return { postCount: 0, totalVacancies: 0 };
-  }
-
-  const postIds = postsList.map((p) => p.id);
-  const vacanciesList = await db.query.vacancies.findMany({
-    where: inArray(vacancies.postId, postIds),
-  });
-
-  const totalVacancies = vacanciesList.reduce((sum, v) => sum + v.count, 0);
-
-  return { postCount: postsList.length, totalVacancies };
+  const out = new Map<number, { postCount: number; totalVacancies: number }>();
+  if (!db) return out;
+  const rows = await db
+    .select({
+      recruitmentId: posts.recruitmentId,
+      postCount: sql<number>`count(distinct ${posts.id})::int`,
+      totalVacancies: sql<number>`coalesce(sum(${vacancies.count}), 0)::int`,
+    })
+    .from(posts)
+    .leftJoin(vacancies, eq(vacancies.postId, posts.id))
+    .groupBy(posts.recruitmentId);
+  for (const r of rows) out.set(r.recruitmentId, { postCount: r.postCount, totalVacancies: r.totalVacancies });
+  return out;
 }
 
 export default async function RecruitmentsPage() {
@@ -63,22 +59,16 @@ export default async function RecruitmentsPage() {
     allRecruitments = [];
   }
 
-  // Get stats for each recruitment
-  let recruitmentsWithStats: any[] = [];
+  let statsById = new Map<number, { postCount: number; totalVacancies: number }>();
   try {
-    recruitmentsWithStats = await Promise.all(
-      allRecruitments.map(async (rec) => {
-        const stats = await getRecruitmentStats(rec.id);
-        return { ...rec, ...stats };
-      })
-    );
+    statsById = await getAllRecruitmentStats();
   } catch {
-    recruitmentsWithStats = allRecruitments.map((rec) => ({
-      ...rec,
-      postCount: 0,
-      totalVacancies: 0,
-    }));
+    statsById = new Map();
   }
+  const recruitmentsWithStats: any[] = allRecruitments.map((rec) => ({
+    ...rec,
+    ...(statsById.get(rec.id) ?? { postCount: 0, totalVacancies: 0 }),
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
