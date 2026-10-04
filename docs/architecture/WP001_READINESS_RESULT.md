@@ -96,3 +96,26 @@ None of these is designed here. Each needs its own pre-change report and approva
 - Dry run at full fidelity on the restored copy (real organizations, 68 existing postings).
 - Owner and architect review of this result.
 - Migration `20261004060000_wp_001_observation_candidate_boundary.sql` is local; applying it is a separate approved step.
+
+## Single readiness report for the deployment decision (architect, 2026-10-04)
+
+G1/G3, the multi-post rule and the SEO representation logic are approved; the
+SEO architecture is frozen in principle, subject to verification during the
+data deployment. Do not weaken the JobPosting gate to raise the number.
+Order: organization resolution (alias seed) → Post/Vacancy model →
+description and location enrichment → re-measure JobPosting eligibility.
+
+| Question | Status |
+| --- | --- |
+| Can the current production DB be restored? | NOT RUN (owner: `WP001_BACKUP_GATE.md`) |
+| New ingestion leaves data non-public until promotion? | PASS (scratch; contract test) |
+| Re-ingestion preserves reviewed data? | PASS on synthetic tests; real 68 rows untested until a restore exists |
+| Organization resolution avoids dirty canonical orgs? | PASS (0 canonical created; 700 candidate names held) |
+| A single-post job can become a JobPosting? | PASS (SD-09i unit test); 0 corpus pages yet, by data |
+| Multi-post notices stay non-JobPosting until Posts exist? | PASS (SD-09g; 153 of 466 public pages in the corpus) |
+| Sitemap and indexing respect eligibility / indexability? | PARTIAL: Tier A gate holds; the sitemap query filters `APPROVED` and Tier A but not `is_expired`, and the tier is not recomputed on expiry. Small fix proposed, not made |
+| Share of the new corpus eligible after enrichment | MEASURED 0 of 466 today; re-measure after resolution, Posts/Vacancies, description and location work |
+
+Open point to settle with the deployment: expired Tier A pages can stay in the
+sitemap until their tier changes. Fix is one filter in the sitemap query plus a
+contract test; needs the architect's approval like any change.
