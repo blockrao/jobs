@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbV2 } from "@/db";
 
-export async function POST(request: NextRequest) {
+async function run(request: NextRequest) {
   // Fail closed (SEC-001): no configured secret means no access. There is
   // deliberately no fallback value.
   const cronSecret = process.env.CRON_SECRET;
@@ -63,6 +63,19 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Vercel's scheduler issues GET (and sends `Authorization: Bearer $CRON_SECRET`
+ * when CRON_SECRET is set); manual and external callers use POST. Both run the
+ * same fail-closed handler (A-044).
+ */
+export async function GET(request: NextRequest) {
+  return run(request);
+}
+
+export async function POST(request: NextRequest) {
+  return run(request);
 }
 
 /**
