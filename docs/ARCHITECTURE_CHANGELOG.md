@@ -1079,3 +1079,11 @@ POSTVAC-A1 = COMPLETE / PRODUCTION VERIFIED (owner acceptance 2026-10-04). Next:
 Pushed `447df28..954743a` (A-039 plus three documentation commits). GitHub deployment record: Production deployment for `954743a`, "Deployment has completed" (project `jobing/asdf`).
 
 Live check (observed in the browser pane, www.joboye.com): unauthenticated POST `/api/query/normalize` with `useLLM:true`, with no `useLLM`, and with a wrong bearer all returned 200 with `processing.method = rule_based` and no LLM latency. `/`, `/jobs`, `/sitemap.xml`, `/robots.txt` return 200. A-039 CLOSED. The authorized path was not exercised live (no secret is set in production by design). Recorded for later, not part of A-039: `/api/query/normalize-v2` has an unauthenticated `useLLM` flag that only calls a stub; any future real LLM call there needs the same gate.
+
+## 2026-10-04: A-041 applied and closed
+
+Owner approved option 1 plus 2a. Applied migration `20261004140000_a_041_fix_urgency_function_org_table.sql` to production through the Supabase connector (name `a_041_fix_urgency_function_org_table`), then ran `refresh_posting_urgency_states()` once (returned 7 updated rows, 08:16 UTC).
+
+Verification (observed, production): the function no longer references `organizations_new` and reads `organizations`; the migration alone changed no rows (hash of all 194 non-eligible rows identical before and after the migration and after the run); hash of every protected column (everything except the five derived columns and updated_at) identical for all 201 postings before and after; organizations (125) and posts (4) hashes identical; the 7 eligible postings (ids 163, 164, 165, 225 to 228) now have `search_text`, `announcement_state`, `closing_state`, `urgency_score` and `days_to_closing` populated. Rows 163 to 165 show refreshed `days_to_closing` (stale by three days), which is the intended effect. No recurring schedule was added. A-041 CLOSED.
+
+Finding, not fixed (A-068): `/api/search/jobs` still returns 0 results because the search code calls the database client in a way the driver rejects (`NOT_TAGGED_CALL`), and the catch block returns an empty list. This is separate from A-041.
