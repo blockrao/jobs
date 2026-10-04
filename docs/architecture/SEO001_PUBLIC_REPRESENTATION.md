@@ -81,3 +81,41 @@ A page is in the sitemap exactly when it is indexable, and both follow from one 
 | D2 | `/recruitments/*` and `/positions/*` | APPROVED: `noindex, follow` until Canonical Read Migration, because they are not canonical public projections yet |
 | D3 | Dedicated Hindi listing pages (`/hi/jobs` and so on) | DEFERRED. Cookie-switched listing pages remain English canonical pages |
 | D4 | Unattached lifecycle notices | Not exposed as canonical Recruitments. Existing public job-page treatment remains until the canonical read projection work |
+
+## Freeze addendum (2026-10-04, architect final review) — PROPOSED, awaiting owner confirmation
+
+Incorporates the architect's seven points. No new SEO track. Defines one
+rule: **JobPosting eligible = Tier A (public, indexable, complete) AND open
+AND not expired AND an established hiring organization AND a real extracted
+title.** A page may exist, even be indexable, without being JobPosting eligible.
+
+Rules added: (1) eligibility gate above; (2) `hiringOrganization` is the
+employing organization of the Post where established, otherwise the issuing
+organization of the Recruitment, never a candidate; (3) `description` must be
+a complete representation (responsibilities/qualifications/education visible on
+the page), never a facts-only template; (4) expired or closed: no JobPosting,
+page follows the lifecycle policy; (5) `validThrough` only from a real date,
+never invented; (6) Google Indexing API for new, materially updated and
+expired job URLs is part of the frozen architecture, implemented after
+reliable canonical data, sitemap stays the discovery mechanism; (7) the unit
+of one JobPosting for multi-post, multi-category, multi-location notices is an
+implementation rule set from the real pilot, not assumed.
+
+Verified implementation state (observed in code, `main` + local):
+- G1 eligibility is decided in `buildJobPostingSchema` only by open stage,
+  deadline not passed, and an extracted title (`postNames[0]`). It does NOT
+  consult the content-quality tier, `review_status` or `is_expired`. Gap.
+- G2 `hiringOrganization` = the posting's organization row (issuing body from
+  ingestion). No employing-organization field exists (ARC-001 R3 gap).
+- G3 description is `postings.description` as stored; no completeness check.
+  The loader's facts-only template would pass the current builder. Gap.
+- G4 expiry: stage and `validThrough` checks stop markup after the date; the
+  lifecycle function covers postings, not recruitments. `validThrough` is
+  omitted when unknown (correct).
+- G5 visible page content: description, eligibility, responsibilities and
+  requirements sections render when present; sufficiency is not enforced.
+- G6 sitemap is generated from `index_tier = 'A'` with `updatedAt`; the
+  per-URL change signal needed for the Indexing API can be taken from
+  `updated_at`, `is_expired` and `index_tier` transitions. No gap in design;
+  not implemented.
+- G7 one posting row = one notice today.
