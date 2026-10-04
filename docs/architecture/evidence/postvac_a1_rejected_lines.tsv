@@ -1,0 +1,489 @@
+external_id	line	count	reason
+3062617	Biochemistry	1	ACADEMIC_DISCIPLINE
+3062617	Ophthalmology	1	ACADEMIC_DISCIPLINE
+3062617	Paediatrics	1	ACADEMIC_DISCIPLINE
+3062617	Psychiatry	1	ACADEMIC_DISCIPLINE
+3063451	Urdu	757	ACADEMIC_DISCIPLINE
+3067668	Physics	450	ACADEMIC_DISCIPLINE
+3067668	Chemistry	450	ACADEMIC_DISCIPLINE
+3067668	Biology	450	ACADEMIC_DISCIPLINE
+3067952	Geology	6	ACADEMIC_DISCIPLINE
+3068546	Anaesthesia	3	ACADEMIC_DISCIPLINE
+3068546	Surgery	2	ACADEMIC_DISCIPLINE
+3068546	Pathology	2	ACADEMIC_DISCIPLINE
+3068546	Paediatrics	3	ACADEMIC_DISCIPLINE
+3068546	Medicine	4	ACADEMIC_DISCIPLINE
+3068546	Ophthalmology	2	ACADEMIC_DISCIPLINE
+3068546	ENT	2	ACADEMIC_DISCIPLINE
+3068546	Orthopaedics	2	ACADEMIC_DISCIPLINE
+3068546	Psychiatry	3	ACADEMIC_DISCIPLINE
+3069294	Anatomy	2	ACADEMIC_DISCIPLINE
+3069294	Biochemistry	3	ACADEMIC_DISCIPLINE
+3069294	Microbiology	1	ACADEMIC_DISCIPLINE
+3069294	Nuclear Medicine	4	ACADEMIC_DISCIPLINE
+3069294	Obstetrics & Gynaecology	2	ACADEMIC_DISCIPLINE
+3069294	Ophthalmology	1	ACADEMIC_DISCIPLINE
+3069294	Orthopaedics	3	ACADEMIC_DISCIPLINE
+3069294	Paediatrics	1	ACADEMIC_DISCIPLINE
+3069294	Pharmacology	3	ACADEMIC_DISCIPLINE
+3069294	Physiology	1	ACADEMIC_DISCIPLINE
+3069294	Transfusion Medicine	2	ACADEMIC_DISCIPLINE
+3070146	Anatomy	3	ACADEMIC_DISCIPLINE
+3070146	Biochemistry	4	ACADEMIC_DISCIPLINE
+3070146	Cardiology	5	ACADEMIC_DISCIPLINE
+3070146	Community Medicine	1	ACADEMIC_DISCIPLINE
+3070146	Emergency Medicine	4	ACADEMIC_DISCIPLINE
+3070146	Forensic Medicine	1	ACADEMIC_DISCIPLINE
+3070146	Neurology	2	ACADEMIC_DISCIPLINE
+3070146	Nuclear Medicine	2	ACADEMIC_DISCIPLINE
+3070146	Obstetrics & Gynaecology	4	ACADEMIC_DISCIPLINE
+3070146	Pharmacology	1	ACADEMIC_DISCIPLINE
+3070146	Plastic Surgery	1	ACADEMIC_DISCIPLINE
+3070146	Urology	3	ACADEMIC_DISCIPLINE
+3070368	Anaesthesia	5	ACADEMIC_DISCIPLINE
+3070368	Microbiology	1	ACADEMIC_DISCIPLINE
+3070368	Ophthalmology	1	ACADEMIC_DISCIPLINE
+3070556	Critical Care Medicine	12	ACADEMIC_DISCIPLINE
+3070608	English	2	ACADEMIC_DISCIPLINE
+3070608	Hindi	1	ACADEMIC_DISCIPLINE
+3070608	Urdu	1	ACADEMIC_DISCIPLINE
+3070608	Commerce	1	ACADEMIC_DISCIPLINE
+3070608	Mathematics	2	ACADEMIC_DISCIPLINE
+3070608	Physics	1	ACADEMIC_DISCIPLINE
+3070608	Chemistry	1	ACADEMIC_DISCIPLINE
+3070608	Botany	1	ACADEMIC_DISCIPLINE
+3070608	Zoology	1	ACADEMIC_DISCIPLINE
+3070608	Statistics	2	ACADEMIC_DISCIPLINE
+3070608	Political Science	2	ACADEMIC_DISCIPLINE
+3070608	Economics	2	ACADEMIC_DISCIPLINE
+3070798	Physics	1	ACADEMIC_DISCIPLINE
+3065508	Para Legal Volunteer	0	BAD_COUNT
+3069671	Post Graduate Teacher (PGT) – Physics, Hindi	0	BAD_COUNT
+3069671	Trained Graduate Teacher (TGT) – Mathematics, Social Science, Sanskrit	0	BAD_COUNT
+3069671	Primary Teacher (PRT)	0	BAD_COUNT
+3063451	General	3065	CATEGORY_LABEL
+3059915	Graduate Trained Assistant Teacher - Science & Mathematics	1664	COMBINED
+3062617	Obst. & Gynae.	2	COMBINED
+3066740	Health & Malaria Inspector Gr II	43	COMBINED
+3066740	Audiologist & Speech Therapist	1	COMBINED
+3067214	Library and Information Officer	1	COMBINED
+3067236	Individual Consultant: Standard & Specification Expert	1	COMBINED
+3067238	DGM/ Contract Specialist	1	COMBINED
+3067238	Manager/ Structural Engineer (Highway Design)	1	COMBINED
+3067238	Manager/ Highway Design Engineer	1	COMBINED
+3067238	Assistant Manager/ Highway Design Engineer	2	COMBINED
+3067238	Assistant Manager/ Structural Engineer (Highway Design)	2	COMBINED
+3067390	Officer/Asst. Manager/Dy. Manager	1	COMBINED
+3067501	Designer / Faculty	2	COMBINED
+3067501	Associate Senior Faculty / Designer (Assistant Professor)	5	COMBINED
+3067768	Electrical / Electronics & Communication / Electronics & Telecommunication	12	COMBINED
+3067768	Computer Science / Information Technology	13	COMBINED
+3067773	Individual Consultant: Bridge / Structural Engineer	1	COMBINED
+3067773	Individual Consultant: Instrumentation & Control Expert (SCADA)	1	COMBINED
+3068041	Chairperson/Member, Child Welfare Committee	7	COMBINED
+3068062	Assistant Professor - Machine Design/Production Design	1	COMBINED
+3068208	Assistant Manager / Transaction Advisory	3	COMBINED
+3068327	Assistant Manager-Fire & Safety, Grade-M2	1	COMBINED
+3068389	Instructor/P.Way	7	COMBINED
+3068402	Research Associate (RA)/ Project Scientist	1	COMBINED
+3068483	Chief General Manager / General Manager (Corporate Planning)	1	COMBINED
+3068488	Project Manager - Venture Growth & Impact	1	COMBINED
+3068504	Manager/Rajbhasha (E-3)	1	COMBINED
+3068506	Computer Science and Engineering	1	COMBINED
+3068546	OBS/GYN	3	COMBINED
+3068578	JRF/Project Fellow	1	COMBINED
+3068740	Project Engineer - AI and Digital Twins for Semiconductor R&D	1	COMBINED
+3068788	Headmaster/ Headmistress	1	COMBINED
+3068880	Peon / MTS	1	COMBINED
+3068880	DEO/Clk	2	COMBINED
+3068891	Land Revenue & Rent Recovery Officer	1	COMBINED
+3068903	PEM/PTI cum Matron (Contractual)	1	COMBINED
+3068985	Junior Research Fellow/ Project Associate (Electrical & Electronics Engg)	1	COMBINED
+3068985	Junior Research Fellow/ Project Associate (Civil Engineering)	1	COMBINED
+3069006	Associate (Commercial System) / Sr. Associate (Commercial System)	1	COMBINED
+3069009	Project Associate - Ecosystem & Community - Tejas	1	COMBINED
+3069083	Individual Consultant: Senior Resident Engineer / S&T	1	COMBINED
+3069083	Individual Consultant: QS and Billing Engineer	1	COMBINED
+3069083	Individual Consultant: Drawing & Design Engineer / S&T	1	COMBINED
+3069097	Project Associate I/ Project Associate II	1	COMBINED
+3069170	Office Assistant/ Clerk	1	COMBINED
+3069180	Dental Hygienist/ Assistant/ Technician	1	COMBINED
+3069189	Junior Assistant/ Record Clerk	1	COMBINED
+3069235	Senior Research Assistant / Research Assistant	1	COMBINED
+3069242	Electronics & Communication	4	COMBINED
+3069294	Anaesthesiology & Critical Care	6	COMBINED
+3069294	Community Medicine & Family Medicine	2	COMBINED
+3069294	Diagnostic and Interventional Radiology	4	COMBINED
+3069294	Pathology & Lab Medicine	2	COMBINED
+3069294	Physical Medicine & Rehabilitation	1	COMBINED
+3069294	Radiation Oncology/ Radio Therapy	3	COMBINED
+3069311	Part Time Yoga/Sports Trainer	8	COMBINED
+3069428	Manager/ Railway Design & Operation	1	COMBINED
+3069514	Associate Engineer Gr.I - Inspection Mechanical/ Metallurgical	16	COMBINED
+3069635	Karyalay Adhikshak / Lipik (Office Superintendent / Clerk)	1	COMBINED
+3069706	Research Associate/ Teaching Assistant	2	COMBINED
+3069708	Associate Professor - English and Modern European & Other Foreign Languages	1	COMBINED
+3069708	Associate Professor - Journalism and Mass Communication	1	COMBINED
+3069708	Assistant Professor - Journalism and Mass Communication	1	COMBINED
+3069708	Associate Professor - Continuing Education and Extension	1	COMBINED
+3069708	Associate Professor - Electronics and Communication Engineering	1	COMBINED
+3069708	Assistant Professor - Electronics and Communication Engineering	1	COMBINED
+3069708	Professor - Computer Engineering and Information Technology	1	COMBINED
+3069708	Associate Professor - Computer Engineering and Information Technology	1	COMBINED
+3069733	Assistant Manager/ Operations	2	COMBINED
+3069761	Temporary Assistant Professor - Defence & Strategic Studies	2	COMBINED
+3069792	Driver for BUS/ Ambulance/ Truck/ Heavy Vehicles	17	COMBINED
+3069824	Student/ Project Intern	2	COMBINED
+3069842	Research Associate / Project Associate	1	COMBINED
+3069904	Librarian cum Research Assistant (Group-C) on the establishment of Industrial Courts and Labour Courts	1	COMBINED
+3069913	Quality Manager/Compliance Monitoring Manager	1	COMBINED
+3069915	Junior Research Assistant (JRA) / Research Assistant (RA)	1	COMBINED
+3069981	Junior Field/Lab Helper	1	COMBINED
+3070021	Project Associate- Household & Personal Finance	1	COMBINED
+3070050	Senior Consultant – Governance Strategy & Public Affairs	1	COMBINED
+3070050	Consultant – Governance Monitoring & Coordination	1	COMBINED
+3070050	Data & Documentation Program Coordination Associate	1	COMBINED
+3070050	Senior Content & Public Information Associate	1	COMBINED
+3070121	Jr. Field / Lab Helper	1	COMBINED
+3070146	Pulmonary Critical Care & Sleep Medicine	1	COMBINED
+3070146	Tuberculosis & Respiratory Diseases	4	COMBINED
+3070146	CMO / General Medicine (Casualty Medical Officers)	2	COMBINED
+3070175	Co Pilot (P2)-Beechcraft B350/B360	1	COMBINED
+3070185	Senior Resident/Consultant	1	COMBINED
+3070236	Security Guard/ Night Guard	2	COMBINED
+3070261	Junior Assistant/Junior Assistant cum Caretaker	40	COMBINED
+3070292	Computer Operator & Programming Assistant	2	COMBINED
+3070300	Classical Dance – Bharatanatyam/ Kathak/ Kathakali/ Kuchipudi/ Manipuri/ Mohiniyattam/ Odissi/ Sattriya	1	COMBINED
+3070326	Lab Assistant/Lab Instructor-Electronics and Communication Engineering	1	COMBINED
+3070376	Multimedia & Animation Special Effects	10	COMBINED
+3070376	Manufacturing Process Control & Automation	10	COMBINED
+3070426	Retail Construction Engineer / Retail Engineer	10	COMBINED
+3070443	Soft Skills Trainer & Placement Officer	1	COMBINED
+3070524	Chairperson / Member (Pondicherry)	5	COMBINED
+3070524	Chairperson / Member (Karaikal)	5	COMBINED
+3070524	Chairperson / Member (Mahe)	5	COMBINED
+3070524	Chairperson / Member (Yanam)	5	COMBINED
+3070565	Professor cum Director, Centre for Distance and Online Education	1	COMBINED
+3070608	Journalism & Mass Communications	1	COMBINED
+3070608	Library & Information Science	2	COMBINED
+3070641	Training and Placement Officer (On Contract)	1	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Anaesthesiology)	1	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Anatomy)	3	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Biochemistry)	3	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Medicine)	3	COMBINED
+3070658	Senior Resident / Senior Demonstrator (General Surgery)	3	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Obstetrics & Gynecology)	3	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Orthopaedics)	2	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Pediatrics)	1	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Physiology)	3	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Psychiatry)	1	COMBINED
+3070658	Senior Resident / Senior Demonstrator (Radio-Diagnosis)	1	COMBINED
+3070665	Junior Research Fellow/Project Associate-1	1	COMBINED
+3070667	Senior Research Fellow – Sanskrit / Language Processing	2	COMBINED
+3070667	Senior Research Fellow – Ayurveda / Sanskrit	2	COMBINED
+3070669	Officer – Procurement and Stores	2	COMBINED
+3070669	Officer – Administration/General Administration/Services	1	COMBINED
+3070689	Peon/Watchman	55	COMBINED
+3070713	Safety / Security / Pollution Professionals	4	COMBINED
+3070713	Tendering / Technical Monitoring Professionals	3	COMBINED
+3070713	Data Analytics / MIS / Billing Support Professional	3	COMBINED
+3070811	State Project Manager – Monitoring & Evaluation	1	COMBINED
+3070811	State Project Manager - Communication & Documentation	1	COMBINED
+3070813	Project Executive/Senior Project Executive - Accounts	1	COMBINED
+3066997	Department of Sanskrit	1	DEPARTMENT_LINE
+3066997	Department of Mool Shastra	1	DEPARTMENT_LINE
+3066997	Department of Mool Shastra	1	DEPARTMENT_LINE
+3066997	Department of Sowa-Rigpa	1	DEPARTMENT_LINE
+3066997	Department of Bhot Jyotish	1	DEPARTMENT_LINE
+3066997	Department of Rare Buddhist Text Research	1	DEPARTMENT_LINE
+3066997	Department of Dictionary	1	DEPARTMENT_LINE
+3066997	Department of Mool Shastra	1	DEPARTMENT_LINE
+3066997	Department of Bhot Jyotish	1	DEPARTMENT_LINE
+3066997	Department of Sampradaya Shastra	1	DEPARTMENT_LINE
+3066997	Department of Dictionary	1	DEPARTMENT_LINE
+3066997	Department of Translation	1	DEPARTMENT_LINE
+3066997	Centre for Teacher Education	1	DEPARTMENT_LINE
+3066997	Department of Sowa-Rigpa	1	DEPARTMENT_LINE
+3066997	Department of Sanskrit	1	DEPARTMENT_LINE
+3066997	Department of Mool Shastra	1	DEPARTMENT_LINE
+3066997	Department of Sampradaya Shastra	3	DEPARTMENT_LINE
+3066997	Department of Sampradaya Shastra	2	DEPARTMENT_LINE
+3066997	Department of Sampradaya Shastra	2	DEPARTMENT_LINE
+3066997	Department of Sampradaya Shastra	3	DEPARTMENT_LINE
+3066997	Department of Classical & Modern Languages	1	DEPARTMENT_LINE
+3066997	Department of Classical & Modern Languages	1	DEPARTMENT_LINE
+3066997	Department of Classical & Modern Languages	1	DEPARTMENT_LINE
+3066997	Department of Classical & Modern Languages	1	DEPARTMENT_LINE
+3066997	Department of Bon Shastra	2	DEPARTMENT_LINE
+3066997	Department of Social Sciences	2	DEPARTMENT_LINE
+3066997	Department of Social Sciences	1	DEPARTMENT_LINE
+3066997	Department of Social Sciences	1	DEPARTMENT_LINE
+3066997	Department of Tibetan Language & Literature	1	DEPARTMENT_LINE
+3066997	Department of Rare Buddhist Text Research	2	DEPARTMENT_LINE
+3066997	Department of Translation	2	DEPARTMENT_LINE
+3066997	Department of Restoration	1	DEPARTMENT_LINE
+3066997	Centre for Teacher Education	1	DEPARTMENT_LINE
+3066997	Centre for Teacher Education	1	DEPARTMENT_LINE
+3066997	Centre for Teacher Education	1	DEPARTMENT_LINE
+3066997	Centre for Teacher Education	1	DEPARTMENT_LINE
+3066997	Department of Sowa-Rigpa	9	DEPARTMENT_LINE
+3064548	No of Posts	8	GENERIC
+3064687	No of Posts	9	GENERIC
+3066318	No of Posts	10	GENERIC
+3066332	No of Posts	17	GENERIC
+3067361	No of Posts	17	GENERIC
+3068001	No of Posts	12	GENERIC
+3068677	No of Posts	15	GENERIC
+3068721	No of Posts	9	GENERIC
+3068994	No of Posts	8	GENERIC
+3069044	No of Posts	3	GENERIC
+3069337	No of Posts	6	GENERIC
+3069565	No of Posts	60	GENERIC
+3069811	No of Posts	36	GENERIC
+3070302	No of Posts	3	GENERIC
+3070455	No of Posts	27	GENERIC
+3070522	No of Posts	6	GENERIC
+3070775	No of Posts	31	GENERIC
+3070795	No of Posts	23	GENERIC
+3067360	1	7	LEN
+3067360	2	5	LEN
+3067360	3	5	LEN
+3067360	4	2	LEN
+3067360	5	1	LEN
+3067360	6	9	LEN
+3067360	7	14	LEN
+3067360	8	8	LEN
+3068119	01	125	LEN
+3068119	02	10	LEN
+3068119	03	100	LEN
+3068119	04	370	LEN
+3068119	05	25	LEN
+3068119	06	25	LEN
+3070765	01	2	LEN
+3070765	02	2	LEN
+3070765	03	1	LEN
+3070765	04	2	LEN
+3070765	05	1	LEN
+3070765	06	1	LEN
+3070765	07	1	LEN
+3070765	08	1	LEN
+3070765	09	2	LEN
+3070765	10	2	LEN
+3070765	11	1	LEN
+3070765	12	2	LEN
+3070765	13	4	LEN
+3070765	14	1	LEN
+3070765	15	3	LEN
+3070765	16	1	LEN
+3070765	17	1	LEN
+3070765	18	1	LEN
+3070765	19	4	LEN
+3070765	20	2	LEN
+3070765	21	5	LEN
+3070765	22	5	LEN
+3070765	23	2	LEN
+3070765	24	4	LEN
+3070765	25	4	LEN
+3070765	26	2	LEN
+3070765	27	2	LEN
+3070765	28	4	LEN
+3070765	29	4	LEN
+3070765	30	2	LEN
+3070765	31	1	LEN
+3070765	32	14	LEN
+3070765	33	10	LEN
+3070765	34	1	LEN
+3070765	35	1	LEN
+3070765	36	1	LEN
+3070765	37	1	LEN
+3070765	38	2	LEN
+3070765	39	2	LEN
+3070765	40	18	LEN
+3070765	41	10	LEN
+3070765	42	3	LEN
+3070765	43	1	LEN
+3070765	44	1	LEN
+3070765	45	2	LEN
+3070765	46	6	LEN
+3070765	47	2	LEN
+3070765	48	1	LEN
+3070765	49	1	LEN
+3070765	50	1	LEN
+3070765	51	2	LEN
+3070765	52	1	LEN
+3070765	53	1	LEN
+3070765	54	1	LEN
+3070765	55	1	LEN
+3070765	56	1	LEN
+3070765	57	2	LEN
+3070765	58	1	LEN
+3070765	59	1	LEN
+3062617	General Surgery	1	NO_ROLE_NOUN
+3062617	Histopathology	1	NO_ROLE_NOUN
+3062617	Internal Medicine	2	NO_ROLE_NOUN
+3062617	Medical Microbiology	1	NO_ROLE_NOUN
+3062617	Radio-diagnosis	1	NO_ROLE_NOUN
+3062617	Radiotherapy	1	NO_ROLE_NOUN
+3063451	Bangla	25	NO_ROLE_NOUN
+3066174	VP Wealth	91	NO_ROLE_NOUN
+3066771	Pilot	1	NO_ROLE_NOUN
+3066997	Shilpa Vidya	1	NO_ROLE_NOUN
+3066997	Shilpa Vidya	2	NO_ROLE_NOUN
+3067561	Microbiologist (Food Laboratory)	3	NO_ROLE_NOUN
+3067561	Microbiologist (Drug Laboratory)	2	NO_ROLE_NOUN
+3067666	English Reporters	300	NO_ROLE_NOUN
+3067668	Forensic Engineering	450	NO_ROLE_NOUN
+3067768	Mechanical Engineering	5	NO_ROLE_NOUN
+3067952	Industrial Safety	3	NO_ROLE_NOUN
+3067952	Electrical	8	NO_ROLE_NOUN
+3067952	Mechanical	6	NO_ROLE_NOUN
+3067952	Civil	4	NO_ROLE_NOUN
+3067952	M&HS (Medical & Health Services)	4	NO_ROLE_NOUN
+3067952	Environment Management	2	NO_ROLE_NOUN
+3067952	Mineral Processing	3	NO_ROLE_NOUN
+3067952	Finance	3	NO_ROLE_NOUN
+3067952	Human Resources	1	NO_ROLE_NOUN
+3067952	Survey	3	NO_ROLE_NOUN
+3067994	Mechanical Engineering	1	NO_ROLE_NOUN
+3067994	Electrical Engineering	2	NO_ROLE_NOUN
+3068040	Station Master	9	NO_ROLE_NOUN
+3068127	Group B Total	31	NO_ROLE_NOUN
+3068172	Teaching Post	1	NO_ROLE_NOUN
+3068215	Pilot	8	NO_ROLE_NOUN
+3068506	Civil Engineering	2	NO_ROLE_NOUN
+3068506	Electrical Engineering	1	NO_ROLE_NOUN
+3068506	Electronics Engineering	1	NO_ROLE_NOUN
+3068506	Mechanical Engineering	1	NO_ROLE_NOUN
+3068546	Dermatology (Skin)	2	NO_ROLE_NOUN
+3068880	Lab Tech	1	NO_ROLE_NOUN
+3068880	Dental Hygienist	2	NO_ROLE_NOUN
+3068899	Masseurs Male	1	NO_ROLE_NOUN
+3068899	Masseurs Female	1	NO_ROLE_NOUN
+3068903	Quarter Master (Contractual)	1	NO_ROLE_NOUN
+3068978	Athletics - Men	2	NO_ROLE_NOUN
+3068978	Athletics - Women	2	NO_ROLE_NOUN
+3068978	Boxing - Men	1	NO_ROLE_NOUN
+3069109	Lascar	1	NO_ROLE_NOUN
+3069139	Paediatrician	2	NO_ROLE_NOUN
+3069143	Gynecologist	1	NO_ROLE_NOUN
+3069143	Dental Hygienist	1	NO_ROLE_NOUN
+3069187	PhD Fellowship (CSE/IT/ECE)	1	NO_ROLE_NOUN
+3069242	Mechanical	4	NO_ROLE_NOUN
+3069242	Computer Science	5	NO_ROLE_NOUN
+3069242	Chemical	2	NO_ROLE_NOUN
+3069294	Dentistry (Orthodontics & Dentofacial Orthopedics)	1	NO_ROLE_NOUN
+3069294	Dentistry (Oral & Maxillofacial Surgery)	1	NO_ROLE_NOUN
+3069294	General Medicine	3	NO_ROLE_NOUN
+3069294	General Surgery	4	NO_ROLE_NOUN
+3069294	Hospital Administration	1	NO_ROLE_NOUN
+3069460	Para-Legal Volunteers (PLVs)	29	NO_ROLE_NOUN
+3069503	Field Artist	1	NO_ROLE_NOUN
+3069555	Graduate Apprentices (General Streams)	50	NO_ROLE_NOUN
+3069556	Paramedics	1	NO_ROLE_NOUN
+3069635	Computer Vigyan (Computer Science)	1	NO_ROLE_NOUN
+3069635	Poornkalik Shikshika (Hindi & Sanskrit)	1	NO_ROLE_NOUN
+3069635	Poornkalik Shikshika (English)	2	NO_ROLE_NOUN
+3069635	Poornkalik Shikshika (Mathematics/PCM)	3	NO_ROLE_NOUN
+3069635	Poornkalik Shikshika (Social Science)	2	NO_ROLE_NOUN
+3069635	Poornkalik Shikshika (Science/ZBC)	1	NO_ROLE_NOUN
+3069635	Anshkalik Shikshika (Art, Craft & Music)	4	NO_ROLE_NOUN
+3069635	Anshkalik Shikshika (Computer)	4	NO_ROLE_NOUN
+3069635	Anshkalik Shikshika (Sports & Physical Education)	3	NO_ROLE_NOUN
+3069635	Caretaker	1	NO_ROLE_NOUN
+3069695	Sanginis (Anganwadi Workers)	3	NO_ROLE_NOUN
+3069717	District Resource Person	2	NO_ROLE_NOUN
+3069748	Mali	2	NO_ROLE_NOUN
+3069794	Dresser (Med) (T&S Grade-E)	31	NO_ROLE_NOUN
+3069850	PAT-I	5	NO_ROLE_NOUN
+3069850	PAT-II	5	NO_ROLE_NOUN
+3069858	System Admin	2	NO_ROLE_NOUN
+3069858	Graphic Designer	1	NO_ROLE_NOUN
+3069877	Research Intern	2	NO_ROLE_NOUN
+3070064	Part-Time Correspondent (PTC) - Vadodara	1	NO_ROLE_NOUN
+3070064	Part-Time Correspondent (PTC) - Narmada	1	NO_ROLE_NOUN
+3070064	Part-Time Correspondent (PTC) - Dahod	1	NO_ROLE_NOUN
+3070064	Part-Time Correspondent (PTC) - Navsari	1	NO_ROLE_NOUN
+3070064	Part-Time Correspondent (PTC) - Patan	1	NO_ROLE_NOUN
+3070064	Part-Time Correspondent (PTC) - Banaskantha	1	NO_ROLE_NOUN
+3070096	Aquatic	4	NO_ROLE_NOUN
+3070096	Equestrian	1	NO_ROLE_NOUN
+3070096	Ice Hockey	6	NO_ROLE_NOUN
+3070096	Kho-Kho	3	NO_ROLE_NOUN
+3070096	Pencak Silat	4	NO_ROLE_NOUN
+3070096	Powerlifting	1	NO_ROLE_NOUN
+3070096	Central SKI (Alpine/Nordic)	8	NO_ROLE_NOUN
+3070096	Table Tennis	2	NO_ROLE_NOUN
+3070096	MTB Cycling	2	NO_ROLE_NOUN
+3070096	Karate	4	NO_ROLE_NOUN
+3070124	Statistician	1	NO_ROLE_NOUN
+3070129	Senior Adviser (Operations)	5	NO_ROLE_NOUN
+3070140	Marketing Lead	1	NO_ROLE_NOUN
+3070146	CTVS	6	NO_ROLE_NOUN
+3070146	Endocrinology	1	NO_ROLE_NOUN
+3070146	General Medicine	3	NO_ROLE_NOUN
+3070146	General Surgery	18	NO_ROLE_NOUN
+3070146	Gastroenterology	1	NO_ROLE_NOUN
+3070146	Hospital Administration	1	NO_ROLE_NOUN
+3070146	Neuro Surgery	3	NO_ROLE_NOUN
+3070146	Radio Diagnosis	3	NO_ROLE_NOUN
+3070261	Sports Coach (Female)	1	NO_ROLE_NOUN
+3070300	Drama – (Acting/ Direction)	1	NO_ROLE_NOUN
+3070331	Deputy Vice President (Analytical Marketing & Campaign)	1	NO_ROLE_NOUN
+3070331	Deputy Vice President (Digital Marketing)	2	NO_ROLE_NOUN
+3070368	OBG	13	NO_ROLE_NOUN
+3070368	Pulmonology	2	NO_ROLE_NOUN
+3070376	Machinist	10	NO_ROLE_NOUN
+3070376	Turner	10	NO_ROLE_NOUN
+3070376	ICTSM	10	NO_ROLE_NOUN
+3070376	AOCP	10	NO_ROLE_NOUN
+3070451	Foreman (Electrical)	1	NO_ROLE_NOUN
+3070513	Lekhapal (Male)	4	NO_ROLE_NOUN
+3070536	Sports Coach (Basketball)- Male	1	NO_ROLE_NOUN
+3070536	Sports Coach (Squash)	1	NO_ROLE_NOUN
+3070554	District Judge (Entry Level)	10	NO_ROLE_NOUN
+3070556	Medical Oncology	1	NO_ROLE_NOUN
+3070589	Plastic Surgery (M.D.S- Orthodontics)	1	NO_ROLE_NOUN
+3070608	Environmental Science	1	NO_ROLE_NOUN
+3070608	Computer Science	3	NO_ROLE_NOUN
+3070608	Social Work	1	NO_ROLE_NOUN
+3070608	Public Administration	1	NO_ROLE_NOUN
+3070611	District Judge	30	NO_ROLE_NOUN
+3070643	Visvesvaraya Post Doctoral Fellowship	1	NO_ROLE_NOUN
+3070686	Lift Operators	6	NO_ROLE_NOUN
+3070781	Reader - F	10	NO_ROLE_NOUN
+3070795	Advt No	561	NO_ROLE_NOUN
+3070800	Post Doctoral Fellowship	1	NO_ROLE_NOUN
+3070827	Headmaster, Primary School	27	NO_ROLE_NOUN
+3070827	Headmaster, Upper Primary School	24	NO_ROLE_NOUN
+3070836	Classical Dance	1	NO_ROLE_NOUN
+3070836	Mridangam	1	NO_ROLE_NOUN
+3070842	Treatment Organizer	25	NO_ROLE_NOUN
+3070846	General Knowledge	50	NO_ROLE_NOUN
+3070846	English Composition	20	NO_ROLE_NOUN
+3070846	Subjective	30	NO_ROLE_NOUN
+3070848	Table Tennis	1	NO_ROLE_NOUN
+3070848	Kho-Kho	1	NO_ROLE_NOUN
+3070848	Karate	1	NO_ROLE_NOUN
+3070848	Gym	1	NO_ROLE_NOUN
+3070096	Athletics	5	SPORT_DISCIPLINE
+3070096	Archery	5	SPORT_DISCIPLINE
+3070096	Badminton	6	SPORT_DISCIPLINE
+3070096	Basketball	3	SPORT_DISCIPLINE
+3070096	Boxing	9	SPORT_DISCIPLINE
+3070096	Football	2	SPORT_DISCIPLINE
+3070096	Gymnastics	6	SPORT_DISCIPLINE
+3070096	Handball	3	SPORT_DISCIPLINE
+3070096	Hockey	3	SPORT_DISCIPLINE
+3070096	Judo	12	SPORT_DISCIPLINE
+3070096	Sports Shooting	8	SPORT_DISCIPLINE
+3070096	Taekwondo	7	SPORT_DISCIPLINE
+3070096	Volleyball	6	SPORT_DISCIPLINE
+3070096	Weightlifting	4	SPORT_DISCIPLINE
+3070096	Wrestling	5	SPORT_DISCIPLINE
+3070096	Canoeing	3	SPORT_DISCIPLINE
+3070096	Kayaking	3	SPORT_DISCIPLINE
+3070096	Rowing	1	SPORT_DISCIPLINE
+3070848	Badminton	1	SPORT_DISCIPLINE
+3070848	Volleyball	1	SPORT_DISCIPLINE
+3070848	Kabaddi	1	SPORT_DISCIPLINE
+3070848	Judo	1	SPORT_DISCIPLINE

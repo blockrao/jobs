@@ -1,0 +1,51 @@
+external_id	line	count	first_prototype_verdict	final_verdict	label_genuine_post(by assistant)
+3069104	Intensivist	1	OK	OK	Y
+3067309	Electric Lineman (PE)	2	OK	OK	Y
+3069390	Block Coordinator	7	OK	OK	Y
+3069708	Assistant Professor - Music (Tabla)	1	OK	OK	Y
+3069503	Clerk (Legal)	11	OK	OK	Y
+3069748	Peon	8	OK	OK	Y
+3069030	Junior Accounting Assistant	1	OK	OK	Y
+3068703	Railway Advocate (Mangaon)	2	OK	OK	Y
+3069650	TGT Mathematics	4	OK	OK	Y
+3069189	Office Assistant	1	OK	OK	Y
+3069209	Dental Surgeon (MHS Grade-IV)	9	OK	OK	Y
+3069885	Assistant cum Bench Clerk	1	OK	OK	Y
+3067133	Consultant (Store)	1	OK	OK	Y
+3070428	Deputy Project Manager (DOSA Hall Offices)	3	OK	OK	Y
+3069303	Assistant Professor (Sociology) - Tuljapur Campus	1	OK	OK	Y
+3070010	Project Associate-I	1	OK	OK	Y
+3066619	Controller of Examinations	1	OK	OK	Y
+3067773	Individual Consultant: Senior Contract Expert	1	OK	OK	Y
+3040278	Assistant Professor (Aerospace Engineering)	40	OK	OK	Y
+3068706	Accounts Clerk cum Typist	200	OK	OK	Y
+3070428	Deputy Project Manager (DOSA Reception Desk)	1	OK	OK	Y
+3069579	Assistant Programmer (Contract) Janpad Panchayat Level	2	OK	OK	Y
+3070259	Case Worker	1	OK	OK	Y
+3069708	Professor - Law	1	OK	OK	Y
+3063995	Professor-cum-Principal	1	OK	OK	Y
+3070480	Assistant Professor (on Contract basis)-Forensic Science	1	OK	OK	Y
+3070827	Lecturer	53	OK	OK	Y
+3068939	Administrative Officer	1	OK	OK	Y
+3069743	Assistant Director (Info-Tech)	2	OK	OK	Y
+3069344	Project Associate-I	1	OK	OK	Y
+3068518	Medical Consultant	3	OK	OK	Y
+3068592	Junior Research Fellow (JRF)	1	OK	OK	Y
+3069677	Dy. Director (Consumer Assistance)	1	OK	OK	Y
+3069650	TGT Social Science	4	OK	OK	Y
+3069134	Scientist D (medical)	1	OK	OK	Y
+3069464	Junior Security Assistant (On Contract)	30	OK	OK	Y
+3068669	Medical Officer	1	OK	OK	Y
+3066997	BRA Research Professor (Tenure Post)	1	OK	OK	Y
+3069731	Senior Research Fellow (SRF)	1	OK	OK	Y
+3069157	Project Associate II (Ecology)	1	OK	OK	Y
+3070226	Computer Programmer	1	OK	OK	Y
+3070096	Equestrian	1	OK	NO_ROLE_NOUN	N
+3069109	Store Keeper Grade II	1	OK	OK	Y
+3069852	Editorial Assistant (Hindi)	1	OK	OK	Y
+3069028	Research Assistant	1	OK	OK	Y
+3069708	Associate Professor - Mechanical Engineering	1	OK	OK	Y
+3069752	Project Technical Support II	1	OK	OK	Y
+3070376	Electrician	10	OK	OK	Y
+3068256	Part Time Teacher (Sanskrit)	1	OK	OK	Y
+3068603	Assistant (Library)	1	OK	OK	Y
