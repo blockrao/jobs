@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { listPostings } from "@/lib/queries";
+import { JOBS_PAGE_SIZE, pageHref, parsePage } from "@/lib/pagination";
 import {
   STAGE_LABELS,
   STAGE_LABELS_HI,
@@ -27,13 +28,14 @@ type Props = {
   searchParams: Promise<{
     kind?: string;
     q?: string;
+    page?: string;
   }>;
 };
 
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  const { kind, q } = await searchParams;
+  const { kind, q, page } = await searchParams;
   let label = "All Jobs";
   if (kind === "GOVERNMENT") label = "Government Jobs";
   else if (kind === "PRIVATE") label = "Private Jobs";
@@ -46,12 +48,14 @@ export async function generateMetadata({
     // cross-link.
     // Filter and search views are noindex and canonical to the unfiltered
     // listing (SEO-001 section 4).
-    ...listingSeo("/jobs", { kind, q }),
+    // A paginated view (page 2 and later) is treated as filtered: noindex, canonical to /jobs.
+    ...listingSeo("/jobs", { kind, q, page: parsePage(page) > 1 ? page : undefined }),
   };
 }
 
 export default async function JobsListPage({ searchParams }: Props) {
-  const { kind, q } = await searchParams;
+  const { kind, q, page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
   const validKind =
     kind === "GOVERNMENT" || kind === "PRIVATE" ? kind : undefined;
   let results: Awaited<ReturnType<typeof listPostings>> = [];
@@ -59,11 +63,16 @@ export default async function JobsListPage({ searchParams }: Props) {
     results = await listPostings({
       kind: validKind,
       search: q,
-      limit: 50,
+      // One extra row tells us whether a next page exists.
+      limit: JOBS_PAGE_SIZE + 1,
+      offset: (page - 1) * JOBS_PAGE_SIZE,
     });
   } catch {
     results = [];
   }
+
+  const hasNext = results.length > JOBS_PAGE_SIZE;
+  if (hasNext) results = results.slice(0, JOBS_PAGE_SIZE);
 
   const cookieStore = await cookies();
   const isHi = cookieStore.get("NEXT_LOCALE")?.value === "hi";
@@ -199,6 +208,25 @@ export default async function JobsListPage({ searchParams }: Props) {
             </li>
           )}
         </ul>
+        {(page > 1 || hasNext) && (
+          <nav aria-label="Pagination" className="mt-6 flex items-center justify-between text-sm">
+            {page > 1 ? (
+              <Link rel="prev" href={pageHref("/jobs", { kind: validKind, q }, page - 1)} className="hover:underline">
+                {isHi ? "← पिछला" : "← Previous"}
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span className="text-neutral-500">{isHi ? `पृष्ठ ${page}` : `Page ${page}`}</span>
+            {hasNext ? (
+              <Link rel="next" href={pageHref("/jobs", { kind: validKind, q }, page + 1)} className="hover:underline">
+                {isHi ? "अगला →" : "Next →"}
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+        )}
       </div>
     </div>
   );

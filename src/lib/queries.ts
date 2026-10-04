@@ -80,10 +80,12 @@ export async function listPostings(opts?: {
   categorySlug?: string;
   search?: string;
   limit?: number;
+  offset?: number;
 }) {
   if (!hasDb()) return [];
   const db = getDb();
   const limit = opts?.limit ?? 30;
+  const offset = Math.max(0, opts?.offset ?? 0);
 
   // `is_expired` is maintained by refresh_recruitment_lifecycle(). Search already honours it; the
   // listing must too, or an expired opening stays on /jobs and the home page after its last date.
@@ -114,10 +116,21 @@ export async function listPostings(opts?: {
   return db.query.postings.findMany({
     where: conditions.length > 0 ? and(...conditions) : undefined,
     with: { organization: true },
-    orderBy: [desc(postings.datePosted)],
+    orderBy: [desc(postings.datePosted), desc(postings.id)],
     limit,
+    offset,
   });
 }
+
+/** True when a last date exists and its UTC day has passed (same rule as `notPastLastDate`). */
+export function isPastLastDate(validThrough: Date | string | null | undefined, now: Date = new Date()): boolean {
+  if (!validThrough) return false;
+  const startOfTodayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return new Date(validThrough).getTime() < startOfTodayUtc;
+}
+
+/** Entity pages (organization, category, exam, commission) list current postings only (A-067 principle). */
+const currentOnly = [sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
 
 export async function getOrganizationBySlug(slug: string) {
   if (!hasDb()) return null;
@@ -129,7 +142,8 @@ export async function getOrganizationBySlug(slug: string) {
   const orgPostings = await db.query.postings.findMany({
     where: and(
       eq(postings.organizationId, org.id),
-      eq(postings.reviewStatus, "APPROVED")
+      eq(postings.reviewStatus, "APPROVED"),
+      ...currentOnly,
     ),
     orderBy: [desc(postings.datePosted)],
   });
@@ -157,7 +171,7 @@ export async function getCategoryBySlug(slug: string) {
     category,
     postings: postingLinks
       .map((l) => l.posting)
-      .filter((p) => p.reviewStatus === "APPROVED"),
+      .filter((p) => p.reviewStatus === "APPROVED" && p.isExpired !== true && !isPastLastDate(p.validThrough)),
     articles: articleLinks
       .map((l) => l.article)
       .filter((a) => a.status === "PUBLISHED"),
@@ -316,7 +330,8 @@ export async function getPostingsByExam(examSlug: string) {
   return db.query.postings.findMany({
     where: and(
       eq(postings.examId, exam.id),
-      eq(postings.reviewStatus, "APPROVED")
+      eq(postings.reviewStatus, "APPROVED"),
+      ...currentOnly,
     ),
     with: { organization: true },
     orderBy: [desc(postings.datePosted)],
@@ -341,7 +356,8 @@ export async function getPostingsByCommission(commissionSlug: string) {
   return db.query.postings.findMany({
     where: and(
       inArray(postings.examId, examIds),
-      eq(postings.reviewStatus, "APPROVED")
+      eq(postings.reviewStatus, "APPROVED"),
+      ...currentOnly,
     ),
     with: { organization: true, exam: { with: { commission: true } } },
     orderBy: [desc(postings.datePosted)],

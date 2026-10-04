@@ -28,6 +28,56 @@ export interface RecruitmentIdentity {
   officialNotificationNumber: string | null;
   /** Used only for the fallback match path and as the name for a new row. */
   title: string;
+  /** Dates the source stated for the recruitment (never invented). */
+  applicationStartDate?: Date | null;
+  applicationEndDate?: Date | null;
+}
+
+/**
+ * The advertisement / notification number as an identity key. Strips a leading label
+ * ("Advt. No.", "Notification No:"), collapses whitespace, and rejects values that
+ * carry no identifying digit or are too short to be a real reference (returns null,
+ * which means "no strong key", never a guess).
+ */
+export function normalizeAdvertisementNumber(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let v = raw
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^(advertisement|advt|notification|notice|ref)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
+    .trim();
+  if (v.length < 3 || v.length > 200) return null;
+  if (!/\d/.test(v)) return null;
+  return v;
+}
+
+/**
+ * Fill or extend recruitment dates from a later sighting. A start date is only filled when empty;
+ * an end date is only moved later (an extension), never earlier. Nothing else on the row changes.
+ */
+export async function refreshRecruitmentDates(
+  db: Db,
+  recruitmentId: number,
+  dates: { applicationStartDate?: Date | null; applicationEndDate?: Date | null },
+): Promise<{ filledStart: boolean; extendedEnd: boolean }> {
+  const row = await db.query.recruitments.findFirst({ where: eq(recruitments.id, recruitmentId) });
+  if (!row) return { filledStart: false, extendedEnd: false };
+  const patch: Record<string, unknown> = {};
+  let filledStart = false;
+  let extendedEnd = false;
+  if (dates.applicationStartDate && !row.applicationStartDate) {
+    patch.applicationStartDate = dates.applicationStartDate;
+    filledStart = true;
+  }
+  if (dates.applicationEndDate && (!row.applicationEndDate || dates.applicationEndDate.getTime() > row.applicationEndDate.getTime())) {
+    patch.applicationEndDate = dates.applicationEndDate;
+    extendedEnd = true;
+  }
+  if (filledStart || extendedEnd) {
+    patch.updatedAt = new Date();
+    await db.update(recruitments).set(patch).where(eq(recruitments.id, recruitmentId));
+  }
+  return { filledStart, extendedEnd };
 }
 
 export interface ResolvedRecruitment {
@@ -142,6 +192,8 @@ export async function resolveRecruitment(
       name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
       slug,
       officialNotificationNumber: identity.officialNotificationNumber,
+      applicationStartDate: identity.applicationStartDate ?? null,
+      applicationEndDate: identity.applicationEndDate ?? null,
     })
     .onConflictDoNothing({ target: recruitments.slug })
     .returning({ id: recruitments.id });

@@ -15,6 +15,10 @@ import { getDbV2 } from "@/db";
 import { detectLanguage, normalizeHinglishPhonetics } from "@/lib/query-engine/language-detector";
 import { extractFilters } from "@/lib/query-engine/filter-extractor";
 
+/** Same rule as the listing guard in queries.ts (A-067): the last date itself still counts (UTC day); an unknown date is not excluded. */
+const SEARCH_NOT_PAST_LAST_DATE =
+  "(p.valid_through IS NULL OR p.valid_through >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')";
+
 export interface SearchFilters {
   query?: string;
   announcementState?: "ANNOUNCED_TODAY" | "ANNOUNCED_THIS_WEEK" | "ANNOUNCED_THIS_MONTH" | "OLDER";
@@ -116,12 +120,18 @@ async function searchPostingsEnglish(
   const db = getDbV2();
   if (!db) return [];
 
+  // Placeholders are numbered by a counter so any combination of filters lines up
+  // with its parameter (the previous fixed offsets broke when a filter was omitted).
   const params: any[] = [];
-  if (query) params.push(query);
-  if (announcementState) params.push(announcementState);
-  if (closingState) params.push(closingState);
-  if (organizationId) params.push(organizationId);
-  if (locationRegion) params.push(locationRegion);
+  const add = (v: any) => {
+    params.push(v);
+    return `$${params.length}`;
+  };
+  const queryPh = query ? add(query) : null;
+  const announcementPh = announcementState ? add(announcementState) : null;
+  const closingPh = closingState ? add(closingState) : null;
+  const organizationPh = organizationId ? add(organizationId) : null;
+  const locationPh = locationRegion ? add(locationRegion) : null;
 
   const sqlQuery = `
     SELECT
@@ -159,15 +169,16 @@ async function searchPostingsEnglish(
     WHERE p.review_status = 'APPROVED'
       AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
       AND p.is_expired = FALSE
-      ${query ? `AND p.search_text @@ plainto_tsquery('english', $1)` : ""}
-      ${announcementState ? `AND p.announcement_state = $${query ? 2 : 1}` : ""}
-      ${closingState ? `AND p.closing_state = $${query ? 3 : announcementState ? 2 : 1}` : ""}
-      ${organizationId ? `AND p.organization_id = $${query ? 4 : announcementState ? 3 : closingState ? 2 : 1}` : ""}
-      ${locationRegion ? `AND p.location_region = $${query ? 5 : announcementState ? 4 : closingState ? 3 : organizationId ? 2 : 1}` : ""}
+      AND ${SEARCH_NOT_PAST_LAST_DATE}
+      ${queryPh ? `AND p.search_text @@ plainto_tsquery('english', ${queryPh})` : ""}
+      ${announcementPh ? `AND p.announcement_state = ${announcementPh}` : ""}
+      ${closingPh ? `AND p.closing_state = ${closingPh}` : ""}
+      ${organizationPh ? `AND p.organization_id = ${organizationPh}` : ""}
+      ${locationPh ? `AND p.location_region = ${locationPh}` : ""}
     ORDER BY
       ${
         sortBy === "relevance" && query
-          ? "ts_rank(p.search_text, plainto_tsquery('english', $1)) DESC"
+          ? `ts_rank(p.search_text, plainto_tsquery('english', ${queryPh ?? "''"})) DESC`
           : sortBy === "closing_soonest"
             ? "p.days_to_closing ASC NULLS LAST"
             : sortBy === "most_urgent"
@@ -178,7 +189,7 @@ async function searchPostingsEnglish(
   `;
 
   try {
-    const results = await (db.$client as any)(sqlQuery, params);
+    const results = await (db.$client as any).unsafe(sqlQuery, params);
     return results as SearchResult[];
   } catch (error) {
     console.error("Search query error:", error);
@@ -219,6 +230,7 @@ async function searchPostingsHindi(
     "p.review_status = 'APPROVED'",
     "p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')",
     "p.is_expired = FALSE",
+    SEARCH_NOT_PAST_LAST_DATE,
   ];
 
   const params: any[] = [];
@@ -322,7 +334,7 @@ async function searchPostingsHindi(
   `;
 
   try {
-    const results = await (db.$client as any)(sqlQuery, params);
+    const results = await (db.$client as any).unsafe(sqlQuery, params);
     return results as SearchResult[];
   } catch (error) {
     console.error("Hindi search query error:", error);
@@ -339,7 +351,7 @@ export async function getUrgentOpportunities(limit = 50): Promise<SearchResult[]
   if (!db) return [];
 
   try {
-    const results = await (db.$client as any)(
+    const results = await (db.$client as any).unsafe(
       `SELECT * FROM urgent_opportunities LIMIT $1`,
       [limit]
     );
@@ -359,7 +371,7 @@ export async function getClosingThisWeek(limit = 50): Promise<SearchResult[]> {
   if (!db) return [];
 
   try {
-    const results = await (db.$client as any)(
+    const results = await (db.$client as any).unsafe(
       `SELECT * FROM closing_this_week LIMIT $1`,
       [limit]
     );
@@ -379,7 +391,7 @@ export async function getNewlyAnnounced(limit = 50): Promise<SearchResult[]> {
   if (!db) return [];
 
   try {
-    const results = await (db.$client as any)(
+    const results = await (db.$client as any).unsafe(
       `SELECT * FROM newly_announced LIMIT $1`,
       [limit]
     );
@@ -399,7 +411,7 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
   if (!db) return [];
 
   try {
-    const suggestions = await (db.$client as any)(
+    const suggestions = await (db.$client as any).unsafe(
       `
         SELECT DISTINCT suggestion FROM (
           SELECT o.name as suggestion

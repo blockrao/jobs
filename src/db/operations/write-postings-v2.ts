@@ -24,7 +24,7 @@ import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, isNonRecruitmentContent } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
-import { resolveRecruitment, resolvePostLines, truncateForColumn } from "../../ingest/resolve";
+import { resolveRecruitment, resolvePostLines, truncateForColumn, normalizeAdvertisementNumber, refreshRecruitmentDates } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "crypto";
@@ -383,12 +383,21 @@ export async function writePostingsToDB(
             organizationId: org.id,
             examId,
             year: recruitmentYear(norm),
-            officialNotificationNumber: null, // not yet used as an identity key
+            // Strong identity key when the source states a usable advertisement number.
+            officialNotificationNumber: normalizeAdvertisementNumber(norm.advertisementNumber),
             title: norm.title,
+            applicationStartDate: norm.applicationStartDate ?? null,
+            applicationEndDate: norm.validThrough ?? null,
           },
           norm.slug,
         );
       }
+
+      // A later sighting fills a missing start date or extends the end date on the recruitment.
+      await refreshRecruitmentDates(db, recruitment.id, {
+        applicationStartDate: norm.applicationStartDate ?? null,
+        applicationEndDate: norm.validThrough ?? null,
+      });
 
       let postId: number | null = existingPosting?.inferredPostId ?? null;
       // Per-line Posts: only lines that pass the post-line classifier become Posts, and
