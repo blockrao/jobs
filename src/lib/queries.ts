@@ -67,6 +67,14 @@ export async function getPostingBySlug(slug: string) {
   } as any;
 }
 
+/**
+ * A posting whose last date has passed must not be offered, even if the lifecycle
+ * job has not yet set `is_expired` (A-067). The last date itself still counts
+ * (UTC day, the same rule promotion uses); an unknown last date is not excluded.
+ * This guard is independent of the lifecycle cron and of the stored flag.
+ */
+const notPastLastDate = sql`(${postings.validThrough} IS NULL OR ${postings.validThrough} >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`;
+
 export async function listPostings(opts?: {
   kind?: "GOVERNMENT" | "PRIVATE";
   categorySlug?: string;
@@ -79,7 +87,7 @@ export async function listPostings(opts?: {
 
   // `is_expired` is maintained by refresh_recruitment_lifecycle(). Search already honours it; the
   // listing must too, or an expired opening stays on /jobs and the home page after its last date.
-  const conditions: any[] = [eq(postings.reviewStatus, "APPROVED"), sql`${postings.isExpired} IS NOT TRUE`];
+  const conditions: any[] = [eq(postings.reviewStatus, "APPROVED"), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
   if (opts?.kind) conditions.push(eq(postings.kind, opts.kind));
   if (opts?.search) {
     conditions.push(
@@ -212,6 +220,7 @@ export async function getPostingSlugsPageForSitemap(
         eq(postings.reviewStatus, "APPROVED"),
         eq(postings.indexTier, "A"),
         sql`${postings.isExpired} IS NOT TRUE`,
+        notPastLastDate,
       ),
     )
     .orderBy(postings.id)

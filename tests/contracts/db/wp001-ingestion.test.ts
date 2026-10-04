@@ -210,6 +210,50 @@ describe.skipIf(!sql)("WP-001 ingestion readiness (scratch database)", () => {
   });
 });
 
+describe.skipIf(!sql)("A-067 date guard independent of the lifecycle flag (scratch database)", () => {
+  beforeEach(async () => {
+    await sql!.unsafe(`truncate ${TABLES} restart identity cascade`);
+    await seedOrgs();
+  });
+
+  async function three() {
+    await processRaw([raw({ externalId: "D1" }), raw({ externalId: "D2" }), raw({ externalId: "D3" })]);
+    await promotePending(getDb(), { apply: true });
+    await sql!`update public.postings set index_tier = 'A', is_expired = false`;
+  }
+
+  test("WP1-14 a past-date posting is excluded from the listing and the sitemap although is_expired is false", async () => {
+    await three();
+    await sql!`update public.postings set valid_through = now() - interval '3 days' where external_id = 'D1'`;
+    const list = await listPostings({ limit: 50 });
+    expect(list).toHaveLength(2);
+    const [d1] = await sql!`select id from public.postings where external_id = 'D1'`;
+    expect(list.map((p: { id: number }) => p.id)).not.toContain(d1.id);
+    expect(await sitemapPage(0, 100)).toHaveLength(2);
+  });
+
+  test("WP1-15 future-date and unknown-date postings stay; the last date itself still counts", async () => {
+    await three();
+    await sql!`update public.postings set valid_through = null where external_id = 'D1'`;
+    await sql!`update public.postings set valid_through = date_trunc('day', now() at time zone 'UTC') at time zone 'UTC' where external_id = 'D2'`; // last date is today (UTC)
+    await sql!`update public.postings set valid_through = now() + interval '30 days' where external_id = 'D3'`;
+    expect(await listPostings({ limit: 50 })).toHaveLength(3);
+    expect(await sitemapPage(0, 100)).toHaveLength(3);
+    await sql!`update public.postings set valid_through = date_trunc('day', now() at time zone 'UTC') at time zone 'UTC' - interval '1 second' where external_id = 'D2'`; // yesterday 23:59:59 UTC
+    expect(await listPostings({ limit: 50 })).toHaveLength(2);
+    expect(await sitemapPage(0, 100)).toHaveLength(2);
+  });
+
+  test("WP1-16 the guard does not rely on, or modify, the stored flag", async () => {
+    await three();
+    await sql!`update public.postings set valid_through = now() - interval '2 days' where external_id = 'D1'`;
+    await listPostings({ limit: 50 });
+    await sitemapPage(0, 100);
+    const [r] = await sql!`select is_expired from public.postings where external_id = 'D1'`;
+    expect(r.is_expired).toBe(false);
+  });
+});
+
 describe.skipIf(!sql)("SEO-001 sitemap expiry (scratch database)", () => {
   test("WP1-13 an expired Tier A job is excluded from the sitemap; a live Tier A job is included", async () => {
     await sql!.unsafe(`truncate ${TABLES} restart identity cascade`);
@@ -229,6 +273,14 @@ describe("WP-001 static rules", () => {
     const src = stripComments(readSource("src/lib/queries.ts"));
     const fn = src.slice(src.indexOf("getPostingSlugsPageForSitemap"), src.indexOf("getAllArticleSlugsForSitemap"));
     expect(fn).toMatch(/isExpired/);
+    expect(fn).toMatch(/notPastLastDate/); // A-067: date guard independent of the flag
+  });
+
+  test("WP1-S7 the public listing applies the date guard and the lifecycle cron route is unchanged by it", () => {
+    const src = stripComments(readSource("src/lib/queries.ts"));
+    const list = src.slice(src.indexOf("export async function listPostings"), src.indexOf("export async function getOrganizationBySlug"));
+    expect(list).toMatch(/notPastLastDate/);
+    expect(src).toMatch(/validThrough\} >= date_trunc/);
   });
 
   test("WP1-S1 the ingestion path never creates a canonical organization", () => {
