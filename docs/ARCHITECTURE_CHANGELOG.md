@@ -1104,3 +1104,7 @@ Deployed as 6af06ad (GitHub deployment: Production, success). Live check: `/jobs
 ## 2026-10-05: A-070/A-071 post-hoc record of owner-directed production fixes (unpushed)
 
 Applied to production on 2026-10-04 and recorded here afterwards: official-link provenance column, lifecycle v2 function and trigger, clearing of 552 bulk-written verified stamps, deadline normalisation to end of IST day (856 rows), one lifecycle run (17 postings expired). Migration files and rollback scripts committed to match; schema.ts gains `officialLinkSource`. Deviations from A-040, S-01/S-02 and A-064 are listed in A-070/A-071 and await architect acceptance. Two code fixes are proposed only (A-072). Nothing pushed.
+
+## 2026-10-05: A-073 fill-only enrichment of 17 postings (applied, owner-approved)
+
+17 postings (ids 280, 973, 351, 483, 603, 1036, 479, 359, 935, 218, 812, 920, 158, 123, 187, 653, 1014) had empty age, fee, pay, qualification, apply and notification fields filled from Employment News detail pages (govtjobguru extraction, discovery source, not authority). Fill-only (`coalesce`), 0 overwrites verified against `backup_20261005.postings_fill_a`; 4 link conflicts held (351, 479, 653, 920); MPESB 1014 deadline conflict (stored 2026-09-12 vs notification 2026-10-27) left untouched for review; ITBP duplicates 129/146 skipped. Rollback: restore the 11 columns from the backup table by id. Live check on one page (Supreme Court JCA) shows age, fee and qualification. Local commit only, rides with the next code push.
