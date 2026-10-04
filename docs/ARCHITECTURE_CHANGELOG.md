@@ -1100,3 +1100,7 @@ Result: a genuine protection gap on the listing and home page now, and on the si
 
 Deployed as 6af06ad (GitHub deployment: Production, success). Live check: `/jobs` lists 34 postings = database expectation (54 approved, 19 past last date, 1 flagged expired); none of the 19 past-date postings appear. Home page shows 8, all current. Sitemap carries 4 job URLs = the 4 Tier A, not-expired postings (expectation 4). Valid and future-dated postings unaffected. No stored data written by this change (query-only). Lifecycle cron, JobPosting gate and stored data unchanged; cron GET/POST defect stays deferred. A-068 stays open.
 
+
+## 2026-10-05: A-070/A-071 post-hoc record of owner-directed production fixes (unpushed)
+
+Applied to production on 2026-10-04 and recorded here afterwards: official-link provenance column, lifecycle v2 function and trigger, clearing of 552 bulk-written verified stamps, deadline normalisation to end of IST day (856 rows), one lifecycle run (17 postings expired). Migration files and rollback scripts committed to match; schema.ts gains `officialLinkSource`. Deviations from A-040, S-01/S-02 and A-064 are listed in A-070/A-071 and await architect acceptance. Two code fixes are proposed only (A-072). Nothing pushed.

@@ -896,6 +896,9 @@ export const recruitments = pgTable(
     // reliable than matching on year+title. Nullable because not every
     // source captures it, but it's preferred whenever present.
     officialNotificationNumber: varchar("official_notification_number", { length: 200 }),
+    // Provenance of the official notification/apply link on this recruitment:
+    // MANUAL_VERIFIED | AGGREGATOR_DISCOVERED. Null = no link. (A-070)
+    officialLinkSource: varchar("official_link_source", { length: 40 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
