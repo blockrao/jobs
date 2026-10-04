@@ -1051,3 +1051,12 @@ Architect approved G1 (JobPosting needs Tier A, approved, not expired, real hiri
 Architect decision: SEO/Google Jobs architecture frozen. The 0 of 466 JobPosting-eligible result on the real corpus is a data and enrichment finding, not an architecture defect. Reopen only if real production data shows an important job representation the frozen model cannot express.
 Implementation correction (not an architecture change): `getPostingSlugsPageForSitemap` now excludes `is_expired` postings, so an expired Tier A job leaves the sitemap even though the lifecycle job does not recompute the tier. Tests WP1-13 (scratch DB) and WP1-S6 (static). Suite: 132 pass, 28 skipped, 2 known failures (ENT-07, IDX-06).
 Deployment: no separate push. Ships with the WP-001 readiness changes only after the backup gate, restore verification and readiness report pass.
+
+## 2026-10-04 — WP-001 readiness deployed (code and migration)
+
+Owner approved after rotating the production DB credentials and updating the hosting environment.
+1. Migration `wp_001_observation_candidate_boundary` applied to production through the Supabase connector (Supabase assigns its own version number; the repository file is `20261004060000_...`). Verified: `organization_aliases`, `organization_candidates`, `source_observations` exist, row-level security on, indexes 3/2/4, all empty. The five core-table md5 checksums are identical to the pre-change baseline (organizations 125, postings 201, recruitments 183, source_documents 208, sources 10).
+2. Nine local commits pushed together (`755eeff..6a2c4df`). GitHub deployment record for 6a2c4df: state success, environment named "Production" (earlier ones read "Production – asdf"; owner to confirm in the hosting dashboard that 6a2c4df is the current production deployment on `asdf`).
+3. Post-deploy checks (read-only): production counts unchanged (postings 201: 54 APPROVED, 144 PENDING, 3 REJECTED; new tables 0 rows); https://www.joboye.com/jobs loads and lists 50 postings; sitemap fetched. No backfill and no 950-notice ingestion was performed.
+Not verified in production: the new write path (no ingest has run since), JobPosting gate on a live job page, sitemap expiry exclusion on live data.
+Recovery point: the owner's pg_dump (1,396 TOC entries; restore not tested).
