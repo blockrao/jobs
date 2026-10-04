@@ -1073,3 +1073,9 @@ Verification (observed, 2026-10-04 07:55 UTC):
 Open items unchanged: three legacy Posts that the classifier would reject stay as they are (A2); low Recruitment resolution rate accepted as an upstream organization-resolution issue; A-067 lifecycle cron defect recorded and deferred.
 
 POSTVAC-A1 = COMPLETE / PRODUCTION VERIFIED (owner acceptance 2026-10-04). Next: organization alias seed, gated on the GA4/Search Console export; then description enrichment, location enrichment, and re-measurement of JobPosting eligibility with the gate unchanged (eligibility is an outcome of better canonical data, not a target).
+
+## 2026-10-04: A-039 deployed and verified (954743a)
+
+Pushed `447df28..954743a` (A-039 plus three documentation commits). GitHub deployment record: Production deployment for `954743a`, "Deployment has completed" (project `jobing/asdf`).
+
+Live check (observed in the browser pane, www.joboye.com): unauthenticated POST `/api/query/normalize` with `useLLM:true`, with no `useLLM`, and with a wrong bearer all returned 200 with `processing.method = rule_based` and no LLM latency. `/`, `/jobs`, `/sitemap.xml`, `/robots.txt` return 200. A-039 CLOSED. The authorized path was not exercised live (no secret is set in production by design). Recorded for later, not part of A-039: `/api/query/normalize-v2` has an unauthenticated `useLLM` flag that only calls a stub; any future real LLM call there needs the same gate.
