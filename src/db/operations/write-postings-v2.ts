@@ -24,7 +24,7 @@ import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, isNonRecruitmentContent } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
-import { resolveRecruitment, resolvePost, truncateForColumn } from "../../ingest/resolve";
+import { resolveRecruitment, resolvePostLines, truncateForColumn } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "crypto";
@@ -132,6 +132,7 @@ export interface RecordResult {
   orgMatchedOn?: string;
   orgAmbiguous?: boolean;
   candidateReason?: string;
+  postLines?: import("../../ingest/resolve").PostLinesResult;
   candidateId?: number;
   postingId?: number;
   observationId?: number;
@@ -390,14 +391,20 @@ export async function writePostingsToDB(
       }
 
       let postId: number | null = existingPosting?.inferredPostId ?? null;
-      const extractedJobTitle = norm.postNames?.[0]?.trim();
-      if (!postId && extractedJobTitle) {
-        const post = await resolvePost(
+      // Per-line Posts: only lines that pass the post-line classifier become Posts, and
+      // a notice stands for one Post only when its table is exactly one accepted line
+      // (architect unit rule). Existing Posts and an already-set posting link are never changed.
+      const tableLines = norm.postTable ?? (norm.postNames ?? []).slice(0, 1).map((n) => ({ name: n, vacancies: undefined }));
+      if (tableLines.length > 0) {
+        const lineResult = await resolvePostLines(
           db,
-          { recruitmentId: recruitment.id, name: extractedJobTitle, positionCategory: "OTHER" },
-          `${norm.slug}-post`,
+          recruitment.id,
+          norm.slug,
+          tableLines,
+          { countOptional: !norm.postTable },
         );
-        postId = post.id;
+        result.postLines = lineResult;
+        if (!postId && lineResult.singlePostId) postId = lineResult.singlePostId;
       }
       if (recruitment.created || postId) out.resolved++;
 

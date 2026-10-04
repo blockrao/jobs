@@ -16,6 +16,7 @@
 import { eq, and } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
+import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -245,4 +246,108 @@ function titleCasePositionCategory(category: string): string {
     .split("_")
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+// ---------------------------------------------------------------------------
+// Per-line Posts (Post/Vacancy increment, A1). Never updates an existing Post
+// (A2), never invents a Post from a rejected line, and never copies a raw
+// line count into vacancy_total: the value comes from the one accepted line.
+
+export interface PostLineInput {
+  name: string;
+  vacancies?: number | null;
+}
+
+export interface PostLineOutcome {
+  name: string;
+  verdict: PostLineVerdict;
+  action: "created" | "existing" | "rejected" | "unresolved";
+  postId: number | null;
+  detail?: string;
+}
+
+export interface PostLinesResult {
+  lines: PostLineOutcome[];
+  created: number;
+  existing: number;
+  rejected: number;
+  unresolved: number;
+  /** Set only when the table is exactly one accepted line: the single Post this notice stands for. */
+  singlePostId: number | null;
+}
+
+async function getOrCreatePositionId(db: Db, category: PostIdentity["positionCategory"]): Promise<number> {
+  const slug = slugifyPositionCategory(category);
+  const found = await db.query.positions.findFirst({ where: eq(positions.slug, slug) });
+  if (found) return found.id;
+  const [createdPosition] = await db
+    .insert(positions)
+    .values({ name: titleCasePositionCategory(category), slug, category })
+    .returning();
+  return createdPosition.id;
+}
+
+function postLineSlug(recruitmentSlug: string, name: string): string {
+  const stem = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  // "-pl1-" marks Posts written by the post-line classifier, so they can be found and reversed.
+  return `${recruitmentSlug.slice(0, 100)}-${POST_LINE_CLASSIFIER_VERSION}-${stem}`.slice(0, 200);
+}
+
+export async function resolvePostLines(
+  db: Db,
+  recruitmentId: number,
+  recruitmentSlug: string,
+  lines: PostLineInput[],
+  opts: { countOptional?: boolean } = {},
+): Promise<PostLinesResult> {
+  const result: PostLinesResult = { lines: [], created: 0, existing: 0, rejected: 0, unresolved: 0, singlePostId: null };
+  let existing = (await db.query.posts.findMany({ where: eq(posts.recruitmentId, recruitmentId) })).map((p) => ({
+    id: p.id,
+    name: p.name,
+    vacancyTotal: p.vacancyTotal,
+  }));
+  let positionId: number | null = null;
+  for (const line of lines) {
+    const count = typeof line.vacancies === "number" ? line.vacancies : null;
+    // countOptional: adapters that give a name but no per-line count. The count then stays null (never invented).
+    const verdict = classifyPostLine(line.name, count ?? (opts.countOptional ? 1 : null));
+    if (verdict !== "OK") {
+      result.rejected++;
+      result.lines.push({ name: line.name, verdict, action: "rejected", postId: null });
+      continue;
+    }
+    const name = truncateForColumn(line.name.trim(), POST_NAME_MAX_LENGTH);
+    const decision = decidePostIdentity({ name, count }, existing);
+    if (decision.kind === "EXISTING") {
+      result.existing++;
+      result.lines.push({ name, verdict, action: "existing", postId: decision.postId, detail: decision.basis });
+      continue;
+    }
+    if (decision.kind === "UNRESOLVED") {
+      result.unresolved++;
+      result.lines.push({ name, verdict, action: "unresolved", postId: null, detail: decision.reason });
+      continue;
+    }
+    positionId ??= await getOrCreatePositionId(db, "OTHER");
+    const [row] = await db
+      .insert(posts)
+      .values({ recruitmentId, positionId, name, slug: postLineSlug(recruitmentSlug, name), vacancyTotal: count })
+      .onConflictDoNothing()
+      .returning({ id: posts.id });
+    if (!row) {
+      // Lost a race on the unique (recruitment, lower(name)) index: it exists now, never duplicate.
+      result.existing++;
+      result.lines.push({ name, verdict, action: "existing", postId: null, detail: "CONFLICT_EXISTING" });
+      continue;
+    }
+    result.created++;
+    existing = [...existing, { id: row.id, name, vacancyTotal: count }];
+    result.lines.push({ name, verdict, action: "created", postId: row.id });
+  }
+  if (lines.length === 1 && result.lines[0].postId != null) result.singlePostId = result.lines[0].postId;
+  return result;
 }
