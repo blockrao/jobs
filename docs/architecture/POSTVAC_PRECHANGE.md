@@ -23,13 +23,15 @@ Date: 2026-10-04. No code, migration or data was changed for this report.
 4. Sum disagreements exist (CSJMU 3069708: lines sum 33, stated 36). The promotion step already blocks these (POST_COUNT_MISMATCH); the new model must keep that block.
 5. The source has no category (UR/OBC/SC/ST), gender or location split, so `vacancies` rows (category_type is NOT NULL) cannot be filled honestly from this source. Writing a fake category to satisfy the column is rejected.
 
-## Proposal (small, one push, no production data change)
+## Proposal (revision 2; small, one push, no production data change)
 
-A. Post rows: one `posts` row per post line of the latest observation, only when the recruitment is identified. Name is the cleaned line; `vacancy_total` is the line count. Lines that fail the classifier (discipline, category, "various posts", combined names) create no Post and mark the recruitment `post_unit_unresolved`.
+A. Post rows: one `posts` row per source post line of the latest observation, only when the recruitment is identified. Name is the cleaned line; `vacancy_total` is the line count. A line that fails the classifier creates no Post. No schema change: the unresolved state is recorded in the dry-run report and the observation, not in a new column (no migration).
+A1. Classifier (conservative, unresolved by default). A line becomes a Post only if all hold: name is 3 to 200 characters; it is not a bare category or reservation label (UR, OBC, SC, ST, EWS, PwBD, Gen); it is not a known discipline or sport list (the ITBP "Athletics" case); it is not generic ("various posts", "total", "other posts"); it has no "/" or " and " joining two post titles (combined names stay unresolved); the count is a positive integer. Before approval I will attach the rule list as code, the rejected lines from the 751 loaded notices, and a labelled sample of 50 lines with the false-positive count.
+A2. Existing rows: the 12 Post rows created by the current one-per-notice path are left in place and not rewritten. New per-line Posts are written only for recruitments that have no Post yet, or whose existing Post name matches a line. Nothing is replaced or deleted.
 B. Vacancies: not populated from this source. `posts.vacancy_total` carries the line count. Category rows wait for an official notification (DOC-001 territory, not pulled forward).
 C. Postings: unchanged. `postings.post_names` stays as it is; the JobPosting unit rule is unchanged (resolved Post only).
-D. Contract tests: line-to-Post, classifier negatives (ITBP discipline case), combined name, sum mismatch, idempotent re-run, reviewed rows untouched.
-E. Rehearsal on the scratch copy of production state first, with before/after counts.
+D. Contract tests: line-to-Post, classifier negatives (ITBP discipline case), combined name, sum mismatch, idempotent re-run including a renamed source line (no duplicate Post), reviewed rows untouched, 12 existing Posts untouched.
+E. Rehearsal on the scratch copy of production state first, with before/after counts. Nothing is applied to production; production backfill stays out of scope.
 
 ## Out of scope
 
