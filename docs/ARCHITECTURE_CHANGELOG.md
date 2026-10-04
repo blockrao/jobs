@@ -1045,3 +1045,9 @@ Architect direction received: Data → platform readiness → data flow; no prod
 ## 2026-10-04 — SEO-001 freeze: G1/G3 implemented locally
 
 Architect approved G1 (JobPosting needs Tier A, approved, not expired, real hiring organization, no unresolved multi-post) and G3 (complete description; facts-only template ineligible), and the unit rule (one JobPosting per resolved Post; no JobPosting for unresolved multi-post notices). Implemented as `evaluateJobPostingEligibility`; tests SD-09a..j. Corpus dry run: 0 of 466 public pages eligible (enrichment gap, not a gate defect). Local, unpushed; freeze after verification with the data deployment.
+
+## 2026-10-04 — SEO-001 FROZEN; sitemap expiry correction (local, unpushed)
+
+Architect decision: SEO/Google Jobs architecture frozen. The 0 of 466 JobPosting-eligible result on the real corpus is a data and enrichment finding, not an architecture defect. Reopen only if real production data shows an important job representation the frozen model cannot express.
+Implementation correction (not an architecture change): `getPostingSlugsPageForSitemap` now excludes `is_expired` postings, so an expired Tier A job leaves the sitemap even though the lifecycle job does not recompute the tier. Tests WP1-13 (scratch DB) and WP1-S6 (static). Suite: 132 pass, 28 skipped, 2 known failures (ENT-07, IDX-06).
+Deployment: no separate push. Ships with the WP-001 readiness changes only after the backup gate, restore verification and readiness report pass.

@@ -205,7 +205,15 @@ export async function getPostingSlugsPageForSitemap(
     // incomplete, duplicate, or non-job postings stay crawlable on-site but
     // out of the sitemap and noindex'd — see generateMetadata in
     // src/app/jobs/[slug]/page.tsx.
-    .where(and(eq(postings.reviewStatus, "APPROVED"), eq(postings.indexTier, "A")))
+    // An expired posting leaves the sitemap even if its stored tier is still A
+    // (the lifecycle job sets is_expired; it does not recompute the tier).
+    .where(
+      and(
+        eq(postings.reviewStatus, "APPROVED"),
+        eq(postings.indexTier, "A"),
+        sql`${postings.isExpired} IS NOT TRUE`,
+      ),
+    )
     .orderBy(postings.id)
     .offset(offset)
     .limit(limit);

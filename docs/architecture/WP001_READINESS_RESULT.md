@@ -113,7 +113,7 @@ description and location enrichment → re-measure JobPosting eligibility.
 | Organization resolution avoids dirty canonical orgs? | PASS (0 canonical created; 700 candidate names held) |
 | A single-post job can become a JobPosting? | PASS (SD-09i unit test); 0 corpus pages yet, by data |
 | Multi-post notices stay non-JobPosting until Posts exist? | PASS (SD-09g; 153 of 466 public pages in the corpus) |
-| Sitemap and indexing respect eligibility / indexability? | PARTIAL: Tier A gate holds; the sitemap query filters `APPROVED` and Tier A but not `is_expired`, and the tier is not recomputed on expiry. Small fix proposed, not made |
+| Sitemap and indexing respect eligibility / indexability? | PASS after the approved fix: the sitemap query now also excludes `is_expired` (tests WP1-13, WP1-S6) |
 | Share of the new corpus eligible after enrichment | MEASURED 0 of 466 today; re-measure after resolution, Posts/Vacancies, description and location work |
 
 Open point to settle with the deployment: expired Tier A pages can stay in the

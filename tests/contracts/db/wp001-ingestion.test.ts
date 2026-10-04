@@ -24,12 +24,13 @@ let processRaw: typeof import("@/ingest/pipeline").processRaw;
 let listPostings: typeof import("@/lib/queries").listPostings;
 let promotePending: typeof import("@/ingest/promotion").promotePending;
 let getDb: typeof import("@/db").getDb;
+let sitemapPage: typeof import("@/lib/queries").getPostingSlugsPageForSitemap;
 
 beforeAll(async () => {
   if (!url) return;
   process.env.DATABASE_URL = url; // scratch only; checked above
   ({ processRaw } = await import("@/ingest/pipeline"));
-  ({ listPostings } = await import("@/lib/queries"));
+  ({ listPostings, getPostingSlugsPageForSitemap: sitemapPage } = await import("@/lib/queries"));
   ({ promotePending } = await import("@/ingest/promotion"));
   ({ getDb } = await import("@/db"));
 });
@@ -209,7 +210,27 @@ describe.skipIf(!sql)("WP-001 ingestion readiness (scratch database)", () => {
   });
 });
 
+describe.skipIf(!sql)("SEO-001 sitemap expiry (scratch database)", () => {
+  test("WP1-13 an expired Tier A job is excluded from the sitemap; a live Tier A job is included", async () => {
+    await sql!.unsafe(`truncate ${TABLES} restart identity cascade`);
+    await seedOrgs();
+    await processRaw([raw({ externalId: "S1" }), raw({ externalId: "S2" })]);
+    await promotePending(getDb(), { apply: true });
+    await sql!`update public.postings set index_tier = 'A'`;
+    expect(await sitemapPage(0, 100)).toHaveLength(2);
+    await sql!`update public.postings set is_expired = true where external_id = 'S1'`;
+    const rows = await sitemapPage(0, 100);
+    expect(rows).toHaveLength(1);
+  });
+});
+
 describe("WP-001 static rules", () => {
+  test("WP1-S6 the sitemap posting query excludes expired postings", () => {
+    const src = stripComments(readSource("src/lib/queries.ts"));
+    const fn = src.slice(src.indexOf("getPostingSlugsPageForSitemap"), src.indexOf("getAllArticleSlugsForSitemap"));
+    expect(fn).toMatch(/isExpired/);
+  });
+
   test("WP1-S1 the ingestion path never creates a canonical organization", () => {
     const offenders = listFiles("src/ingest")
       .concat(listFiles("src/db/operations").filter((f) => /\/write-/.test(f)))

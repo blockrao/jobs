@@ -82,7 +82,7 @@ A page is in the sitemap exactly when it is indexable, and both follow from one 
 | D3 | Dedicated Hindi listing pages (`/hi/jobs` and so on) | DEFERRED. Cookie-switched listing pages remain English canonical pages |
 | D4 | Unattached lifecycle notices | Not exposed as canonical Recruitments. Existing public job-page treatment remains until the canonical read projection work |
 
-## Freeze addendum (2026-10-04, architect final review) — G1/G3 APPROVED and implemented locally; freeze after deploy verification
+## Freeze addendum (2026-10-04, architect final review) — FROZEN 2026-10-04 (G1/G3 approved, implemented locally; verified at the data deployment)
 
 Incorporates the architect's seven points. No new SEO track. Defines one
 rule: **JobPosting eligible = Tier A (public, indexable, complete) AND open
@@ -150,3 +150,10 @@ Post-level employing organization stays the target.
   description 466, multi-post unresolved 153, no longer open 17. The loader
   description and missing location are what hold eligibility back; enrichment,
   not the gate, is the next lever.
+
+### Freeze and sitemap expiry (architect, 2026-10-04)
+
+Architecture FROZEN. Reopen only if real production data shows an important
+job representation the frozen model cannot express; a low eligible count is
+a data finding. Sitemap: expired postings are excluded by `is_expired`
+(tests WP1-13, WP1-S6); an implementation correction, not a policy change.
