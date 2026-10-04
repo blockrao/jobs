@@ -1087,3 +1087,11 @@ Owner approved option 1 plus 2a. Applied migration `20261004140000_a_041_fix_urg
 Verification (observed, production): the function no longer references `organizations_new` and reads `organizations`; the migration alone changed no rows (hash of all 194 non-eligible rows identical before and after the migration and after the run); hash of every protected column (everything except the five derived columns and updated_at) identical for all 201 postings before and after; organizations (125) and posts (4) hashes identical; the 7 eligible postings (ids 163, 164, 165, 225 to 228) now have `search_text`, `announcement_state`, `closing_state`, `urgency_score` and `days_to_closing` populated. Rows 163 to 165 show refreshed `days_to_closing` (stale by three days), which is the intended effect. No recurring schedule was added. A-041 CLOSED.
 
 Finding, not fixed (A-068): `/api/search/jobs` still returns 0 results because the search code calls the database client in a way the driver rejects (`NOT_TAGGED_CALL`), and the catch block returns an empty list. This is separate from A-041.
+
+## 2026-10-04: expiry-protection verification (A-067, verification only)
+
+Question: do expiry protections hold if the lifecycle cron has not run? Observed:
+- JobPosting gate (`evaluateJobPostingEligibility`): protected independently of the flag. It rejects a past `validThrough` or a non-open stage at render time; job pages revalidate every 300 seconds.
+- Sitemap (`getPostingSlugsPageForSitemap`): depends on `is_expired` alone. Today 0 of 4 Tier A postings is past its date, so nothing is exposed yet; 165 reaches its last date on 2026-10-12 and would stay listed until the flag is set.
+- Public listing and home page (`listPostings`): depend on `is_expired` alone. Production has 19 APPROVED postings past their last date with the flag false (all Tier B or C, 18 ARCHIVED, 1 DRAFT); 18 of them appear on the live `/jobs` listing and 2 on the home page. Only one posting has the flag set (id 164, a future date).
+Result: a genuine protection gap on the listing and home page now, and on the sitemap from 2026-10-12. Smallest fix proposed for separate approval: add a date predicate (`valid_through IS NULL OR valid_through >= now()`) to the two queries, with tests. Cron stays deferred.
