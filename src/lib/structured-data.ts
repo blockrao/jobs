@@ -5,6 +5,7 @@ import type {
   postingUpdates,
   postings,
 } from "@/db/schema";
+import { evaluateJobPostingEligibility } from "./content-quality/gate";
 
 type Posting = typeof postings.$inferSelect;
 type Organization = typeof organizations.$inferSelect;
@@ -112,6 +113,10 @@ export function buildJobPostingSchema(
   org: Organization,
 ): Record<string, unknown> | null {
   if (!isHiringOpen(posting.currentStage, posting.validThrough)) return null;
+  // SEO-001 freeze (G1, G3): Tier A, approved, not expired, a real hiring
+  // organization, one resolved Post, a complete description. Otherwise the
+  // page may exist but carries no JobPosting.
+  if (!evaluateJobPostingEligibility(posting as never, org).eligible) return null;
 
   // JobPosting.title must be the job title (e.g. "Research Associate III"),
   // never the scraped headline ("...Recruitment 2026 – Apply Online for 1

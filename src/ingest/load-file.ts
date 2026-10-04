@@ -52,6 +52,8 @@ async function main() {
   const { orgNameVerdict, normalizeOrgName } = await import("./organization-resolution");
   const { promotePending, isOfficialStyleUrl, postCountMismatchFromFacts } = await import("./promotion");
   const { organizations, postings, organizationCandidates } = await import("../db/schema");
+  const { eq } = await import("drizzle-orm");
+  const { evaluateJobPostingEligibility } = await import("../lib/content-quality/gate");
 
   const db = getDb();
   const today = new Date();
@@ -146,6 +148,16 @@ async function main() {
       organizationsWithPublicPosting: await n(`select count(distinct organization_id)::int n from public.postings where ${listingFilter}`),
       promotedWithPastLastDate: await n(`select count(*)::int n from public.postings where review_status='APPROVED' and valid_through < now()::date`),
     };
+    // SEO-001 freeze (G1, G3): how many promoted/public pages are JobPosting eligible, and why not.
+    const pubRows = await db.select({ p: postings, o: organizations }).from(postings).innerJoin(organizations, eq(postings.organizationId, organizations.id)).where(eq(postings.reviewStatus, "APPROVED"));
+    const reasonCounts: Record<string, number> = {};
+    let eligible = 0;
+    for (const { p, o } of pubRows) {
+      const r = evaluateJobPostingEligibility(p as never, o);
+      if (r.eligible) eligible++;
+      for (const why of r.reasons) reasonCounts[why] = (reasonCounts[why] ?? 0) + 1;
+    }
+    const jobPostingEligibility = { publicPages: pubRows.length, jobPostingEligible: eligible, ineligibleReasons: reasonCounts };
     const lifecycle = (await db.execute(sql.raw("select * from refresh_recruitment_lifecycle()")))[0];
     const afterLifecycle = {
       expiredPostings: await n(`select count(*)::int n from public.postings where is_expired = true`),
@@ -172,6 +184,7 @@ async function main() {
       beforePromo,
       promoted: promoApplied.promoted,
       afterPromo,
+      jobPostingEligibility,
       lifecycleFunctionResult: lifecycle,
       afterLifecycle,
     };

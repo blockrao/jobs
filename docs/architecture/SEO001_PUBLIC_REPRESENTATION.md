@@ -82,7 +82,7 @@ A page is in the sitemap exactly when it is indexable, and both follow from one 
 | D3 | Dedicated Hindi listing pages (`/hi/jobs` and so on) | DEFERRED. Cookie-switched listing pages remain English canonical pages |
 | D4 | Unattached lifecycle notices | Not exposed as canonical Recruitments. Existing public job-page treatment remains until the canonical read projection work |
 
-## Freeze addendum (2026-10-04, architect final review) — PROPOSED, awaiting owner confirmation
+## Freeze addendum (2026-10-04, architect final review) — G1/G3 APPROVED and implemented locally; freeze after deploy verification
 
 Incorporates the architect's seven points. No new SEO track. Defines one
 rule: **JobPosting eligible = Tier A (public, indexable, complete) AND open
@@ -119,3 +119,34 @@ Verified implementation state (observed in code, `main` + local):
   `updated_at`, `is_expired` and `index_tier` transitions. No gap in design;
   not implemented.
 - G7 one posting row = one notice today.
+
+
+### Pre-change decision (architect, 2026-10-04)
+
+G1 and G3 approved. A Tier B, pending, rejected or expired page emits no
+JobPosting. G3 belongs in the JobPosting eligibility gate, not in a blanket
+page requirement: an incomplete page may exist, it is just not JobPosting
+eligible. **Unit rule:** single-post recruitment = one resolved Post = one
+JobPosting. Multi-post with distinct Posts resolvable = one JobPosting per
+Post. Multi-post whose Posts cannot yet be represented = recruitment page, no
+JobPosting; never a generic JobPosting for several different jobs. The
+issuing organization is never copied into an employing-organization field;
+Post-level employing organization stays the target.
+
+### Implementation (local, unpushed)
+
+- `evaluateJobPostingEligibility` in `src/lib/content-quality/gate.ts`: approved, not
+  expired, open, Tier A, real hiring organization (pure rules in `src/lib/org-name.ts`),
+  at most one post name, description not the facts-only template. `buildJobPostingSchema`
+  calls it, so the builder and measurement use one rule.
+- Contract tests SD-09a..j (pending, rejected, expired, Tier B x2, facts-only
+  description, multi-post, bucket/title organization, positive case, `validThrough`
+  never invented). The SD-02 fixture was made a complete Tier A posting.
+- Not yet done: per-Post JobPosting (needs Post rows with vacancies and employing
+  organization; the posts and vacancies increment). Until then no multi-post notice
+  is JobPosting eligible.
+- Measured on the real corpus (scratch, simulated aliases, after promotion):
+  466 public pages, 0 JobPosting eligible. Reasons: not Tier A 464, facts-only
+  description 466, multi-post unresolved 153, no longer open 17. The loader
+  description and missing location are what hold eligibility back; enrichment,
+  not the gate, is the next lever.

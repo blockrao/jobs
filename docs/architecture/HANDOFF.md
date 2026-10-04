@@ -51,6 +51,11 @@ restored copy, owner and architect review of the result. Next increment is
 chosen from the result (alias seed list, posts and vacancies as rows,
 recruitment dates, `/jobs` pagination). DATA-000 stays on hold.
 
+SEO freeze (2026-10-04): G1/G3 approved by the architect and implemented
+locally (`evaluateJobPostingEligibility`, tests SD-09a..j). Unit rule: one
+JobPosting per resolved Post, none for unresolved multi-post notices. Freeze
+once verified with the data deployment. Do not push before the backup gate.
+
 ## Immediate pending items (items 1–3 are the real work; do these first)
 
 1. **Close SEO-001.** The hosting plan's daily deployment limit was hit on

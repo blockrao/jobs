@@ -1041,3 +1041,7 @@ Architect direction received: Data → platform readiness → data flow; no prod
 - Readiness findings R1–R8 recorded in `WP001_READINESS.md`; R1, R2, R7, R8 fixed locally; R3 (posts, vacancies, employing organization), R4 (recruitment dates), R5 (listing pagination), R6 (recruitment lifecycle) open.
 - Dry run result: `WP001_READINESS_RESULT.md`. DATA-000 remains on hold.
 - Not run: backup gate (owner), full-fidelity dry run on a restore.
+
+## 2026-10-04 — SEO-001 freeze: G1/G3 implemented locally
+
+Architect approved G1 (JobPosting needs Tier A, approved, not expired, real hiring organization, no unresolved multi-post) and G3 (complete description; facts-only template ineligible), and the unit rule (one JobPosting per resolved Post; no JobPosting for unresolved multi-post notices). Implemented as `evaluateJobPostingEligibility`; tests SD-09a..j. Corpus dry run: 0 of 466 public pages eligible (enrichment gap, not a gate defect). Local, unpushed; freeze after verification with the data deployment.

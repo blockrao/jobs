@@ -18,6 +18,7 @@
 
 import { readFileSync } from "node:fs";
 import type { RawPosting } from "../types";
+import { FACTS_ONLY_DESCRIPTION_MARKER } from "../../lib/content-quality/gate";
 import { collapse, parseIndianDate, scoreConfidence, extractVacancies } from "./util";
 
 const SOURCE = "freejobalert";
@@ -174,8 +175,8 @@ export function recordToRaw(rec: FileRecord, nowForObservation?: Date): RawPosti
   if (totalVacancies) factsSummary.push(`${totalVacancies} vacancies`);
   if (validThrough) factsSummary.push(`last date ${validThrough.toISOString().slice(0, 10)}`);
   const description = factsSummary.length > 1
-    ? `${title}. ${factsSummary.join(", ")}. Check the official notification for eligibility, fees and dates.`
-    : `${title}. Check the official notification for details.`;
+    ? `${title}. ${factsSummary.join(", ")}. ${FACTS_ONLY_DESCRIPTION_MARKER} eligibility, fees and dates.`
+    : `${title}. ${FACTS_ONLY_DESCRIPTION_MARKER} details.`;
 
   const p: RawPosting = {
     source: SOURCE,

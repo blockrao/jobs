@@ -31,7 +31,14 @@ const posting = (over: Record<string, unknown> = {}) =>
     slug: "sample-job",
     title: "Sample Org Recruitment 2026 – Apply Online for 3 Posts",
     postNames: ["Law Officer"],
-    description: "Description.",
+    description:
+      "Sample Org invites applications for the post of Law Officer on a contract basis. The officer drafts and vets legal opinions, represents the organization before tribunals and advises departments on service and procurement matters. Selection is by written test and interview.",
+    eligibility: "Bachelor's degree in Law with at least three years of experience in a government or corporate legal department.",
+    reviewStatus: "APPROVED",
+    isExpired: false,
+    isCanonical: null,
+    canonicalSlug: null,
+    officialNotificationUrl: "https://sample.example.gov.in/advt.pdf",
     currentStage: "APPLICATION_OPEN",
     validThrough: new Date(Date.now() + 10 * DAY),
     datePosted: new Date(Date.now() - DAY),
@@ -70,6 +77,36 @@ describe("JobPosting lifecycle", () => {
   test("SD-02d no JobPosting when only the scraped headline is available as a title", () => {
     expect(buildJobPostingSchema(posting({ postNames: [] }), org)).toBeNull();
     expect(buildJobPostingSchema(posting({ postNames: null }), org)).toBeNull();
+  });
+});
+
+describe("JobPosting eligibility gate (SEO-001 freeze G1, G3)", () => {
+  const none = (over: Record<string, unknown>, o: never = org) => expect(buildJobPostingSchema(posting(over), o)).toBeNull();
+
+  test("SD-09a a pending page does not emit JobPosting", () => none({ reviewStatus: "PENDING" }));
+  test("SD-09b a rejected page does not emit JobPosting", () => none({ reviewStatus: "REJECTED" }));
+  test("SD-09c an expired page does not emit JobPosting even if the stage and date lag", () => none({ isExpired: true }));
+  test("SD-09d a Tier B page (missing location) does not emit JobPosting", () =>
+    none({ locationCity: null, locationRegion: null }));
+  test("SD-09e a Tier B page (missing eligibility) does not emit JobPosting", () => none({ eligibility: null }));
+  test("SD-09f the facts-only template description is not JobPosting eligible", () =>
+    none({
+      description:
+        "Sample Org Recruitment 2026 for Law Officer. Sample Org has notified, 3 vacancies, last date 2026-11-30. Check the official notification for eligibility, fees and dates. Extra padding text to be longer than the minimum length of one hundred and fifty characters.",
+    }));
+  test("SD-09g a multi-post notice without resolved Posts emits no generic JobPosting", () =>
+    none({ postNames: ["Law Officer", "Accountant", "Driver"] }));
+  test("SD-09h a bucket or title-derived organization is not a hiring organization", () => {
+    none({}, { ...(org as object), name: "Educational Institution" } as never);
+    none({}, { ...(org as object), name: "ECIL 310 ITI Apprentice Recruitment" } as never);
+  });
+  test("SD-09i a single resolved post on an approved complete Tier A page still emits", () => {
+    expect(buildJobPostingSchema(posting(), org)?.["@type"]).toBe("JobPosting");
+  });
+  test("SD-09j validThrough is omitted, never invented, when the deadline is unknown", () => {
+    const s = buildJobPostingSchema(posting({ validThrough: null }), org);
+    expect(s).not.toBeNull();
+    expect(s?.validThrough).toBeUndefined();
   });
 });
 

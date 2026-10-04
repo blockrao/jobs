@@ -27,6 +27,8 @@
  * there is never a second, hand-maintained copy of "is this good enough."
  */
 
+import { orgNameVerdict } from "../org-name";
+
 const OPEN_STAGES = new Set(["NOTIFICATION_OUT", "APPLICATION_OPEN", "ACTIVE"]);
 
 // Content types that belong on a recruitment's update timeline, not as a
@@ -102,4 +104,55 @@ export function evaluateContentQuality(p: GateInput): GateResult {
   }
 
   return { tier: missing.length === 0 ? "A" : "B", missing };
+}
+
+
+/**
+ * Marker of the facts-only description the file/aggregator loaders write when
+ * the source gave no real prose. A page carrying it may exist; it is never a
+ * complete representation of the job, so it is not JobPosting eligible (G3).
+ */
+export const FACTS_ONLY_DESCRIPTION_MARKER = "Check the official notification for";
+
+export interface JobPostingEligibilityInput extends GateInput {
+  reviewStatus: string;
+  isExpired?: boolean | null;
+}
+
+export type JobPostingIneligibleReason =
+  | "NOT_APPROVED"
+  | "EXPIRED"
+  | "NOT_OPEN"
+  | "NOT_TIER_A"
+  | "ORGANIZATION_UNRESOLVED"
+  | "MULTI_POST_UNRESOLVED"
+  | "DESCRIPTION_FACTS_ONLY";
+
+/**
+ * JobPosting eligibility (SEO-001 freeze, G1 and G3). A page may exist, even
+ * be indexable, without being JobPosting eligible. One rule, used by the
+ * builder and by measurement scripts.
+ *
+ * One JobPosting = one sufficiently resolved Post. A notice with several
+ * posts and no resolved Post rows is not eligible: no generic JobPosting for
+ * materially different jobs. The hiring organization is the posting's
+ * organization only when it is a real issuing body (not a bucket or a
+ * title-derived name); an employing organization per Post does not exist yet.
+ */
+export function evaluateJobPostingEligibility(
+  p: JobPostingEligibilityInput,
+  org: { name: string } | null,
+): { eligible: boolean; reasons: JobPostingIneligibleReason[]; missing: string[] } {
+  const reasons: JobPostingIneligibleReason[] = [];
+  if (p.reviewStatus !== "APPROVED") reasons.push("NOT_APPROVED");
+  if (p.isExpired === true) reasons.push("EXPIRED");
+  if (!OPEN_STAGES.has(p.currentStage) || (p.validThrough != null && p.validThrough.getTime() < Date.now())) {
+    reasons.push("NOT_OPEN");
+  }
+  const gate = evaluateContentQuality(p);
+  if (gate.tier !== "A") reasons.push("NOT_TIER_A");
+  if (!org || !orgNameVerdict(org.name).ok) reasons.push("ORGANIZATION_UNRESOLVED");
+  if ((p.postNames?.length ?? 0) > 1) reasons.push("MULTI_POST_UNRESOLVED");
+  if (p.description && p.description.includes(FACTS_ONLY_DESCRIPTION_MARKER)) reasons.push("DESCRIPTION_FACTS_ONLY");
+  return { eligible: reasons.length === 0, reasons, missing: gate.missing };
 }
