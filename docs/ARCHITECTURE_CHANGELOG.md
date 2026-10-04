@@ -1071,3 +1071,5 @@ Verification (observed, 2026-10-04 07:55 UTC):
 - Production database after deploy: posts 4 (last created 2026-10-02), `-pl1-` Posts 0, recruitments 183, postings 201 (54 APPROVED), organizations 125, source observations 0, candidates 0, last ingest 2026-10-02. No Post creation and no ingestion occurred.
 
 Open items unchanged: three legacy Posts that the classifier would reject stay as they are (A2); low Recruitment resolution rate accepted as an upstream organization-resolution issue; A-067 lifecycle cron defect recorded and deferred.
+
+POSTVAC-A1 = COMPLETE / PRODUCTION VERIFIED (owner acceptance 2026-10-04). Next: organization alias seed, gated on the GA4/Search Console export; then description enrichment, location enrichment, and re-measurement of JobPosting eligibility with the gate unchanged (eligibility is an outcome of better canonical data, not a target).
