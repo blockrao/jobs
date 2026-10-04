@@ -1095,3 +1095,8 @@ Question: do expiry protections hold if the lifecycle cron has not run? Observed
 - Sitemap (`getPostingSlugsPageForSitemap`): depends on `is_expired` alone. Today 0 of 4 Tier A postings is past its date, so nothing is exposed yet; 165 reaches its last date on 2026-10-12 and would stay listed until the flag is set.
 - Public listing and home page (`listPostings`): depend on `is_expired` alone. Production has 19 APPROVED postings past their last date with the flag false (all Tier B or C, 18 ARCHIVED, 1 DRAFT); 18 of them appear on the live `/jobs` listing and 2 on the home page. Only one posting has the flag set (id 164, a future date).
 Result: a genuine protection gap on the listing and home page now, and on the sitemap from 2026-10-12. Smallest fix proposed for separate approval: add a date predicate (`valid_through IS NULL OR valid_through >= now()`) to the two queries, with tests. Cron stays deferred.
+
+## 2026-10-04: A-067 listing/sitemap expiry guard (production verified)
+
+Deployed as 6af06ad (GitHub deployment: Production, success). Live check: `/jobs` lists 34 postings = database expectation (54 approved, 19 past last date, 1 flagged expired); none of the 19 past-date postings appear. Home page shows 8, all current. Sitemap carries 4 job URLs = the 4 Tier A, not-expired postings (expectation 4). Valid and future-dated postings unaffected. No stored data written by this change (query-only). Lifecycle cron, JobPosting gate and stored data unchanged; cron GET/POST defect stays deferred. A-068 stays open.
+
