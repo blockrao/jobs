@@ -1060,3 +1060,14 @@ Owner approved after rotating the production DB credentials and updating the hos
 3. Post-deploy checks (read-only): production counts unchanged (postings 201: 54 APPROVED, 144 PENDING, 3 REJECTED; new tables 0 rows); https://www.joboye.com/jobs loads and lists 50 postings; sitemap fetched. No backfill and no 950-notice ingestion was performed.
 Not verified in production: the new write path (no ingest has run since), JobPosting gate on a live job page, sitemap expiry exclusion on live data.
 Recovery point: the owner's pg_dump (1,396 TOC entries; restore not tested).
+
+## 2026-10-04: Post/Vacancy A1 deployed (447df28)
+
+Pushed `6a2c4df..447df28` as one deployment (code `447df28` plus the accumulated documentation commits). No schema change, no migration, no backfill, no 950-notice ingestion.
+
+Verification (observed, 2026-10-04 07:55 UTC):
+- GitHub deployment record: Production deployment for `447df28` on Vercel project `jobing/asdf`, status "Deployment has completed". The same record shows a Production deployment for `6a2c4df` created 07:26 UTC (supports the earlier label check; the dashboard label itself was not viewed).
+- Live site: `/`, `/jobs`, `/sitemap.xml`, `/robots.txt` return 200; the sitemap lists 4 job URLs.
+- Production database after deploy: posts 4 (last created 2026-10-02), `-pl1-` Posts 0, recruitments 183, postings 201 (54 APPROVED), organizations 125, source observations 0, candidates 0, last ingest 2026-10-02. No Post creation and no ingestion occurred.
+
+Open items unchanged: three legacy Posts that the classifier would reject stay as they are (A2); low Recruitment resolution rate accepted as an upstream organization-resolution issue; A-067 lifecycle cron defect recorded and deferred.
