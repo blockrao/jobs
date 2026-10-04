@@ -1026,3 +1026,10 @@ D1–D7 were raised by Phase 0 and decided at GATE-1 (see that entry; D5 deferre
 | GOV-001 | `33ddc955c5f17e9df992928f7db7d4e7240bd935` |
 | MIG-001 | `210444b` |
 | SEC-001 | `b8e05f1`, `bba968c`, `cd3fa2d` |
+
+## 2026-10-04 — SEO-001 live re-check (CLOSED)
+
+After the owner deployed `main` on `asdf`, checked on https://www.joboye.com with a browser on the owner's machine, on one entity URL (`/jobs/itbp-constable-gd-sports-quota-online-form-2026-c93b30`):
+- A-052: HTTP `Link` header carries only preconnect/preload entries, no `hreflang`. PASS.
+- A-053: `Accept-Language: hi` and the `NEXT_LOCALE=hi` cookie both return 200 with no redirect. PASS.
+Grade: observed on one URL in production. SEO-001 recorded CLOSED; not expanded. A-058/A-059 follow-ups: none from this check. Local, unpushed: this entry.
