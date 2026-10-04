@@ -56,7 +56,11 @@ Parser findings (source side, not fixed here): some notices produce numeric "nam
 
 Safeguards that bound a false positive: a Post alone publishes nothing (JobPosting needs APPROVED, Tier A, a real organization and a non-template description); every classifier Post is tagged with the classifier version in provenance for reversal; apply stays out of production in this increment.
 
-Renamed-line identity rule (owner condition): a line matches an existing Post of the same Recruitment only on strong evidence: normalized name equal, or same count plus a name similarity of at least 0.85 with no other candidate within 0.1, or the same line position with the same count. Weak evidence creates no new Post and records the line as unresolved/reviewable. Never create a second Post because the latest text differs.
+Fresh final-rule gate (2026-10-04): 50 lines drawn at random (seed 101) from the 876 accepted lines not used in any earlier sample, with the final rules unchanged since the draw (`evidence/postvac_a1_fresh50_final_rules.tsv`). Reviewed blind by a separate reviewer instance that saw only the line text and count, not the rules or earlier labels (a model reviewer, not a human): 48 genuine, 0 not-a-post, 2 unsure (#1 bare "Executive", #35 "Project Technical Staff II (Phlebotomist / Lab technician)"). Clear false positives: 0 of 50. The two unsure lines are listed for owner spot-check.
+
+Amendment 1, existing-Post identity (owner, supersedes the earlier rule): an exact normalized-name match within the same Recruitment is sufficient. Strong name similarity (at least 0.85, no other candidate within 0.1) is sufficient only with unambiguous supporting evidence (same count, same source observation lineage, or the same normalized name stem). Line position and count are supporting evidence only, never sufficient. Otherwise the line is UNRESOLVED and goes to review; a changed source text never creates a duplicate Post.
+
+Amendment 2, vacancy_total (owner): `posts.vacancy_total` is the count of that one line, populated only when the line passed the Post classifier. It is never the raw number of source lines and never taken from a rejected line (numeric, department, discipline, sport, header, combined, zero count). Counts of rejected lines feed nothing, including recruitment-level totals. A mismatch between the sum of accepted lines and the stated notice total stays a flag (POST_COUNT_MISMATCH), not a correction.
 
 ## Out of scope
 
