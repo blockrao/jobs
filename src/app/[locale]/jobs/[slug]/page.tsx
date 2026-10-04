@@ -218,6 +218,12 @@ export default async function LocaleJobPage({ params }: Props) {
     applicationFee: isHi ? "आवेदन शुल्क" : "Application Fee",
     postedOn: isHi ? "प्रकाशित तिथि" : "Posted On",
     lastDate: isHi ? "अंतिम तिथि" : "Last Date to Apply",
+    notAvailable: isHi ? "उपलब्ध नहीं" : "Not available",
+    notSpecified: isHi ? "निर्दिष्ट नहीं" : "Not specified",
+    sourceDerived: isHi
+      ? "यह जानकारी स्रोत से ली गई है और अधूरी हो सकती है। आवेदन से पहले आधिकारिक अधिसूचना देखें।"
+      : "This information is derived from a published source and may be incomplete. Check the official notification before applying.",
+    checkSource: isHi ? "स्रोत / आधिकारिक अधिसूचना देखें" : "Check source / official notification",
     examDate: isHi ? "परीक्षा तिथि" : "Exam Date",
     lastVerified: isHi ? "अंतिम सत्यापन" : "Last Verified",
     applyNow: isHi ? "अभी आवेदन करें" : "Apply Now",
@@ -301,6 +307,11 @@ export default async function LocaleJobPage({ params }: Props) {
           {L.notice}
         </div>
       )}
+      {(!posting.validThrough || !posting.officialNotificationUrl || posting.totalVacancies == null) && (
+        <div className="mt-4 rounded-md border border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-800">
+          {L.sourceDerived}
+        </div>
+      )}
       {L.notTranslatedNotice && (
         <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
           {L.notTranslatedNotice}
@@ -308,12 +319,10 @@ export default async function LocaleJobPage({ params }: Props) {
       )}
 
       <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-black/10 p-4 text-sm sm:grid-cols-3">
-        {posting.totalVacancies != null && (
-          <div>
-            <dt className="text-neutral-500">{L.vacancies}</dt>
-            <dd className="font-medium">{posting.totalVacancies}</dd>
-          </div>
-        )}
+        <div>
+          <dt className="text-neutral-500">{L.vacancies}</dt>
+          <dd className="font-medium">{posting.totalVacancies != null ? posting.totalVacancies : L.notSpecified}</dd>
+        </div>
         {posting.postNames && posting.postNames.length > 0 && (
           <div className="col-span-2 sm:col-span-1">
             <dt className="text-neutral-500">{L.posts}</dt>
@@ -354,12 +363,10 @@ export default async function LocaleJobPage({ params }: Props) {
             <dd className="font-medium">{formatDate(posting.datePosted, dateLocale)}</dd>
           </div>
         )}
-        {posting.validThrough && (
-          <div>
-            <dt className="text-neutral-500">{L.lastDate}</dt>
-            <dd className="font-medium">{formatDate(posting.validThrough, dateLocale)}</dd>
-          </div>
-        )}
+        <div>
+          <dt className="text-neutral-500">{L.lastDate}</dt>
+          <dd className="font-medium">{posting.validThrough ? formatDate(posting.validThrough, dateLocale) : L.notAvailable}</dd>
+        </div>
         {posting.examDate && (
           <div>
             <dt className="text-neutral-500">{L.examDate}</dt>
@@ -395,6 +402,16 @@ export default async function LocaleJobPage({ params }: Props) {
             className="rounded-md border border-black/20 px-5 py-2.5 text-sm font-semibold hover:bg-neutral-50"
           >
             {L.officialNotification}
+          </a>
+        )}
+        {!posting.officialNotificationUrl && (posting as any).sourceUrl && (
+          <a
+            href={(posting as any).sourceUrl}
+            target="_blank"
+            rel="noopener nofollow"
+            className="rounded-md border border-black/20 px-5 py-2.5 text-sm font-semibold hover:bg-neutral-50"
+          >
+            {L.checkSource}
           </a>
         )}
       </div>
