@@ -35,7 +35,7 @@ Source: `PAGE_QUALITY_AUDIT_AND_PLAN.md` section 5D. Status: code and docs only,
 
 ## Smallest design
 
-- Additive nullable column `postings.content_changed_at timestamptz`. Migration `supabase/migrations/20261005120000_pq_004_content_changed_at.sql` (`ADD COLUMN IF NOT EXISTS`, no backfill, no default). Rollback `supabase/rollback/pq_004_content_changed_at.down.sql`. Nothing is applied.
+- Additive nullable column `postings.content_changed_at timestamptz`. Migration `supabase/migrations/20261005130000_pq_004_content_changed_at.sql` (`ADD COLUMN IF NOT EXISTS`, no backfill, no default). Rollback `supabase/rollback/pq_004_content_changed_at.down.sql`. Nothing is applied.
 - `src/db/schema.ts` declares `contentChangedAt` (migration README rule 7).
 - Sitemap uses `pickSitemapLastmod(contentChangedAt, updatedAt)` in `src/lib/freshness/lastmod.ts`. With the column NULL everywhere the output is identical to today, so applying the migration changes no behaviour by itself.
 - Not in this increment: the writers that set `content_changed_at` (the material-field branch in `write-postings-v2.ts`, admin stage change, `extraContent` updates). Until they do, the column stays NULL and the sitemap behaves as today. Proposed as PQ-004b after the migration is applied, with its own pre-change note, because it touches the write path. One-time backfill is not proposed: NULL falls back safely.
