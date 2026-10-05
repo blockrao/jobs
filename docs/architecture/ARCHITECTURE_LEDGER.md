@@ -297,5 +297,5 @@ closed architecture decision reopened without a genuine contradiction.
 | — of which deferred empirical validation | | | 1 (U-07 validation → Official Document Acquisition) | 1 (U-07) |
 | Implementation increments complete | 0 | 1 closed (MIG-001); SEC-001 deployed, awaiting V7 and remaining V8 | 2 closed (MIG-001, ARC-001); SEC-001 in final verification | 3 closed (MIG-001, SEC-001, ARC-001); SEO-001 open |
 | Architecture decisions reopened | 0 | 0 | 0 | 0 |
-| A-077 | Per-post facts and page model (PQ-006) | Post is the JobPosting unit; multi-post notices get a notice page (no JobPosting) and own-facts leaf pages; per-post eligibility, age rules, fees, evidence stored as data beside verbatim text; pilot UPSC 4, BPSC 944, SBI /23 | ARCHITECTURAL/DATA | Proposed 2026-10-05; awaiting owner approval | `PQ006_PRECHANGE.md` | Approval, then migration and pilot |
+| A-080 | Per-post facts and page model (PQ-006) | Post is the JobPosting unit; multi-post notices get a notice page (no JobPosting) and own-facts leaf pages; per-post eligibility, age rules, fees, evidence stored as data beside verbatim text; pilot UPSC 4, BPSC 944, SBI /23 | ARCHITECTURAL/DATA | Proposed 2026-10-05; awaiting owner approval | `PQ006_PRECHANGE.md` | Approval, then migration and pilot |
 
