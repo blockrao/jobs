@@ -1,0 +1,30 @@
+name: enrich-full
+# PQ-008: full dry run over all FreeJobAlert-sourced postings. Reads with a restricted login; writes nothing to the database.
+on:
+  push:
+    branches: [claude/formalise-lifecycle-and-verification]
+    paths: ["data/enrich/run/full.trigger", ".github/workflows/enrich-full.yml"]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Fetch and extract
+        env:
+          DATABASE_URL_READONLY: ${{ secrets.DATABASE_URL_READONLY }}
+        run: |
+          mkdir -p out
+          SKIP=$(cat data/enrich/run/skip-ids.txt)
+          npx tsx src/scripts/enrich-full.ts out/full-result.json "$SKIP"
+      - name: Publish results to branch enrich-full-results
+        run: |
+          cd out
+          git init -q && git config user.name enrich-bot && git config user.email enrich-bot@users.noreply.github.com
+          git checkout -q -b enrich-full-results && git add full-result.json && git commit -qm "full dry run result"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" enrich-full-results
