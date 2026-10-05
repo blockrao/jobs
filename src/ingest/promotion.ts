@@ -8,6 +8,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { postings, sourceObservations } from "../db/schema";
+import { findAggregatorViolations } from "../lib/approval-guard";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -105,6 +106,10 @@ export async function promotePending(db: Db, opts: { apply?: boolean; now?: Date
       },
       now,
     );
+    if (verdict.eligible && findAggregatorViolations(row).length > 0) {
+      verdict.eligible = false;
+      verdict.failed.push("AGGREGATOR_REFERENCE");
+    }
     if (verdict.eligible) {
       report.eligible++;
       report.eligibleIds.push(row.id);

@@ -28,6 +28,8 @@ import { resolveRecruitment, resolvePostLines, truncateForColumn, normalizeAdver
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
 import { eq, and, desc } from "drizzle-orm";
 import crypto from "crypto";
+import { publicLink } from "../../lib/aggregators";
+import { sanitizeForStorage } from "../../ingest/enrich-facts";
 import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution } from "../../ingest/organization-resolution";
 
 function hashContent(title: string, description: string): string {
@@ -189,9 +191,9 @@ async function recordObservation(
     lastDate: iso(norm.validThrough),
     startDate: iso(norm.applicationStartDate),
     examDate: iso(norm.examDate),
-    notificationUrl: norm.officialNotificationUrl ?? null,
-    applyUrl: norm.applyUrl ?? null,
-    websiteUrl: norm.websiteUrl ?? null,
+    notificationUrl: publicLink(norm.officialNotificationUrl),
+    applyUrl: publicLink(norm.applyUrl),
+    websiteUrl: publicLink(norm.websiteUrl),
     postNames: norm.postNames ?? null,
     advertisementNumber: norm.advertisementNumber ?? null,
     stated: norm.observationFacts ?? null,
@@ -260,6 +262,11 @@ const PROVENANCE_FIELDS = ["sourceId", "sourceDocumentId", "sourcePortals"] as c
 // Derived from the facts; recomputed only for unreviewed rows (they drive
 // the sitemap and robots decision of a reviewed page, which must not move).
 const DERIVED_FIELDS = ["indexTier", "qualityMissing", "qualityEvaluatedAt", "confidence", "confidenceScore", "currentStage"] as const;
+// Enrichment facts: filled once, never overwritten by a later sighting (reviewed or not).
+const FILL_ONLY_FIELDS = new Set([
+  "ageLimitMin", "ageLimitMax", "ageRelaxationNotes", "applicationFeeGeneral", "applicationFeeReserved",
+  "salaryMin", "salaryMax", "extraContent",
+]);
 // Never written by a re-ingest: identity and editorial state.
 const NEVER_FIELDS = new Set(["slug", "reviewStatus", "publishingStatus", "status", "createdAt", "ingestedAt", "isCanonical", "canonicalSlug", "kind"]);
 
@@ -362,6 +369,17 @@ export async function writePostingsToDB(
       result.orgMatchedOn = resolution.matchedOn;
       if (resolution.kind === "EXISTING") result.orgAmbiguous = resolution.ambiguous;
 
+      // Aggregator hygiene on everything stored: links and text are cleaned here whatever the adapter sent.
+      const hygiene = sanitizeForStorage(norm);
+      if (hygiene.rejectReason) {
+        result.action = "rejected";
+        result.reason = hygiene.rejectReason;
+        out.rejected++;
+        await setObservationOutcome(db, obs.id, "REJECTED", result.reason, existingPosting?.id);
+        continue;
+      }
+      const clean = hygiene.clean;
+
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
       // 3. Resolve onto the canonical entity layer (identity-key based).
@@ -420,7 +438,7 @@ export async function writePostingsToDB(
       if (recRow && recRow.organizationId !== org.id) result.recruitmentOrgMismatch = true;
 
       // 4. Provenance: persist the raw capture, not just a confidence score.
-      const rawContent = [norm.title, norm.description, norm.eligibility].filter(Boolean).join("\n\n");
+      const rawContent = [clean.title, clean.description, clean.eligibility].filter(Boolean).join("\n\n");
       const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
       const sourceDocumentId = await getOrCreateSourceDocument(db, source.id, norm.externalId, norm.sourceUrl, rawContent);
 
@@ -433,19 +451,19 @@ export async function writePostingsToDB(
 
       const currentStage = inferStage(deduped.primary);
 
-      const safeTitle = truncateForColumn(norm.title, 220);
-      const safeLocationCity = norm.locationCity ? truncateForColumn(norm.locationCity, 120) : null;
-      const safeLocationRegion = norm.locationRegion ? truncateForColumn(norm.locationRegion, 120) : null;
+      const safeTitle = truncateForColumn(clean.title, 220);
+      const safeLocationCity = clean.locationCity ? truncateForColumn(clean.locationCity, 120) : null;
+      const safeLocationRegion = clean.locationRegion ? truncateForColumn(clean.locationRegion, 120) : null;
 
       const gate = evaluateContentQuality({
         title: safeTitle,
         totalVacancies: norm.totalVacancies ?? null,
-        eligibility: norm.eligibility ?? null,
-        description: norm.description ?? null,
-        locationCity: norm.locationCity ?? null,
-        locationRegion: norm.locationRegion ?? null,
-        applyUrl: norm.applyUrl ?? null,
-        officialNotificationUrl: norm.officialNotificationUrl ?? null,
+        eligibility: clean.eligibility,
+        description: clean.description || null,
+        locationCity: clean.locationCity,
+        locationRegion: clean.locationRegion,
+        applyUrl: clean.applyUrl,
+        officialNotificationUrl: clean.officialNotificationUrl,
         currentStage,
         validThrough: norm.validThrough ?? null,
         postNames: norm.postNames ?? null,
@@ -459,13 +477,15 @@ export async function writePostingsToDB(
         organizationId: org.id,
         examId,
         postNames: norm.postNames ?? [],
-        description: norm.description || "",
-        eligibility: norm.eligibility ?? null,
+        description: clean.description,
+        eligibility: clean.eligibility,
         totalVacancies: norm.totalVacancies ?? null,
         ageLimitMin: norm.ageLimitMin ?? null,
         ageLimitMax: norm.ageLimitMax ?? null,
+        ageRelaxationNotes: clean.ageRelaxationNotes,
         applicationFeeGeneral: norm.applicationFeeGeneral ?? null,
         applicationFeeReserved: norm.applicationFeeReserved ?? null,
+        extraContent: clean.extraContent,
         locationCity: safeLocationCity,
         locationRegion: safeLocationRegion,
         locationCountry: norm.locationCountry ?? "India",
@@ -473,8 +493,8 @@ export async function writePostingsToDB(
         salaryMax: norm.salaryMax ?? null,
         salaryCurrency: norm.salaryCurrency ?? "INR",
         salaryPeriod: norm.salaryPeriod ?? "MONTH",
-        officialNotificationUrl: norm.officialNotificationUrl ?? null,
-        applyUrl: norm.applyUrl ?? null,
+        officialNotificationUrl: clean.officialNotificationUrl,
+        applyUrl: clean.applyUrl,
         currentStage,
         validThrough: norm.validThrough ?? null,
         examDate: norm.examDate ?? null,
@@ -549,6 +569,7 @@ export async function writePostingsToDB(
           continue;
         }
         if (isEmpty(inc)) continue; // never blank an existing value with an absent one
+        if (FILL_ONLY_FIELDS.has(key) && !isEmpty(cur)) continue; // enrichment facts: fill-only
 
         if (isEmpty(cur)) {
           // Missing value: fill, reviewed or not.

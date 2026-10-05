@@ -5,7 +5,8 @@
 
 import { getDb } from "@/db";
 import { postings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
+import { findAggregatorViolations } from "@/lib/approval-guard";
 
 async function approvePendingJobs() {
   const db = getDb();
@@ -20,11 +21,15 @@ async function approvePendingJobs() {
 
   console.log(`  Current PENDING count: ${before.length}`);
 
-  // Approve all pending
-  const result = await db
-    .update(postings)
-    .set({ reviewStatus: "APPROVED", updatedAt: new Date() })
-    .where(eq(postings.reviewStatus, "PENDING"));
+  // Approve all pending that carry no aggregator name or link in a public field
+  const clean = before.filter((p) => findAggregatorViolations(p).length === 0);
+  console.log(`  Refused (aggregator reference): ${before.length - clean.length}`);
+  if (clean.length > 0) {
+    await db
+      .update(postings)
+      .set({ reviewStatus: "APPROVED", updatedAt: new Date() })
+      .where(inArray(postings.id, clean.map((p) => p.id)));
+  }
 
   // Get count after
   const after = await db

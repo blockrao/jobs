@@ -36,3 +36,21 @@ export function stripAggregatorTag(text: string): string {
 export function publicLink(url: string | null | undefined): string | null {
   return url && !isAggregatorUrl(url) ? url : null;
 }
+
+const SOCIAL_CTA_RE = /\b(join|follow)\s+(our\s+)?(telegram|whatsapp)\b|\b(telegram|whatsapp)\s+(channel|group)\b/i;
+const URL_IN_TEXT_RE = /https?:\/\/[^\s)"'<>]+|\b(?:t\.me|telegram\.me|wa\.me)\/\S*/gi;
+
+/**
+ * True when free text names an aggregator, carries an aggregator/social link
+ * (full URL or bare host), a "(via ...)" provenance tag, or a join-our-channel call.
+ * Used on every stored public text; stricter than mentionsAggregator alone.
+ */
+export function containsAggregatorReference(text: string | null | undefined): boolean {
+  if (!text) return false;
+  if (mentionsAggregator(text) || SOCIAL_CTA_RE.test(text) || /\(via\s/i.test(text)) return true;
+  for (const m of text.matchAll(URL_IN_TEXT_RE)) {
+    const u = /^https?:/i.test(m[0]) ? m[0] : `https://${m[0]}`;
+    if (isAggregatorUrl(u)) return true;
+  }
+  return false;
+}

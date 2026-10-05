@@ -19,6 +19,8 @@
 import { readFileSync } from "node:fs";
 import type { RawPosting } from "../types";
 import { FACTS_ONLY_DESCRIPTION_MARKER } from "../../lib/content-quality/gate";
+import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
+import { mergeArticleFacts } from "../enrich-facts";
 import { collapse, parseIndianDate, scoreConfidence, extractVacancies } from "./util";
 
 const SOURCE = "ext-1";
@@ -33,6 +35,8 @@ interface FileRecord {
   metaDescription?: string;
   rows: string[][];
   links: Array<[string, string]>;
+  /** Optional captured article HTML. When present the section extractor runs on it; the older captures hold flattened rows only and carry none. */
+  html?: string;
 }
 
 const NOT_JOB = /result|admit card|hall ticket|answer key|syllabus|time ?table|merit list|counsel|cut ?off|date sheet|score/i;
@@ -219,6 +223,16 @@ export function recordToRaw(rec: FileRecord, nowForObservation?: Date): RawPosti
     },
     observationRaw: { articleId: rec.id, url: rec.url, rows: rec.rows },
   };
+  if (rec.html) {
+    try {
+      const { posting, held } = mergeArticleFacts(p, parseFreeJobAlertArticle(rec.html));
+      if (held.length) posting.observationFacts = { ...posting.observationFacts, enrichmentHeld: held };
+      posting.confidence = scoreConfidence(posting);
+      return posting;
+    } catch {
+      // extractor failure must not lose the record
+    }
+  }
   p.confidence = scoreConfidence(p);
   return p;
 }

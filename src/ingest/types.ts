@@ -1,4 +1,4 @@
-import type { postings } from "@/db/schema";
+import type { postings, ExtraContent } from "@/db/schema";
 
 type PostingStage = (typeof postings.$inferSelect)["currentStage"];
 type PostingKind = (typeof postings.$inferSelect)["kind"];
@@ -31,6 +31,10 @@ export interface RawPosting {
   totalVacancies?: number;
   ageLimitMin?: number;
   ageLimitMax?: number;
+  /** Short factual relaxation line, only when the source states one. Never aggregator text. */
+  ageRelaxationNotes?: string;
+  /** Fact tables (age, fee, selection, dates...) from the article, scrubbed of aggregator references. */
+  extraContent?: ExtraContent;
   applicationFeeGeneral?: number;
   applicationFeeReserved?: number;
 

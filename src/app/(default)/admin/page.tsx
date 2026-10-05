@@ -16,7 +16,8 @@ import { SubmitButton } from "@/components/submit-button";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
   const db = getDb();
   const [orgs, cats, postingRows, pendingRows, articleRows] = await Promise.all([
     db.select().from(organizations).orderBy(desc(organizations.createdAt)),
@@ -28,6 +29,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-12 px-4 py-8">
+      {error && <div role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
         <form action={logoutAction}>

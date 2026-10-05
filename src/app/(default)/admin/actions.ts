@@ -14,6 +14,8 @@ import {
   postings,
 } from "@/db/schema";
 import { adminSessionToken, checkAdminPassword } from "@/lib/admin-token";
+import { approveIfClean, type ApprovalResult } from "@/lib/approval-guard";
+import { containsAggregatorReference, isAggregatorUrl, stripAggregatorTag } from "@/lib/aggregators";
 
 const COOKIE_NAME = "admin_session";
 
@@ -47,6 +49,16 @@ async function requireAdmin() {
   if (!token || cookie !== token) {
     redirect("/admin/login");
   }
+}
+
+function cleanUpdateText(v: string | null): string | null {
+  if (!v) return null;
+  const t = stripAggregatorTag(v);
+  return t && !containsAggregatorReference(t) ? t : null;
+}
+
+function cleanUpdateLink(v: string | null): string | null {
+  return v && !isAggregatorUrl(v) ? v : null;
 }
 
 export async function loginAction(formData: FormData) {
@@ -167,9 +179,10 @@ export async function updatePostingStage(postingId: number, formData: FormData) 
   await db.insert(postingUpdates).values({
     postingId,
     stage: stage as never,
-    title: str(formData, "updateTitle") ?? `Status updated`,
-    description: str(formData, "updateDescription") ?? undefined,
-    linkUrl: str(formData, "updateLink") ?? undefined,
+    // Timeline text is public: provenance tags such as "(via <source>)" are never stored, and aggregator names or links are refused.
+    title: cleanUpdateText(str(formData, "updateTitle")) ?? `Status updated`,
+    description: cleanUpdateText(str(formData, "updateDescription")) ?? undefined,
+    linkUrl: cleanUpdateLink(str(formData, "updateLink")) ?? undefined,
     eventDate: str(formData, "eventDate")
       ? new Date(str(formData, "eventDate")!)
       : new Date(),
@@ -221,12 +234,26 @@ async function createApprovalNews(postingId: number) {
   }
 }
 
-async function approvePostingDirect(postingId: number) {
+async function approvePostingDirect(postingId: number): Promise<ApprovalResult> {
   const db = getDb();
-  await db
-    .update(postings)
-    .set({ reviewStatus: "APPROVED", updatedAt: new Date() })
-    .where(eq(postings.id, postingId));
+  const result = await approveIfClean(
+    {
+      load: async (id) => {
+        const posting = await db.query.postings.findFirst({ where: eq(postings.id, id) });
+        if (!posting) return null;
+        const updates = await db.select().from(postingUpdates).where(eq(postingUpdates.postingId, id));
+        return { posting, updates };
+      },
+      markApproved: async (id) => {
+        await db
+          .update(postings)
+          .set({ reviewStatus: "APPROVED", updatedAt: new Date() })
+          .where(eq(postings.id, id));
+      },
+    },
+    postingId,
+  );
+  if (!result.ok) return result;
 
   // Generate news article for this posting
   await createApprovalNews(postingId);
@@ -236,6 +263,7 @@ async function approvePostingDirect(postingId: number) {
   revalidatePath("/news");
   revalidatePath("/exams");
   revalidatePath("/");
+  return result;
 }
 
 async function rejectPostingDirect(postingId: number) {
@@ -253,7 +281,8 @@ export async function approvePosting(formData: FormData) {
   await requireAdmin();
   const postingId = num(formData, "postingId");
   if (!postingId) return;
-  await approvePostingDirect(postingId);
+  const result = await approvePostingDirect(postingId);
+  if (!result.ok) redirect(`/admin?error=${encodeURIComponent(result.error)}`);
 }
 
 export async function rejectPosting(formData: FormData) {

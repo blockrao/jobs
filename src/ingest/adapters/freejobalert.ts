@@ -14,6 +14,8 @@ import {
   sleep,
 } from "./util";
 import { buildTableBag, findLink, splitPostNames } from "./sarkari-detail";
+import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
+import { mergeArticleFacts } from "../enrich-facts";
 
 const SOURCE = "ext-1";
 const BASE = "https://www.freejobalert.com";
@@ -97,7 +99,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     collapse($('meta[name="description"]').attr("content") || "") ||
     collapse($("article p, .entry-content p").first().text());
 
-  return {
+  const base: Partial<RawPosting> = {
     organizationName: recruiting,
     totalVacancies: vacancies,
     datePosted,
@@ -112,6 +114,18 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     applyUrl,
     officialNotificationUrl,
   };
+
+  // Section facts (age, fee, pay, dates, links, fact tables) fill what the label
+  // table did not give; nothing is overwritten and flagged values are held.
+  // An extractor failure must never lose the posting.
+  try {
+    const { posting, held } = mergeArticleFacts(base, parseFreeJobAlertArticle(html));
+    if (held.length) posting.observationFacts = { enrichmentHeld: held };
+    return posting;
+  } catch (err) {
+    console.warn(`  [${SOURCE}] article facts skipped: ${(err as Error).message}`);
+    return base;
+  }
 }
 
 function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
@@ -140,6 +154,14 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     postNames: detail.postNames,
     applyUrl: detail.applyUrl,
     officialNotificationUrl: detail.officialNotificationUrl,
+    ageLimitMin: detail.ageLimitMin,
+    ageLimitMax: detail.ageLimitMax,
+    ageRelaxationNotes: detail.ageRelaxationNotes,
+    applicationFeeGeneral: detail.applicationFeeGeneral,
+    applicationFeeReserved: detail.applicationFeeReserved,
+    websiteUrl: detail.websiteUrl,
+    extraContent: detail.extraContent,
+    observationFacts: detail.observationFacts,
   };
   p.confidence = scoreConfidence(p);
   return p;
