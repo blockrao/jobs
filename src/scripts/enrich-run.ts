@@ -16,9 +16,9 @@ async function main() {
     try {
       const html = await fetchHtml(it.url, { ua: CLAUDE_UA, retries: 2, retryDelayMs: 2000 });
       const f = parseFreeJobAlertArticle(html);
-      out.push({ id: it.id, ok: true, htmlBytes: html.length, facts: f });
+      out.push({ id: it.id, url: it.url, ok: true, htmlBytes: html.length, facts: f });
     } catch (e) {
-      out.push({ id: it.id, ok: false, error: String((e as Error).message).slice(0, 200) });
+      out.push({ id: it.id, url: it.url, ok: false, error: String((e as Error).message).slice(0, 200) });
     }
     console.log('RESULT ' + JSON.stringify(out[out.length - 1]));
     await sleep(2500);
