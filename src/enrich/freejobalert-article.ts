@@ -27,6 +27,8 @@ export interface ArticleFacts {
   extraContent?: ExtraContent;
   /** Sections that exist on the page but yielded nothing (for the dry-run report). */
   unparsed: string[];
+  /** Dry-run diagnostics only (never stored). */
+  debug?: { headings: string[]; linkLabels: string[] };
 }
 
 interface Section {
@@ -97,13 +99,28 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
   };
 
   // ---- Age ----
+  // Only explicit statements are used: "minimum age ... N", a range "N to M years",
+  // or a table column headed "max". Relaxation figures are never read as limits.
   for (const s of by("age")) {
-    const text = [...s.paras, ...s.tables.flat().map((r) => r.join(" "))].join(" ");
-    const nums = numbers(text).filter((n) => n >= 14 && n <= 70);
-    if (nums.length) {
-      out.ageLimitMin = Math.min(...nums.filter((n) => n <= 30).length ? nums.filter((n) => n <= 30) : [Math.min(...nums)]);
-      out.ageLimitMax = Math.max(...nums);
+    const para = s.paras.join(" ");
+    const range = collapse(para).match(/\b(\d{2})\s*(?:to|-|–)\s*(\d{2})\s*(?:years?|yrs?)/i);
+    const minM = collapse(para).match(/minimum age[^0-9]{0,60}(\d{2})\b/i);
+    const maxM = collapse(para).match(/maximum age[^0-9]{0,80}(\d{2})\b/i);
+    const maxTable = s.tables.find((r) => r.length > 1 && /max|upper/i.test(r[0].join(" ")) && !/^\s*relax/i.test(r[0][1] ?? ""));
+    let maxCells: number[] = [];
+    if (maxTable) {
+      const cols = maxTable[0].map((h, i) => (/max|upper/i.test(h) ? i : -1)).filter((i) => i >= 0);
+      maxCells = maxTable.slice(1).flatMap((r) => cols.flatMap((i) => numbers(r[i] ?? "")));
     }
+    const plausible = (n: number) => n >= 14 && n <= 70;
+    if (minM && plausible(+minM[1])) out.ageLimitMin = +minM[1];
+    else if (range && plausible(+range[1])) out.ageLimitMin = +range[1];
+    const maxCandidates = [
+      ...maxCells.filter(plausible),
+      ...(range && plausible(+range[2]) ? [+range[2]] : []),
+      ...(maxM && plausible(+maxM[1]) ? [+maxM[1]] : []),
+    ];
+    if (maxCandidates.length) out.ageLimitMax = Math.max(...maxCandidates);
     const t = s.tables.find((r) => r.length > 1);
     if (t) tables.push({ title: "Age limit", headers: t[0], rows: t.slice(1) });
     break;
@@ -168,5 +185,9 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
   if (out.applicationFeeGeneral == null && by("fee").length) out.unparsed.push("fee");
   if (out.salaryMin == null && by("salary").length) out.unparsed.push("salary");
   if (!out.applyUrl && by("links").length) out.unparsed.push("applyUrl");
+  out.debug = {
+    headings: sections.map((x) => x.heading.slice(0, 60)),
+    linkLabels: sections.filter((x) => /link/i.test(x.heading)).flatMap((x) => x.links.map((l) => l.label.slice(0, 50) + " => " + (() => { try { return new URL(l.href).hostname; } catch { return "?"; } })())),
+  };
   return out;
 }
