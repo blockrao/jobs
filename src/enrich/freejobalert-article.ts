@@ -210,7 +210,10 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
       const n = sent ? rupees(sent) : undefined;
       if (n != null) { out.applicationFeeGeneral = n; out.applicationFeeReserved = n; }
     }
-    if (out.applicationFeeGeneral == null && /\bno (application )?fee\b|\bfee[- ]free\b|not charged|exempt/i.test(s.paras.join(" "))) {
+    // Zero only for an explicit "no fee / nil / free" statement. "No fee is mentioned" means unknown, not free.
+    const feeText = s.paras.join(" ");
+    if (out.applicationFeeGeneral == null && /\bno (application |exam(ination)? )?fee\b|\bfee[- ]free\b|\bnil\b|free of (cost|charge)|not charged/i.test(feeText)
+        && !/mention|specif|stated|not (yet )?(available|announced|provided)|not (given|disclosed)/i.test(feeText)) {
       out.applicationFeeGeneral = 0;
     }
     break;

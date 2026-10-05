@@ -18,12 +18,15 @@ for (const f of inFiles) {
   for (const r of JSON.parse(readFileSync(f, "utf8")) as { id: number; url: string; ok: boolean; facts: ArticleFacts }[]) {
     if (!r.ok) continue;
     const x = r.facts;
-    if (x.review.filter((v) => v !== "vacancy-table-partial-dropped").length) { skippedReview++; continue; }
+    const blocking = x.review.filter((v) => v !== "vacancy-table-partial-dropped" && v !== "age-over-60");
+    if (blocking.length) { skippedReview++; continue; }
+    const holdAge = x.review.includes("age-over-60");
+    const holdPay = (x.salaryMin != null && x.salaryMin < 5000) || (x.salaryMax != null && x.salaryMax > 500000);
     const set: string[] = [];
     const num = (col: string, v: number | undefined) => v != null && set.push(`${col} = coalesce(${col}, ${v})`);
-    num("age_limit_min", x.ageLimitMin); num("age_limit_max", x.ageLimitMax);
+    if (!holdAge) { num("age_limit_min", x.ageLimitMin); num("age_limit_max", x.ageLimitMax); }
     num("application_fee_general", x.applicationFeeGeneral); num("application_fee_reserved", x.applicationFeeReserved);
-    num("salary_min", x.salaryMin); num("salary_max", x.salaryMax);
+    if (!holdPay) { num("salary_min", x.salaryMin); num("salary_max", x.salaryMax); }
     const dt = (col: string, v: unknown) => {
       if (v) set.push(`${col} = coalesce(${col}, ${q(new Date(v as string).toISOString())}::timestamptz)`);
     };
@@ -40,16 +43,26 @@ for (const f of inFiles) {
     applied++;
   }
 }
-const header = `-- PQ-008 fill-only enrichment from public notification facts. Generated ${new Date().toISOString().slice(0, 10)}.
--- Fill-only: coalesce() never overwrites an existing value${REFRESH ? " (exception: extra_content, which this enrichment created, is rebuilt with the corrected tables)" : ""}. Each row guarded by id AND source_url.
--- Backup first (included), then updates, then a verification query.
-create table if not exists backup_20261005.postings_enrich_${REFRESH ? "dates_" : ""}${process.argv[2].includes("b2") ? "b2" : "b1"} as
-  select * from public.postings where id in (${ids.join(",")});
+const CHUNK = Number(process.env.CHUNK ?? 0);
+const base = process.argv[2];
+const groups: { stmts: string[]; ids: number[] }[] = [];
+if (CHUNK > 0) {
+  for (let i = 0; i < stmts.length; i += CHUNK) groups.push({ stmts: stmts.slice(i, i + CHUNK), ids: ids.slice(i, i + CHUNK) });
+} else groups.push({ stmts, ids });
+groups.forEach((g, n) => {
+  const tag = CHUNK > 0 ? `full_${String(n + 1).padStart(2, "0")}` : (base.includes("b2") ? "b2" : "b1");
+  const file = CHUNK > 0 ? base.replace(/\.sql$/, `_${String(n + 1).padStart(2, "0")}.sql`) : base;
+  const header = `-- PQ-008 fill-only enrichment from public notification facts. Generated ${new Date().toISOString().slice(0, 10)}. Part ${n + 1} of ${groups.length}.
+-- Fill-only: coalesce() never overwrites an existing value${REFRESH ? " (exception: extra_content, rebuilt from the corrected tables when it came from this enrichment)" : ""}. Each row guarded by id AND source_url.
+create table if not exists backup_20261005.postings_enrich_${tag} as
+  select * from public.postings where id in (${g.ids.join(",")});
 `;
-const footer = `
+  const footer = `
 select count(*) filter (where age_limit_max is not null) with_age, count(*) filter (where application_fee_general is not null) with_fee,
-       count(*) filter (where salary_min > 0) with_pay, count(*) filter (where nullif(apply_url,'') is not null) with_apply
-from public.postings where id in (${ids.join(",")});
+       count(*) filter (where salary_min > 0) with_pay, count(*) filter (where nullif(apply_url,'') is not null) with_apply,
+       count(*) filter (where valid_through is not null) with_deadline
+from public.postings where id in (${g.ids.join(",")});
 `;
-writeFileSync(outFile, header + stmts.join("\n") + "\n" + footer);
-console.log(JSON.stringify({ applied, skippedReview, nothing }));
+  writeFileSync(file, header + g.stmts.join("\n") + "\n" + footer);
+});
+console.log(JSON.stringify({ applied, skippedReview, nothing, files: groups.length }));

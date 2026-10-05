@@ -111,3 +111,12 @@ describe("dates and partial vacancy tables", () => {
     expect(f.extraContent?.tables?.some((t) => t.title === "Vacancies by category")).toBe(true);
   });
 });
+
+describe("fee zero only when explicitly free", () => {
+  test("'No application fee is mentioned' is unknown, not free", () => {
+    expect(wrap("Application Fee", "<p>No application fee is mentioned in the official notification.</p>").applicationFeeGeneral).toBeUndefined();
+  });
+  test("'No application fee' is free", () => {
+    expect(wrap("Application Fee", "<p>There is no application fee for any category.</p>").applicationFeeGeneral).toBe(0);
+  });
+});
