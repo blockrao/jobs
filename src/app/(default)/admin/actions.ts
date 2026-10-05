@@ -144,7 +144,7 @@ export async function createPosting(formData: FormData) {
   const organizationId = num(formData, "organizationId");
   const examId = num(formData, "examId");
   const description = str(formData, "description");
-  if (!title || !organizationId || !examId || !description) return;
+  if (!title || !organizationId || !description) return;
 
   const slugBase = str(formData, "slug") ?? slugify(title);
   const slug = `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
@@ -169,6 +169,7 @@ export async function createPosting(formData: FormData) {
       salaryMax: num(formData, "salaryMax") ?? undefined,
       locationCity: str(formData, "locationCity") ?? undefined,
       locationRegion: str(formData, "locationRegion") ?? undefined,
+      externalId: str(formData, "externalId") ?? undefined,
       officialNotificationUrl: str(formData, "officialNotificationUrl") ?? undefined,
       applyUrl: str(formData, "applyUrl") ?? undefined,
       validThrough: str(formData, "validThrough")

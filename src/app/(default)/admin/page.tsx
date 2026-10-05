@@ -165,6 +165,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
           <input name="salaryMax" type="number" aria-label="Salary/pay max" placeholder="Salary/Pay Max" className="input" />
           <input name="validThrough" type="date" aria-label="Last date" placeholder="Last Date" className="input" />
           <input name="examDate" type="date" aria-label="Exam date" placeholder="Exam Date" className="input" />
+          <input name="externalId" aria-label="Advt. No. / External ID" placeholder="Advt. No. (e.g. 12/2026)" className="input" />
           <input name="officialNotificationUrl" aria-label="Official notification URL" placeholder="Official Notification URL" className="input col-span-2" />
           <input name="applyUrl" aria-label="Apply URL" placeholder="Apply URL" className="input" />
           <textarea name="eligibility" aria-label="Eligibility" placeholder="Eligibility" className="input col-span-3" />

@@ -179,10 +179,20 @@ export function buildJobPostingSchema(
     url,
     title: extractedTitle,
     description: posting.description,
+    // identifier.value priority:
+    //   1. Official government advertisement number from the canonical
+    //      recruitment record (e.g. "12/2026" for "Advt. No. 12/2026") —
+    //      the most stable, cross-site-matchable identifier.
+    //   2. externalId scraped from the source aggregator — less authoritative
+    //      but still unique per source, better than a DB serial.
+    //   3. DB id as a last resort (no semantic meaning to Google, but valid).
     identifier: {
       "@type": "PropertyValue",
       name: org.name,
-      value: String(posting.id),
+      value:
+        (posting as any).canonicalRecruitment?.officialNotificationNumber ??
+        (posting as any).externalId ??
+        String(posting.id),
     },
     datePosted: posting.datePosted?.toISOString(),
     validThrough: posting.validThrough?.toISOString(),
