@@ -145,6 +145,12 @@ function buildFaqs(
           },
     );
   }
+  const extra = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
+  for (const f of extra?.faqs ?? []) {
+    const question = isHi && f.qHi ? f.qHi : f.q;
+    const answer = isHi && f.aHi ? f.aHi : f.a;
+    if (question && answer && !faqs.some((x) => x.question === question)) faqs.push({ question, answer });
+  }
   return faqs;
 }
 
@@ -168,6 +174,7 @@ export default async function LocaleJobPage({ params }: Props) {
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescription = isHi && descriptionHi ? descriptionHi : posting.description;
   const displayEligibility = isHi && eligibilityHi ? eligibilityHi : posting.eligibility;
+  const extraContent = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
   const displayRequirements = isHi && requirementsHi ? requirementsHi : posting.requirements;
   const displayResponsibilities =
     isHi && responsibilitiesHi ? responsibilitiesHi : posting.responsibilities;
@@ -497,6 +504,47 @@ export default async function LocaleJobPage({ params }: Props) {
         <h2 className="text-lg font-semibold">{L.overview}</h2>
         <p className="whitespace-pre-line">{displayDescription}</p>
 
+        {(extraContent?.notices ?? []).map((n) => (
+          <div key={n.title}>
+            <h2 className="text-lg font-semibold">{isHi && n.titleHi ? n.titleHi : n.title}</h2>
+            <p className="whitespace-pre-line">{isHi && n.bodyHi ? n.bodyHi : n.body}</p>
+          </div>
+        ))}
+
+        {(extraContent?.tables ?? []).map((t) => {
+          const headers = isHi && t.headersHi ? t.headersHi : t.headers;
+          const rows = isHi && t.rowsHi ? t.rowsHi : t.rows;
+          return (
+            <div key={t.title}>
+              <h2 className="text-lg font-semibold">{isHi && t.titleHi ? t.titleHi : t.title}</h2>
+              <div className="not-prose overflow-x-auto">
+                <table className="w-full min-w-[20rem] border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      {headers.map((h) => (
+                        <th key={h} className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.join("|")}>
+                        {r.map((c, i) => (
+                          <td key={i} className="border border-black/10 px-3 py-2">
+                            {c}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
+
         {displayEligibility && (
           <>
             <h2 className="text-lg font-semibold">{L.eligibility}</h2>
@@ -521,7 +569,9 @@ export default async function LocaleJobPage({ params }: Props) {
         {posting.ageRelaxationNotes && (
           <>
             <h2 className="text-lg font-semibold">{L.ageDetails}</h2>
-            <p className="whitespace-pre-line">{posting.ageRelaxationNotes}</p>
+            <p className="whitespace-pre-line">
+              {isHi && (posting as any).ageRelaxationNotesHi ? (posting as any).ageRelaxationNotesHi : posting.ageRelaxationNotes}
+            </p>
           </>
         )}
       </section>

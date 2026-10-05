@@ -36,6 +36,19 @@ export const postingKindEnum = pgEnum("posting_kind", [
 // notification->result pipeline; private postings use the ACTIVE/FILLED/
 // CLOSED subset. One enum keeps the timeline table and canonical-page
 // rendering logic simple across both kinds.
+export type ExtraContent = {
+  tables?: {
+    title: string;
+    titleHi?: string;
+    headers: string[];
+    headersHi?: string[];
+    rows: string[][];
+    rowsHi?: string[][];
+  }[];
+  notices?: { title: string; titleHi?: string; body: string; bodyHi?: string }[];
+  faqs?: { q: string; a: string; qHi?: string; aHi?: string }[];
+};
+
 export const postingStageEnum = pgEnum("posting_stage", [
   "NOTIFICATION_OUT",
   "APPLICATION_OPEN",
@@ -283,6 +296,8 @@ export const postings = pgTable(
     ageLimitMin: integer("age_limit_min"),
     ageLimitMax: integer("age_limit_max"),
     ageRelaxationNotes: text("age_relaxation_notes"),
+    // A-076: optional structured page content (tables, notices, FAQs); see ExtraContent.
+    extraContent: jsonb("extra_content").$type<ExtraContent | null>(),
     applicationFeeGeneral: integer("application_fee_general"),
     applicationFeeReserved: integer("application_fee_reserved"),
 
