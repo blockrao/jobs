@@ -1124,3 +1124,43 @@ Additive nullable `postings.extra_content` (jsonb) with migration and rollback; 
 ## 2026-10-05: A-077 Page Completeness Standard (PQ-002)
 
 Owner approved PQ-002 to PQ-007. PQ-002 adds a pure 12-check completeness score (official link, apply link, vacancies, pay, age, fee, qualification, selection process, dates, verified date, at least 3 notice FAQs, Hindi) reported beside the tier; indexing is unchanged. Baseline from production (read-only SQL mirroring the rules): of 604 approved postings 1 is complete, 14 partial, 589 thin (average 4.3 of 12); Tier A 265: 1 complete, 8 partial, 256 thin. Most-missing checks: FAQs 603, verified date 596, fee 589, age 587, pay 578, Hindi 575, apply link 511, selection process 421. Weekly report: `npm run report:completeness` (needs database access; the workspace used the connector instead). Contract suite: 6 new tests pass.
+## 2026-10-05: SEARCH-001 abbreviation search, title fix, search text refresh (owner-approved; code only)
+
+Scorecard: abbreviation search PASS (unit tests S-6a..f, S-7a..d); job page title PASS (T-1a..e); search text refresh wired PASS (cron test, SEARCH-001); production data written: none; migration: none; contract suite 163 passed with only the two known baseline failures (ENT-07, IDX-06); typecheck clean.
+
+Live baseline before the change (observed 2026-10-05 in the built-in browser): `/api/search/jobs?q=recruitment` 50 results, `q=clerk` 18, `q=ssc` 0. The earlier note that search was still broken (A-068) was wrong: the fix is deployed. The zero for "ssc" is a coverage gap: posting text spells the commission out and no abbreviation layer existed.
+
+Changes:
+1. `src/lib/search-aliases.ts`: about 55 abbreviations (commissions, boards, banks, forces, exams) with short distinguishing phrases, and 16 Devanagari spellings (एसएससी and similar). The English search now matches each word as itself OR its phrase, words ANDed: `sbi po` is (sbi OR state bank india) AND (po OR probationary officer). A query with no known abbreviation builds the same tsquery as before. A Devanagari query that is only known abbreviations is searched in Latin; any other Hindi query keeps the Hindi filter path.
+2. `src/lib/seo/meta-title.ts`: the job page title no longer repeats the organization when the stored title already names it (live defect "X — Org — Org | JobOye"), and the Hindi page uses the Hindi organization name when one exists.
+3. Search text refresh: nothing in the application ever called `refresh_posting_urgency_states()`, which is the only writer of `postings.search_text`. It now runs after the lifecycle job in the cron route (best effort, own try/catch) and after `promotePending(apply)` publishes rows. The A-044 cron test now expects the second call and a new test covers refresh failure.
+
+Not done, by evidence: the planned one-time backfill of 47 postings. Production check: all 557 publishable postings (AUTOMATED_VALIDATION_PASS or PUBLISHED) already have search text; the 47 without are DRAFT (29) and ARCHIVED (18) and are not searchable by rule. No production data was written.
+
+Read-only expectation on production data before deploy: `ssc` 0 to 1 result, `upsc` 4, `bpsc` 1, `clerk` unchanged 18. Low counts reflect the loaded data, not the search. Expansion phrases were chosen to avoid spelling variants (organisation/organization).
+
+Verification: live search checks (English, Hindi abbreviations, title) after deployment; result recorded with the next code push.
+
+### SEARCH-001 RESULT (recorded 2026-10-05)
+
+Deployed and verified in production (observed): "ssc" now returns results through the abbreviation layer; the job page title no longer repeats the organization name. Search text refresh is wired into the lifecycle cron and promotion. No production data written.
+
+## 2026-10-05: PQ-002 completeness standard and PQ-003 live page check (owner-approved; code only, read-only tooling)
+
+Scorecard: completeness standard PASS (C-1a..g); live page rules PASS (V-1a..i); one-command live check PASS on one page in the browser (see below); production data written: none; migration: none; indexing decisions changed: none; contract suite 179 passed with only ENT-07 and IDX-06 failing (known baseline); typecheck clean.
+
+Changes: `src/lib/content-quality/completeness.ts` (16 checks, one definition used by both TypeScript and the report SQL), `src/lib/verify-live.ts` and `src/scripts/verify-live.ts` (`npm run verify:live -- <slug>`), `src/scripts/report-completeness.ts` (`npm run report:completeness`), tests in `tests/contracts/unit/page-quality.test.ts`.
+
+Baseline (observed, production, 2026-10-05): 539 live pages, 267 Tier A. notice_faqs passes on 1 of 539 pages; description_depth on 5 of 539. Weakest groups: depth, Hindi, verified date, requirements, fee. The standard reports; it does not gate anything.
+
+Live check (observed, in the browser on production, equivalent rules, upsc-junior-technical-officer-sugar-technology-2026-k9p2): en and hi return 200; lang matches; canonicals self-referencing; hreflang en/hi/x-default reciprocal; JSON-LD parses (WebSite, JobPosting, BreadcrumbList, FAQPage); no repeated title segment; one h1; indexable and in the sitemap. The script itself cannot reach the site from the agent workspace, so it should be run once from the owner's machine.
+
+## 2026-10-05: PQ-004 job page defects (owner-approved; code only)
+
+Scorecard: age-limit dash PASS (D-1a); both fees shown PASS (D-1b); vacancy grammar PASS (D-1c); dates rendered in IST PASS (D-1d); title length PASS (D-2a, D-2b); meta description cut at a word and fact-led PASS (D-2c, D-2d); `directApply` only for on-site links PASS (D-3a); social image added (`public/og-default.png`, large Twitter card; excluded from the locale proxy matcher); production data written: none; migration: none; contract suite 188 passed with only ENT-07 and IDX-06 failing (known baseline); typecheck clean; production build succeeds.
+
+Origin: audit of one page (UPSC JTO, Sugar Technology) found site-wide defects: 230 live pages showed "—–N yrs", 285 had titles over 70 characters, every page marked `directApply` true although applications are on the official site, and meta descriptions were cut mid-word.
+
+Not done, by decision: `educationRequirements` / `experienceRequirements` in JobPosting (needs structured per-post fields, not free text; goes with posts-and-vacancies as rows); vacancy-by-category table, selection process, important dates; organization logos; notice-specific FAQs. Date display now uses IST; whether the stored `date_posted` of the UPSC advertisement (26 Sep IST) is the notice date (25 Sep) is a data question, not changed.
+
+PQ-004 RESULT (observed on production, UPSC JTO page, 2026-10-05): title "UPSC Junior Technical Officer (Sugar Technology) Recruitment 2026 | JobOye"; age "Up to 38 yrs"; fee "₹25 (General) · ₹0 (Reserved)"; posted "26 Sept 2026"; FAQ reads "1 vacancy" and names the post; `directApply` false; `og:image` served (200 image/png) and Twitter card large. Follow-up: the meta description CTA was shortened so the description is not cut at "how to…".

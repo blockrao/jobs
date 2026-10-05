@@ -19,6 +19,7 @@
     "i18n:translate-articles": "dotenv -e .env.local -- tsx src/scripts/translate-articles.ts",
     "i18n:demo": "npx tsx src/scripts/demo-translation-mock.ts",
     "report:completeness": "dotenv -e .env.local -- tsx src/scripts/report-completeness.ts",
+    "verify:live": "tsx src/scripts/verify-live.ts",
     "validate:routes": "dotenv -e .env.local -- tsx src/scripts/validate-canonical-routes.ts",
     "test:hindi-search": "dotenv -e .env.local -- tsx src/scripts/test-hindi-search.ts",
     "ingest": "dotenv -e .env.local -- tsx src/ingest/run.ts",

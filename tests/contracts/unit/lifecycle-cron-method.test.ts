@@ -33,10 +33,24 @@ describe("A-044 lifecycle cron methods", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  test.each(["GET", "POST"] as const)("%s with the right bearer runs the refresh once", async (m) => {
+  test.each(["GET", "POST"] as const)("%s with the right bearer runs the lifecycle refresh once", async (m) => {
     vi.stubEnv("CRON_SECRET", "test-secret-not-real");
     const res = await call(m, { authorization: "Bearer test-secret-not-real" });
     expect(res.status).toBe(200);
-    expect(execute).toHaveBeenCalledTimes(1);
+    // Lifecycle refresh first, then the best-effort search text refresh (SEARCH-001).
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  test("SEARCH-001: a failing search text refresh does not fail the lifecycle update", async () => {
+    vi.stubEnv("CRON_SECRET", "test-secret-not-real");
+    execute.mockImplementationOnce(async () => [{ expired_postings: 3, archived_recruitments: 1, last_refreshed: new Date() }]);
+    execute.mockImplementationOnce(async () => {
+      throw new Error("function missing");
+    });
+    const res = await call("GET", { authorization: "Bearer test-secret-not-real" });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.results.expired_postings).toBe(3);
+    expect(body.search_text_refreshed).toBeNull();
   });
 });
