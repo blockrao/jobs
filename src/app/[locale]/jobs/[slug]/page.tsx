@@ -251,13 +251,15 @@ export default async function LocaleJobPage({ params }: Props) {
   const timeline = [...(posting.updates ?? []), ...derivedTimeline].sort(
     (a: any, b: any) => a.eventDate.getTime() - b.eventDate.getTime(),
   );
-  const relatedArticles = (posting.postingArticles ?? []).map((pa: any) => pa.article);
+  const relatedArticles = (posting.postingArticles ?? [])
+    .map((pa: any) => pa.article)
+    .filter((a: any) => a.status === "PUBLISHED");
   const kindPath = posting.kind === "GOVERNMENT" ? "GOVERNMENT" : "PRIVATE";
   const stageLabels = isHi ? STAGE_LABELS_HI : STAGE_LABELS;
   const kindLabels = isHi ? KIND_LABELS_HI : KIND_LABELS;
 
   const schema = jsonLdGraph(
-    buildJobPostingSchema(posting as any, org as any),
+    buildJobPostingSchema(posting as any, org as any, relatedArticles.map((a: any) => a.slug)),
     buildExamEventSchema(posting as any),
     buildBreadcrumbSchema([
       // No localized homepage exists — point at "/" directly rather than a
@@ -381,6 +383,27 @@ export default async function LocaleJobPage({ params }: Props) {
           </>
         )}
       </p>
+
+      {relatedArticles.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {relatedArticles.map((article: any) => {
+            const articleHref =
+              isHi && article.titleHi
+                ? `/hi/articles/${article.slug}`
+                : `/articles/${article.slug}`;
+            const articleTitle = isHi && article.titleHi ? article.titleHi : article.title;
+            return (
+              <Link
+                key={article.id}
+                href={articleHref}
+                className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100"
+              >
+                📄 {articleTitle}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {L.notice && (
         <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">

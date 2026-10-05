@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   articles,
@@ -76,6 +76,27 @@ export async function loginAction(formData: FormData) {
     maxAge: 60 * 60 * 24 * 7,
   });
   redirect("/admin");
+}
+
+export async function linkArticleToPosting(postingId: number, formData: FormData) {
+  await requireAdmin();
+  const db = getDb();
+  const articleId = num(formData, "articleId");
+  if (!articleId) return;
+  await db
+    .insert(postingArticles)
+    .values({ postingId, articleId, relationType: "RELATED" })
+    .onConflictDoNothing();
+  revalidatePath(`/admin/postings/${postingId}`);
+}
+
+export async function unlinkArticleFromPosting(postingId: number, articleId: number) {
+  await requireAdmin();
+  const db = getDb();
+  await db
+    .delete(postingArticles)
+    .where(and(eq(postingArticles.postingId, postingId), eq(postingArticles.articleId, articleId)));
+  revalidatePath(`/admin/postings/${postingId}`);
 }
 
 export async function logoutAction() {

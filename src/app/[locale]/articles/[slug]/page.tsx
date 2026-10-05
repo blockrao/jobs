@@ -56,7 +56,9 @@ export default async function ArticlePage({ params }: Props) {
     ? "इस लेख का पूरा हिंदी अनुवाद जल्द ही उपलब्ध होगा। नीचे अंग्रेज़ी में विवरण दिया गया है।"
     : null;
 
-  const relatedPostings = article.postingArticles.map((pa) => pa.posting);
+  const relatedPostings = article.postingArticles
+    .map((pa) => pa.posting)
+    .filter((p) => p.reviewStatus === "APPROVED");
   // buildJobPostingSchema always mints the JobPosting @id off the canonical
   // unprefixed URL (absoluteUrl(`/jobs/${slug}`)) regardless of locale — the
   // Article.about[] references must match that exact @id or the graph

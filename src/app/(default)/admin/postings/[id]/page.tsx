@@ -3,7 +3,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { postings, postingUpdates } from "@/db/schema";
-import { updatePostingStage } from "../../actions";
+import { updatePostingStage, linkArticleToPosting, unlinkArticleFromPosting } from "../../actions";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
 import { SubmitButton } from "@/components/submit-button";
 
@@ -19,7 +19,7 @@ export default async function AdminPostingDetail({
   const db = getDb();
   const posting = await db.query.postings.findFirst({
     where: eq(postings.id, postingId),
-    with: { organization: true },
+    with: { organization: true, postingArticles: { with: { article: true } } },
   });
   if (!posting) notFound();
 
@@ -29,6 +29,8 @@ export default async function AdminPostingDetail({
     .where(eq(postingUpdates.postingId, postingId));
 
   const updatePostingStageWithId = updatePostingStage.bind(null, postingId);
+  const linkArticleWithId = linkArticleToPosting.bind(null, postingId);
+  const linkedArticles = posting.postingArticles ?? [];
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
@@ -79,6 +81,59 @@ export default async function AdminPostingDetail({
           />
           <SubmitButton className="btn col-span-2" pendingText="Pushing…">
             Push Update
+          </SubmitButton>
+        </form>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Linked Articles</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Articles linked here appear as related guides on the job page and emit reciprocal structured-data references for Google.
+        </p>
+        {linkedArticles.length > 0 && (
+          <ul className="mt-3 space-y-2 text-sm">
+            {linkedArticles.map((pa) => {
+              const unlinkWithIds = unlinkArticleFromPosting.bind(null, postingId, pa.article.id);
+              return (
+                <li key={pa.article.id} className="flex items-center justify-between gap-2 rounded-md border border-black/10 px-3 py-2">
+                  <div>
+                    <Link
+                      href={`/articles/${pa.article.slug}`}
+                      target="_blank"
+                      className="font-medium underline"
+                    >
+                      {pa.article.title}
+                    </Link>
+                    <span className="ml-2 text-xs text-neutral-400">
+                      #{pa.article.id} · {pa.article.status}
+                    </span>
+                  </div>
+                  <form action={unlinkWithIds}>
+                    <button
+                      type="submit"
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Unlink
+                    </button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {linkedArticles.length === 0 && (
+          <p className="mt-3 text-sm text-neutral-500">No articles linked yet.</p>
+        )}
+        <form action={linkArticleWithId} className="mt-3 flex gap-2">
+          <input
+            name="articleId"
+            type="number"
+            placeholder="Article ID"
+            required
+            className="input w-32"
+          />
+          <SubmitButton className="btn" pendingText="Linking…">
+            Link Article
           </SubmitButton>
         </form>
       </section>

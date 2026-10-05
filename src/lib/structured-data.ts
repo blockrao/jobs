@@ -112,6 +112,7 @@ export function buildExamSchema(
 export function buildJobPostingSchema(
   posting: Posting,
   org: Organization,
+  linkedArticleSlugs: string[] = [],
 ): Record<string, unknown> | null {
   if (!isHiringOpen(posting.currentStage, posting.validThrough)) return null;
 
@@ -199,6 +200,16 @@ export function buildJobPostingSchema(
     // apply links go to the official site, so it is true only for a link on
     // this site (PQ-004).
     directApply: isOnSiteUrl(posting.applyUrl),
+    // Reciprocal graph link: articles that cover this posting reference the
+    // JobPosting @id above; this closes the loop so crawlers can walk both
+    // directions. Uses canonical (non-locale) article URLs to match the
+    // Article @id minted in buildArticleSchema.
+    ...(linkedArticleSlugs.length > 0 && {
+      mentions: linkedArticleSlugs.map((slug) => ({
+        "@type": "Article",
+        "@id": absoluteUrl(`/articles/${slug}#article`),
+      })),
+    }),
   };
 }
 
