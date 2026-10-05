@@ -53,7 +53,8 @@ function numbers(text: string): number[] {
   return [...collapse(text).replace(/,/g, "").matchAll(/\b(\d{1,3})\s*(?:years?|yrs?)\b/gi)].map((m) => +m[1]);
 }
 
-function rupees(text: string): number | undefined {
+function rupees(text: string, bareOk = false): number | undefined {
+  if (bareOk && /^\s*\d[\d,]*(\/-)?\s*$/.test(text)) return +text.replace(/[^0-9]/g, "");
   const m = collapse(text).replace(/,/g, "").match(/(?:₹|rs\.?|inr)\s*(\d{1,6})/i);
   return m ? +m[1] : undefined;
 }
@@ -106,28 +107,37 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
   };
 
   // ---- Age ----
-  // Only explicit statements are used: "minimum age ... N", a range "N to M years",
-  // or a table column headed "max". Relaxation figures are never read as limits.
+  // Only explicit statements are used. Sentences about relaxation, calculators
+  // or service years are ignored, and a table "relaxation" column is never read.
+  const plausible = (n: number) => n >= 14 && n <= 70;
+  const sentences = (paras: string[]) =>
+    paras.flatMap((p) => collapse(p).replace(/\brs\.\s*/gi, "Rs ").split(/(?<=[.;])\s+/)).filter((x) => !/relax|calculator|calculate|service|experience/i.test(x));
   for (const s of by("age")) {
-    const para = s.paras.join(" ");
-    const range = collapse(para).match(/\b(\d{2})\s*(?:to|-|–)\s*(\d{2})\s*(?:years?|yrs?)/i);
-    const minM = collapse(para).match(/minimum age[^0-9]{0,60}(\d{2})\b/i);
-    const maxM = collapse(para).match(/maximum age[^0-9]{0,80}(\d{2})\b/i);
-    const maxTable = s.tables.find((r) => r.length > 1 && /max|upper/i.test(r[0].join(" ")) && !/^\s*relax/i.test(r[0][1] ?? ""));
-    let maxCells: number[] = [];
-    if (maxTable) {
-      const cols = maxTable[0].map((h, i) => (/max|upper/i.test(h) ? i : -1)).filter((i) => i >= 0);
-      maxCells = maxTable.slice(1).flatMap((r) => cols.flatMap((i) => numbers(r[i] ?? "")));
+    const mins: number[] = [];
+    const maxs: number[] = [];
+    for (const sent of sentences(s.paras)) {
+      let m: RegExpMatchArray | null;
+      if ((m = sent.match(/between\s+(\d{2})\s*(?:years?)?\s*(?:and|to|-|–)\s*(\d{2})/i))) { mins.push(+m[1]); maxs.push(+m[2]); }
+      if ((m = sent.match(/\b(\d{2})\s*(?:years?|yrs?)?\s*(?:to|-|–)\s*(\d{2})\s*(?:years?|yrs?)/i))) { mins.push(+m[1]); maxs.push(+m[2]); }
+      if ((m = sent.match(/(?:minimum age|not less than|at least|should not be less than)[^0-9]{0,40}(\d{2})\b/i))) mins.push(+m[1]);
+      if ((m = sent.match(/(?:maximum age|upper age limit|not more than|not exceed|should not be more than)[^0-9]{0,60}(\d{2})\b/i))) maxs.push(+m[1]);
     }
-    const plausible = (n: number) => n >= 14 && n <= 70;
-    if (minM && plausible(+minM[1])) out.ageLimitMin = +minM[1];
-    else if (range && plausible(+range[1])) out.ageLimitMin = +range[1];
-    const maxCandidates = [
-      ...maxCells.filter(plausible),
-      ...(range && plausible(+range[2]) ? [+range[2]] : []),
-      ...(maxM && plausible(+maxM[1]) ? [+maxM[1]] : []),
-    ];
-    if (maxCandidates.length) out.ageLimitMax = Math.max(...maxCandidates);
+    for (const t of s.tables) {
+      const hdr = t[0];
+      const minC = hdr.findIndex((h) => /min/i.test(h) && !/relax/i.test(h));
+      const maxC = hdr.findIndex((h) => /max|upper age|age limit/i.test(h) && !/relax/i.test(h));
+      for (const r of t.slice(1)) {
+        if (minC >= 0) mins.push(...numbers(r[minC] ?? ""));
+        if (maxC >= 0) maxs.push(...numbers(r[maxC] ?? ""));
+        if (minC < 0 && maxC < 0 && !/relax/i.test(hdr.join(" "))) {
+          const m = (r.slice(1).join(" ")).match(/\b(\d{2})\s*(?:years?)?\s*(?:to|-|–)\s*(\d{2})\s*(?:years?|yrs?)/i);
+          if (m) { mins.push(+m[1]); maxs.push(+m[2]); }
+        }
+      }
+    }
+    const mn = mins.filter(plausible), mx = maxs.filter(plausible);
+    if (mn.length) out.ageLimitMin = Math.min(...mn);
+    if (mx.length) out.ageLimitMax = Math.max(...mx);
     const t = s.tables.find((r) => r.length > 1);
     if (t) tables.push({ title: "Age limit", headers: t[0], rows: t.slice(1) });
     break;
@@ -135,19 +145,25 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
 
   // ---- Fee ----
   for (const s of by("fee")) {
-    const t = s.tables.find((r) => r.length > 1);
+    const t = s.tables.find((r) => r.length > 1 && r[0].some((h) => /fee|charge/i.test(h)));
     if (t) {
-      const amounts = t.slice(1).map((r) => rupees(r.slice(1).join(" ") || r.join(" "))).filter((n): n is number => n != null);
-      if (amounts.length) {
-        out.applicationFeeGeneral = amounts[0];
-        out.applicationFeeReserved = amounts.length > 1 ? Math.min(...amounts) : amounts[0];
+      const hdr = t[0];
+      let col = hdr.findIndex((h) => /total/i.test(h));
+      if (col < 0) col = hdr.findIndex((h, i) => i > 0 && /fee|charge/i.test(h));
+      if (col < 0) col = hdr.length - 1;
+      const rows = t.slice(1).map((r) => ({ cat: r[0] ?? "", amt: rupees(r[col] ?? "", true) })).filter((r): r is { cat: string; amt: number } => r.amt != null);
+      if (rows.length) {
+        const gen = rows.find((r) => /general|unreserved|\bUR\b|open/i.test(r.cat));
+        out.applicationFeeGeneral = (gen ?? rows.reduce((a, b) => (b.amt > a.amt ? b : a))).amt;
+        out.applicationFeeReserved = Math.min(...rows.map((r) => r.amt));
       }
       tables.push({ title: "Application fee", headers: t[0], rows: t.slice(1) });
     } else {
-      const n = rupees(s.paras.join(" "));
-      if (n != null) out.applicationFeeGeneral = n;
+      const sent = s.paras.flatMap((p) => collapse(p).replace(/\brs\.\s*/gi, "Rs ").split(/(?<=[.;])\s+/)).find((x) => /\bfee\b/i.test(x) && rupees(x) != null);
+      const n = sent ? rupees(sent) : undefined;
+      if (n != null) { out.applicationFeeGeneral = n; out.applicationFeeReserved = n; }
     }
-    if (/\bno (application )?fee\b|\bfee[- ]free\b|exempt/i.test(s.paras.join(" ")) && out.applicationFeeGeneral == null) {
+    if (out.applicationFeeGeneral == null && /\bno (application )?fee\b|\bfee[- ]free\b|not charged|exempt/i.test(s.paras.join(" "))) {
       out.applicationFeeGeneral = 0;
     }
     break;
@@ -155,11 +171,16 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
 
   // ---- Salary ----
   for (const s of by("salary")) {
-    const text = [...s.paras, ...s.tables.flat().map((r) => r.join(" "))].join(" ");
-    const sal = parseSalary(text);
-    if (sal.salaryMin) {
-      out.salaryMin = sal.salaryMin;
-      out.salaryMax = sal.salaryMax;
+    const text = collapse([...s.paras, ...s.tables.flat().map((r) => r.join(" "))].join(" ")).replace(/,/g, "");
+    const mins: number[] = [], maxs: number[] = [];
+    for (const m of text.matchAll(/(?:₹|rs\.?|inr)?\s*(\d{4,7})\s*(?:-|–|to)\s*(?:₹|rs\.?|inr)?\s*(\d{4,7})/gi)) {
+      const lo = +m[1], hi = +m[2];
+      if (lo >= 1000 && hi >= lo) { mins.push(lo); maxs.push(hi); }
+    }
+    if (mins.length) { out.salaryMin = Math.min(...mins); out.salaryMax = Math.max(...maxs); }
+    else {
+      const single = parseSalary(text);
+      if (single.salaryMin) out.salaryMin = single.salaryMin;
     }
     break;
   }

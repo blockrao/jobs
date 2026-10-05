@@ -43,3 +43,33 @@ describe("aggregator hygiene", () => {
     expect(f.officialNotificationUrl).toBeUndefined();
   });
 });
+
+const wrap = (h: string, body: string) => parseFreeJobAlertArticle(`<article><h2>X ${h}</h2>${body}</article>`);
+describe("layout variants seen on real pages", () => {
+  test("age: 'between 19 and 40 years'", () => {
+    const f = wrap("Age Limit", "<p>Candidates must be between 19 and 40 years of age as on 01.01.2026.</p>");
+    expect([f.ageLimitMin, f.ageLimitMax]).toEqual([19, 40]);
+  });
+  test("age: 'not less than 21 years and not more than 40 years'", () => {
+    const f = wrap("Age Limit", "<p>Candidates should not be less than 21 years and not more than 40 years of age. Age relaxation of 5 years applies.</p>");
+    expect([f.ageLimitMin, f.ageLimitMax]).toEqual([21, 40]);
+  });
+  test("age: min/max columns, relaxation column ignored", () => {
+    const f = wrap("Age Limit", "<table><tr><th>Category</th><th>Minimum Age</th><th>Maximum Age</th><th>Relaxation in Upper Age Limit</th></tr><tr><td>UR</td><td>18 years</td><td>37 years</td><td>-</td></tr><tr><td>SC</td><td>18 years</td><td>37 years</td><td>5 years</td></tr></table>");
+    expect([f.ageLimitMin, f.ageLimitMax]).toEqual([18, 37]);
+  });
+  test("age: not stated stays empty", () => {
+    expect(wrap("Age Limit", "<p>Age limit is not specified in this brief notification.</p>").ageLimitMax).toBeUndefined();
+  });
+  test("fee: Total Fee column, General row preferred", () => {
+    const f = wrap("Application Fee", "<table><tr><th>Category</th><th>Facilitation (₹)</th><th>Total Fee (₹)</th></tr><tr><td>SC/BC</td><td>550</td><td>710</td></tr><tr><td>General</td><td>1000</td><td>1,200</td></tr></table>");
+    expect([f.applicationFeeGeneral, f.applicationFeeReserved]).toEqual([1200, 710]);
+  });
+  test("fee: prose sentence", () => {
+    expect(wrap("Application Fee", "<p>The application fee is Rs. 100 payable online.</p>").applicationFeeGeneral).toBe(100);
+  });
+  test("salary: several posts give lowest and highest", () => {
+    const f = wrap("Salary", "<table><tr><th>Post</th><th>Pay</th></tr><tr><td>A</td><td>₹19,900 – ₹63,200</td></tr><tr><td>B</td><td>₹35,400 – ₹1,12,400</td></tr></table>");
+    expect([f.salaryMin, f.salaryMax]).toEqual([19900, 112400]);
+  });
+});
