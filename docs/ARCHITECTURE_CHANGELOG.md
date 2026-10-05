@@ -1220,3 +1220,11 @@ PQ-004 RESULT (observed on production, UPSC JTO page, 2026-10-05): title "UPSC J
 **Code.** Adapters emit the neutral codes; the writer never stores a source address (used in memory for hashing only); `sources.url` stored empty. The enrichment CI jobs and `data/enrich` (lists of source addresses) are removed: enrichment needed the stored address and its job is done.
 
 **Consequences.** A posting can no longer be traced back to its source page from the database; re-enrichment of a posting means re-finding it. Backups of the old values sit in schema `backup_20261005` and can be dropped once the owner is satisfied (drop the schema to erase the last copy). The read-only role `enrich_ro` and its policy remain (the policy now matches nothing); dropping them was blocked in this session.
+
+## PQ-012: completeness push (2026-10-05)
+
+**Audit.** Of 604 approved postings: 423 had no apply link, 473 no fee, 266 no age, 162 no pay, 596 never verified, 22 past-deadline not expired, 564 without timeline, 1 with notice FAQs. 430 postings pending.
+
+**Done.** (1) Importer wired to the article fact extractor (fill-only; aggregator guard on storage and on approval). (2) Pending backlog triaged; 81 reviewed postings approved (25 Tier A, 56 Tier B; backup `backup_20261005.pending_approval_backup`, rollback in the approval SQL header); urgency refreshed. (3) State and region filled for 215 pending postings. (4) 11 official apply links added where the notice was reachable; 9 less certain ones skipped. (5) Notice-specific FAQs and a minimal timeline are now derived at render time from stored facts (`src/lib/content/notice-faqs.ts`), not stored.
+
+**Open.** Apply links for ~412 pages (many notices are offline or email-only), 228 pending postings need data, fee/age/pay gaps, verification against official notices, stale-open closure (22 approved, 26 flagged), Hindi coverage, tested backup and restore, scheduled import with alerting, Search Console submission (owner action). Importer follow-ups: live adapter does not set `source` (writer would store "unknown"); file adapter still stores the address in observation raw.

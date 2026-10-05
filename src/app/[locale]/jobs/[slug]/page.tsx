@@ -1,3 +1,4 @@
+import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/content/notice-faqs";
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
 import { entitySeo } from "@/lib/seo";
@@ -211,8 +212,45 @@ export default async function LocaleJobPage({ params }: Props) {
   const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting, isHi, displayTitle, displayOrgName, displayEligibility);
-  const timeline = [...(posting.updates ?? [])].sort(
-    (a, b) => a.eventDate.getTime() - b.eventDate.getTime(),
+  // Notice-specific FAQs and a minimal timeline are derived from the stored facts at render time
+  // (fact-only, English; never stored, so they always match the current data).
+  const noticeFacts: NoticeFacts = {
+    id: posting.id,
+    title: posting.title,
+    org: org.name,
+    vac: posting.totalVacancies ?? null,
+    pay_min: posting.salaryMin ?? null,
+    pay_max: posting.salaryMax ?? null,
+    age_min: posting.ageLimitMin ?? null,
+    age_max: posting.ageLimitMax ?? null,
+    date_posted: posting.datePosted ? new Date(posting.datePosted).toISOString() : null,
+    valid_through: posting.validThrough ? new Date(posting.validThrough).toISOString() : null,
+    exam_date: posting.examDate ? new Date(posting.examDate).toISOString() : null,
+    has_apply: Boolean(publicLink(posting.applyUrl)),
+    post_names: ((posting.postNames as string[] | null) ?? []).filter((n) => typeof n === "string"),
+    extra_tables: (extraContent?.tables ?? []).map((t: any) => t.title as string),
+    existing_faqs: extraContent?.faqs?.length ?? 0,
+    n_updates: (posting.updates ?? []).length,
+  };
+  if (noticeFacts.existing_faqs === 0 && !isHi) {
+    for (const f of buildNoticeFaqs(noticeFacts)) {
+      if (!faqs.some((x) => x.question === f.q)) faqs.push({ question: f.q, answer: f.a });
+    }
+  }
+  const derivedTimeline = !isHi
+    ? buildNoticeTimeline(noticeFacts).map((r, i) => ({
+        id: `derived-${i}`,
+        stage: r.stage,
+        title: r.title,
+        titleHi: null,
+        description: null,
+        descriptionHi: null,
+        linkUrl: null,
+        eventDate: new Date(r.eventDate),
+      }))
+    : [];
+  const timeline = [...(posting.updates ?? []), ...derivedTimeline].sort(
+    (a: any, b: any) => a.eventDate.getTime() - b.eventDate.getTime(),
   );
   const relatedArticles = (posting.postingArticles ?? []).map((pa: any) => pa.article);
   const kindPath = posting.kind === "GOVERNMENT" ? "GOVERNMENT" : "PRIVATE";
