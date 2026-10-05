@@ -68,7 +68,7 @@ export default async function StatePage({ params }: Props) {
               <p className="text-sm text-neutral-600">
                 {j.organization.name}
                 {j.locationCity ? ` · ${j.locationCity}` : ""}
-                {j.totalVacancies ? ` · ${j.totalVacancies} posts` : ""} ·{" "}
+                {j.totalVacancies ? ` · ${j.totalVacancies} ${j.totalVacancies === 1 ? "post" : "posts"}` : ""} ·{" "}
                 {STAGE_LABELS[j.currentStage] ?? j.currentStage}
               </p>
               <p className="text-xs text-neutral-400">

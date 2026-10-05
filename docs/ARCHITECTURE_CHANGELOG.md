@@ -1164,3 +1164,23 @@ Origin: audit of one page (UPSC JTO, Sugar Technology) found site-wide defects: 
 Not done, by decision: `educationRequirements` / `experienceRequirements` in JobPosting (needs structured per-post fields, not free text; goes with posts-and-vacancies as rows); vacancy-by-category table, selection process, important dates; organization logos; notice-specific FAQs. Date display now uses IST; whether the stored `date_posted` of the UPSC advertisement (26 Sep IST) is the notice date (25 Sep) is a data question, not changed.
 
 PQ-004 RESULT (observed on production, UPSC JTO page, 2026-10-05): title "UPSC Junior Technical Officer (Sugar Technology) Recruitment 2026 | JobOye"; age "Up to 38 yrs"; fee "₹25 (General) · ₹0 (Reserved)"; posted "26 Sept 2026"; FAQ reads "1 vacancy" and names the post; `directApply` false; `og:image` served (200 image/png) and Twitter card large. Follow-up: the meta description CTA was shortened so the description is not cut at "how to…".
+
+---
+
+## PQ-009 — State assignment for postings and state hub pages (A-079)
+
+| Field | Value |
+| --- | --- |
+| Change ID | PQ-009 |
+| Date | 2026-10-05 |
+| Status | Applied and deployed; live check passed on the Manipur hub and a job page |
+
+**Objective.** Give each posting a state or union territory where the evidence supports one, publish a hub page per state, and link jobs to their state.
+
+**Schema.** Additive nullable `postings.state_slug` plus partial index (migration `20261005140000_postings_state_slug.sql`, rollback `supabase/rollback/postings_state_slug.down.sql`). Applied before the code.
+
+**Data.** `state_slug` set on 446 of 604 approved postings, fill-only, backup `backup_20261005.postings_state_backfill`. Evidence order: stored location, organization state, state-body name, place named in the organization name or title. Central bodies without a place (SSC, UPSC, railways, banks, forces) stay NULL. Where a posting had no city or region, `location_region` was filled with the state name from the same evidence; approved postings with no location fell from 288 to 114. Index tiers recomputed afterwards (backups `postings_tier_recompute`, `postings_tier_recompute2`): Tier A 267 to 412, Tier B 150, Tier C 42.
+
+**Code.** `src/lib/states/` (list, resolver, place map, queries), `/states` and `/states/[slug]` (English only; noindex and out of the sitemap while a state has no current job), state link in the job page breadcrumb and location line, footer link, sitemap entries. Dadra and Nagar Haveli and Daman and Diu is one hub.
+
+**Open.** Hindi hubs deferred (A-054 to A-056). 158 postings unplaced on purpose. Review the `place`-basis placements flagged in the result report (ids 665, 436, 438, 793, 919, 494, 417, 419, 421, 130, 131, 107, 865, 900).
