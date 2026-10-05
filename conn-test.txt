@@ -1,0 +1,11 @@
+secret_present: yes
+--- connected as (expect enrich_ro)
+enrich_ro
+--- read test (expect a number)
+568
+--- visible rows by source (expect only freejobalert)
+freejobalert|568
+--- write test (expect permission denied)
+ERROR:  permission denied for table postings
+--- other column test (expect permission denied)
+ERROR:  permission denied for table postings
