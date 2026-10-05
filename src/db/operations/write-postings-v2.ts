@@ -528,6 +528,7 @@ export async function writePostingsToDB(
             publishingStatus: "DRAFT",
             status: "ACTIVE",
             datePosted: norm.datePosted ?? new Date(),
+            lastVerifiedAt: new Date(),
             createdAt: new Date(),
             updatedAt: new Date(),
           })
@@ -616,6 +617,7 @@ export async function writePostingsToDB(
         out.unchanged++;
       } else {
         set.updatedAt = new Date();
+        set.lastVerifiedAt = new Date();
         await db.update(postings).set(set).where(eq(postings.id, existingPosting.id));
         if (flaggedFields.length > 0) {
           result.action = "flagged";

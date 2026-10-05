@@ -79,6 +79,8 @@ export async function listPostings(opts?: {
   kind?: "GOVERNMENT" | "PRIVATE";
   categorySlug?: string;
   search?: string;
+  /** "newly-added": posted in last 7 days; "open": current_stage = APPLICATION_OPEN */
+  filter?: "newly-added" | "open";
   limit?: number;
   offset?: number;
 }) {
@@ -98,6 +100,13 @@ export async function listPostings(opts?: {
         ilike(postings.description, `%${opts.search}%`),
       ),
     );
+  }
+  if (opts?.filter === "newly-added") {
+    // Posted within the last 7 days (date_posted is reliable — set at ingest from source)
+    conditions.push(sql`${postings.datePosted} >= now() - interval '7 days'`);
+  } else if (opts?.filter === "open") {
+    // Application window currently open (stage-based — more reliable than validThrough which may be stale)
+    conditions.push(eq(postings.currentStage, "APPLICATION_OPEN"));
   }
 
   if (opts?.categorySlug) {

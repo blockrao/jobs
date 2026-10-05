@@ -29,16 +29,19 @@ type Props = {
     kind?: string;
     q?: string;
     page?: string;
+    filter?: string;
   }>;
 };
 
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  const { kind, q, page } = await searchParams;
+  const { kind, q, page, filter } = await searchParams;
   let label = "All Jobs";
   if (kind === "GOVERNMENT") label = "Government Jobs";
   else if (kind === "PRIVATE") label = "Private Jobs";
+  if (filter === "newly-added") label = `Newly Added ${label}`;
+  else if (filter === "open") label = `Open Applications — ${label}`;
 
   return {
     title: label,
@@ -54,14 +57,20 @@ export async function generateMetadata({
 }
 
 export default async function JobsListPage({ searchParams }: Props) {
-  const { kind, q, page: pageParam } = await searchParams;
+  const { kind, q, page: pageParam, filter: filterParam } = await searchParams;
   const page = parsePage(pageParam);
   const validKind =
     kind === "GOVERNMENT" || kind === "PRIVATE" ? kind : undefined;
+  const validFilter =
+    filterParam === "newly-added" || filterParam === "open"
+      ? (filterParam as "newly-added" | "open")
+      : undefined;
+
   let results: Awaited<ReturnType<typeof listPostings>> = [];
   try {
     results = await listPostings({
       kind: validKind,
+      filter: validFilter,
       search: q,
       // One extra row tells us whether a next page exists.
       limit: JOBS_PAGE_SIZE + 1,
@@ -92,22 +101,52 @@ export default async function JobsListPage({ searchParams }: Props) {
     all: isHi ? "सभी" : "All",
     government: isHi ? "सरकारी" : "Government",
     private: isHi ? "निजी" : "Private",
+    newlyAdded: isHi ? "नई नौकरियां" : "Newly Added",
+    open: isHi ? "आवेदन खुले" : "Applications Open",
     showing: (n: number) =>
       isHi ? `${n} नौकरियां दिखाई जा रही हैं` : `Showing ${n} job${n !== 1 ? "s" : ""}`,
     noResults: isHi
       ? "कोई नौकरी नहीं मिली। कोई और खोज आज़माएं।"
       : "No jobs found. Try a different search.",
     posted: isHi ? "प्रकाशित" : "Posted",
+    verified: isHi ? "सत्यापित" : "Verified",
+    examOn: isHi ? "परीक्षा" : "Exam",
   };
+
+  // Heading: combine kind + filter
+  function pageHeading() {
+    const base = validKind ? L.kindJobs(validKind) : L.allJobs;
+    if (validFilter === "newly-added") return `${L.newlyAdded} — ${base}`;
+    if (validFilter === "open") return `${L.open} — ${base}`;
+    return base;
+  }
+
+  // Build href helpers that keep existing params
+  function filterHref(f: string | undefined) {
+    const params = new URLSearchParams();
+    if (validKind) params.set("kind", validKind);
+    if (q) params.set("q", q);
+    if (f) params.set("filter", f);
+    const qs = params.toString();
+    return `/jobs${qs ? `?${qs}` : ""}`;
+  }
+
+  function kindHref(k: string | undefined) {
+    const params = new URLSearchParams();
+    if (k) params.set("kind", k);
+    if (q) params.set("q", q);
+    if (validFilter) params.set("filter", validFilter);
+    const qs = params.toString();
+    return `/jobs${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight">
-        {validKind ? L.kindJobs(validKind) : L.allJobs}
-      </h1>
+      <h1 className="text-2xl font-bold tracking-tight">{pageHeading()}</h1>
 
       <form className="mt-4 flex gap-2" action="/jobs" method="get">
         {validKind && <input type="hidden" name="kind" value={validKind} />}
+        {validFilter && <input type="hidden" name="filter" value={validFilter} />}
         <input
           type="search"
           name="q"
@@ -123,15 +162,16 @@ export default async function JobsListPage({ searchParams }: Props) {
         </button>
       </form>
 
+      {/* Kind filter row */}
       <div className="mt-4 flex gap-3 text-sm">
         <Link
-          href="/jobs"
+          href={kindHref(undefined)}
           className={!validKind ? "font-semibold underline" : "text-neutral-600"}
         >
           {L.all}
         </Link>
         <Link
-          href="/jobs?kind=GOVERNMENT"
+          href={kindHref("GOVERNMENT")}
           className={
             validKind === "GOVERNMENT"
               ? "font-semibold underline"
@@ -141,7 +181,7 @@ export default async function JobsListPage({ searchParams }: Props) {
           {L.government}
         </Link>
         <Link
-          href="/jobs?kind=PRIVATE"
+          href={kindHref("PRIVATE")}
           className={
             validKind === "PRIVATE"
               ? "font-semibold underline"
@@ -149,6 +189,40 @@ export default async function JobsListPage({ searchParams }: Props) {
           }
         >
           {L.private}
+        </Link>
+      </div>
+
+      {/* Status / time filter row */}
+      <div className="mt-2 flex gap-2 text-xs">
+        <Link
+          href={filterHref(undefined)}
+          className={
+            !validFilter
+              ? "rounded-full border border-neutral-900 bg-neutral-900 px-3 py-1 font-semibold text-white"
+              : "rounded-full border border-black/20 px-3 py-1 text-neutral-600 hover:border-black/40"
+          }
+        >
+          {L.all}
+        </Link>
+        <Link
+          href={filterHref("newly-added")}
+          className={
+            validFilter === "newly-added"
+              ? "rounded-full border border-neutral-900 bg-neutral-900 px-3 py-1 font-semibold text-white"
+              : "rounded-full border border-black/20 px-3 py-1 text-neutral-600 hover:border-black/40"
+          }
+        >
+          {L.newlyAdded}
+        </Link>
+        <Link
+          href={filterHref("open")}
+          className={
+            validFilter === "open"
+              ? "rounded-full border border-green-700 bg-green-700 px-3 py-1 font-semibold text-white"
+              : "rounded-full border border-green-600/40 px-3 py-1 text-green-700 hover:border-green-600"
+          }
+        >
+          {L.open}
         </Link>
       </div>
 
@@ -181,6 +255,9 @@ export default async function JobsListPage({ searchParams }: Props) {
                 ? `/hi/jobs/${posting.slug}`
                 : `/jobs/${posting.slug}`;
 
+            const examDate = (posting as any).examDate as Date | null | undefined;
+            const lastVerifiedAt = (posting as any).lastVerifiedAt as Date | null | undefined;
+
             return (
               <li key={posting.id} className="py-4">
                 <Link
@@ -198,6 +275,12 @@ export default async function JobsListPage({ searchParams }: Props) {
                 </p>
                 <p className="text-xs text-neutral-400">
                   {L.posted} {formatDate(posting.datePosted, dateLocale)}
+                  {examDate && (
+                    <> · {L.examOn}: {formatDate(examDate, dateLocale)}</>
+                  )}
+                  {lastVerifiedAt && (
+                    <> · {L.verified} {formatDate(lastVerifiedAt, dateLocale)}</>
+                  )}
                 </p>
               </li>
             );
@@ -211,7 +294,7 @@ export default async function JobsListPage({ searchParams }: Props) {
         {(page > 1 || hasNext) && (
           <nav aria-label="Pagination" className="mt-6 flex items-center justify-between text-sm">
             {page > 1 ? (
-              <Link rel="prev" href={pageHref("/jobs", { kind: validKind, q }, page - 1)} className="hover:underline">
+              <Link rel="prev" href={pageHref("/jobs", { kind: validKind, q, filter: validFilter }, page - 1)} className="hover:underline">
                 {isHi ? "← पिछला" : "← Previous"}
               </Link>
             ) : (
@@ -219,7 +302,7 @@ export default async function JobsListPage({ searchParams }: Props) {
             )}
             <span className="text-neutral-500">{isHi ? `पृष्ठ ${page}` : `Page ${page}`}</span>
             {hasNext ? (
-              <Link rel="next" href={pageHref("/jobs", { kind: validKind, q }, page + 1)} className="hover:underline">
+              <Link rel="next" href={pageHref("/jobs", { kind: validKind, q, filter: validFilter }, page + 1)} className="hover:underline">
                 {isHi ? "अगला →" : "Next →"}
               </Link>
             ) : (
