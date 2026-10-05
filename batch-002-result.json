@@ -1,0 +1,2654 @@
+[
+ {
+  "id": 959,
+  "url": "https://www.freejobalert.com/articles/csir-nml-recruitment-2026-walk-in-for-48-project-assistant-project-associate-and-more-posts-3069011",
+  "ok": true,
+  "htmlBytes": 248444,
+  "facts": {
+   "unparsed": [
+    "age",
+    "applyUrl"
+   ],
+   "review": [],
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Age limit",
+      "headers": [
+       "Level",
+       "Emoluments",
+       "Upper Age",
+       "Remarks"
+      ],
+      "rows": [
+       [
+        "Project Assistant-I (PA-I)",
+        "₹18,000 + HRA",
+        "35",
+        "As per CSIR norms"
+       ],
+       [
+        "Project Assistant-II (PA-II)",
+        "₹20,000 + HRA",
+        "35",
+        "As per CSIR norms"
+       ],
+       [
+        "Scientific Administrative Assistant (SAA)",
+        "₹24,000 + HRA (ANRF project)",
+        "50",
+        "As per ANRF guidelines"
+       ],
+       [
+        "Project-JRF",
+        "₹37,000 + HRA",
+        "28",
+        "As per DST, GOI norms"
+       ],
+       [
+        "Project Associate-I (PAT-I)",
+        "₹25,000 or ₹31,000* + HRA",
+        "35",
+        "*Higher rate for NET/GATE-qualified candidates"
+       ],
+       [
+        "Project Associate-I (ANRF project)",
+        "₹30,000 or ₹37,000** + HRA",
+        "50",
+        "**Higher rate for NET/GATE-qualified scholars"
+       ],
+       [
+        "Project Associate-II (PAT-II)",
+        "₹28,000 or ₹35,000* + HRA",
+        "35",
+        "*Higher rate for NET/GATE-qualified candidates"
+       ],
+       [
+        "Project Scientist-I (PS-I)",
+        "₹77,000 + HRA (ANRF project)",
+        "50",
+        "As per ANRF guidelines"
+       ]
+      ]
+     }
+    ]
+   },
+   "debug": {
+    "sample": {
+     "age": " ## Level|Emoluments|Upper Age|Remarks / Project Assistant-I (PA-I)|₹18,000 + HRA|35|As per CSIR norms / Project Assistant-II (PA-II)|₹20,000 + HRA|35|As per CSIR norms"
+    },
+    "headings": [
+     "CSIR-NML Project Staff Recruitment 2026 Overview",
+     "Walk-in Interview Schedule (Group-wise)",
+     "Project-wise Vacancy & Essential Qualification",
+     "Upper Age Limit & Emoluments (as on date of interview)",
+     "Selection Process",
+     "How to Attend the Walk-in Interview",
+     "Documents Required",
+     "Important Terms & Conditions",
+     "Important Links",
+     "CSIR NML Recruitment 2026 - FAQS"
+    ],
+    "linkLabels": []
+   }
+  }
+ },
+ {
+  "id": 1007,
+  "url": "https://www.freejobalert.com/articles/koppal-pourakarmika-recruitment-2026-apply-offline-for-48-posts-3068711",
+  "ok": true,
+  "htmlBytes": 223242,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMin": 18,
+   "ageLimitMax": 50,
+   "applicationFeeGeneral": 200,
+   "applicationFeeReserved": 100,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "Scheduled Caste, Scheduled Tribe, Category-1, and Women candidates",
+        "₹100"
+       ],
+       [
+        "General category, 2A, 2B, 3A, 3B categories",
+        "₹200"
+       ]
+      ]
+     },
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "S.No.",
+       "Urban Local Body",
+       "Nera Paavati Pourakarmika Posts",
+       "Posts Reserved under Manual Scavengers Act (10%)",
+       "Total Vacant Direct-Payment Posts"
+      ],
+      "rows": [
+       [
+        "1",
+        "Nagarasabhe Koppal",
+        "15",
+        "2",
+        "17"
+       ],
+       [
+        "2",
+        "Nagarasabhe Gangavati",
+        "27",
+        "4",
+        "31"
+       ],
+       [
+        "Total",
+        "42",
+        "6",
+        "48"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Notification Date",
+        "21.09.2026"
+       ],
+       [
+        "Start Date for Application Submission",
+        "22.09.2026"
+       ],
+       [
+        "Last Date for Application Submission",
+        "22.10.2026"
+       ],
+       [
+        "Selection/Appointment List",
+        "Not specified in the notification"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-22T06:30:00.000Z",
+   "officialNotificationUrl": "https://cdn.s3waas.gov.in/s36cd67d9b6f0150c77bda2eda01ae484c/uploads/2026/09/17899920549227.pdf",
+   "officialWebsiteUrl": "http://www.koppaldudc.mrc.gov.in/",
+   "debug": {
+    "sample": {
+     "age": "Minimum age: 18 years // Maximum age: 50 years ## ",
+     "fee": "The application fee must be paid via Demand Draft (DD). For candidates applying against Nagarasabhe Koppal posts, the DD should be drawn in favour of Nagarasabhe Koppal; for candidates applying against Nagarasabhe Gangavati posts, the DD should be drawn in favour of Nagarasabhe Gangavati. Applications submitted without the fee, or without the complete set of documents specified in the application form, will not be co"
+    },
+    "headings": [
+     "Koppal Pourakarmika Recruitment 2026-27 Overview",
+     "Koppal Pourakarmika Recruitment 2026-27 Important Dates",
+     "Koppal Pourakarmika Recruitment 2026-27 Vacancy Details",
+     "Koppal Pourakarmika Recruitment 2026-27 Eligibility Criteria",
+     "Koppal Pourakarmika Recruitment 2026-27 Age Limit",
+     "Koppal Pourakarmika Recruitment 2026-27 Application Fee",
+     "Koppal Pourakarmika Recruitment 2026-27 Selection Process",
+     "How to Apply for Koppal Pourakarmika Recruitment 2026-27",
+     "Koppal Pourakarmika Recruitment 2026-27 Important Instructio",
+     "Koppal Pourakarmika Recruitment 2026-27 Important Links",
+     "Koppal Pourakarmika Recruitment 2026-27 FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF: Click here => cdn.s3waas.gov.in",
+     "Official Website: Click here => www.koppaldudc.mrc.gov.in",
+     "Join Arattai Channel: Click Here => web.arattai.in",
+     "Join Telegram Channel: Click Here => t.me",
+     "Join WhatsApp Channel: Click Here => www.whatsapp.com",
+     "Sarkari Result: Click Here => sarkariresult.freejobalert.com",
+     "Download Mobile App: Click Here => play.google.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 770,
+  "url": "https://www.freejobalert.com/articles/rgssh-recruitment-2026-apply-online-for-45-professor-associate-professor-assistant-professor-deputy-medical-superintendent-posts-3070810",
+  "ok": true,
+  "htmlBytes": 219974,
+  "facts": {
+   "unparsed": [
+    "fee"
+   ],
+   "review": [],
+   "ageLimitMax": 60,
+   "salaryMin": 15600,
+   "salaryMax": 39100,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "No application fee is mentioned in the official notification."
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Last date of Google form filling",
+        "22 October 2026"
+       ],
+       [
+        "Tentative date of Interview",
+        "28 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "officialNotificationUrl": "https://rgssh.delhi.gov.in/sites/default/files/rgssh/universal/rect_notice_10_2026_for_faculty_and_dms.pdf",
+   "applyUrl": "https://docs.google.com/forms/d/1ZIoQBzJdfk6/edit",
+   "officialWebsiteUrl": "https://rgssh.delhi.gov.in",
+   "debug": {
+    "sample": {
+     "age": "Professor: Maximum age 60 years. // Associate Professor: Maximum age 60 years. ## ",
+     "fee": " ## Category|Fee / No application fee is mentioned in the official notification.",
+     "salary": " ## Post Name|Salary / Professor|Rs. 3,05,000/- per month / Associate Professor|Rs. 2,55,000/- per month"
+    },
+    "headings": [
+     "RGSSH Recruitment 2026 - Overview",
+     "RGSSH Vacancy 2026 Notification PDF",
+     "RGSSH Vacancy 2026 Details",
+     "Eligibility Criteria",
+     "Application Fee",
+     "Age Limit",
+     "Salary / Stipend",
+     "Important Dates",
+     "Selection Process",
+     "How to Apply",
+     "RGSSH Recruitment 2026 - Important Links",
+     "RGSSH Professor, Associate Professor, Assistant Professor, D"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => rgssh.delhi.gov.in",
+     "Apply Online => docs.google.com",
+     "Official Website => rgssh.delhi.gov.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 882,
+  "url": "https://www.freejobalert.com/articles/dhs-nagapattinam-recruitment-2026-apply-offline-for-44-deo-anm-dental-technician-and-more-posts-3070597",
+  "ok": true,
+  "htmlBytes": 230359,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "salaryMin": 11000,
+   "validThrough": "2026-10-09T06:30:00.000Z",
+   "officialNotificationUrl": "https://cdn.s3waas.gov.in/s3c203d8a151612acf12457e4d67635a95/uploads/2026/09/17903218356384.pdf",
+   "officialWebsiteUrl": "https://nagapattinam.nic.in/",
+   "debug": {
+    "sample": {
+     "salary": "Salary is paid per month and varies by post. The lowest salary listed is Rs. 11,000 for Multi Purpose Hospital Worker, and the highest is Rs. 44,000 for Micro Biologist. Medical Officer Siddha is listed at Rs. 40,000. Post-wise salary is shown in the vacancy table above. No allowances or other benefits are mentioned in the notification. ## Sl. No.|Post|Salary per month / 1|Dispenser Siddha-Pharmacist|Rs. 18,000/- / 2"
+    },
+    "headings": [
+     "DHS Nagapattinam Vacancy 2026 Notification PDF",
+     "DHS Nagapattinam Recruitment 2026 Overview",
+     "DHS Nagapattinam Important Dates",
+     "DHS Nagapattinam Vacancy 2026",
+     "DHS Nagapattinam Eligibility Criteria",
+     "DHS Nagapattinam Salary",
+     "DHS Nagapattinam Terms and Conditions",
+     "How to Apply for DHS Nagapattinam Recruitment 2026",
+     "DHS Nagapattinam Recruitment 2026 - Important Links",
+     "DHS Nagapattinam Dispenser Siddha-Pharmacist, Medical Office"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => cdn.s3waas.gov.in",
+     "Application Form => cdn.s3waas.gov.in",
+     "Official Website => nagapattinam.nic.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 484,
+  "url": "https://www.freejobalert.com/articles/ignou-teaching-recruitment-2026-apply-online-42-professor-associate-assistant-professor-posts-3068316",
+  "ok": true,
+  "htmlBytes": 250776,
+  "facts": {
+   "unparsed": [
+    "age",
+    "applyUrl"
+   ],
+   "review": [],
+   "salaryMin": 57700,
+   "salaryMax": 218200,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Selection process",
+      "headers": [
+       "Academic/Research Activity",
+       "Marks (Sciences/Medical/Computer Science)",
+       "Marks (Arts/Humanities/Social Sciences/Management)"
+      ],
+      "rows": [
+       [
+        "Research papers (refereed/peer-reviewed/UGC-listed journals)",
+        "8 per paper",
+        "10 per paper"
+       ],
+       [
+        "Ph.D. guidance (degree awarded)",
+        "10 per degree",
+        "10 per degree"
+       ],
+       [
+        "Research projects completed (>₹10 lakh)",
+        "10",
+        "10"
+       ],
+       [
+        "Patents (International)",
+        "10",
+        "10"
+       ],
+       [
+        "Awards/Fellowship (International)",
+        "7",
+        "7"
+       ]
+      ]
+     },
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "School",
+       "Professor",
+       "Associate Professor",
+       "Assistant Professor"
+      ],
+      "rows": [
+       [
+        "School of Humanities",
+        "English–01(PwBD-a); Urdu–01(ST)",
+        "English–01(UR); Urdu–01(SC), 01(OBC)",
+        "–"
+       ],
+       [
+        "School of Social Sciences",
+        "Anthropology–01(SC); Sociology–01(OBC)",
+        "Anthropology–01(PwBD-a)",
+        "–"
+       ],
+       [
+        "School of Sciences",
+        "Biochemistry–01(ST); Chemistry–01(OBC); Physics–01(SC); Statistics–01(OBC)",
+        "Biochemistry–01(ST)",
+        "Geology–01(PwBD-a)"
+       ],
+       [
+        "School of Continuing Education",
+        "Child Development–01(UR); Home Science–01(UR); Nutritional Science–01(OBC)",
+        "Child Development–01(ST); Nutritional Science–01(SC), 01(UR); Home Science–01(OBC)",
+        "–"
+       ],
+       [
+        "School of Management Studies",
+        "Commerce–01(OBC)",
+        "–",
+        "–"
+       ],
+       [
+        "School of Health Sciences",
+        "Health Science–01(UR); Nursing–01(SC)",
+        "Health Science–01(OBC); Nursing–01(UR)",
+        "Health Science–01(OBC)"
+       ],
+       [
+        "School of Law",
+        "Law–01(UR)",
+        "–",
+        "–"
+       ],
+       [
+        "School of Journalism & New Media Studies",
+        "Journalism & New Media Studies–01(UR)",
+        "–",
+        "Journalism & New Media Studies–01(SC), 01(OBC)"
+       ],
+       [
+        "School of Tourism, Hospitality Service Sectoral Management",
+        "Tourism & Hospitality Service–01(ST)",
+        "Tourism & Hospitality Service–01(OBC)",
+        "–"
+       ],
+       [
+        "School of InterDisciplinary & TransDisciplinary Studies",
+        "Environment Studies–01(OBC)",
+        "InterDisciplinary & TransDisciplinary Studies–01(UR) (Specialization: Philosophy)",
+        "Environment Studies–01(SC)"
+       ],
+       [
+        "School of Social Work",
+        "Social Work–01(UR)",
+        "Social Work–01(OBC)",
+        "–"
+       ],
+       [
+        "School of Foreign Languages",
+        "Foreign Languages–01(UR) (Specialization: Arabic/French/Russian/Spanish)",
+        "Foreign Languages–01(SC), 01(UR) (Specialization: Arabic/French/Russian/Spanish)",
+        "–"
+       ],
+       [
+        "School of Translation Studies and Training",
+        "Translation Studies and Training–01(OBC)",
+        "–",
+        "–"
+       ],
+       [
+        "School of Performing and Visual Arts",
+        "–",
+        "–",
+        "Visual Arts (Painting)–01(OBC)"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Online Portal Opens",
+        "20 September 2026"
+       ],
+       [
+        "Online Application Last Date",
+        "20 October 2026, or 30 days from publication of the advertisement in Employment News, whichever is later"
+       ],
+       [
+        "Eligibility Cut-off Date",
+        "Last date of receipt of online application"
+       ],
+       [
+        "Last Date to Receive Hard Copy (by post) at ACD Office",
+        "30 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "debug": {
+    "sample": {
+     "age": " ## ",
+     "salary": " ## Post|7th CPC Academic Level|Pay Range / Professor|Level 14|₹1,44,200 – ₹2,18,200 / Associate Professor|Level 13A|₹1,31,400 – ₹2,17,100"
+    },
+    "headings": [
+     "IGNOU Recruitment 2026 Overview",
+     "IGNOU Recruitment 2026 Important Dates",
+     "IGNOU Recruitment 2026 Vacancy Details (School-wise)",
+     "IGNOU Recruitment 2026 Eligibility",
+     "IGNOU Recruitment 2026 Age Limit",
+     "IGNOU Recruitment 2026 Pay Scale",
+     "IGNOU Recruitment 2026 Selection Process (Screening & Interv",
+     "How to Apply for IGNOU Recruitment 2026",
+     "Documents Required",
+     "Important Conditions",
+     "IGNOU Recruitment 2026 Important Links",
+     "IGNOU Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": []
+   }
+  }
+ },
+ {
+  "id": 576,
+  "url": "https://www.freejobalert.com/articles/iit-madras-assistant-professor-recruitment-2026-apply-online-for-40-posts-3040278",
+  "ok": true,
+  "htmlBytes": 215789,
+  "facts": {
+   "unparsed": [
+    "fee"
+   ],
+   "review": [],
+   "ageLimitMax": 36,
+   "salaryMin": 70900,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "Assistant Professor (Aerospace Engineering)",
+        "40"
+       ],
+       [
+        "Assistant Professor (Applied Mechanics & Biomedical Engineering)"
+       ],
+       [
+        "Assistant Professor (Biotechnology)"
+       ],
+       [
+        "Assistant Professor (Chemistry)"
+       ],
+       [
+        "Assistant Professor (Chemical Engineering)"
+       ],
+       [
+        "Assistant Professor (Civil Engineering)"
+       ],
+       [
+        "Assistant Professor (Computer Science & Engineering)"
+       ],
+       [
+        "Assistant Professor (Data Science and Artificial Intelligence)"
+       ],
+       [
+        "Assistant Professor (Electrical Engineering)"
+       ],
+       [
+        "Assistant Professor (Engineering Design)"
+       ],
+       [
+        "Assistant Professor (Humanities & Social Sciences)"
+       ],
+       [
+        "Assistant Professor (Management Studies)"
+       ],
+       [
+        "Assistant Professor (Medical Sciences & Technology)"
+       ],
+       [
+        "Assistant Professor (Mechanical Engineering)"
+       ],
+       [
+        "Assistant Professor (Metallurgical and Materials Engineering)"
+       ],
+       [
+        "Assistant Professor (Ocean Engineering)"
+       ],
+       [
+        "Assistant Professor (Physics)"
+       ],
+       [
+        "Assistant Professor (School of Interdisciplinary Studies)"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Advertisement Date",
+        "27 February 2026"
+       ],
+       [
+        "Application Submission Deadline",
+        "15 October 2026"
+       ],
+       [
+        "Age Calculation Date",
+        "31 December 2026"
+       ],
+       [
+        "Last Date to Apply",
+        "15 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-15T06:30:00.000Z",
+   "officialNotificationUrl": "https://facapp.iitm.ac.in/img/Advertisement_RA-2026.pdf",
+   "applyUrl": "https://facapp.iitm.ac.in",
+   "officialWebsiteUrl": "https://facapp.iitm.ac.in",
+   "debug": {
+    "sample": {
+     "age": "Maximum Age: Not completed 36 years as on 31 December 2026. // Age relaxation is applicable for OBC, SC/ST, PwD, and women candidates as per government norms. ## ",
+     "fee": "No application fee is mentioned in the official notification. ## ",
+     "salary": "Assistant Professor Grade-II: 7th CPC Pay Level 10, Minimum Basic Pay: ₹ 70,900/-. Approximate total emoluments including HRA: ₹ 1,71,300/-. Approximate total emoluments excluding HRA: ₹ 1,50,000/-. // Assistant Professor Grade-I: 7th CPC Pay Level 12, Minimum Basic Pay: ₹ 1,01,500/-. Approximate total emoluments including HRA: ₹ 2,29,400/-. Approximate total emoluments excluding HRA: ₹ 1,99,000/-. ## "
+    },
+    "headings": [
+     "IIT Madras Assistant Professor Recruitment 2026 - Overview",
+     "IIT Madras Assistant Professor Vacancy 2026 Notification PDF",
+     "IIT Madras Assistant Professor Vacancy Details 2026",
+     "IIT Madras Assistant Professor Eligibility Criteria 2026",
+     "IIT Madras Assistant Professor Application Fee 2026",
+     "IIT Madras Assistant Professor Age Limit 2026",
+     "IIT Madras Assistant Professor Salary 2026",
+     "IIT Madras Assistant Professor Recruitment 2026 - Important ",
+     "IIT Madras Assistant Professor Selection Process 2026",
+     "How to Apply",
+     "IIT Madras Assistant Professor Recruitment 2026 - Important ",
+     "IIT Madras Assistant Professor Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => facapp.iitm.ac.in",
+     "Apply Online => facapp.iitm.ac.in",
+     "Official Website => facapp.iitm.ac.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 325,
+  "url": "https://www.freejobalert.com/articles/casdic-drdo-paid-intern-recruitment-2026-apply-online-for-30-posts-3067768",
+  "ok": true,
+  "htmlBytes": 214904,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMax": 25,
+   "salaryMin": 5000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "Electrical / Electronics & Communication / Electronics & Telecommunication",
+        "12"
+       ],
+       [
+        "Computer Science / Information Technology",
+        "13"
+       ],
+       [
+        "Mechanical Engineering",
+        "5"
+       ],
+       [
+        "Total",
+        "30"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Last date for receipt of application",
+        "11 October 2026"
+       ],
+       [
+        "Intimation to Selected Students",
+        "13 November 2026"
+       ],
+       [
+        "Date of Start of Internship",
+        "01 December 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-11T06:30:00.000Z",
+   "officialNotificationUrl": "https://drdo.gov.in/drdo/sites/default/files/vacancy/advtCASDIC14092026.pdf",
+   "officialWebsiteUrl": "https://drdo.gov.in/",
+   "debug": {
+    "sample": {
+     "age": "Maximum Age Limit: 25 years. // Age relaxation rules are not specified in the provided data. ## ",
+     "salary": "Rs. 5000 Per Month ## "
+    },
+    "headings": [
+     "CASDIC DRDO Recruitment 2026 - Overview",
+     "CASDIC DRDO Vacancy 2026 Notification PDF",
+     "CASDIC DRDO Recruitment 2026 - Vacancy Details",
+     "CASDIC DRDO Recruitment 2026 - Eligibility Criteria",
+     "CASDIC DRDO Recruitment 2026 - Age Limit",
+     "CASDIC DRDO Recruitment 2026 - Salary / Stipend",
+     "CASDIC DRDO Recruitment 2026 - Important Dates",
+     "CASDIC DRDO Recruitment 2026 - Selection Process",
+     "How to Apply",
+     "CASDIC DRDO Recruitment 2026 - Important Links",
+     "CASDIC DRDO Paid Intern Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => drdo.gov.in",
+     "Official Website => drdo.gov.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 954,
+  "url": "https://www.freejobalert.com/articles/cmo-ghaziabad-medical-officer-recruitment-2026-walkin-for-30-posts-3070449",
+  "ok": true,
+  "htmlBytes": 214508,
+  "facts": {
+   "unparsed": [
+    "age",
+    "fee",
+    "applyUrl"
+   ],
+   "review": [],
+   "salaryMin": 100000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "General/OBC",
+        "Nil"
+       ],
+       [
+        "SC/ST",
+        "Nil"
+       ]
+      ]
+     },
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "EMO - District Hospital",
+        "2"
+       ],
+       [
+        "Medical Officer - CHC-NCD",
+        "1"
+       ],
+       [
+        "Female Medical Officer - Mahila Swasthya",
+        "1"
+       ],
+       [
+        "Medical Officer - Tele Medicine",
+        "2"
+       ],
+       [
+        "Medical Officer (UPHC)",
+        "2"
+       ],
+       [
+        "Medical Officer (Urban Ayushman Arogya Mela - 15th Finance Commission)",
+        "11"
+       ],
+       [
+        "Medical Officer (Urban Ayushman Arogya Mela - PMABHM)",
+        "11"
+       ],
+       [
+        "Total",
+        "30"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Notification Date",
+        "29 September 2026"
+       ],
+       [
+        "Walk-in Interview Date",
+        "15 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "officialNotificationUrl": "https://cdn.s3waas.gov.in/s36da9003b743b65f4c0ccd295cc484e57/uploads/2026/09/17907560382624.pdf",
+   "officialWebsiteUrl": "https://ghaziabad.nic.in",
+   "debug": {
+    "sample": {
+     "age": "All Posts: Maximum age 65 years (No specific age relaxation mentioned) ## ",
+     "fee": " ## Category|Fee / General/OBC|Nil / SC/ST|Nil",
+     "salary": " ## Post Name|Salary / EMO - District Hospital|Rs. 1,00,000/- Per Month / Medical Officer - CHC-NCD|Rs. 1,00,000/- Per Month"
+    },
+    "headings": [
+     "CMO Ghaziabad Recruitment 2026 - Overview",
+     "CMO Ghaziabad Vacancy 2026 Notification PDF",
+     "Vacancy Details",
+     "Eligibility Criteria",
+     "Application Fee",
+     "Age Limit",
+     "Salary / Stipend",
+     "Important Dates",
+     "Selection Process",
+     "Walk-In Procedure",
+     "CMO Ghaziabad Recruitment 2026 - Important Links",
+     "CMO Ghaziabad Medical Officer Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => cdn.s3waas.gov.in",
+     "Official Website => ghaziabad.nic.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 1038,
+  "url": "https://www.freejobalert.com/articles/sahitya-akademi-recruitment-2026-apply-online-for-30-clerk-mts-and-more-posts-3063652",
+  "ok": true,
+  "htmlBytes": 234318,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMax": 50,
+   "applicationFeeGeneral": 1000,
+   "applicationFeeReserved": 800,
+   "salaryMin": 18000,
+   "salaryMax": 208700,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Application fee",
+      "headers": [
+       "Pay Level",
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "Level-10 / Level-11",
+        "UR/OBC",
+        "₹1,000"
+       ],
+       [
+        "SC/ST/Women",
+        "₹500"
+       ],
+       [
+        "EWS/PwD",
+        "Nil"
+       ],
+       [
+        "Level-1 to Level-6",
+        "UR/OBC",
+        "₹800"
+       ],
+       [
+        "SC/ST/Women",
+        "₹500"
+       ],
+       [
+        "EWS/PwD",
+        "Nil"
+       ]
+      ]
+     }
+    ]
+   },
+   "officialNotificationUrl": "https://sahitya-akademi.gov.in/pdf/EligibilityCriteria_22.pdf",
+   "officialWebsiteUrl": "https://sahitya-akademi.gov.in/",
+   "debug": {
+    "sample": {
+     "age": "Maximum age: 50 years for all 13 posts // Age relaxation: as per Government of India rules ## ",
+     "fee": "In continuation of the notification dated 22 August 2026 inviting applications for various posts in Sahitya Akademi, it is hereby inform that the application fee prescribed therein stand withdrawn. ## Pay Level|Category|Fee / Level-10 / Level-11|UR/OBC|₹1,000 / SC/ST/Women|₹500",
+     "salary": "Pay is as per the 7th CPC Pay Matrix, ranging from Level-1 (₹18,000–56,900) for Multi-Tasking Staff to Level-11 (₹67,700–2,08,700) for Deputy Secretary. See the Eligibility table above for the pay level of each post. ## "
+    },
+    "headings": [
+     "Sahitya Akademi Recruitment 2026 Overview",
+     "Sahitya Akademi Recruitment 2026 Important Dates",
+     "Sahitya Akademi Vacancy 2026 - Post Details",
+     "Sahitya Akademi Eligibility Criteria & Educational Qualifica",
+     "Sahitya Akademi Salary",
+     "Sahitya Akademi Application Fee",
+     "Sahitya Akademi Age Limit",
+     "Sahitya Akademi Selection Process",
+     "How to Apply for Sahitya Akademi Recruitment 2026",
+     "Sahitya Akademi Documents Required",
+     "Sahitya Akademi Important Instructions",
+     "Sahitya Akademi Recruitment 2026 Important Links",
+     "Sahitya Akademi Recruitment 2026 FAQs"
+    ],
+    "linkLabels": [
+     "Fee & Extended PDF: Click Here => sahitya-akademi.gov.in",
+     "Application Form: Deputy Secretary | Assistant Edi => sahitya-akademi.gov.in",
+     "Application Form: Deputy Secretary | Assistant Edi => sahitya-akademi.gov.in",
+     "Application Form: Deputy Secretary | Assistant Edi => sahitya-akademi.gov.in",
+     "Eligibility Criteria Notification PDF: Click here => sahitya-akademi.gov.in",
+     "Official Notification PDF: Click here => sahitya-akademi.gov.in",
+     "Employment News Notification PDF: Click here => img2.freejobalert.com",
+     "Official Website: Click here => sahitya-akademi.gov.in",
+     "Join Arattai Channel: Click Here => web.arattai.in",
+     "Join Telegram Channel: Click Here => t.me",
+     "Join WhatsApp Channel: Click Here => www.whatsapp.com",
+     "Sarkari Result: Click Here => sarkariresult.freejobalert.com",
+     "Download Mobile App: Click Here => play.google.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 405,
+  "url": "https://www.freejobalert.com/articles/dmho-wanaparthy-recruitment-2026-apply-offline-for-27-staff-nurse-anm-and-more-posts-3070455",
+  "ok": true,
+  "htmlBytes": 218899,
+  "facts": {
+   "unparsed": [
+    "fee",
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMin": 18,
+   "ageLimitMax": 44,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "General Candidate (OC and BC)",
+        "Rupees 300/-"
+       ],
+       [
+        "SC/ST candidates",
+        "Rupees 200/-"
+       ]
+      ]
+     },
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "Pediatrician / Medical Officer",
+        "3"
+       ],
+       [
+        "Staff Nurse",
+        "3"
+       ],
+       [
+        "2nd ANM",
+        "2"
+       ],
+       [
+        "Staff Nurse",
+        "1"
+       ],
+       [
+        "Lab Technician",
+        "1"
+       ],
+       [
+        "Staff Nurse",
+        "2"
+       ],
+       [
+        "Anaesthetist",
+        "1"
+       ],
+       [
+        "OBG Specialist",
+        "1"
+       ],
+       [
+        "Staff Nurse",
+        "3"
+       ],
+       [
+        "MLHP / CHO / MO - Palle Dawakhana",
+        "6"
+       ],
+       [
+        "Physician / MBBS / MD",
+        "1"
+       ],
+       [
+        "Lab Technician",
+        "2"
+       ],
+       [
+        "ANM",
+        "1"
+       ],
+       [
+        "Total",
+        "27"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Issue of Notification by the District Collector",
+        "29 September 2026"
+       ],
+       [
+        "Receiving of applications",
+        "30 September 2026"
+       ],
+       [
+        "Last Date of application receiving",
+        "09 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-09T06:30:00.000Z",
+   "officialNotificationUrl": "https://cdn.s3waas.gov.in/s3fa7cdfad1a5aaf8370ebeda47a1ff1c3/uploads/2026/09/17906817279503.pdf",
+   "officialWebsiteUrl": "https://wanaparthy.telangana.gov.in/",
+   "debug": {
+    "sample": {
+     "age": "Minimum Age: 18 years // Maximum Age: 44 years ## ",
+     "fee": " ## Category|Fee / General Candidate (OC and BC)|Rupees 300/- / SC/ST candidates|Rupees 200/-"
+    },
+    "headings": [
+     "DMHO Wanaparthy Recruitment 2026 - Overview",
+     "DMHO Wanaparthy Vacancy 2026 Notification PDF",
+     "Vacancy Details",
+     "Eligibility Criteria",
+     "Application Fee",
+     "Age Limit",
+     "Important Dates",
+     "Selection Process",
+     "How to Apply",
+     "DMHO Wanaparthy Recruitment 2026 - Important Links",
+     "DMHO Wanaparthy Contractual Posts under NHM Recruitment 2026"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => cdn.s3waas.gov.in",
+     "Official Website => wanaparthy.telangana.gov.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 652,
+  "url": "https://www.freejobalert.com/articles/mppgcl-apprentice-recruitment-2026-apply-offline-for-27-graduate-and-technician-apprentice-posts-3069291",
+  "ok": true,
+  "htmlBytes": 211867,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "salaryMin": 12300,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Apprentice Category",
+       "Discipline",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "Graduate Apprentice",
+        "Mechanical Engineering",
+        "8"
+       ],
+       [
+        "Electrical Engineering",
+        "8"
+       ],
+       [
+        "Electrical & Electronics Engineering",
+        "1"
+       ],
+       [
+        "General Stream",
+        "5"
+       ],
+       [
+        "Technician Apprentice",
+        "Diploma Engineering Branches",
+        "5"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Last Date to Submit Application",
+        "20 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-20T06:30:00.000Z",
+   "officialNotificationUrl": "https://mppgcl.mp.gov.in/CAREER/APPRENTICE_ADVT_SGTPS_MPPGCL_BIRSINGHPUR_246_16092026.pdf",
+   "officialWebsiteUrl": "https://mppgcl.mp.gov.in",
+   "debug": {
+    "sample": {
+     "salary": " ## Post|Monthly Stipend / Graduate Apprentice|₹12,300/- / Technician Apprentice|₹10,900/-"
+    },
+    "headings": [
+     "MPPGCL SGTPS Apprentice Recruitment 2026 Overview",
+     "What is MPPGCL SGTPS Apprentice Recruitment 2026?",
+     "MPPGCL SGTPS Apprentice Vacancy Details 2026",
+     "MPPGCL Apprentice Qualification 2026",
+     "MPPGCL SGTPS Apprentice Stipend 2026",
+     "MPPGCL Apprentice Training Period",
+     "MPPGCL SGTPS Apprentice Eligibility Criteria",
+     "How to Apply for MPPGCL SGTPS Apprentice Recruitment 2026?",
+     "MPPGCL Apprentice Important Dates 2026",
+     "Documents Required",
+     "MPPGCL SGTPS Apprentice Selection Process 2026",
+     "MPPGCL Apprentice Important Links",
+     "MPPGCL Apprentice Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF: Click here => mppgcl.mp.gov.in",
+     "Official Website: Click here => mppgcl.mp.gov.in",
+     "Join Arattai Channel: Click Here => web.arattai.in",
+     "Join Telegram Channel: Click Here => t.me",
+     "Join WhatsApp Channel: Click Here => www.whatsapp.com",
+     "Sarkari Result: Click Here => sarkariresult.freejobalert.com",
+     "Download Mobile App: Click Here => play.google.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 946,
+  "url": "https://www.freejobalert.com/articles/c-dac-recruitment-2026-walkin-for-27-project-manager-senior-project-engineer-project-engineer-posts-3069453",
+  "ok": true,
+  "htmlBytes": 226718,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMax": 56,
+   "applicationFeeGeneral": 0,
+   "salaryMin": 40000,
+   "salaryMax": 150000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Age limit",
+      "headers": [
+       "Post",
+       "Experience",
+       "Salary",
+       "Maximum Age"
+      ],
+      "rows": [
+       [
+        "Project Manager - Software System Architect",
+        "10 years",
+        "₹1,00,000 to ₹1,50,000 per month",
+        "56 years"
+       ],
+       [
+        "Senior Project Engineer - Full Stack Developer",
+        "4 years",
+        "₹60,000 to ₹1,00,000 per month",
+        "40 years"
+       ],
+       [
+        "Project Engineer - Full Stack Developer",
+        "2 years",
+        "₹40,000 to ₹60,000 per month",
+        "45 years"
+       ],
+       [
+        "Senior Project Engineer - Android Developer",
+        "4 years",
+        "₹60,000 to ₹1,00,000 per month",
+        "40 years"
+       ],
+       [
+        "Project Engineer - Android Developer",
+        "2 years",
+        "₹40,000 to ₹60,000 per month",
+        "45 years"
+       ],
+       [
+        "Project Engineer - Network Security",
+        "1 year",
+        "₹40,000 to ₹60,000 per month",
+        "45 years"
+       ]
+      ]
+     },
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post",
+       "Experience",
+       "Salary",
+       "Maximum Age"
+      ],
+      "rows": [
+       [
+        "Project Manager - Software System Architect",
+        "10 years",
+        "₹1,00,000 to ₹1,50,000 per month",
+        "56 years"
+       ],
+       [
+        "Senior Project Engineer - Full Stack Developer",
+        "4 years",
+        "₹60,000 to ₹1,00,000 per month",
+        "40 years"
+       ],
+       [
+        "Project Engineer - Full Stack Developer",
+        "2 years",
+        "₹40,000 to ₹60,000 per month",
+        "45 years"
+       ],
+       [
+        "Senior Project Engineer - Android Developer",
+        "4 years",
+        "₹60,000 to ₹1,00,000 per month",
+        "40 years"
+       ],
+       [
+        "Project Engineer - Android Developer",
+        "2 years",
+        "₹40,000 to ₹60,000 per month",
+        "45 years"
+       ],
+       [
+        "Project Engineer - Network Security",
+        "1 year",
+        "₹40,000 to ₹60,000 per month",
+        "45 years"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date and Time"
+      ],
+      "rows": [
+       [
+        "Walk-in interview period",
+        "25 September to 9 October 2026"
+       ],
+       [
+        "Interview days",
+        "Monday to Friday"
+       ],
+       [
+        "Registration time",
+        "10:00 AM to 11:00 AM"
+       ],
+       [
+        "Interview time stated in the notification",
+        "2:00 PM to 6:00 PM"
+       ]
+      ]
+     }
+    ]
+   },
+   "officialNotificationUrl": "https://www.cdac.in/index.aspx?id=pdf_hrd_sil&dynamicId=Walk-In-Positions-PMS-PE.pdf",
+   "officialWebsiteUrl": "https://www.cdac.in",
+   "debug": {
+    "sample": {
+     "age": " ## Post|Experience|Salary|Maximum Age / Project Manager - Software System Architect|10 years|₹1,00,000 to ₹1,50,000 per month|56 years / Senior Project Engineer - Full Stack Developer|4 years|₹60,000 to ₹1,00,000 per month|40 years",
+     "fee": "No application fee will be charged for attending the C-DAC Guwahati walk-in interview. ## ",
+     "salary": " ## Post|Experience|Salary|Maximum Age / Project Manager - Software System Architect|10 years|₹1,00,000 to ₹1,50,000 per month|56 years / Senior Project Engineer - Full Stack Developer|4 years|₹60,000 to ₹1,00,000 per month|40 years"
+    },
+    "headings": [
+     "C-DAC Guwahati Recruitment 2026 Overview",
+     "Important Dates and Interview Schedule",
+     "C-DAC Guwahati Vacancy 2026",
+     "Post-wise Eligibility, Experience, Salary and Age Limit",
+     "Educational Qualification",
+     "Post-wise Experience and Skill Requirements",
+     "Age Limit",
+     "Salary Details",
+     "Contract Period",
+     "Application Fee",
+     "Selection Process",
+     "Documents Required for Walk-in Interview",
+     "How to Attend the C-DAC Guwahati Walk-in Interview",
+     "Walk-in Interview Venue",
+     "Important Instructions",
+     "C-DAC Recruitment 2026 - Important Links",
+     "C-DAC Project Manager, Senior Project Engineer, Project Engi"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => www.cdac.in",
+     "Application Form => www.cdac.in",
+     "Official Website => www.cdac.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 318,
+  "url": "https://www.freejobalert.com/articles/braou-part-time-lecturer-recruitment-2026-apply-online-for-26-posts-3070608",
+  "ok": true,
+  "htmlBytes": 213075,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "English",
+        "2"
+       ],
+       [
+        "Hindi",
+        "1"
+       ],
+       [
+        "Urdu",
+        "1"
+       ],
+       [
+        "Commerce",
+        "1"
+       ],
+       [
+        "Mathematics",
+        "2"
+       ],
+       [
+        "Physics",
+        "1"
+       ],
+       [
+        "Chemistry",
+        "1"
+       ],
+       [
+        "Botany",
+        "1"
+       ],
+       [
+        "Environmental Science",
+        "1"
+       ],
+       [
+        "Zoology",
+        "1"
+       ],
+       [
+        "Computer Science",
+        "3"
+       ],
+       [
+        "Statistics",
+        "2"
+       ],
+       [
+        "Social Work",
+        "1"
+       ],
+       [
+        "Public Administration",
+        "1"
+       ],
+       [
+        "Political Science",
+        "2"
+       ],
+       [
+        "Economics",
+        "2"
+       ],
+       [
+        "Journalism & Mass Communications",
+        "1"
+       ],
+       [
+        "Library & Information Science",
+        "2"
+       ],
+       [
+        "Total",
+        "26"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Last Date of Submission",
+        "07 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-07T06:30:00.000Z",
+   "officialNotificationUrl": "https://braou.ac.in/preview/CMS/LatestNews/latestnews_30092026204814070_e3821eea-273d-4165-bd1e-6c4b5195e267.pdf",
+   "officialWebsiteUrl": "https://braou.ac.in/",
+   "debug": {
+    "sample": {},
+    "headings": [
+     "BRAOU Recruitment 2026 - Overview",
+     "BRAOU Vacancy 2026 Notification PDF",
+     "Vacancy Details",
+     "Eligibility Criteria",
+     "Important Dates",
+     "Selection Process",
+     "How to Apply",
+     "BRAOU Recruitment 2026 - Important Links",
+     "BRAOU Part Time Lecturer Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => braou.ac.in",
+     "Official Website => braou.ac.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 1033,
+  "url": "https://www.freejobalert.com/articles/rites-recruitment-2026-apply-online-for-05-assistant-manager-senior-manager-posts-3067860",
+  "ok": true,
+  "htmlBytes": 230130,
+  "facts": {
+   "unparsed": [
+    "vacancy-table-partial-dropped"
+   ],
+   "review": [],
+   "ageLimitMax": 38,
+   "applicationFeeGeneral": 600,
+   "applicationFeeReserved": 300,
+   "salaryMin": 40000,
+   "salaryMax": 180000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Age limit",
+      "headers": [
+       "Post",
+       "Upper Age Limit"
+      ],
+      "rows": [
+       [
+        "Sr. Manager (Ports & Waterways)",
+        "38 years"
+       ],
+       [
+        "Assistant Manager (Ports & Waterways)",
+        "32 years"
+       ],
+       [
+        "Assistant Manager (Coastal Modelling)",
+        "32 years"
+       ]
+      ]
+     },
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "General / OBC candidates",
+        "₹600 plus applicable taxes"
+       ],
+       [
+        "EWS / SC / ST / PwBD candidates",
+        "₹300 plus applicable taxes"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Commencement of Online Application & Fee Payment",
+        "16.09.2026"
+       ],
+       [
+        "Last Date for Online Application & Fee Payment",
+        "08.10.2026"
+       ],
+       [
+        "Written Test (Tentative)",
+        "25.10.2026"
+       ],
+       [
+        "Cut-off Date for Age, Experience & Eligibility",
+        "08.10.2026 (last date of application)"
+       ]
+      ]
+     }
+    ]
+   },
+   "applyUrl": "https://recruit.rites.com/frmRegistration.aspx",
+   "officialNotificationUrl": "https://www.rites.com/Upload/Career/RG_26-R1_25_to_RG_28-R1_25_final_adv_(1)_pdf-2026-Sep-16-11-44-37.pdf",
+   "officialWebsiteUrl": "https://www.rites.com",
+   "debug": {
+    "sample": {
+     "age": "Age is reckoned as on the last date of application, 08.10.2026. // Age relaxation for PwBD candidates applies irrespective of whether the post is reserved for them, provided the post is identified as suitable. For the Civil discipline posts under this advertisement, Locomotor Disability (OA, OL, OAL, BL, Leprosy Cured, Acid Attack Victims) and Hearing Impairment (HI) categories are identified as suitable. ## Post|Upp",
+     "fee": "Candidates from posts not reserved for SC/ST/PwD categories must also pay the full fee at the application stage. // The fee charged from SC/ST/PwD category candidates will be refunded later upon their participation in the further selection process (written exam/interview), credited to the source account/card used for payment, after deducting GST/bank charges, on submission and scrutiny of their category certificate. ",
+     "salary": "In addition to the pay scale, selected candidates are entitled to leaves as per company leave rules, Maternity/Paternity Leave, Medical facility, Group Insurance, and Leave Encashment, as applicable to regular employees. ## Post|Pay Scale / Sr. Manager (Ports & Waterways)|₹60,000 – ₹1,80,000 / Assistant Manager (Ports & Waterways)|₹40,000 – ₹1,40,000"
+    },
+    "headings": [
+     "",
+     "RITES Recruitment 2026 Overview",
+     "RITES Recruitment 2026 Important Dates",
+     "RITES Recruitment 2026 Vacancy Details",
+     "RITES Recruitment 2026 Eligibility Criteria",
+     "RITES Recruitment 2026 Age Limit",
+     "RITES Recruitment 2026 Salary",
+     "RITES Recruitment 2026 Application Fee",
+     "RITES Ltd Recruitment 2026 Selection Process",
+     "How to Apply for RITES Ltd Recruitment 2026",
+     "RITES Ltd Recruitment 2026 Important Instructions",
+     "RITES Recruitment 2026 Important Links",
+     "RITES Ltd Recruitment 2026 FAQs"
+    ],
+    "linkLabels": [
+     "Apply Online: Click here => recruit.rites.com",
+     "Official Notification PDF: Click here => www.rites.com",
+     "Official Website: Click here => www.rites.com",
+     "Join Arattai Channel: Click Here => web.arattai.in",
+     "Join Telegram Channel: Click Here => t.me",
+     "Join WhatsApp Channel: Click Here => www.whatsapp.com",
+     "Sarkari Result: Click Here => sarkariresult.freejobalert.com",
+     "Download Mobile App: Click Here => play.google.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 315,
+  "url": "https://www.freejobalert.com/articles/bmc-treatment-organizer-recruitment-2026-apply-online-for-25-posts-3070842",
+  "ok": true,
+  "htmlBytes": 213803,
+  "facts": {
+   "unparsed": [
+    "fee"
+   ],
+   "review": [],
+   "ageLimitMin": 18,
+   "ageLimitMax": 43,
+   "salaryMin": 17000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "Treatment Organizer",
+        "25"
+       ],
+       [
+        "Total",
+        "25"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Online Application Start Date",
+        "11 September 2026"
+       ],
+       [
+        "Initial Last Date",
+        "9 October 2026"
+       ],
+       [
+        "Extended Last Date",
+        "9 October 2026"
+       ],
+       [
+        "Last Date for Submission of Hard Copy of Application with Documents",
+        "9 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-09T06:30:00.000Z",
+   "officialNotificationUrl": "https://www.mcgm.gov.in/irj/go/km/docs/documents/MCGM%20Department%20List/Chief%20Personnel%20Officer/Recruitment%20Notice/TO%20Advt%20Dt%20Extension%2009.10.2026.pdf",
+   "applyUrl": "https://docs.google.com/forms/d/1fQOSA69LWuk7R3jwch8DnzzL15NKkocyLnY-47FoRbs/viewform?edit_requested=true",
+   "officialWebsiteUrl": "https://www.mcgm.gov.in",
+   "debug": {
+    "sample": {
+     "age": "Treatment Organizer: Minimum Age: 18 years, Maximum Age: 43 years. ## ",
+     "fee": "No application fee is mentioned in the official notification. ## ",
+     "salary": "Treatment Organizer: Rs. 17,000/- per month fixed ## "
+    },
+    "headings": [
+     "BMC Treatment Organizer Recruitment 2026 - Overview",
+     "BMC Treatment Organizer Vacancy 2026 Notification PDF",
+     "Vacancy Details",
+     "Eligibility Criteria",
+     "Application Fee",
+     "Age Limit",
+     "Salary / Stipend",
+     "Important Dates",
+     "Selection Process",
+     "How to Apply",
+     "BMC Treatment Organizer Recruitment 2026 - Important Links",
+     "BMC Treatment Organizer Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => www.mcgm.gov.in",
+     "Apply Online => docs.google.com",
+     "Official Website => www.mcgm.gov.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 654,
+  "url": "https://www.freejobalert.com/articles/mumbai-port-authority-class-i-and-class-ii-recruitment-2026-notification-out-apply-online-for-25-aee-executive-engineer-and-more-posts-3070047",
+  "ok": true,
+  "htmlBytes": 237969,
+  "facts": {
+   "unparsed": [],
+   "review": [],
+   "applicationFeeGeneral": 750,
+   "applicationFeeReserved": 250,
+   "salaryMin": 40000,
+   "salaryMax": 160000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Fee"
+      ],
+      "rows": [
+       [
+        "SC, ST and PwBD candidates",
+        "Rs. 250/- (intimation charges only) + 18% GST"
+       ],
+       [
+        "All other candidates (other than PwBD)",
+        "Rs. 750/- (application fee including intimation charges) + 18% GST"
+       ]
+      ]
+     },
+     {
+      "title": "Selection process",
+      "headers": [
+       "Name of Test",
+       "No. of Questions",
+       "Maximum Marks",
+       "Duration"
+      ],
+      "rows": [
+       [
+        "Technical Questions (subject related)",
+        "60",
+        "120",
+        "50 minutes"
+       ],
+       [
+        "Test of Reasoning, General Awareness and Information Technology",
+        "30",
+        "30",
+        "25 minutes"
+       ],
+       [
+        "Quantitative Aptitude",
+        "25",
+        "25",
+        "25 minutes"
+       ],
+       [
+        "English Language",
+        "25",
+        "25",
+        "20 minutes"
+       ],
+       [
+        "Total",
+        "140",
+        "200",
+        "120 minutes"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Activity",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Online Registration & Fee Payment – Start Date",
+        "29/09/2026"
+       ],
+       [
+        "Online Registration & Fee Payment – Last Date",
+        "28/10/2026"
+       ],
+       [
+        "Online Examination (Mumbai / Greater Mumbai / Navi Mumbai / Thane / Palghar, depending on the number of candidates)",
+        "To be intimated shortly"
+       ]
+      ]
+     }
+    ]
+   },
+   "applyUrl": "https://ibpsreg.ibps.in/mpajul26/",
+   "officialNotificationUrl": "https://mumbaiport.gov.in/WriteReadData/RTF1984/1790582446.pdf",
+   "officialWebsiteUrl": "https://www.mumbaiport.gov.in/",
+   "debug": {
+    "sample": {
+     "fee": "The application fee or intimation charges must be paid online between 29/09/2026 and 28/10/2026 (both dates inclusive). // Bank transaction charges for online payment must be borne by the candidate. The fee is non-refundable and cannot be held in reserve for any other examination or selection. An SC or ST candidate who applies for a post as UR is not eligible for the fee relaxation. Payment can be made by Debit Card ",
+     "salary": "The notification gives the basic pay and approximate total emoluments as follows. // HRA is paid as admissible for those not residing in Mumbai Port Authority quarters. Other allowances are as applicable. ## Post Name|Pay Scale|Basic Pay|Approximate Total Emoluments / Accounts Officer Gr. I, Assistant Executive Engineer (Civil), Assistant Traffic Manager Gr. I, Assistant Estate Manager Gr. I, Executive Engineer (Civi"
+    },
+    "headings": [
+     "MbPA Recruitment 2026 – Quick Summary",
+     "MbPA Recruitment 2026 Overview",
+     "MbPA Vacancy 2026",
+     "MbPA Recruitment 2026 Important Dates",
+     "MbPA Recruitment 2026 Eligibility Criteria",
+     "MbPA Application Fee",
+     "MbPA Salary",
+     "MbPA Selection Process",
+     "Documents Required at Verification / Interview",
+     "How to Apply for MbPA Recruitment 2026",
+     "Important Instructions for Candidates",
+     "MbPA Recruitment 2026 Important Links",
+     "Mumbai Port Authority Class I and Class II Recruitment 2026 "
+    ],
+    "linkLabels": [
+     "Apply Online => ibpsreg.ibps.in",
+     "Official Notification (Advt. No. DR-20) => mumbaiport.gov.in",
+     "Official Website => www.mumbaiport.gov.in",
+     "Candidates who have completed their engineering de => www.freejobalert.com",
+     "Candidates who have completed their engineering de => www.freejobalert.com",
+     "Candidates who have completed their engineering de => www.freejobalert.com",
+     "Candidates who have completed their engineering de => www.freejobalert.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 927,
+  "url": "https://www.freejobalert.com/articles/udd-uttarakhand-recruitment-2026-apply-offline-for-25-executive-engineer-assistant-engineer-and-more-posts-3068799",
+  "ok": true,
+  "htmlBytes": 219081,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "salaryMin": 9300,
+   "salaryMax": 39100,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post",
+       "No. of Deputation Posts"
+      ],
+      "rows": [
+       [
+        "Executive Engineer",
+        "5"
+       ],
+       [
+        "Assistant Engineer - Electrical",
+        "1"
+       ],
+       [
+        "Junior Engineer - Civil",
+        "6"
+       ],
+       [
+        "Junior Engineer - Mechanical",
+        "2"
+       ],
+       [
+        "Junior Engineer - Electrical",
+        "11"
+       ],
+       [
+        "Total",
+        "25"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Notice issued",
+        "21 September 2026 (exact date not clearly legible on the scanned notice)"
+       ],
+       [
+        "Last date to submit application",
+        "5 October 2026, by 5:00 PM"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-05T06:30:00.000Z",
+   "officialNotificationUrl": "https://cdnbbsr.s3waas.gov.in/s38208974663db80265e9bfe7b222dcb18/uploads/2026/09/202609211541077784.pdf",
+   "officialWebsiteUrl": "https://udd.uk.gov.in/",
+   "debug": {
+    "sample": {
+     "salary": "Compensation is defined by pay band and grade pay rather than a fixed salary figure: ## Post|Pay Band|Grade Pay / Executive Engineer|15600-39100|6600 / Assistant Engineer (Electrical)|15600-39100|5400"
+    },
+    "headings": [
+     "UDD Uttarakhand Recruitment 2026 Notification PDF",
+     "UDD Uttarakhand Engineer Recruitment 2026 Overview",
+     "UDD Uttarakhand Recruitment 2026 Important Dates",
+     "UDD Uttarakhand Vacancy Details 2026",
+     "UDD Uttarakhand Eligibility Criteria",
+     "UDD Uttarakhand Qualification",
+     "UDD Uttarakhand Salary",
+     "UDD Uttarakhand Selection Process",
+     "How to Apply for UDD Uttarakhand Engineer Recruitment 2026",
+     "Important Notes",
+     "UDD Uttarakhand Executive Engineer, Assistant Engineer and M",
+     "UDD Uttarakhand Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF: Click here => cdnbbsr.s3waas.gov.in",
+     "Official Website: Click here => udd.uk.gov.in",
+     "Join Arattai Channel: Click Here => web.arattai.in",
+     "Join Telegram Channel: Click Here => t.me",
+     "Join WhatsApp Channel: Click Here => www.whatsapp.com",
+     "Sarkari Result: Click Here => sarkariresult.freejobalert.com",
+     "Download Mobile App: Click Here => play.google.com",
+     "Candidates looking for more opportunities in Uttar => www.freejobalert.com",
+     "Candidates looking for more opportunities in Uttar => www.freejobalert.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 968,
+  "url": "https://www.freejobalert.com/articles/drdo-dipr-apprentice-recruitment-2026-apply-online-for-24-posts-3069091",
+  "ok": true,
+  "htmlBytes": 221137,
+  "facts": {
+   "unparsed": [],
+   "review": [],
+   "salaryMin": 9600,
+   "validThrough": "2026-10-13T06:30:00.000Z",
+   "applyUrl": "https://www.apprenticeshipindia.gov.in/",
+   "officialNotificationUrl": "https://drdo.gov.in/drdo/sites/default/files/vacancy/advtDIPR22092026.pdf",
+   "officialWebsiteUrl": "https://drdo.gov.in",
+   "debug": {
+    "sample": {
+     "salary": "Selected apprentices will be paid the applicable minimum stipend prescribed for their trade, on a monthly basis through the prescribed banking mode. The stipend ranges from ₹9,600/- to ₹10,560/- per month depending on the trade, as detailed in the trade-wise vacancy table above. Selected candidates must furnish valid bank account details linked with Aadhaar, wherever required, at the time of joining. ## S. No.|Trade|"
+    },
+    "headings": [
+     "DIPR Apprentice Recruitment 2026 Notification PDF",
+     "DIPR Apprentice Recruitment 2026 Overview",
+     "DIPR Apprentice Vacancy 2026 - Trade-Wise Details",
+     "DIPR Apprentice Important Dates",
+     "DIPR Apprentice Eligibility Criteria",
+     "DIPR Apprentice Salary/Stipend",
+     "DIPR Apprentice Selection Process",
+     "How to Apply for DIPR Apprentice Recruitment 2026",
+     "Terms and Conditions of DIPR Apprenticeship Training",
+     "DRDO DIPR Apprentice Important Links",
+     "DRDO DIPR Apprentice Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Apply Online: Click here => www.apprenticeshipindia.gov.in",
+     "Official Notification PDF: Click here => drdo.gov.in",
+     "Official Website: Click here => drdo.gov.in",
+     "Join Arattai Channel: Click Here => web.arattai.in",
+     "Join Telegram Channel: Click Here => t.me",
+     "Join WhatsApp Channel: Click Here => www.whatsapp.com",
+     "Sarkari Result: Click Here => sarkariresult.freejobalert.com",
+     "Download Mobile App: Click Here => play.google.com",
+     "Candidates holding ITI qualifications can also exp => www.freejobalert.com",
+     "Candidates holding ITI qualifications can also exp => www.freejobalert.com"
+    ]
+   }
+  }
+ },
+ {
+  "id": 321,
+  "url": "https://www.freejobalert.com/articles/burari-hospital-senior-residents-recruitment-2026-walkin-for-22-posts-3070368",
+  "ok": true,
+  "htmlBytes": 210480,
+  "facts": {
+   "unparsed": [
+    "fee",
+    "salary",
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMax": 45,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "OBG",
+        "13"
+       ],
+       [
+        "Anaesthesia",
+        "5"
+       ],
+       [
+        "Microbiology",
+        "1"
+       ],
+       [
+        "Pulmonology",
+        "2"
+       ],
+       [
+        "Ophthalmology",
+        "1"
+       ],
+       [
+        "Total",
+        "22"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Walk-in Interview Start Date",
+        "29 September 2026"
+       ],
+       [
+        "Walk-in Interview End Date",
+        "13 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-13T06:30:00.000Z",
+   "officialNotificationUrl": "https://health.delhi.gov.in/sites/default/files/Health/circulars-orders/wbur_28.pdf",
+   "officialWebsiteUrl": "https://burari.delhi.gov.in/",
+   "debug": {
+    "sample": {
+     "age": "Senior Residents: Maximum age is 45 years. Age relaxation applicable: SC & ST: 5 years, OBC: 3 years. ## ",
+     "fee": "No application fee is mentioned in the official notification. ## ",
+     "salary": "In accordance with 7th CPC guidelines as adopted by GNCT of Delhi. ## "
+    },
+    "headings": [
+     "Burari Hospital Recruitment 2026 - Overview",
+     "Burari Hospital Vacancy 2026 Notification PDF",
+     "Vacancy Details",
+     "Eligibility Criteria",
+     "Application Fee",
+     "Age Limit",
+     "Salary / Stipend",
+     "Important Dates",
+     "Selection Process",
+     "Walk-In Procedure",
+     "Burari Hospital Recruitment 2026 - Important Links",
+     "Burari Hospital Senior Residents Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => health.delhi.gov.in",
+     "Official Website => burari.delhi.gov.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 832,
+  "url": "https://www.freejobalert.com/articles/tnsrlm-thoothukudi-block-coordinator-recruitment-2026-apply-offline-for-22-posts-3070497",
+  "ok": true,
+  "htmlBytes": 220371,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMax": 35,
+   "salaryMin": 12000,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Age limit",
+      "headers": [
+       "Criteria",
+       "Details"
+      ],
+      "rows": [
+       [
+        "Minimum age",
+        "18 years completed"
+       ],
+       [
+        "Maximum age",
+        "35 years"
+       ],
+       [
+        "Age calculation date",
+        "1 July 2026"
+       ],
+       [
+        "Age relaxation",
+        "Not specified in the notification"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Notification date",
+        "09.2026 (day not specified)"
+       ],
+       [
+        "Application start date",
+        "Not specified in the notification"
+       ],
+       [
+        "Last date to apply",
+        "16 October 2026, by 5:45 PM"
+       ],
+       [
+        "Age calculation date",
+        "1 July 2026"
+       ],
+       [
+        "Exam/interview date",
+        "Will be informed separately to eligible applicants"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-16T06:30:00.000Z",
+   "officialNotificationUrl": "https://cdn.s3waas.gov.in/s3019d385eb67632a7e958e23f24bd07d7/uploads/2026/09/17903342297599.pdf",
+   "officialWebsiteUrl": "https://www.thoothukudi.nic.in",
+   "debug": {
+    "sample": {
+     "age": "The age limit is calculated as on 1 July 2026. Candidates must have completed 18 years and must be within a maximum age of 35 years. ## Criteria|Details / Minimum age|18 years completed / Maximum age|35 years",
+     "salary": "The post carries a consolidated monthly payment of ₹12,000, along with a travel allowance of ₹750, making a total of ₹12,750. // The notification does not state whether this amount is paid per month. The contract period is also not specified. ## Component|Amount / Consolidated pay (தொகுப்பூதியம்)|₹12,000 / Travel allowance (பயணப்படி)|₹750"
+    },
+    "headings": [
+     "TNSRLM Thoothukudi Recruitment 2026 - Overview",
+     "TNSRLM Thoothukudi Vacancy 2026 Notification PDF",
+     "TNSRLM Thoothukudi Block Coordinator Vacancy 2026",
+     "TNSRLM Thoothukudi Block Coordinator Important Dates",
+     "TNSRLM Thoothukudi Block Coordinator Eligibility Criteria",
+     "TNSRLM Thoothukudi Block Coordinator Qualification",
+     "TNSRLM Thoothukudi Block Coordinator Age Limit",
+     "TNSRLM Thoothukudi Block Coordinator Salary",
+     "TNSRLM Thoothukudi Block Coordinator Selection Process",
+     "How to Apply for TNSRLM Thoothukudi Block Coordinator Recrui",
+     "TNSRLM Thoothukudi Recruitment 2026 - Important Links",
+     "TNSRLM Thoothukudi Block Coordinator Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => cdn.s3waas.gov.in",
+     "Official Website => www.thoothukudi.nic.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 998,
+  "url": "https://www.freejobalert.com/articles/isro-iprc-recruitment-2026-apply-online-for-22-technical-assistant-technician-and-skilled-posts-3067463",
+  "ok": true,
+  "htmlBytes": 246289,
+  "facts": {
+   "unparsed": [
+    "vacancy-table-partial-dropped",
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMin": 18,
+   "ageLimitMax": 35,
+   "applicationFeeGeneral": 750,
+   "applicationFeeReserved": 500,
+   "salaryMin": 44900,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Age limit",
+      "headers": [
+       "Post Codes",
+       "Age Limit (as on 05-10-2026)"
+      ],
+      "rows": [
+       [
+        "60 to 68 & 70",
+        "18 to 35 years"
+       ],
+       [
+        "71 (Fireman 'A')",
+        "18 to 25 years"
+       ]
+      ]
+     },
+     {
+      "title": "Application fee",
+      "headers": [
+       "Post Codes",
+       "Application Fee"
+      ],
+      "rows": [
+       [
+        "60 to 62 (Technical Assistant)",
+        "Rs. 750"
+       ],
+       [
+        "63 to 71 (Technician, Cook, Fireman)",
+        "Rs. 500"
+       ]
+      ]
+     },
+     {
+      "title": "Selection process",
+      "headers": [
+       "Post",
+       "Mode of Selection"
+      ],
+      "rows": [
+       [
+        "Technical Assistant, Technician 'B', Cook 'A'",
+        "Written Test + Skill Test (Curriculum-based)"
+       ],
+       [
+        "Fireman 'A'",
+        "Written Test + Skill Test (Physical Efficiency Test) + Detailed Medical Examination"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Advertisement Date",
+        "12 September 2026"
+       ],
+       [
+        "Online Application Start",
+        "15 September 2026"
+       ],
+       [
+        "Online Application Last Date",
+        "5 October 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "debug": {
+    "sample": {
+     "age": "Age relaxation of 5 years is available for SC/ST candidates and 3 years for OBC candidates, where the post is reserved for that category. Additional relaxation applies to serving government employees, Ex-servicemen, Persons with Benchmark Disabilities, widows, divorced women, judicially separated women, and meritorious sportspersons, as per Government of India orders. // Before submitting the application, candidates ",
+     "fee": "Fees are payable online only, via the SBI e-Payment gateway, using Internet Banking, Domestic Debit/Credit Cards, or UPI. Fee once paid is refunded (fully for Female/SC/ST/Ex-Serviceman/PwBD candidates, and partially - Rs. 500 or Rs. 400 depending on post - for other candidates) but only to those who appear in the Written Test. ## Post Codes|Application Fee / 60 to 62 (Technical Assistant)|Rs. 750 / 63 to 71 (Technic",
+     "salary": " ## Post|Pay Matrix Level|Pay Range / Technical Assistant|Level 7|Rs.44,900/- – Rs.1,42,400/- / Technician ‘B’|Level 3|Rs.21,700/- – Rs.69,100/-"
+    },
+    "headings": [
+     "ISRO IPRC Recruitment 2026 Overview",
+     "ISRO IPRC Recruitment 2026 Important Dates",
+     "ISRO IPRC Recruitment 2026 Vacancy Details (Post & Code-wise",
+     "ISRO IPRC Recruitment 2026 Eligibility Criteria",
+     "ISRO IPRC Recruitment 2026 Age Limit",
+     "ISRO IPRC Recruitment 2026 Pay Scale",
+     "ISRO IPRC Recruitment 2026 Application Fee",
+     "ISRO IPRC Recruitment 2026 Selection Process",
+     "How to Apply for ISRO IPRC Recruitment 2026",
+     "Documents Required",
+     "Important Conditions",
+     "ISRO IPRC Recruitment 2026 Important Links",
+     "ISRO IPRC Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": []
+   }
+  }
+ },
+ {
+  "id": 942,
+  "url": "https://www.freejobalert.com/articles/bcpl-non-executive-recruitment-2026-apply-online-for-24-foreman-technician-and-more-posts-3066999",
+  "ok": true,
+  "htmlBytes": 229624,
+  "facts": {
+   "unparsed": [
+    "age"
+   ],
+   "review": [],
+   "applicationFeeGeneral": 200,
+   "salaryMin": 25000,
+   "salaryMax": 86570,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Age limit",
+      "headers": [
+       "SN",
+       "Post",
+       "Minimum Essential Educational Qualification",
+       ""
+      ],
+      "rows": [
+       [
+        "1",
+        "Foreman (Chemical)",
+        "Diploma in Engineering in Chemical / Petrochemical / Chemical Technology / Petrochemical Technology with minimum 55% marks",
+        ""
+       ],
+       [
+        "2",
+        "Foreman (Civil)",
+        "Diploma in Engineering in Civil with minimum 55% marks",
+        ""
+       ],
+       [
+        "3",
+        "Junior Superintendent (Human Resources)",
+        "Bachelor Degree with Diploma in Personnel Management / Industrial Relations with minimum 50% marks in each; candidates should be proficient in operations of personal computer",
+        ""
+       ],
+       [
+        "4",
+        "Foreman (Instrumentation)",
+        "Diploma in Engineering in Instrumentation / Instrumentation & Control / Electronics & Instrumentation / Electrical & Instrumentation / Electronics / Electrical & Electronics with minimum 55% marks",
+        ""
+       ],
+       [
+        "5",
+        "Operator (Chemical)",
+        "Bachelor Degree in Science (B.Sc.) with Physics, Chemistry & Mathematics, minimum 50% marks, OR B.Sc. (Honours) in Chemistry with minimum 50% marks",
+        ""
+       ],
+       [
+        "6",
+        "Technician (Electrical)",
+        "Matric plus ITI Tradesmanship / National Apprenticeship Certificate in Electrical / Wireman Trade",
+        ""
+       ],
+       [
+        "7",
+        "Technician (Instrumentation)",
+        "Matric plus ITI Tradesmanship / National Apprenticeship Certificate in Instrumentation trade",
+        ""
+       ],
+       [
+        "8",
+        "Technician (Mechanical)",
+        "Matric plus ITI Tradesmanship / National Apprenticeship Certificate in Fitter / Diesel Mechanic / Machinist / Turner trade",
+        ""
+       ]
+      ]
+     },
+     {
+      "title": "Application fee",
+      "headers": [
+       "Category",
+       "Application Fee"
+      ],
+      "rows": [
+       [
+        "General / EWS / OBC (NCL)",
+        "Rs. 200/ - (non-refundable)"
+       ],
+       [
+        "SC / ST / PwBD",
+        "Exempted (subject to submission of certificate at the time of Selection Process)"
+       ]
+      ]
+     },
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "SN",
+       "Post",
+       "Total"
+      ],
+      "rows": [
+       [
+        "1",
+        "Foreman (Chemical)",
+        "03"
+       ],
+       [
+        "2",
+        "Foreman (Civil)",
+        "01"
+       ],
+       [
+        "3",
+        "Junior Superintendent (Human Resources)",
+        "01"
+       ],
+       [
+        "4",
+        "Foreman (Instrumentation)",
+        "01"
+       ],
+       [
+        "5",
+        "Operator (Chemical)",
+        "08"
+       ],
+       [
+        "6",
+        "Technician (Electrical)",
+        "03"
+       ],
+       [
+        "7",
+        "Technician (Instrumentation)",
+        "02"
+       ],
+       [
+        "8",
+        "Technician (Mechanical)",
+        "02"
+       ],
+       [
+        "",
+        "Total",
+        "21"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date/ Time"
+      ],
+      "rows": [
+       [
+        "Availability of online application form on www.bcplonline.co.in",
+        "From 10.09.2026, 08:00 hours"
+       ],
+       [
+        "BCPL Non Executive Recruitment 2026 Last Date to apply",
+        "09.10.2026, 17:00 hours"
+       ],
+       [
+        "Cut-off date for age limit and post-qualification experience",
+        "09.10.2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-09T06:30:00.000Z",
+   "debug": {
+    "sample": {
+     "age": "All full-time, part-time, and Open and Distance Learning (ODL) courses approved by AICTE and UGC are accepted, including Graduation and Post Graduation as specified. // Qualifications must be from a UGC-recognized university, AICTE-approved institution, or the concerned statutory council. Diploma qualifications must be recognized by the respective State Board of Technical Education; ITI/ NAC qualifications must be re",
+     "fee": "Payment must be made online only, through the payment gateway integrated with the application. No other mode of payment is accepted. // The fee, once paid, cannot be withdrawn, refunded, or held in reserve for future exams/ selection. ## Category|Application Fee / General / EWS / OBC (NCL)|Rs. 200/ - (non-refundable) / SC / ST / PwBD|Exempted (subject to submission of certificate at the time of Selection Process)",
+     "salary": "Selected candidates will be on probation for one year and will draw initial basic pay in the corresponding pay scale. In addition to Basic Pay, candidates are entitled to: // Industrial Dearness Allowance (IDA) at applicable rates ## Post Grade|Pay Scale / S-5 (Foreman - Chemical/ Civil/ Instrumentation, Jr. Superintendent HR)|Rs. 28,500 - 86,570/ - / S-3 (Operator, Technician - regular posts)|Rs. 25,000 - 81,430/ -"
+    },
+    "headings": [
+     "BCPL Non Executive Recruitment 2026 Notification PDF",
+     "BCPL Non Executive Recruitment 2026 - Quick Overview",
+     "BCPL Recruitment 2026 Vacancy Details",
+     "BCPL Non Executive Recruitment 2026 Important Dates",
+     "BCPL Non Executive Recruitment 2026 Eligibility Criteria (Qu",
+     "BCPL Non Executive Recruitment 2026 - Age Limit",
+     "BCPL Non Executive Recruitment 2026 Application Fee",
+     "BCPL Non Executive Recruitment 2026 Salary and Emoluments",
+     "BCPL Non Executive Recruitment 2026 Selection Process",
+     "How to Apply for BCPL Non Executive Recruitment 2026",
+     "Important General Instructions",
+     "BCPL Non Executive Recruitment 2026 - FAQs"
+    ],
+    "linkLabels": []
+   }
+  }
+ },
+ {
+  "id": 598,
+  "url": "https://www.freejobalert.com/articles/itda-gumla-tgt-recruitment-2026-apply-offline-for-20-posts-3069650",
+  "ok": true,
+  "htmlBytes": 212845,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "ageLimitMin": 21,
+   "ageLimitMax": 60,
+   "extraContent": {
+    "tables": [
+     {
+      "title": "Vacancies by category",
+      "headers": [
+       "Post Name",
+       "Total Posts"
+      ],
+      "rows": [
+       [
+        "TGT Hindi",
+        "4"
+       ],
+       [
+        "TGT English",
+        "4"
+       ],
+       [
+        "TGT Mathematics",
+        "4"
+       ],
+       [
+        "TGT Science",
+        "4"
+       ],
+       [
+        "TGT Social Science",
+        "4"
+       ],
+       [
+        "Total",
+        "20"
+       ]
+      ]
+     },
+     {
+      "title": "Important dates",
+      "headers": [
+       "Event",
+       "Date"
+      ],
+      "rows": [
+       [
+        "Last Date for Receipt of Application",
+        "06 October 2026"
+       ],
+       [
+        "Walk-in Interview/Skill Test",
+        "12 October 2026"
+       ],
+       [
+        "Notification Date",
+        "22 August 2026"
+       ]
+      ]
+     }
+    ]
+   },
+   "validThrough": "2026-10-06T06:30:00.000Z",
+   "officialNotificationUrl": "https://cdn.s3waas.gov.in/s3389bc7bb1e1c2a5e7e147703232a88f6/uploads/2026/09/17903237824125.pdf",
+   "officialWebsiteUrl": "https://www.gumla.nic.in",
+   "debug": {
+    "sample": {
+     "age": "All Posts: Minimum Age: 21 years, Maximum Age: 60 years. Age relaxation: Retired teachers up to 65 years. // Candidates should ensure that they meet the prescribed age limit as on the specified cut-off date. You can use our Age Calculator to check your exact age and confirm your eligibility before applying. ## "
+    },
+    "headings": [
+     "ITDA Gumla Recruitment 2026 - Overview",
+     "ITDA Gumla Vacancy 2026 Notification PDF",
+     "ITDA Gumla Vacancy Details 2026",
+     "Eligibility Criteria",
+     "Age Limit",
+     "Important Dates",
+     "Selection Process",
+     "How to Apply",
+     "ITDA Gumla Recruitment 2026 - Important Links",
+     "ITDA Gumla TGT (Trained Graduate Teacher) Recruitment 2026 -"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => cdn.s3waas.gov.in",
+     "Official Website => www.gumla.nic.in"
+    ]
+   }
+  }
+ },
+ {
+  "id": 1013,
+  "url": "https://www.freejobalert.com/articles/ministry-of-culture-intern-recruitment-2026-apply-online-for-20-posts-3070231",
+  "ok": true,
+  "htmlBytes": 214226,
+  "facts": {
+   "unparsed": [
+    "applyUrl"
+   ],
+   "review": [],
+   "salaryMin": 20000,
+   "validThrough": "2026-10-14T06:30:00.000Z",
+   "officialNotificationUrl": "https://culture.gov.in/files/vacancies_documents/TIB_Inters_advert.pdf",
+   "officialWebsiteUrl": "https://culture.gov.in/",
+   "debug": {
+    "sample": {
+     "salary": "The notification mentions a remuneration of ₹20,000 for the intern. Whether this amount is payable monthly or for the full internship period is not specified in the notification. ## Particulars|Details / Remuneration|₹20,000 / Payment Period|Not specified in the notification"
+    },
+    "headings": [
+     "Ministry of Culture Intern Recruitment 2026 Quick Summary",
+     "Ministry of Culture Intern Recruitment 2026 Overview",
+     "Ministry of Culture Intern Vacancy 2026",
+     "Ministry of Culture Intern Important Dates",
+     "Ministry of Culture Intern Eligibility Criteria",
+     "Ministry of Culture Intern Qualification",
+     "Ministry of Culture Intern Remuneration (Salary)",
+     "Ministry of Culture Intern Selection Process",
+     "Purpose and Scope of Work",
+     "Leave Rules for Ministry of Culture Interns",
+     "Documents Required to Apply",
+     "How to Apply for Ministry of Culture Intern Recruitment 2026",
+     "Important Links",
+     "Ministry of Culture Intern Online Form 2026 - FAQs"
+    ],
+    "linkLabels": [
+     "Official Notification PDF => culture.gov.in",
+     "Official Website => culture.gov.in"
+    ]
+   }
+  }
+ }
+]
