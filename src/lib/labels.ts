@@ -86,7 +86,10 @@ export function formatDate(
 ) {
   if (!date) return null;
   const d = typeof date === "string" ? new Date(date) : date;
+  // Dates are Indian dates: render in IST, not the server's timezone (the
+  // server runs in UTC, which showed an IST-midnight date as the day before).
   return d.toLocaleDateString(localeTag, {
+    timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -112,4 +115,34 @@ export function formatCurrencyRange(
     ] ?? "";
   if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}${periodLabel}`;
   return `${fmt(min ?? max ?? 0)}${periodLabel}`;
+}
+
+/** "Up to 38 yrs", "18–38 yrs", or null. Never prints a placeholder dash. */
+export function formatAgeRange(
+  min: number | null | undefined,
+  max: number | null | undefined,
+  isHi = false,
+): string | null {
+  const yrs = isHi ? "वर्ष" : "yrs";
+  if (min != null && max != null) return `${min}–${max} ${yrs}`;
+  if (max != null) return isHi ? `अधिकतम ${max} ${yrs}` : `Up to ${max} ${yrs}`;
+  if (min != null) return isHi ? `न्यूनतम ${min} ${yrs}` : `From ${min} ${yrs}`;
+  return null;
+}
+
+/** "₹25 (General) · ₹0 (Reserved)" using only the fees that are stored. */
+export function formatFee(
+  general: number | null | undefined,
+  reserved: number | null | undefined,
+  isHi = false,
+): string | null {
+  const parts: string[] = [];
+  if (general != null) parts.push(`₹${general} (${isHi ? "सामान्य" : "General"})`);
+  if (reserved != null) parts.push(`₹${reserved} (${isHi ? "आरक्षित" : "Reserved"})`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** "1 vacancy", "3 vacancies". */
+export function vacanciesPhrase(n: number): string {
+  return `${n} ${n === 1 ? "vacancy" : "vacancies"}`;
 }

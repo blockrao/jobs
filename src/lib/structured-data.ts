@@ -182,8 +182,21 @@ export function buildJobPostingSchema(
     applicantLocationRequirements,
     baseSalary,
     totalJobOpenings: posting.totalVacancies ?? undefined,
-    directApply: Boolean(posting.applyUrl),
+    // directApply means the application can be completed on this page. Our
+    // apply links go to the official site, so it is true only for a link on
+    // this site (PQ-004).
+    directApply: isOnSiteUrl(posting.applyUrl),
   };
+}
+
+export function isOnSiteUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  if (url.startsWith("/")) return true;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "") === new URL(absoluteUrl("/")).hostname.replace(/^www\./, "");
+  } catch {
+    return false;
+  }
 }
 
 export function buildExamEventSchema(posting: Posting) {

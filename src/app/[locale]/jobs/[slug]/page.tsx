@@ -1,5 +1,5 @@
 import { entitySeo } from "@/lib/seo";
-import { composeJobMetaTitle } from "@/lib/seo/meta-title";
+import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -20,8 +20,11 @@ import {
   STAGE_LABELS,
   STAGE_LABELS_HI,
   WORKPLACE_TYPE_LABELS,
+  formatAgeRange,
   formatCurrencyRange,
   formatDate,
+  formatFee,
+  vacanciesPhrase,
 } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
@@ -38,7 +41,7 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
   const deduped = text.toLowerCase().startsWith(repeatOf.toLowerCase())
     ? text.slice(repeatOf.length).replace(/^[\s.:–-]+/, "")
     : text;
-  return deduped.length > maxLen ? `${deduped.slice(0, maxLen - 1).trimEnd()}…` : deduped;
+  return cutAtWord(deduped, maxLen);
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -58,7 +61,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     displayTitle,
     isHi && orgNameHi ? [orgNameHi, posting.organization.name] : [posting.organization.name]
   );
-  const description = plainTextSnippet(displayDescriptionSource, displayTitle);
+  const factsDescription = isHi
+    ? null
+    : composeJobMetaDescription({
+        postName: posting.postNames?.[0]?.trim() || null,
+        orgName: posting.organization.name,
+        vacancies: posting.totalVacancies,
+        lastDate: posting.validThrough ? formatDate(posting.validThrough, "en-IN") : null,
+      });
+  const description = factsDescription ?? plainTextSnippet(displayDescriptionSource, displayTitle);
+  const ogImages = [{ url: "/og-default.png", width: 1200, height: 630, alt: "JobOye government jobs" }];
 
   // Tier B/C postings stay crawlable and linkable but are kept out of the
   // index until they pass the content-quality gate (src/lib/content-quality/
@@ -83,7 +95,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: seo.url,
       type: "article",
+      images: ogImages,
     },
+    twitter: { card: "summary_large_image", title, description, images: ogImages.map((i) => i.url) },
   };
 }
 
@@ -95,24 +109,26 @@ function buildFaqs(
   displayEligibility: string | null,
 ) {
   const faqs: { question: string; answer: string }[] = [];
+  // English FAQs name the post, not the whole page headline (PQ-004).
+  const t = isHi ? displayTitle : posting.postNames?.[0]?.trim() || displayTitle;
   if (posting.totalVacancies) {
     faqs.push(
       isHi
         ? {
-            question: `${displayTitle} में कितनी रिक्तियां हैं?`,
-            answer: `${displayOrgName} द्वारा घोषित ${displayTitle} में ${posting.totalVacancies} रिक्तियां हैं।`,
+            question: `${t} में कितनी रिक्तियां हैं?`,
+            answer: `${displayOrgName} द्वारा घोषित ${t} में ${posting.totalVacancies} रिक्तियां हैं।`,
           }
         : {
-            question: `How many vacancies are there in ${displayTitle}?`,
-            answer: `${displayTitle} has ${posting.totalVacancies} vacancies announced by ${displayOrgName}.`,
+            question: `How many vacancies are there for ${t} at ${displayOrgName}?`,
+            answer: `${displayOrgName} has announced ${vacanciesPhrase(posting.totalVacancies)} for ${t}.`,
           },
     );
   }
   if (displayEligibility) {
     faqs.push(
       isHi
-        ? { question: `${displayTitle} के लिए पात्रता क्या है?`, answer: displayEligibility }
-        : { question: `What is the eligibility for ${displayTitle}?`, answer: displayEligibility },
+        ? { question: `${t} के लिए पात्रता क्या है?`, answer: displayEligibility }
+        : { question: `What is the eligibility for ${t}?`, answer: displayEligibility },
     );
   }
   if (posting.validThrough) {
@@ -120,11 +136,11 @@ function buildFaqs(
     faqs.push(
       isHi
         ? {
-            question: `${displayTitle} हेतु आवेदन की अंतिम तिथि क्या है?`,
+            question: `${t} हेतु आवेदन की अंतिम तिथि क्या है?`,
             answer: `आवेदन की अंतिम तिथि ${dateStr} है। आवेदन करने से पहले सदैव आधिकारिक अधिसूचना से पुष्टि करें।`,
           }
         : {
-            question: `What is the last date to apply for ${displayTitle}?`,
+            question: `What is the last date to apply for ${t}?`,
             answer: `The last date to apply is ${dateStr}. Always confirm on the official notification before the deadline.`,
           },
     );
@@ -133,7 +149,7 @@ function buildFaqs(
     faqs.push(
       isHi
         ? {
-            question: `${displayTitle} हेतु आवेदन शुल्क क्या है?`,
+            question: `${t} हेतु आवेदन शुल्क क्या है?`,
             answer: `सामान्य श्रेणी हेतु आवेदन शुल्क ₹${posting.applicationFeeGeneral} है${
               posting.applicationFeeReserved != null
                 ? ` तथा आरक्षित श्रेणियों हेतु ₹${posting.applicationFeeReserved}`
@@ -141,7 +157,7 @@ function buildFaqs(
             }।`,
           }
         : {
-            question: `What is the application fee for ${displayTitle}?`,
+            question: `What is the application fee for ${t}?`,
             answer: `The application fee is ₹${posting.applicationFeeGeneral} for general category${
               posting.applicationFeeReserved != null
                 ? ` and ₹${posting.applicationFeeReserved} for reserved categories`
@@ -356,11 +372,11 @@ export default async function LocaleJobPage({ params }: Props) {
             <dd className="font-medium">{salaryText}</dd>
           </div>
         )}
-        {(posting.ageLimitMin || posting.ageLimitMax) && (
+        {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi) && (
           <div>
             <dt className="text-neutral-500">{L.ageLimit}</dt>
             <dd className="font-medium">
-              {posting.ageLimitMin ?? "—"}–{posting.ageLimitMax ?? "—"} {isHi ? "वर्ष" : "yrs"}
+              {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi)}
               {posting.ageRelaxationNotes && (
                 <span className="font-normal text-neutral-500">
                   {" "}
@@ -370,10 +386,10 @@ export default async function LocaleJobPage({ params }: Props) {
             </dd>
           </div>
         )}
-        {posting.applicationFeeGeneral != null && (
+        {formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, isHi) && (
           <div>
             <dt className="text-neutral-500">{L.applicationFee}</dt>
-            <dd className="font-medium">₹{posting.applicationFeeGeneral}</dd>
+            <dd className="font-medium">{formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, isHi)}</dd>
           </div>
         )}
         {posting.datePosted && (

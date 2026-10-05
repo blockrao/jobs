@@ -1151,3 +1151,11 @@ Changes: `src/lib/content-quality/completeness.ts` (16 checks, one definition us
 Baseline (observed, production, 2026-10-05): 539 live pages, 267 Tier A. notice_faqs passes on 1 of 539 pages; description_depth on 5 of 539. Weakest groups: depth, Hindi, verified date, requirements, fee. The standard reports; it does not gate anything.
 
 Live check (observed, in the browser on production, equivalent rules, upsc-junior-technical-officer-sugar-technology-2026-k9p2): en and hi return 200; lang matches; canonicals self-referencing; hreflang en/hi/x-default reciprocal; JSON-LD parses (WebSite, JobPosting, BreadcrumbList, FAQPage); no repeated title segment; one h1; indexable and in the sitemap. The script itself cannot reach the site from the agent workspace, so it should be run once from the owner's machine.
+
+## 2026-10-05: PQ-004 job page defects (owner-approved; code only)
+
+Scorecard: age-limit dash PASS (D-1a); both fees shown PASS (D-1b); vacancy grammar PASS (D-1c); dates rendered in IST PASS (D-1d); title length PASS (D-2a, D-2b); meta description cut at a word and fact-led PASS (D-2c, D-2d); `directApply` only for on-site links PASS (D-3a); social image added (`public/og-default.png`, large Twitter card; excluded from the locale proxy matcher); production data written: none; migration: none; contract suite 188 passed with only ENT-07 and IDX-06 failing (known baseline); typecheck clean; production build succeeds.
+
+Origin: audit of one page (UPSC JTO, Sugar Technology) found site-wide defects: 230 live pages showed "—–N yrs", 285 had titles over 70 characters, every page marked `directApply` true although applications are on the official site, and meta descriptions were cut mid-word.
+
+Not done, by decision: `educationRequirements` / `experienceRequirements` in JobPosting (needs structured per-post fields, not free text; goes with posts-and-vacancies as rows); vacancy-by-category table, selection process, important dates; organization logos; notice-specific FAQs. Date display now uses IST; whether the stored `date_posted` of the UPSC advertisement (26 Sep IST) is the notice date (25 Sep) is a data question, not changed.
