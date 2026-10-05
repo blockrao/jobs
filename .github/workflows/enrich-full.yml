@@ -21,10 +21,12 @@ jobs:
         run: |
           mkdir -p out
           SKIP=$(cat data/enrich/run/skip-ids.txt)
-          npx tsx src/scripts/enrich-full.ts out/full-result.json "$SKIP"
+          set -o pipefail
+          npx tsx src/scripts/enrich-full.ts out/full-result.json "$SKIP" 2>&1 | sed 's#postgres[a-z]*://[^ ]*#<redacted>#g' | tee out/run-log.txt
       - name: Publish results to branch enrich-full-results
+        if: always()
         run: |
           cd out
           git init -q && git config user.name enrich-bot && git config user.email enrich-bot@users.noreply.github.com
-          git checkout -q -b enrich-full-results && git add full-result.json && git commit -qm "full dry run result"
+          git checkout -q -b enrich-full-results && git add . && git commit -qm "full dry run result"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" enrich-full-results
