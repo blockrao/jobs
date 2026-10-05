@@ -7,9 +7,9 @@
 const AGGREGATOR_HOSTS = [
   "freejobalert.com", "sarkariresult.com", "sarkarinaukri.com", "indiasarkarinaukri.com",
   "sahisarkarijobs.com", "sarkariexam.com", "t.me", "telegram.me", "whatsapp.com",
-  "arattai.in", "web.arattai.in", "facebook.com", "twitter.com", "x.com", "instagram.com", "youtube.com",
+  "arattai.in", "web.arattai.in", "wa.me", "telegram.org", "facebook.com", "twitter.com", "x.com", "instagram.com", "youtube.com",
 ];
-const NAME_RE = /free\s*job\s*alert|sarkari\s*result|sarkari\s*naukri|sahi\s*sarkari\s*jobs/i;
+const NAME_RE = /arattai|free\s*job\s*alert|sarkari\s*result|sarkari\s*naukri|sahi\s*sarkari\s*jobs/i;
 
 export function isAggregatorUrl(url: string | null | undefined): boolean {
   if (!url) return false;
