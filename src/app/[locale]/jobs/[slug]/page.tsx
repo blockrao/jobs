@@ -36,9 +36,6 @@ export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 
-// Scraped descriptions are stored as HTML (often literally opening with
-// "<p>{the same title again}</p>"), which is unusable as a meta description
-// — it leaks markup into search snippets and just repeats the <title> tag.
 function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string {
   const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   const deduped = text.toLowerCase().startsWith(repeatOf.toLowerCase())
@@ -75,10 +72,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = factsDescription ?? plainTextSnippet(displayDescriptionSource, displayTitle);
   const ogImages = [{ url: "/og-default.png", width: 1200, height: 630, alt: "JobOye government jobs" }];
 
-  // All approved postings (Tier A and B) are indexable; Tier C (non-job,
-  // duplicate, or expired) are excluded from indexing. The quality gate
-  // (src/lib/content-quality/gate.ts) still classifies completeness but
-  // indexability is no longer gated on reaching Tier A.
   const seo = entitySeo({
     base: "/jobs",
     slug: posting.slug,
@@ -111,7 +104,6 @@ function buildFaqs(
   displayEligibility: string | null,
 ) {
   const faqs: { question: string; answer: string }[] = [];
-  // English FAQs name the post, not the whole page headline (PQ-004).
   const t = isHi ? displayTitle : posting.postNames?.[0]?.trim() || displayTitle;
   if (posting.totalVacancies) {
     faqs.push(
@@ -177,6 +169,34 @@ function buildFaqs(
   return faqs;
 }
 
+// Derive a human-readable recruitment status pill from stage + deadline
+function recruitmentStatusLabel(
+  stage: string,
+  validThrough: Date | null,
+  hiringOpen: boolean,
+  isHi: boolean,
+): { label: string; color: "green" | "amber" | "red" | "neutral" } {
+  if (stage === "APPLICATION_OPEN" && hiringOpen) {
+    return { label: isHi ? "🟢 आवेदन खुले हैं" : "🟢 Applications Open", color: "green" };
+  }
+  if (stage === "APPLICATION_CLOSED" || (!hiringOpen && validThrough && new Date() > validThrough)) {
+    return { label: isHi ? "🔴 आवेदन बंद" : "🔴 Applications Closed", color: "red" };
+  }
+  if (stage === "NOTIFICATION_OUT") {
+    return { label: isHi ? "🟡 अधिसूचना जारी" : "🟡 Notification Out", color: "amber" };
+  }
+  if (["EXAM_SCHEDULED", "EXAM_CONDUCTED", "ADMIT_CARD_RELEASED"].includes(stage)) {
+    return { label: isHi ? "📋 परीक्षा चरण" : "📋 Exam Stage", color: "amber" };
+  }
+  if (["RESULT_OUT", "MERIT_LIST_OUT", "FINAL_RESULT_OUT"].includes(stage)) {
+    return { label: isHi ? "✅ परिणाम उपलब्ध" : "✅ Result Available", color: "green" };
+  }
+  if (stage === "INTERVIEW_SCHEDULED") {
+    return { label: isHi ? "🗓️ साक्षात्कार निर्धारित" : "🗓️ Interview Scheduled", color: "amber" };
+  }
+  return { label: isHi ? "जानकारी उपलब्ध नहीं" : "Status Unknown", color: "neutral" };
+}
+
 export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
@@ -191,9 +211,6 @@ export default async function LocaleJobPage({ params }: Props) {
   const responsibilitiesHi = (posting as any).responsibilitiesHi as string | null;
   const locationCityHi = (posting as any).locationCityHi as string | null;
 
-  // Per-field fallback: show the Hindi text where it exists, English
-  // otherwise — a posting can have a translated title but no translated
-  // eligibility text yet.
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescription = isHi && descriptionHi ? descriptionHi : posting.description;
   const displayEligibility = isHi && eligibilityHi ? eligibilityHi : posting.eligibility;
@@ -206,13 +223,11 @@ export default async function LocaleJobPage({ params }: Props) {
   const org = posting.organization;
   const orgNameHi = (org as any).nameHi as string | null;
   const displayOrgName = isHi && orgNameHi ? orgNameHi : org.name;
-  // Only link into the Hindi org page when it actually has Hindi content.
   const orgHref = isHi && orgNameHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
   const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting, isHi, displayTitle, displayOrgName, displayEligibility);
-  // Notice-specific FAQs and a minimal timeline are derived from the stored facts at render time
-  // (fact-only, English; never stored, so they always match the current data).
+
   const noticeFacts: NoticeFacts = {
     id: posting.id,
     title: posting.title,
@@ -262,8 +277,6 @@ export default async function LocaleJobPage({ params }: Props) {
     buildJobPostingSchema(posting as any, org as any, relatedArticles.map((a: any) => a.slug)),
     buildExamEventSchema(posting as any),
     buildBreadcrumbSchema([
-      // No localized homepage exists — point at "/" directly rather than a
-      // /${locale} URL that just redirects there.
       { name: isHi ? "होम" : "Home", path: "/" },
       { name: displayOrgName, path: orgHref },
       { name: displayTitle, path: isHi ? `/hi/jobs/${posting.slug}` : `/jobs/${posting.slug}` },
@@ -277,6 +290,20 @@ export default async function LocaleJobPage({ params }: Props) {
     posting.salaryCurrency ?? "INR",
     posting.salaryPeriod ?? "MONTH",
   );
+
+  const recruitmentStatus = recruitmentStatusLabel(
+    posting.currentStage,
+    posting.validThrough,
+    hiringOpen,
+    isHi,
+  );
+
+  const statusColorMap = {
+    green: "border-green-200 bg-green-50 text-green-800",
+    amber: "border-amber-200 bg-amber-50 text-amber-800",
+    red: "border-red-200 bg-red-50 text-red-800",
+    neutral: "border-neutral-200 bg-neutral-50 text-neutral-700",
+  };
 
   const L = {
     vacancies: isHi ? "रिक्तियां" : "Vacancies",
@@ -313,7 +340,12 @@ export default async function LocaleJobPage({ params }: Props) {
     viewExamHub: isHi ? "परीक्षा विवरण एवं अन्य अभियान देखें" : "View exam details and other campaigns",
     eligibilityChecklist: isHi ? "पात्रता विवरण" : "Eligibility Criteria",
     howToApply: isHi ? "आवेदन कैसे करें" : "How to Apply",
-    bankDetails: isHi ? "भुगतान विवरण" : "Payment / Bank Details",
+    selectionProcess: isHi ? "चयन प्रक्रिया" : "Selection Process",
+    bankDetails: isHi ? "भुगतान विवरण" : "Fee & Payment Details",
+    jobContext: isHi ? "भर्ती संदर्भ" : "Job Context",
+    sourceVerification: isHi ? "स्रोत एवं सत्यापन" : "Source & Verification",
+    officiallyVerified: isHi ? "✅ आधिकारिक रूप से सत्यापित" : "✅ Officially Verified",
+    aggregatorDerived: isHi ? "ℹ️ समाचार स्रोत से प्राप्त" : "ℹ️ Derived from news aggregator",
     notice: !hiringOpen
       ? isHi
         ? `यह भर्ती आवेदन चरण से आगे बढ़ चुकी है (${stageLabels[posting.currentStage] ?? posting.currentStage})। नीचे दिया गया विवरण संदर्भ हेतु रखा गया है।`
@@ -327,6 +359,12 @@ export default async function LocaleJobPage({ params }: Props) {
         : null,
   };
 
+  // Has entity graph links?
+  const hasEntityGraph =
+    posting.canonicalPosition || posting.canonicalRecruitment || posting.exam;
+
+  const sv = extraContent?.sourceVerification;
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <script
@@ -334,10 +372,9 @@ export default async function LocaleJobPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
 
+      {/* ── Breadcrumb ── */}
       <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-500">
-        <Link href="/" className="hover:underline">
-          {L.home}
-        </Link>{" "}
+        <Link href="/" className="hover:underline">{L.home}</Link>{" "}
         /{" "}
         {posting.canonicalPosition && (
           <>
@@ -362,27 +399,33 @@ export default async function LocaleJobPage({ params }: Props) {
         {stateHub && (
           <>
             {" / "}
-            <Link href={`/states/${stateHub.slug}`} className="hover:underline">{isHi ? stateHub.nameHi : stateHub.name}</Link>
+            <Link href={`/states/${stateHub.slug}`} className="hover:underline">
+              {isHi ? stateHub.nameHi : stateHub.name}
+            </Link>
           </>
         )}
       </nav>
 
+      {/* ── 1. JOB IDENTITY ── */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Badge tone="brand">{kindLabels[posting.kind]}</Badge>
-        <Badge tone="neutral">{stageLabels[posting.currentStage] ?? posting.currentStage}</Badge>
+        {/* Recruitment Status pill — prominent, near the title */}
+        <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-semibold ${statusColorMap[recruitmentStatus.color]}`}>
+          {recruitmentStatus.label}
+        </span>
       </div>
 
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{displayTitle}</h1>
       <p className="mt-1 text-neutral-600">
-        <Link href={orgHref} className="hover:underline">
-          {displayOrgName}
-        </Link>
+        <Link href={orgHref} className="hover:underline">{displayOrgName}</Link>
         {displayLocationCity ? ` · ${displayLocationCity}` : ""}
         {posting.locationRegion && !stateHub ? `, ${posting.locationRegion}` : ""}
         {stateHub && (
           <>
             {", "}
-            <Link href={`/states/${stateHub.slug}`} className="hover:underline">{isHi ? stateHub.nameHi : stateHub.name}</Link>
+            <Link href={`/states/${stateHub.slug}`} className="hover:underline">
+              {isHi ? stateHub.nameHi : stateHub.name}
+            </Link>
           </>
         )}
       </p>
@@ -391,9 +434,7 @@ export default async function LocaleJobPage({ params }: Props) {
         <div className="mt-3 flex flex-wrap gap-2">
           {relatedArticles.map((article: any) => {
             const articleHref =
-              isHi && article.titleHi
-                ? `/hi/articles/${article.slug}`
-                : `/articles/${article.slug}`;
+              isHi && article.titleHi ? `/hi/articles/${article.slug}` : `/articles/${article.slug}`;
             const articleTitle = isHi && article.titleHi ? article.titleHi : article.title;
             return (
               <Link
@@ -408,6 +449,7 @@ export default async function LocaleJobPage({ params }: Props) {
         </div>
       )}
 
+      {/* Warnings */}
       {L.notice && (
         <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {L.notice}
@@ -424,10 +466,14 @@ export default async function LocaleJobPage({ params }: Props) {
         </div>
       )}
 
+      {/* Qualitative highlights — differentiators only, never numeric duplicates of the stats grid */}
       {(extraContent?.highlights ?? []).length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {(extraContent!.highlights!).map((h) => (
-            <span key={h.text} className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-neutral-50 px-3 py-1 text-sm font-medium">
+            <span
+              key={h.text}
+              className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-neutral-50 px-3 py-1 text-sm font-medium"
+            >
               <span aria-hidden="true">{h.icon}</span>
               {isHi && h.textHi ? h.textHi : h.text}
             </span>
@@ -435,6 +481,7 @@ export default async function LocaleJobPage({ params }: Props) {
         </div>
       )}
 
+      {/* ── 2. CRITICAL FACTS (stats grid) ── */}
       <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-black/10 p-4 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-neutral-500">{L.vacancies}</dt>
@@ -467,8 +514,7 @@ export default async function LocaleJobPage({ params }: Props) {
               {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi)}
               {posting.ageRelaxationNotes && (
                 <span className="font-normal text-neutral-500">
-                  {" "}
-                  {isHi ? "(श्रेणी अनुसार भिन्न)" : "(varies by category)"}
+                  {" "}{isHi ? "(श्रेणी अनुसार भिन्न)" : "(varies by category)"}
                 </span>
               )}
             </dd>
@@ -499,13 +545,12 @@ export default async function LocaleJobPage({ params }: Props) {
         {posting.lastVerifiedAt && (
           <div>
             <dt className="text-neutral-500">{L.lastVerified}</dt>
-            <dd className="font-medium">
-              {formatDate(posting.lastVerifiedAt, dateLocale)}
-            </dd>
+            <dd className="font-medium">{formatDate(posting.lastVerifiedAt, dateLocale)}</dd>
           </div>
         )}
       </dl>
 
+      {/* ── 3. PRIMARY ACTIONS ── */}
       <div className="mt-6 flex flex-wrap gap-3">
         {publicLink(posting.applyUrl) && hiringOpen && (
           <a
@@ -529,7 +574,7 @@ export default async function LocaleJobPage({ params }: Props) {
         )}
       </div>
 
-      {/* Timeline — moved up so readers see recruitment progress before the details */}
+      {/* ── 4. RECRUITMENT STATUS / TIMELINE ── */}
       {timeline.length > 0 && (
         <section className="mt-8">
           <h2 className="text-lg font-semibold">{L.timeline}</h2>
@@ -561,12 +606,68 @@ export default async function LocaleJobPage({ params }: Props) {
         </section>
       )}
 
+      {/* ── 5. JOB CONTEXT / ENTITY GRAPH ── */}
+      {hasEntityGraph && (
+        <section className="mt-8 rounded-lg border border-black/10 bg-neutral-50 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+            {L.jobContext}
+          </p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {posting.canonicalPosition && (
+              <div>
+                <span className="text-neutral-500">{isHi ? "पद" : "Position"}</span>
+                {" · "}
+                <Link
+                  href={`/positions/${posting.canonicalPosition.slug}`}
+                  className="font-medium text-neutral-900 hover:underline"
+                >
+                  {posting.canonicalPosition.name}
+                </Link>
+              </div>
+            )}
+            {posting.canonicalRecruitment && (
+              <div>
+                <span className="text-neutral-500">{isHi ? "भर्ती" : "Recruitment"}</span>
+                {" · "}
+                <Link
+                  href={`/recruitments/${posting.canonicalRecruitment.slug}`}
+                  className="font-medium text-neutral-900 hover:underline"
+                >
+                  {posting.canonicalRecruitment.name}
+                </Link>
+              </div>
+            )}
+            <div>
+              <span className="text-neutral-500">{isHi ? "संस्था" : "Organisation"}</span>
+              {" · "}
+              <Link href={orgHref} className="font-medium text-neutral-900 hover:underline">
+                {displayOrgName}
+              </Link>
+            </div>
+            {posting.exam && (
+              <div>
+                <span className="text-neutral-500">{isHi ? "परीक्षा" : "Exam"}</span>
+                {" · "}
+                <Link
+                  href={isHi ? `/hi/exams/${posting.exam.slug}` : `/exams/${posting.exam.slug}`}
+                  className="font-medium text-neutral-900 hover:underline"
+                >
+                  {isHi && posting.exam.labelHi ? posting.exam.labelHi : posting.exam.label}
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── MAIN CONTENT ── */}
       <section className="prose prose-neutral mt-10 max-w-none">
-        {/* Overview */}
+
+        {/* ── 6. OVERVIEW ── */}
         <h2 className="text-lg font-semibold">{L.overview}</h2>
         <p className="whitespace-pre-line">{displayDescription}</p>
 
-        {/* Notices */}
+        {/* ── Notices ── */}
         {(extraContent?.notices ?? []).map((n) => (
           <div key={n.title}>
             <h2 className="text-lg font-semibold">{isHi && n.titleHi ? n.titleHi : n.title}</h2>
@@ -574,7 +675,7 @@ export default async function LocaleJobPage({ params }: Props) {
           </div>
         ))}
 
-        {/* Structured tables (vacancy breakdown, department-wise posts, etc.) */}
+        {/* ── 7. VACANCY / POST STRUCTURE + DEPARTMENTS (structured tables) ── */}
         {(extraContent?.tables ?? []).map((t) => {
           const headers = isHi && t.headersHi ? t.headersHi : t.headers;
           const rows = isHi && t.rowsHi ? t.rowsHi : t.rows;
@@ -596,9 +697,7 @@ export default async function LocaleJobPage({ params }: Props) {
                     {rows.map((r) => (
                       <tr key={r.join("|")}>
                         {r.map((c, i) => (
-                          <td key={i} className="border border-black/10 px-3 py-2">
-                            {c}
-                          </td>
+                          <td key={i} className="border border-black/10 px-3 py-2">{c}</td>
                         ))}
                       </tr>
                     ))}
@@ -609,17 +708,19 @@ export default async function LocaleJobPage({ params }: Props) {
           );
         })}
 
-        {/* Eligibility checklist (structured) — renders instead of prose when present */}
+        {/* ── 8. ELIGIBILITY ── */}
         {(extraContent?.checklist ?? []).length > 0 ? (
           <>
             <h2 className="text-lg font-semibold">{L.eligibilityChecklist}</h2>
             {(extraContent!.checklist!).map((group) => (
               <div key={group.heading} className="not-prose mb-4">
-                <h3 className="mb-2 font-semibold text-neutral-800">{isHi && group.headingHi ? group.headingHi : group.heading}</h3>
+                <h3 className="mb-2 font-semibold text-neutral-800">
+                  {isHi && group.headingHi ? group.headingHi : group.heading}
+                </h3>
                 <ul className="space-y-1.5">
                   {group.items.map((item, idx) => (
                     <li key={idx} className="flex gap-2 text-sm">
-                      <span className="mt-0.5 flex-shrink-0 text-green-600" aria-hidden="true">✓</span>
+                      <span className="mt-0.5 flex-shrink-0 text-neutral-400" aria-hidden="true">▸</span>
                       <span>{isHi && item.textHi ? item.textHi : item.text}</span>
                     </li>
                   ))}
@@ -629,7 +730,6 @@ export default async function LocaleJobPage({ params }: Props) {
           </>
         ) : (
           <>
-            {/* Fallback: prose eligibility */}
             {displayEligibility && (
               <>
                 <h2 className="text-lg font-semibold">{L.eligibility}</h2>
@@ -653,16 +753,7 @@ export default async function LocaleJobPage({ params }: Props) {
           </>
         )}
 
-        {posting.ageRelaxationNotes && (
-          <>
-            <h2 className="text-lg font-semibold">{L.ageDetails}</h2>
-            <p className="whitespace-pre-line">
-              {isHi && (posting as any).ageRelaxationNotesHi ? (posting as any).ageRelaxationNotesHi : posting.ageRelaxationNotes}
-            </p>
-          </>
-        )}
-
-        {/* Application steps */}
+        {/* ── 9. HOW TO APPLY ── */}
         {(extraContent?.steps ?? []).length > 0 && (
           <>
             <h2 className="text-lg font-semibold">{L.howToApply}</h2>
@@ -682,7 +773,29 @@ export default async function LocaleJobPage({ params }: Props) {
           </>
         )}
 
-        {/* Bank / payment details */}
+        {/* ── 10. SELECTION PROCESS ── */}
+        {(extraContent?.selectionProcess ?? []).length > 0 && (
+          <>
+            <h2 className="text-lg font-semibold">{L.selectionProcess}</h2>
+            <ol className="not-prose mt-3 space-y-3">
+              {(extraContent!.selectionProcess!).map((s) => (
+                <li key={s.step} className="flex gap-3">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-neutral-300 text-xs font-bold text-neutral-700">
+                    {s.step}
+                  </span>
+                  <div>
+                    <p className="font-medium text-neutral-900">{isHi && s.titleHi ? s.titleHi : s.title}</p>
+                    {s.body && (
+                      <p className="mt-0.5 text-sm text-neutral-600">{isHi && s.bodyHi ? s.bodyHi : s.body}</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+
+        {/* ── 11. FEE / PAYMENT / BANK DETAILS ── */}
         {(extraContent?.bankDetails ?? []).length > 0 && (
           <>
             <h2 className="text-lg font-semibold">{L.bankDetails}</h2>
@@ -698,8 +811,22 @@ export default async function LocaleJobPage({ params }: Props) {
             </div>
           </>
         )}
+
+        {/* ── 12. AGE RELAXATION ── */}
+        {posting.ageRelaxationNotes && (
+          <>
+            <h2 className="text-lg font-semibold">{L.ageDetails}</h2>
+            <p className="whitespace-pre-line">
+              {isHi && (posting as any).ageRelaxationNotesHi
+                ? (posting as any).ageRelaxationNotesHi
+                : posting.ageRelaxationNotes}
+            </p>
+          </>
+        )}
+
       </section>
 
+      {/* ── 13. FAQ ── */}
       {faqs.length > 0 && (
         <section className="mt-10">
           <h2 className="text-lg font-semibold">{L.faq}</h2>
@@ -714,6 +841,7 @@ export default async function LocaleJobPage({ params }: Props) {
         </section>
       )}
 
+      {/* ── Related Guides ── */}
       {relatedArticles.length > 0 && (
         <section className="mt-10">
           <h2 className="text-lg font-semibold">{L.relatedGuides}</h2>
@@ -732,7 +860,56 @@ export default async function LocaleJobPage({ params }: Props) {
         </section>
       )}
 
-      {/* Related canonical entities — moved to bottom as secondary navigation */}
+      {/* ── 14. SOURCE & VERIFICATION ── */}
+      {(sv || posting.lastVerifiedAt) && (
+        <section className="mt-10 rounded-lg border border-black/10 bg-neutral-50 p-4 text-sm">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+            {L.sourceVerification}
+          </p>
+          <dl className="space-y-1.5">
+            {sv?.sourceType && (
+              <div className="flex gap-2">
+                <dd className={`font-medium ${sv.sourceType === "official" ? "text-green-700" : "text-neutral-700"}`}>
+                  {sv.sourceType === "official" ? L.officiallyVerified : L.aggregatorDerived}
+                </dd>
+              </div>
+            )}
+            {sv?.sourceName && (
+              <div className="flex gap-2 text-neutral-600">
+                <dt className="flex-shrink-0">{isHi ? "स्रोत:" : "Source:"}</dt>
+                <dd>{sv.sourceName}</dd>
+              </div>
+            )}
+            {sv?.advertisementNo && (
+              <div className="flex gap-2 text-neutral-600">
+                <dt className="flex-shrink-0">{isHi ? "विज्ञापन संख्या:" : "Advertisement No:"}</dt>
+                <dd className="font-mono">{sv.advertisementNo}</dd>
+              </div>
+            )}
+            {sv?.lastChecked && (
+              <div className="flex gap-2 text-neutral-600">
+                <dt className="flex-shrink-0">{isHi ? "अंतिम जाँच:" : "Last checked:"}</dt>
+                <dd>{formatDate(new Date(sv.lastChecked), dateLocale)}</dd>
+              </div>
+            )}
+            {!sv && posting.lastVerifiedAt && (
+              <div className="flex gap-2 text-neutral-600">
+                <dt className="flex-shrink-0">{L.lastVerified}:</dt>
+                <dd>{formatDate(posting.lastVerifiedAt, dateLocale)}</dd>
+              </div>
+            )}
+          </dl>
+          {!posting.officialNotificationUrl && (
+            <p className="mt-2 text-neutral-500">
+              {isHi
+                ? "आधिकारिक अधिसूचना लिंक उपलब्ध नहीं है। सीधे संस्था की वेबसाइट देखें।"
+                : "No official notification link on file. Visit the organisation's website directly."}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ── 15. RELATED CANONICAL ENTITIES ── */}
       <section className="mt-10 border-t border-black/10 pt-8">
         <h2 className="text-sm font-semibold text-neutral-500">{L.relatedInfo}</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -744,7 +921,6 @@ export default async function LocaleJobPage({ params }: Props) {
               subtitle={L.viewPositionHub}
             />
           )}
-
           {posting.canonicalRecruitment && (
             <InfoCard
               tone="success"
@@ -753,14 +929,12 @@ export default async function LocaleJobPage({ params }: Props) {
               subtitle={L.viewRecruitmentHub}
             />
           )}
-
           <InfoCard
             tone="neutral"
             href={orgHref}
             title={displayOrgName}
             subtitle={L.viewAllForOrg}
           />
-
           {posting.exam && (
             <InfoCard
               tone="neutral"

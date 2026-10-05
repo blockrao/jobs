@@ -37,17 +37,24 @@ export const postingKindEnum = pgEnum("posting_kind", [
 // CLOSED subset. One enum keeps the timeline table and canonical-page
 // rendering logic simple across both kinds.
 export type ExtraContent = {
-  // Scannable stat chips shown above the details grid (e.g. "50 vacancies", "₹1.44 L/month")
+  /**
+   * Qualitative differentiators shown as chip pills below the title.
+   * Use for things like "PhD required", "Research experience", "5 departments".
+   * Do NOT duplicate numeric facts already in the stats grid (vacancies, salary, deadline).
+   */
   highlights?: { icon: string; text: string; textHi?: string }[];
-  // Eligibility as a structured checklist (replaces the prose wall)
+  /** Eligibility as grouped checklist — renders instead of prose `eligibility` field when present. */
   checklist?: {
     heading: string;
     headingHi?: string;
+    /** Criteria items — never includes a met/unmet flag; this system describes criteria only. */
     items: { text: string; textHi?: string }[];
   }[];
-  // Numbered application steps (how to apply)
+  /** Numbered application steps (How to Apply). */
   steps?: { step: number; title: string; titleHi?: string; body: string; bodyHi?: string }[];
-  // Payment / bank details shown as a tidy copy-friendly card
+  /** Selection process stages shown as a numbered list. */
+  selectionProcess?: { step: number; title: string; titleHi?: string; body?: string; bodyHi?: string }[];
+  /** Payment / bank details shown as a copy-friendly card. */
   bankDetails?: { label: string; labelHi?: string; value: string; valueHi?: string }[];
   tables?: {
     title: string;
@@ -59,6 +66,19 @@ export type ExtraContent = {
   }[];
   notices?: { title: string; titleHi?: string; body: string; bodyHi?: string }[];
   faqs?: { q: string; a: string; qHi?: string; aHi?: string }[];
+  /**
+   * Source and verification metadata for transparency.
+   * sourceName: e.g. "FreeJobAlert", "Official Notification"
+   * sourceType: "aggregator" | "official" — drives the verification label
+   * advertisementNo: the official advertisement/notification number
+   * lastChecked: ISO date string
+   */
+  sourceVerification?: {
+    sourceName?: string;
+    sourceType?: "aggregator" | "official";
+    advertisementNo?: string;
+    lastChecked?: string;
+  };
 };
 
 export const postingStageEnum = pgEnum("posting_stage", [
