@@ -114,10 +114,19 @@ export function buildJobPostingSchema(
   org: Organization,
 ): Record<string, unknown> | null {
   if (!isHiringOpen(posting.currentStage, posting.validThrough)) return null;
-  // SEO-001 freeze (G1, G3): Tier A, approved, not expired, a real hiring
-  // organization, one resolved Post, a complete description. Otherwise the
-  // page may exist but carries no JobPosting.
-  if (!evaluateJobPostingEligibility(posting as never, org).eligible) return null;
+
+  // Minimum conditions for a valid JobPosting node:
+  // - Approved, not expired, hiring is open (checked above)
+  // - Tier A (all required content fields present)
+  // - A real, resolved organization name (not a bucket name)
+  // - A description (Google required field)
+  // Multi-post notices (postNames.length > 1) ARE eligible — we emit the
+  // first extracted post title as the schema title, which is what Google
+  // wants (one title per JobPosting). The page covers the full recruitment;
+  // totalJobOpenings carries the aggregate vacancy count.
+  const { eligible, reasons } = evaluateJobPostingEligibility(posting as never, org);
+  const schemaReasons = reasons.filter((r) => r !== "MULTI_POST_UNRESOLVED");
+  if (schemaReasons.length > 0) return null;
 
   // JobPosting.title must be the job title (e.g. "Research Associate III"),
   // never the scraped headline ("...Recruitment 2026 – Apply Online for 1
@@ -127,6 +136,7 @@ export function buildJobPostingSchema(
   // entirely rather than publish a mislabeled title.
   const extractedTitle = posting.postNames?.[0]?.trim();
   if (!extractedTitle) return null;
+  void eligible; // kept for reference; schemaReasons is the actual gate
 
   const url = absoluteUrl(`/jobs/${posting.slug}`);
 
@@ -175,7 +185,9 @@ export function buildJobPostingSchema(
     },
     datePosted: posting.datePosted?.toISOString(),
     validThrough: posting.validThrough?.toISOString(),
-    employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "OTHER",
+    // Indian government jobs are permanent positions; FULL_TIME is the correct
+    // default. "OTHER" triggers a Google non-critical warning and adds no value.
+    employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "FULL_TIME",
     hiringOrganization: buildOrganizationSchema(org),
     jobLocation,
     jobLocationType:

@@ -170,7 +170,7 @@ describe.each(ENTITY_TYPES)("$name page metadata", ({ basePath, load }) => {
 });
 
 describe("job page quality gate", () => {
-  test("IDX-03b a job below index tier A is noindex in both languages", async () => {
+  test("IDX-03b a Tier B job is indexable in English (Tier B pages are now indexed)", async () => {
     getPostingBySlug.mockResolvedValue({
       id: 2,
       slug: "thin",
@@ -182,8 +182,25 @@ describe("job page quality gate", () => {
       organization: { name: "Sample Org" },
     });
     const mod = await import("@/app/[locale]/jobs/[slug]/page");
-    expect(isNoindex(await mod.generateMetadata(params({ slug: "thin", locale: "en" })))).toBe(true);
+    // Tier B English pages are now indexed (eligible = indexTier !== 'C')
+    expect(isNoindex(await mod.generateMetadata(params({ slug: "thin", locale: "en" })))).toBe(false);
+    // Hindi is still noindex when no Hindi content exists (hasHindi=false)
     expect(isNoindex(await mod.generateMetadata(params({ slug: "thin", locale: "hi" })))).toBe(true);
+  });
+  test("IDX-03c a Tier C job is noindex in both languages", async () => {
+    getPostingBySlug.mockResolvedValue({
+      id: 3,
+      slug: "nonjob",
+      title: "Admit Card 2026",
+      titleHi: null,
+      description: "x",
+      descriptionHi: null,
+      indexTier: "C",
+      organization: { name: "Sample Org" },
+    });
+    const mod = await import("@/app/[locale]/jobs/[slug]/page");
+    expect(isNoindex(await mod.generateMetadata(params({ slug: "nonjob", locale: "en" })))).toBe(true);
+    expect(isNoindex(await mod.generateMetadata(params({ slug: "nonjob", locale: "hi" })))).toBe(true);
   });
 });
 
