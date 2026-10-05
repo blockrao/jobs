@@ -1137,3 +1137,17 @@ Not done, by evidence: the planned one-time backfill of 47 postings. Production 
 Read-only expectation on production data before deploy: `ssc` 0 to 1 result, `upsc` 4, `bpsc` 1, `clerk` unchanged 18. Low counts reflect the loaded data, not the search. Expansion phrases were chosen to avoid spelling variants (organisation/organization).
 
 Verification: live search checks (English, Hindi abbreviations, title) after deployment; result recorded with the next code push.
+
+### SEARCH-001 RESULT (recorded 2026-10-05)
+
+Deployed and verified in production (observed): "ssc" now returns results through the abbreviation layer; the job page title no longer repeats the organization name. Search text refresh is wired into the lifecycle cron and promotion. No production data written.
+
+## 2026-10-05: PQ-002 completeness standard and PQ-003 live page check (owner-approved; code only, read-only tooling)
+
+Scorecard: completeness standard PASS (C-1a..g); live page rules PASS (V-1a..i); one-command live check PASS on one page in the browser (see below); production data written: none; migration: none; indexing decisions changed: none; contract suite 179 passed with only ENT-07 and IDX-06 failing (known baseline); typecheck clean.
+
+Changes: `src/lib/content-quality/completeness.ts` (16 checks, one definition used by both TypeScript and the report SQL), `src/lib/verify-live.ts` and `src/scripts/verify-live.ts` (`npm run verify:live -- <slug>`), `src/scripts/report-completeness.ts` (`npm run report:completeness`), tests in `tests/contracts/unit/page-quality.test.ts`.
+
+Baseline (observed, production, 2026-10-05): 539 live pages, 267 Tier A. notice_faqs passes on 1 of 539 pages; description_depth on 5 of 539. Weakest groups: depth, Hindi, verified date, requirements, fee. The standard reports; it does not gate anything.
+
+Live check (observed, in the browser on production, equivalent rules, upsc-junior-technical-officer-sugar-technology-2026-k9p2): en and hi return 200; lang matches; canonicals self-referencing; hreflang en/hi/x-default reciprocal; JSON-LD parses (WebSite, JobPosting, BreadcrumbList, FAQPage); no repeated title segment; one h1; indexable and in the sitemap. The script itself cannot reach the site from the agent workspace, so it should be run once from the owner's machine.
