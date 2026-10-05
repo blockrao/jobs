@@ -21,8 +21,10 @@ jobs:
         run: |
           mkdir -p out
           SKIP=$(cat data/enrich/run/skip-ids.txt)
+          psql "$DATABASE_URL_READONLY" -At -F $'\t' -c "select id, source_url from public.postings where review_status='APPROVED' and source='freejobalert' and source_url is not null order by id" > out/list.tsv
+          echo "list rows: $(wc -l < out/list.tsv)"
           set -o pipefail
-          npx tsx src/scripts/enrich-full.ts out/full-result.json "$SKIP" 2>&1 | sed 's#postgres[a-z]*://[^ ]*#<redacted>#g' | tee out/run-log.txt
+          npx tsx src/scripts/enrich-full.ts out/full-result.json "$SKIP" out/list.tsv 2>&1 | sed 's#postgres[a-z]*://[^ ]*#<redacted>#g' | tee out/run-log.txt
       - name: Publish results to branch enrich-full-results
         if: always()
         run: |
