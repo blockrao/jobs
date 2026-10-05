@@ -30,7 +30,7 @@ for (const f of inFiles) {
     if (tables.length) set.push(`extra_content = coalesce(extra_content, ${q(JSON.stringify({ tables }))}::jsonb)`);
     if (!set.length) { nothing++; continue; }
     set.push("updated_at = now()");
-    stmts.push(`update postings set ${set.join(", ")} where id = ${r.id} and source_url = ${q(r.url)};`);
+    stmts.push(`update public.postings set ${set.join(", ")} where id = ${r.id} and source_url = ${q(r.url)};`);
     ids.push(r.id);
     applied++;
   }
@@ -39,12 +39,12 @@ const header = `-- PQ-008 fill-only enrichment from public notification facts. G
 -- Fill-only: coalesce() never overwrites an existing value. Each row guarded by id AND source_url.
 -- Backup first (included), then updates, then a verification query.
 create table if not exists backup_20261005.postings_enrich_${process.argv[2].includes("b2") ? "b2" : "b1"} as
-  select * from postings where id in (${ids.join(",")});
+  select * from public.postings where id in (${ids.join(",")});
 `;
 const footer = `
 select count(*) filter (where age_limit_max is not null) with_age, count(*) filter (where application_fee_general is not null) with_fee,
        count(*) filter (where salary_min > 0) with_pay, count(*) filter (where nullif(apply_url,'') is not null) with_apply
-from postings where id in (${ids.join(",")});
+from public.postings where id in (${ids.join(",")});
 `;
 writeFileSync(outFile, header + stmts.join("\n") + "\n" + footer);
 console.log(JSON.stringify({ applied, skippedReview, nothing }));
