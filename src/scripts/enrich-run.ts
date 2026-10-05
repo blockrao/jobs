@@ -20,6 +20,7 @@ async function main() {
     } catch (e) {
       out.push({ id: it.id, ok: false, error: String((e as Error).message).slice(0, 200) });
     }
+    console.log('RESULT ' + JSON.stringify(out[out.length - 1]));
     await sleep(2500);
   }
   writeFileSync(outFile, JSON.stringify(out, null, 1));
