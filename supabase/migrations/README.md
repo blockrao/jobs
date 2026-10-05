@@ -40,3 +40,30 @@ is known to fail on it.
 
 The tool that applies a file may change. The rule that there is exactly one
 recorded, reproducible path may not.
+
+## Deployment order for schema changes (PQ-003)
+
+The public page query reads every column of the posting row, so code that
+reads a new column breaks every job page until that column exists. Always:
+
+1. **Migration first.** Apply the committed migration (additive, nullable or
+   defaulted) and confirm it in the applied-migration history.
+2. **Then code.** Deploy the code that reads or writes the new column.
+3. **Then data.** Backfill or edit data only after the code that understands
+   it is live.
+
+Never reverse steps 1 and 2. A destructive change follows the additive-first
+rule above and is its own later migration.
+
+## Derived fields
+
+`index_tier` and `quality_missing` are derived from fields the quality gate
+reads. Whenever such a field is changed outside the write path (manual SQL,
+backfill, script), recompute both derived fields for the affected rows in
+the same change, and record that in the RESULT. Otherwise the stored tier,
+the sitemap and the robots meta can disagree with the actual content.
+
+## Live check after deployment
+
+Run `npm run verify:live -- <slug>` for each changed page and attach the
+output to the RESULT (the agent workspace cannot reach the live site).
