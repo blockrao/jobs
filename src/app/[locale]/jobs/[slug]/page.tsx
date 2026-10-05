@@ -232,6 +232,7 @@ export default async function LocaleJobPage({ params }: Props) {
     eligibility: isHi ? "पात्रता" : "Eligibility",
     responsibilities: isHi ? "जिम्मेदारियां" : "Responsibilities",
     requirements: isHi ? "आवश्यकताएं" : "Requirements",
+    ageDetails: isHi ? "आयु सीमा एवं छूट" : "Age Limit and Relaxation",
     home: isHi ? "होम" : "Home",
     timeline: isHi ? "समयरेखा" : "Timeline",
     faq: isHi ? "अक्सर पूछे जाने वाले प्रश्न" : "Frequently Asked Questions",
@@ -348,6 +349,12 @@ export default async function LocaleJobPage({ params }: Props) {
             <dt className="text-neutral-500">{L.ageLimit}</dt>
             <dd className="font-medium">
               {posting.ageLimitMin ?? "—"}–{posting.ageLimitMax ?? "—"} {isHi ? "वर्ष" : "yrs"}
+              {posting.ageRelaxationNotes && (
+                <span className="font-normal text-neutral-500">
+                  {" "}
+                  {isHi ? "(श्रेणी अनुसार भिन्न)" : "(varies by category)"}
+                </span>
+              )}
             </dd>
           </div>
         )}
@@ -506,6 +513,13 @@ export default async function LocaleJobPage({ params }: Props) {
           <>
             <h2 className="text-lg font-semibold">{L.requirements}</h2>
             <p className="whitespace-pre-line">{displayRequirements}</p>
+          </>
+        )}
+
+        {posting.ageRelaxationNotes && (
+          <>
+            <h2 className="text-lg font-semibold">{L.ageDetails}</h2>
+            <p className="whitespace-pre-line">{posting.ageRelaxationNotes}</p>
           </>
         )}
       </section>
