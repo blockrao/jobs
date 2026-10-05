@@ -295,7 +295,7 @@ export async function writePostingsToDB(
   for (let i = 0; i < dedupedPostings.length; i++) {
     const deduped = dedupedPostings[i];
     const norm = normalized[i];
-    const sourcePortal = deduped.sources[0]?.portal || "unknown";
+    const sourcePortal = deduped.sources[0]?.portal || "JobOye HR Team";
     const result: RecordResult = { source: sourcePortal, externalId: norm.externalId, action: "skipped" };
     out.results.push(result);
 

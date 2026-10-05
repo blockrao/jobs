@@ -146,7 +146,7 @@ export function normalize(
 ): NormalizedPosting[] {
   return dedupedPostings.map((deduped) => {
     const raw = deduped.primary;
-    const sourceKey = deduped.sources[0]?.portal || 'unknown';
+    const sourceKey = deduped.sources[0]?.portal || 'JobOye HR Team';
     const slug = deterministicSlug(sourceKey, raw.externalId, raw.title);
     const organizationSlug = raw.organizationSlug || slugify(deduped.organizationName);
 

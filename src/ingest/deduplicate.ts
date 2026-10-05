@@ -42,7 +42,7 @@ export function deduplicate(rawPostings: RawPosting[]): DedupedPosting[] {
         deadline: p.validThrough || null,
         primary: p,
         sources: [
-          { portal: p.source || 'unknown', externalId: p.externalId, score: p.confidence || 0 },
+          { portal: p.source || 'JobOye HR Team', externalId: p.externalId, score: p.confidence || 0 },
         ],
       });
       continue;
@@ -71,7 +71,7 @@ export function deduplicate(rawPostings: RawPosting[]): DedupedPosting[] {
       deadline: earliestDeadline,
       primary,
       sources: group.map((p) => ({
-        portal: p.source || 'unknown',
+        portal: p.source || 'JobOye HR Team',
         externalId: p.externalId,
         score: p.confidence || 0,
       })),
