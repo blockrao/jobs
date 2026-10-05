@@ -2,6 +2,7 @@ import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/co
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
 import { entitySeo } from "@/lib/seo";
+import { redirect } from "next/navigation";
 import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -36,6 +37,10 @@ export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 
+// English requests belong at the canonical /jobs/[slug] served by the
+// (default) layout. Only Hindi (/hi/jobs/[slug]) is served here.
+// Any non-hi locale segment that somehow reaches this route is redirected.
+
 function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string {
   const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   const deduped = text.toLowerCase().startsWith(repeatOf.toLowerCase())
@@ -46,6 +51,11 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
+  // Non-Hindi locales belong at the canonical (default) route /jobs/[slug].
+  // Return minimal metadata; the redirect in the page component handles the rest.
+  if (locale !== "hi") {
+    return { alternates: { canonical: `/jobs/${slug}` }, robots: { index: false, follow: true } };
+  }
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) return {};
 
@@ -199,6 +209,8 @@ function recruitmentStatusLabel(
 
 export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
+  // Only Hindi is served from the locale route. English canonical is at /jobs/[slug].
+  if (locale !== "hi") redirect(`/jobs/${slug}`);
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) notFound();
 
