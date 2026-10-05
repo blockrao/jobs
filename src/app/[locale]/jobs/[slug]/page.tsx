@@ -470,10 +470,12 @@ export default async function LocaleJobPage({ params }: Props) {
               <li key={update.id}>
                 <p className="text-xs text-neutral-500">{formatDate(update.eventDate, dateLocale)}</p>
                 <p className="font-medium">
-                  {stageLabels[update.stage] ?? update.stage}: {update.title}
+                  {stageLabels[update.stage] ?? update.stage}: {isHi && update.titleHi ? update.titleHi : update.title}
                 </p>
                 {update.description && (
-                  <p className="text-sm text-neutral-600">{update.description}</p>
+                  <p className="text-sm text-neutral-600">
+                    {isHi && update.descriptionHi ? update.descriptionHi : update.description}
+                  </p>
                 )}
                 {update.linkUrl && (
                   <a
