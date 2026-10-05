@@ -1,0 +1,37 @@
+name: enrich-connection-test
+# PQ-008: checks the read-only database secret works and is really read-only. Never prints the secret.
+on:
+  push:
+    branches: [claude/formalise-lifecycle-and-verification]
+    paths: [".github/workflows/enrich-connection-test.yml"]
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DB: ${{ secrets.DATABASE_URL_READONLY }}
+    steps:
+      - name: Run checks
+        run: |
+          mkdir -p out
+          {
+            if [ -z "$DB" ]; then echo "secret_present: NO"; else echo "secret_present: yes"; fi
+            if [ -n "$DB" ]; then
+              echo "--- read test (expect a number)"
+              psql "$DB" -At -c "select count(*) from public.postings" 2>&1 | head -3
+              echo "--- visible rows by source (expect only freejobalert)"
+              psql "$DB" -At -c "select source, count(*) from public.postings group by 1" 2>&1 | head -5
+              echo "--- write test (expect permission denied)"
+              psql "$DB" -At -c "update public.postings set total_vacancies = total_vacancies where false" 2>&1 | head -2
+              echo "--- other column test (expect permission denied)"
+              psql "$DB" -At -c "select description from public.postings limit 1" 2>&1 | head -2
+            fi
+          } > out/conn-test.txt 2>&1
+          sed -i 's#postgres[a-z]*://[^ ]*#<redacted>#g' out/conn-test.txt
+      - name: Publish result to branch enrich-conn-test
+        run: |
+          cd out
+          git init -q && git config user.name enrich-bot && git config user.email enrich-bot@users.noreply.github.com
+          git checkout -q -b enrich-conn-test && git add conn-test.txt && git commit -qm "connection test"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" enrich-conn-test
