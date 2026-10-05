@@ -28,7 +28,7 @@ export interface ArticleFacts {
   /** Sections that exist on the page but yielded nothing (for the dry-run report). */
   unparsed: string[];
   /** Dry-run diagnostics only (never stored). */
-  debug?: { headings: string[]; linkLabels: string[] };
+  debug?: { headings: string[]; linkLabels: string[]; sample: Record<string, string> };
 }
 
 interface Section {
@@ -77,6 +77,13 @@ function readSections(html: string): Section[] {
         rows.push($(tr).find("th,td").map((___, c) => collapse($(c).text())).get());
       });
       if (rows.length) cur.tables.push(rows);
+      $(el).find("tr").each((__, tr) => {
+        const label = collapse($(tr).find("th,td").first().text());
+        $(tr).find("a[href]").each((___, a) => {
+          const href = $(a).attr("href") ?? "";
+          if (/^https?:/i.test(href)) cur!.links.push({ label, href });
+        });
+      });
     } else if ($(el).closest("table").length === 0) {
       const t = collapse($(el).text());
       if (t) cur.paras.push(t);
@@ -174,7 +181,7 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
   for (const s of by("links")) {
     for (const l of s.links) {
       if (isAggregatorUrl(l.href)) continue;
-      if (/apply online|online application|registration/i.test(l.label) && !out.applyUrl) out.applyUrl = l.href;
+      if (/apply (online|link)|online application|application link|registration/i.test(l.label) && !out.applyUrl) out.applyUrl = l.href;
       else if (/notification|advertisement|notice/i.test(l.label) && !out.officialNotificationUrl) out.officialNotificationUrl = l.href;
       else if (/official website/i.test(l.label) && !out.officialWebsiteUrl) out.officialWebsiteUrl = l.href;
     }
@@ -185,7 +192,13 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
   if (out.applicationFeeGeneral == null && by("fee").length) out.unparsed.push("fee");
   if (out.salaryMin == null && by("salary").length) out.unparsed.push("salary");
   if (!out.applyUrl && by("links").length) out.unparsed.push("applyUrl");
+  const sample: Record<string, string> = {};
+  for (const k of ["age", "fee", "salary"]) {
+    const sec = by(k)[0];
+    if (sec) sample[k] = (sec.paras.slice(0, 2).join(" // ") + " ## " + sec.tables.slice(0, 1).map((t) => t.slice(0, 3).map((r) => r.join("|")).join(" / ")).join("")).slice(0, 420);
+  }
   out.debug = {
+    sample,
     headings: sections.map((x) => x.heading.slice(0, 60)),
     linkLabels: sections.filter((x) => /link/i.test(x.heading)).flatMap((x) => x.links.map((l) => l.label.slice(0, 50) + " => " + (() => { try { return new URL(l.href).hostname; } catch { return "?"; } })())),
   };
