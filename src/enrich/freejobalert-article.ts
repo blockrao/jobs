@@ -237,7 +237,7 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
     for (const s of by(key)) {
       const t = s.tables.find((r) => r.length > 1);
       if (t) {
-        if (key === "vacancy" && isPartialVacancyTable(t)) { out.review.push("vacancy-table-partial-dropped"); break; }
+        if (key === "vacancy" && isPartialVacancyTable(t)) { out.unparsed.push("vacancy-table-partial-dropped"); break; }
         const title = key === "selection" ? "Selection process" : key === "pattern" ? "Exam pattern" : "Vacancies by category";
         tables.push({ title, headers: t[0], rows: t.slice(1) });
       }

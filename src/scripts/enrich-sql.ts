@@ -9,6 +9,7 @@ import type { ArticleFacts } from "@/enrich/freejobalert-article";
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const [outFile, ...inFiles] = process.argv.slice(2);
+const REFRESH = process.env.REFRESH === "1";
 const stmts: string[] = [];
 let applied = 0, skippedReview = 0, nothing = 0;
 const ids: number[] = [];
@@ -17,7 +18,7 @@ for (const f of inFiles) {
   for (const r of JSON.parse(readFileSync(f, "utf8")) as { id: number; url: string; ok: boolean; facts: ArticleFacts }[]) {
     if (!r.ok) continue;
     const x = r.facts;
-    if (x.review.length) { skippedReview++; continue; }
+    if (x.review.filter((v) => v !== "vacancy-table-partial-dropped").length) { skippedReview++; continue; }
     const set: string[] = [];
     const num = (col: string, v: number | undefined) => v != null && set.push(`${col} = coalesce(${col}, ${v})`);
     num("age_limit_min", x.ageLimitMin); num("age_limit_max", x.ageLimitMax);
@@ -31,7 +32,7 @@ for (const f of inFiles) {
     if (x.officialNotificationUrl && !isAggregatorUrl(x.officialNotificationUrl))
       set.push(`official_notification_url = coalesce(nullif(official_notification_url, ''), ${q(x.officialNotificationUrl)})`);
     const tables = (x.extraContent?.tables ?? []).filter((t) => !mentionsAggregator(JSON.stringify(t)));
-    if (tables.length) set.push(`extra_content = coalesce(extra_content, ${q(JSON.stringify({ tables }))}::jsonb)`);
+    if (tables.length) set.push(REFRESH ? `extra_content = ${q(JSON.stringify({ tables }))}::jsonb` : `extra_content = coalesce(extra_content, ${q(JSON.stringify({ tables }))}::jsonb)`);
     if (!set.length) { nothing++; continue; }
     set.push("updated_at = now()");
     stmts.push(`update public.postings set ${set.join(", ")} where id = ${r.id} and source_url = ${q(r.url)};`);
@@ -40,9 +41,9 @@ for (const f of inFiles) {
   }
 }
 const header = `-- PQ-008 fill-only enrichment from public notification facts. Generated ${new Date().toISOString().slice(0, 10)}.
--- Fill-only: coalesce() never overwrites an existing value. Each row guarded by id AND source_url.
+-- Fill-only: coalesce() never overwrites an existing value${REFRESH ? " (exception: extra_content, which this enrichment created, is rebuilt with the corrected tables)" : ""}. Each row guarded by id AND source_url.
 -- Backup first (included), then updates, then a verification query.
-create table if not exists backup_20261005.postings_enrich_${process.argv[2].includes("b2") ? "b2" : "b1"} as
+create table if not exists backup_20261005.postings_enrich_${REFRESH ? "dates_" : ""}${process.argv[2].includes("b2") ? "b2" : "b1"} as
   select * from public.postings where id in (${ids.join(",")});
 `;
 const footer = `
