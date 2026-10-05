@@ -23,6 +23,10 @@ for (const f of inFiles) {
     num("age_limit_min", x.ageLimitMin); num("age_limit_max", x.ageLimitMax);
     num("application_fee_general", x.applicationFeeGeneral); num("application_fee_reserved", x.applicationFeeReserved);
     num("salary_min", x.salaryMin); num("salary_max", x.salaryMax);
+    const dt = (col: string, v: unknown) => {
+      if (v) set.push(`${col} = coalesce(${col}, ${q(new Date(v as string).toISOString())}::timestamptz)`);
+    };
+    dt("valid_through", x.validThrough); dt("exam_date", x.examDate);
     if (x.applyUrl && !isAggregatorUrl(x.applyUrl)) set.push(`apply_url = coalesce(nullif(apply_url, ''), ${q(x.applyUrl)})`);
     if (x.officialNotificationUrl && !isAggregatorUrl(x.officialNotificationUrl))
       set.push(`official_notification_url = coalesce(nullif(official_notification_url, ''), ${q(x.officialNotificationUrl)})`);

@@ -91,3 +91,23 @@ test("fee: reserved stored only when all other categories agree", () => {
   expect(f.applicationFeeGeneral).toBe(1000);
   expect(f.applicationFeeReserved).toBeUndefined();
 });
+
+describe("dates and partial vacancy tables", () => {
+  test("important dates: last date, exam date, ordinals, midday IST", () => {
+    const f = wrap("Important Dates", "<table><tr><th>Event</th><th>Date</th></tr><tr><td>Online Application Start Date</td><td>7th September 2026</td></tr><tr><td>Last Date for Online Application</td><td>6th October 2026 (23:59 hrs)</td></tr><tr><td>Last Date for Fee Payment</td><td>8th October 2026</td></tr><tr><td>Exam Date</td><td>3-4 December 2026</td></tr></table>");
+    expect(f.validThrough?.toISOString()).toBe("2026-10-06T06:30:00.000Z");
+    expect(f.examDate?.toISOString()).toBe("2026-12-03T06:30:00.000Z");
+  });
+  test("fee payment date is not taken as the last date", () => {
+    const f = wrap("Important Dates", "<table><tr><th>Event</th><th>Date</th></tr><tr><td>Last Date for Fee Payment</td><td>8th October 2026</td></tr></table>");
+    expect(f.validThrough).toBeUndefined();
+  });
+  test("a vacancy table that does not add up to its total is dropped", () => {
+    const f = wrap("Vacancy Details", "<table><tr><th>District</th><th>UR</th><th>Total</th></tr><tr><td>Agra</td><td>127</td><td>315</td></tr><tr><td>Aligarh</td><td>199</td><td>492</td></tr><tr><td>All 75 Districts Total</td><td>11,508</td></tr></table>");
+    expect(f.extraContent?.tables?.some((t) => t.title === "Vacancies by category")).toBeFalsy();
+  });
+  test("a vacancy table that adds up is kept", () => {
+    const f = wrap("Vacancy Details", "<table><tr><th>Category</th><th>General</th><th>Female</th></tr><tr><td>UR</td><td>600</td><td>400</td></tr><tr><td>SC</td><td>300</td><td>200</td></tr><tr><td>Total</td><td>1500</td></tr></table>");
+    expect(f.extraContent?.tables?.some((t) => t.title === "Vacancies by category")).toBe(true);
+  });
+});

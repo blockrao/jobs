@@ -21,6 +21,8 @@ export interface ArticleFacts {
   applicationFeeReserved?: number;
   salaryMin?: number;
   salaryMax?: number;
+  validThrough?: Date;
+  examDate?: Date;
   applyUrl?: string;
   officialNotificationUrl?: string;
   officialWebsiteUrl?: string;
@@ -59,6 +61,35 @@ function rupees(text: string, bareOk = false): number | undefined {
   if (bareOk && /^\s*\d[\d,]*(\/-)?\s*$/.test(text)) return +text.replace(/[^0-9]/g, "");
   const m = collapse(text).replace(/,/g, "").match(/(?:₹|rs\.?|inr)\s*(\d{1,6})/i);
   return m ? +m[1] : undefined;
+}
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+/** Date-only values are stored at midday IST so they never render as the previous day in UTC. */
+function parseDate(text: string, pick: "first" | "last" = "last"): Date | undefined {
+  const t = collapse(text).replace(/(\d)(st|nd|rd|th)\b/gi, "$1").replace(/\([^)]*\)/g, " ")
+    .replace(/\b(\d{1,2})\s*(?:-|–|to|&|and)\s*(\d{1,2})\s+([A-Za-z]{3,9})/i, (_m, a, b, mo) => `${pick === "first" ? a : b} ${mo}`);
+  let m = t.match(/\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})\b/);
+  let y: number, mo: number, d: number;
+  if (m) { d = +m[1]; mo = MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()); y = +m[3]; }
+  else if ((m = t.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b/))) { d = +m[1]; mo = +m[2] - 1; y = +m[3]; }
+  else return undefined;
+  if (mo < 0 || mo > 11 || d < 1 || d > 31 || y < 2020 || y > 2100) return undefined;
+  const dt = new Date(Date.UTC(y, mo, d, 6, 30));
+  return dt.getUTCDate() === d ? dt : undefined;
+}
+
+/** True when a table has a grand-total row that its listed rows do not add up to (a partial listing). */
+export function isPartialVacancyTable(t: string[][]): boolean {
+  const body = t.slice(1);
+  const totalRow = body.find((r) => /\btotal\b/i.test(r[0] ?? ""));
+  if (!totalRow) return false;
+  const nums = (c: string) => [...collapse(c).replace(/,/g, "").matchAll(/\d+/g)].map((m) => +m[0]);
+  const grand = nums(totalRow.slice(1).join(" ")).pop();
+  if (grand == null) return false;
+  const lastIsTotal = /total/i.test(t[0][t[0].length - 1] ?? "");
+  const rows = body.filter((r) => r !== totalRow);
+  const sum = rows.reduce((a, r) => a + (lastIsTotal ? (nums(r[r.length - 1] ?? "")[0] ?? 0) : r.slice(1).reduce((b, c) => b + (nums(c)[0] ?? 0), 0)), 0);
+  return sum !== grand;
 }
 
 function readSections(html: string): Section[] {
@@ -206,6 +237,7 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
     for (const s of by(key)) {
       const t = s.tables.find((r) => r.length > 1);
       if (t) {
+        if (key === "vacancy" && isPartialVacancyTable(t)) { out.review.push("vacancy-table-partial-dropped"); break; }
         const title = key === "selection" ? "Selection process" : key === "pattern" ? "Exam pattern" : "Vacancies by category";
         tables.push({ title, headers: t[0], rows: t.slice(1) });
       }
@@ -213,6 +245,22 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
     }
   }
   if (tables.length) out.extraContent = { tables };
+
+  // ---- Important dates ----
+  for (const s of by("dates")) {
+    const t = s.tables.find((r) => r.length > 1);
+    if (!t) continue;
+    for (const r of t.slice(1)) {
+      const label = r[0] ?? "";
+      const when = parseDate(r.slice(1).join(" "));
+      if (!when) continue;
+      if (/last date.*(appl|online|submission|registration)|closing date|apply (online )?(till|by|before)|end date/i.test(label) && !/fee|payment/i.test(label)) {
+        if (!out.validThrough || when > out.validThrough) out.validThrough = when;
+      } else if (/exam date|date of exam|written exam|examination date/i.test(label) && !out.examDate) out.examDate = parseDate(r.slice(1).join(" "), "first") ?? when;
+    }
+    tables.push({ title: "Important dates", headers: t[0], rows: t.slice(1) });
+    break;
+  }
 
   // ---- Links (labelled list; link text is usually "Click here") ----
   for (const s of by("links")) {
