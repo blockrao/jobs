@@ -85,3 +85,9 @@ describe("sanity and parentheses", () => {
     expect(f.review).toContain("age-inconsistent");
   });
 });
+
+test("fee: reserved stored only when all other categories agree", () => {
+  const f = wrap("Application Fee", "<table><tr><th>Category</th><th>Fee</th></tr><tr><td>General</td><td>₹1,000</td></tr><tr><td>SC/ST</td><td>₹500</td></tr><tr><td>PwBD</td><td>₹300</td></tr></table>");
+  expect(f.applicationFeeGeneral).toBe(1000);
+  expect(f.applicationFeeReserved).toBeUndefined();
+});

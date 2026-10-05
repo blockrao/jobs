@@ -165,8 +165,12 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
       const rows = t.slice(1).map((r) => ({ cat: r[0] ?? "", amt: rupees(r[col] ?? "", true) })).filter((r): r is { cat: string; amt: number } => r.amt != null);
       if (rows.length) {
         const gen = rows.find((r) => /general|unreserved|\bUR\b|open/i.test(r.cat));
-        out.applicationFeeGeneral = (gen ?? rows.reduce((a, b) => (b.amt > a.amt ? b : a))).amt;
-        out.applicationFeeReserved = Math.min(...rows.map((r) => r.amt));
+        const general = gen ?? rows.reduce((a, b) => (b.amt > a.amt ? b : a));
+        out.applicationFeeGeneral = general.amt;
+        // A single "reserved" figure is stored only when every other row agrees;
+        // otherwise the category table carries the detail and the field stays empty.
+        const others = [...new Set(rows.filter((r) => r !== general).map((r) => r.amt))];
+        if (others.length === 1) out.applicationFeeReserved = others[0];
         if (out.applicationFeeGeneral > 20000) out.review.push("fee-over-20000");
       }
       tables.push({ title: "Application fee", headers: t[0], rows: t.slice(1) });
