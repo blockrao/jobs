@@ -32,7 +32,8 @@ async function runAdapter(adapter: SourceAdapter): Promise<PortalResult> {
   const started = Date.now();
   console.log(`\nFetching from ${adapter.source} (${adapter.label})...`);
   try {
-    const postings = await adapter.fetchRaw();
+    // Stamp the neutral source code on every posting so the writer never falls back to "unknown".
+    const postings = (await adapter.fetchRaw()).map((p) => (p.source ? p : { ...p, source: adapter.source }));
     const secs = ((Date.now() - started) / 1000).toFixed(1);
     console.log(`  → ${postings.length} jobs fetched in ${secs}s`);
     return { source: adapter.source, label: adapter.label, count: postings.length, postings };

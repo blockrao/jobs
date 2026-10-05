@@ -221,7 +221,7 @@ export function recordToRaw(rec: FileRecord, nowForObservation?: Date): RawPosti
       qualification: qual?.value ?? null,
       published: rec.published ?? null,
     },
-    observationRaw: { articleId: rec.id, url: rec.url, rows: rec.rows },
+    observationRaw: { articleId: rec.id, rows: rec.rows },
   };
   if (rec.html) {
     try {
