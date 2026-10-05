@@ -64,6 +64,6 @@ export function composeJobMetaDescription(f: MetaDescriptionFacts, maxLen = 155)
     parts.push(`${f.vacancies} ${f.vacancies === 1 ? "vacancy" : "vacancies"}.`);
   }
   if (f.lastDate) parts.push(`Last date ${f.lastDate}.`);
-  parts.push("Eligibility, age limit, fee and how to apply.");
+  parts.push("Eligibility, fee, how to apply.");
   return cutAtWord(parts.join(" "), maxLen);
 }
