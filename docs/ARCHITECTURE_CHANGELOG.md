@@ -1120,3 +1120,7 @@ Advertisement 14/2026 (18.08.2026) was cancelled by 15/2026 (22.09.2026); both r
 ## 2026-10-05: A-076 structured page content column; BPSC page completion (prepared)
 
 Additive nullable `postings.extra_content` (jsonb) with migration and rollback; the job page renders its tables, notices and FAQs (FAQs also feed the FAQ markup) and uses the Hindi age notes on the Hindi page. Order of deployment matters: the migration must be applied before this code is deployed, because the page query reads every posting column. A "Last Verified" date is stamped on posting 944 only, after reading it in full against the official Advertisement 15/2026. Open: whether posting 944 keeps one JobPosting (conflicts with G1 for a four-level notice) or moves to four resolved Posts.
+
+## 2026-10-05: A-077 Page Completeness Standard (PQ-002)
+
+Owner approved PQ-002 to PQ-007. PQ-002 adds a pure 12-check completeness score (official link, apply link, vacancies, pay, age, fee, qualification, selection process, dates, verified date, at least 3 notice FAQs, Hindi) reported beside the tier; indexing is unchanged. Baseline from production (read-only SQL mirroring the rules): of 604 approved postings 1 is complete, 14 partial, 589 thin (average 4.3 of 12); Tier A 265: 1 complete, 8 partial, 256 thin. Most-missing checks: FAQs 603, verified date 596, fee 589, age 587, pay 578, Hindi 575, apply link 511, selection process 421. Weekly report: `npm run report:completeness` (needs database access; the workspace used the connector instead). Contract suite: 6 new tests pass.
