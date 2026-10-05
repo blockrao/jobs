@@ -37,6 +37,18 @@ export const postingKindEnum = pgEnum("posting_kind", [
 // CLOSED subset. One enum keeps the timeline table and canonical-page
 // rendering logic simple across both kinds.
 export type ExtraContent = {
+  // Scannable stat chips shown above the details grid (e.g. "50 vacancies", "₹1.44 L/month")
+  highlights?: { icon: string; text: string; textHi?: string }[];
+  // Eligibility as a structured checklist (replaces the prose wall)
+  checklist?: {
+    heading: string;
+    headingHi?: string;
+    items: { text: string; textHi?: string }[];
+  }[];
+  // Numbered application steps (how to apply)
+  steps?: { step: number; title: string; titleHi?: string; body: string; bodyHi?: string }[];
+  // Payment / bank details shown as a tidy copy-friendly card
+  bankDetails?: { label: string; labelHi?: string; value: string; valueHi?: string }[];
   tables?: {
     title: string;
     titleHi?: string;
