@@ -18,6 +18,8 @@ jobs:
           {
             if [ -z "$DB" ]; then echo "secret_present: NO"; else echo "secret_present: yes"; fi
             if [ -n "$DB" ]; then
+              echo "--- connected as (expect enrich_ro)"
+              psql "$DB" -At -c "select current_user" 2>&1 | head -2
               echo "--- read test (expect a number)"
               psql "$DB" -At -c "select count(*) from public.postings" 2>&1 | head -3
               echo "--- visible rows by source (expect only freejobalert)"
