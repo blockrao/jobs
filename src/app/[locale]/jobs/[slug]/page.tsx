@@ -1,3 +1,4 @@
+import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
 import { entitySeo } from "@/lib/seo";
 import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
@@ -432,9 +433,9 @@ export default async function LocaleJobPage({ params }: Props) {
       </dl>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        {posting.applyUrl && hiringOpen && (
+        {publicLink(posting.applyUrl) && hiringOpen && (
           <a
-            href={posting.applyUrl}
+            href={publicLink(posting.applyUrl) as string}
             target="_blank"
             rel="noopener nofollow"
             className="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
@@ -442,9 +443,9 @@ export default async function LocaleJobPage({ params }: Props) {
             {L.applyNow}
           </a>
         )}
-        {posting.officialNotificationUrl && (
+        {publicLink(posting.officialNotificationUrl) && (
           <a
-            href={posting.officialNotificationUrl}
+            href={publicLink(posting.officialNotificationUrl) as string}
             target="_blank"
             rel="noopener nofollow"
             className="rounded-md border border-black/20 px-5 py-2.5 text-sm font-semibold hover:bg-neutral-50"
@@ -501,16 +502,16 @@ export default async function LocaleJobPage({ params }: Props) {
               <li key={update.id}>
                 <p className="text-xs text-neutral-500">{formatDate(update.eventDate, dateLocale)}</p>
                 <p className="font-medium">
-                  {stageLabels[update.stage] ?? update.stage}: {isHi && update.titleHi ? update.titleHi : update.title}
+                  {stageLabels[update.stage] ?? update.stage}: {stripAggregatorTag(isHi && update.titleHi ? update.titleHi : update.title)}
                 </p>
                 {update.description && (
                   <p className="text-sm text-neutral-600">
                     {isHi && update.descriptionHi ? update.descriptionHi : update.description}
                   </p>
                 )}
-                {update.linkUrl && (
+                {publicLink(update.linkUrl) && (
                   <a
-                    href={update.linkUrl}
+                    href={publicLink(update.linkUrl) as string}
                     target="_blank"
                     rel="noopener nofollow"
                     className="text-sm text-neutral-900 underline"

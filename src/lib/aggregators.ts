@@ -9,13 +9,15 @@ const AGGREGATOR_HOSTS = [
   "sahisarkarijobs.com", "sarkariexam.com", "t.me", "telegram.me", "whatsapp.com",
   "arattai.in", "web.arattai.in", "wa.me", "telegram.org", "facebook.com", "twitter.com", "x.com", "instagram.com", "youtube.com",
 ];
-const NAME_RE = /arattai|free\s*job\s*alert|sarkari\s*result|sarkari\s*naukri|sahi\s*sarkari\s*jobs/i;
+const NAME_RE = /arattai|free\s*job\s*alert|sarkari[\s-]*result|sarkari[\s-]*naukri|sahi\s*sarkari|sarkari[\s-]*exam\b/i;
+// Any host that looks like an aggregator even when it is not in the list (sarkari-naukri.in, freejobalert.in ...).
+const HOST_RE = /sarkari|freejobalert|arattai/i;
 
 export function isAggregatorUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
     const h = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
-    return AGGREGATOR_HOSTS.some((a) => h === a || h.endsWith("." + a));
+    return AGGREGATOR_HOSTS.some((a) => h === a || h.endsWith("." + a)) || HOST_RE.test(h);
   } catch {
     return true; // unparseable links are not published
   }
@@ -23,4 +25,14 @@ export function isAggregatorUrl(url: string | null | undefined): boolean {
 
 export function mentionsAggregator(text: string | null | undefined): boolean {
   return !!text && NAME_RE.test(text);
+}
+
+/** Removes provenance tags such as "(via freejobalert)" from public text. */
+export function stripAggregatorTag(text: string): string {
+  return text.replace(/\s*\(via [^)]*\)/gi, "").trim();
+}
+
+/** A link that is safe to publish: null when it points at an aggregator or cannot be parsed. */
+export function publicLink(url: string | null | undefined): string | null {
+  return url && !isAggregatorUrl(url) ? url : null;
 }

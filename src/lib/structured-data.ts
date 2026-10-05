@@ -1,4 +1,5 @@
 import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
+import { stripAggregatorTag } from "@/lib/aggregators";
 import type {
   articles,
   organizations,
@@ -299,6 +300,6 @@ export function postingTimelineToText(updates: PostingUpdate[]) {
   return updates
     .slice()
     .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())
-    .map((u) => `${u.eventDate.toDateString()}: ${u.title}`)
+    .map((u) => `${u.eventDate.toDateString()}: ${stripAggregatorTag(u.title)}`)
     .join("\n");
 }

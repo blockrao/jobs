@@ -77,3 +77,24 @@ describe("verify-live pure checks", () => {
     expect(formatTable([{ page: "en", check: "x", ok: false, detail: "d" }])).toContain("FAIL");
   });
 });
+
+import { isAggregatorUrl, mentionsAggregator, publicLink, stripAggregatorTag } from "@/lib/aggregators";
+describe("aggregator hygiene helpers", () => {
+  test("hosts", () => {
+    expect(isAggregatorUrl("https://www.sarkari-naukri.in/gate2027-iitm-ac-in/")).toBe(true);
+    expect(isAggregatorUrl("https://www.freejobalert.com/articles/x")).toBe(true);
+    expect(isAggregatorUrl("https://www.sarkariresult.com/2026/x/")).toBe(true);
+    expect(isAggregatorUrl("https://bpsc.bihar.gov.in/notice.pdf")).toBe(false);
+  });
+  test("names and tags", () => {
+    expect(mentionsAggregator("listed on Sahi Sarkari Jobs")).toBe(true);
+    expect(mentionsAggregator("Sarkari-Naukri.in")).toBe(true);
+    expect(mentionsAggregator("Sarkari Vidyalaya Daman")).toBe(false);
+    expect(stripAggregatorTag("Notification released (via freejobalert)")).toBe("Notification released");
+  });
+  test("publicLink", () => {
+    expect(publicLink("https://www.freejobalert.com/a")).toBeNull();
+    expect(publicLink("https://ssc.nic.in/x")).toBe("https://ssc.nic.in/x");
+    expect(publicLink(null)).toBeNull();
+  });
+});

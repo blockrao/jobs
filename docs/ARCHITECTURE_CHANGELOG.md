@@ -1184,3 +1184,21 @@ PQ-004 RESULT (observed on production, UPSC JTO page, 2026-10-05): title "UPSC J
 **Code.** `src/lib/states/` (list, resolver, place map, queries), `/states` and `/states/[slug]` (English only; noindex and out of the sitemap while a state has no current job), state link in the job page breadcrumb and location line, footer link, sitemap entries. Dadra and Nagar Haveli and Daman and Diu is one hub.
 
 **Open.** Hindi hubs deferred (A-054 to A-056). 158 postings unplaced on purpose. Review the `place`-basis placements flagged in the result report (ids 665, 436, 438, 793, 919, 494, 417, 419, 421, 130, 131, 107, 865, 900).
+
+---
+
+## PQ-010 — Aggregator sweep: timeline entries, links and render guards (A-078 follow-up)
+
+| Field | Value |
+| --- | --- |
+| Change ID | PQ-010 |
+| Date | 2026-10-05 |
+| Status | Data cleaned; code guard deployed with the next push |
+
+**Finding.** `posting_updates` (the timeline on job pages) carried the aggregator name in 193 titles ("... (via freejobalert)") and an aggregator URL in 156 links; 2 `postings.apply_url` and 2 `recruitments.official_application_url` pointed at an aggregator; 24 pending descriptions named one. Earlier checks missed it because they looked at pages without a timeline.
+
+**Data (backups in `backup_20261005`: `posting_updates_aggregator`, `postings_aggregator_links`, `recruitments_aggregator_links`).** Tags removed from titles, aggregator links set to NULL, descriptions cleaned. Re-scan of every public text column across postings, organizations, articles, updates, recruitments, exams, categories, commissions: zero hits. Internal provenance columns (`postings.source`, `source_url`, `source_portals`, `sources`, observation tables) are kept for ingestion and are never rendered.
+
+**Code.** `src/lib/aggregators.ts`: host pattern now catches look-alike hosts (sarkari-naukri.in), `stripAggregatorTag`, `publicLink`. Job page: timeline titles and links, apply and official links, and the JSON-LD timeline text all pass through them, so a future ingest cannot leak an aggregator even if the data is wrong. Tests added to `verify-live.test.ts`.
+
+**Open.** Find and fix the original writer of "(via <source>)" update titles (not in the current source tree). Add an aggregator check to the approval step.
