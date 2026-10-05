@@ -73,3 +73,15 @@ describe("layout variants seen on real pages", () => {
     expect([f.salaryMin, f.salaryMax]).toEqual([19900, 112400]);
   });
 });
+
+describe("sanity and parentheses", () => {
+  test("cell 'Minimum 21 years, Maximum 40 years' with superannuation note in brackets", () => {
+    const f = wrap("Age Limit", "<table><tr><th>Post</th><th>Age Limit (as on 01.07.2026)</th></tr><tr><td>Teacher Urban</td><td>Minimum 21 years, Maximum 40 years</td></tr><tr><td>Teacher Sambaddh</td><td>Minimum 21 years (superannuation age for this post is 62 years)</td></tr></table>");
+    expect([f.ageLimitMin, f.ageLimitMax]).toEqual([21, 40]);
+  });
+  test("min above max is dropped and flagged", () => {
+    const f = wrap("Age Limit", "<p>Candidates must be between 40 and 28 years of age.</p>");
+    expect(f.ageLimitMin).toBeUndefined();
+    expect(f.review).toContain("age-inconsistent");
+  });
+});

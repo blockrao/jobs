@@ -27,6 +27,8 @@ export interface ArticleFacts {
   extraContent?: ExtraContent;
   /** Sections that exist on the page but yielded nothing (for the dry-run report). */
   unparsed: string[];
+  /** Values that look odd; held for review, never auto-applied. */
+  review: string[];
   /** Dry-run diagnostics only (never stored). */
   debug?: { headings: string[]; linkLabels: string[]; sample: Record<string, string> };
 }
@@ -99,7 +101,7 @@ function readSections(html: string): Section[] {
 
 export function parseFreeJobAlertArticle(html: string): ArticleFacts {
   const sections = readSections(html);
-  const out: ArticleFacts = { unparsed: [] };
+  const out: ArticleFacts = { unparsed: [], review: [] };
   const tables: NonNullable<ExtraContent["tables"]> = [];
   const by = (key: string) => {
     const re = SECTION_KEYS.find(([k]) => k === key)![1];
@@ -125,12 +127,16 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
     for (const t of s.tables) {
       const hdr = t[0];
       const minC = hdr.findIndex((h) => /min/i.test(h) && !/relax/i.test(h));
-      const maxC = hdr.findIndex((h) => /max|upper age|age limit/i.test(h) && !/relax/i.test(h));
+      const maxC = hdr.findIndex((h) => /max|upper age/i.test(h) && !/relax/i.test(h));
       for (const r of t.slice(1)) {
-        if (minC >= 0) mins.push(...numbers(r[minC] ?? ""));
-        if (maxC >= 0) maxs.push(...numbers(r[maxC] ?? ""));
+        if (minC >= 0) mins.push(...numbers((r[minC] ?? "").replace(/\([^)]*\)/g, " ")));
+        if (maxC >= 0) maxs.push(...numbers((r[maxC] ?? "").replace(/\([^)]*\)/g, " ")));
         if (minC < 0 && maxC < 0 && !/relax/i.test(hdr.join(" "))) {
-          const m = (r.slice(1).join(" ")).match(/\b(\d{2})\s*(?:years?)?\s*(?:to|-|–)\s*(\d{2})\s*(?:years?|yrs?)/i);
+          const cell = r.slice(1).join(" ").replace(/\([^)]*\)/g, " ");
+          let q: RegExpMatchArray | null;
+          if ((q = cell.match(/minimum\s*(?:age)?[^0-9]{0,20}(\d{2})\b/i))) mins.push(+q[1]);
+          if ((q = cell.match(/maximum\s*(?:age)?[^0-9]{0,20}(\d{2})\b/i))) maxs.push(+q[1]);
+          const m = cell.match(/\b(\d{2})\s*(?:years?)?\s*(?:to|-|–)\s*(\d{2})\s*(?:years?|yrs?)/i);
           if (m) { mins.push(+m[1]); maxs.push(+m[2]); }
         }
       }
@@ -138,6 +144,11 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
     const mn = mins.filter(plausible), mx = maxs.filter(plausible);
     if (mn.length) out.ageLimitMin = Math.min(...mn);
     if (mx.length) out.ageLimitMax = Math.max(...mx);
+    if (out.ageLimitMin != null && out.ageLimitMax != null && out.ageLimitMin >= out.ageLimitMax) {
+      out.review.push("age-inconsistent");
+      out.ageLimitMin = undefined;
+      out.ageLimitMax = undefined;
+    } else if (out.ageLimitMax != null && out.ageLimitMax > 60) out.review.push("age-over-60");
     const t = s.tables.find((r) => r.length > 1);
     if (t) tables.push({ title: "Age limit", headers: t[0], rows: t.slice(1) });
     break;
@@ -156,6 +167,7 @@ export function parseFreeJobAlertArticle(html: string): ArticleFacts {
         const gen = rows.find((r) => /general|unreserved|\bUR\b|open/i.test(r.cat));
         out.applicationFeeGeneral = (gen ?? rows.reduce((a, b) => (b.amt > a.amt ? b : a))).amt;
         out.applicationFeeReserved = Math.min(...rows.map((r) => r.amt));
+        if (out.applicationFeeGeneral > 20000) out.review.push("fee-over-20000");
       }
       tables.push({ title: "Application fee", headers: t[0], rows: t.slice(1) });
     } else {
