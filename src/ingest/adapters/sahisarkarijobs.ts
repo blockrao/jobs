@@ -84,7 +84,7 @@ function build(card: Card): RawPosting {
     organizationName: org.organizationName,
     organizationSector: org.organizationSector,
     organizationState: org.organizationState,
-    description: `${card.title} — listed on Sahi Sarkari Jobs (listing-only; detail pages not crawled per robots policy).`,
+    description: `${card.title}.`,
     totalVacancies: extractVacancies(card.title),
     locationRegion: org.organizationState,
     locationCountry: "India",
