@@ -1,4 +1,5 @@
 import { entitySeo } from "@/lib/seo";
+import { composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -52,7 +53,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescriptionSource = isHi && descriptionHi ? descriptionHi : posting.description;
 
-  const title = `${displayTitle} — ${posting.organization.name}`;
+  const orgNameHi = (posting.organization as any).nameHi as string | null;
+  const title = composeJobMetaTitle(
+    displayTitle,
+    isHi && orgNameHi ? [orgNameHi, posting.organization.name] : [posting.organization.name]
+  );
   const description = plainTextSnippet(displayDescriptionSource, displayTitle);
 
   // Tier B/C postings stay crawlable and linkable but are kept out of the

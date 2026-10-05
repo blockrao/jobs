@@ -1120,3 +1120,20 @@ Advertisement 14/2026 (18.08.2026) was cancelled by 15/2026 (22.09.2026); both r
 ## 2026-10-05: A-076 structured page content column; BPSC page completion (prepared)
 
 Additive nullable `postings.extra_content` (jsonb) with migration and rollback; the job page renders its tables, notices and FAQs (FAQs also feed the FAQ markup) and uses the Hindi age notes on the Hindi page. Order of deployment matters: the migration must be applied before this code is deployed, because the page query reads every posting column. A "Last Verified" date is stamped on posting 944 only, after reading it in full against the official Advertisement 15/2026. Open: whether posting 944 keeps one JobPosting (conflicts with G1 for a four-level notice) or moves to four resolved Posts.
+
+## 2026-10-05: SEARCH-001 abbreviation search, title fix, search text refresh (owner-approved; code only)
+
+Scorecard: abbreviation search PASS (unit tests S-6a..f, S-7a..d); job page title PASS (T-1a..e); search text refresh wired PASS (cron test, SEARCH-001); production data written: none; migration: none; contract suite 163 passed with only the two known baseline failures (ENT-07, IDX-06); typecheck clean.
+
+Live baseline before the change (observed 2026-10-05 in the built-in browser): `/api/search/jobs?q=recruitment` 50 results, `q=clerk` 18, `q=ssc` 0. The earlier note that search was still broken (A-068) was wrong: the fix is deployed. The zero for "ssc" is a coverage gap: posting text spells the commission out and no abbreviation layer existed.
+
+Changes:
+1. `src/lib/search-aliases.ts`: about 55 abbreviations (commissions, boards, banks, forces, exams) with short distinguishing phrases, and 16 Devanagari spellings (एसएससी and similar). The English search now matches each word as itself OR its phrase, words ANDed: `sbi po` is (sbi OR state bank india) AND (po OR probationary officer). A query with no known abbreviation builds the same tsquery as before. A Devanagari query that is only known abbreviations is searched in Latin; any other Hindi query keeps the Hindi filter path.
+2. `src/lib/seo/meta-title.ts`: the job page title no longer repeats the organization when the stored title already names it (live defect "X — Org — Org | JobOye"), and the Hindi page uses the Hindi organization name when one exists.
+3. Search text refresh: nothing in the application ever called `refresh_posting_urgency_states()`, which is the only writer of `postings.search_text`. It now runs after the lifecycle job in the cron route (best effort, own try/catch) and after `promotePending(apply)` publishes rows. The A-044 cron test now expects the second call and a new test covers refresh failure.
+
+Not done, by evidence: the planned one-time backfill of 47 postings. Production check: all 557 publishable postings (AUTOMATED_VALIDATION_PASS or PUBLISHED) already have search text; the 47 without are DRAFT (29) and ARCHIVED (18) and are not searchable by rule. No production data was written.
+
+Read-only expectation on production data before deploy: `ssc` 0 to 1 result, `upsc` 4, `bpsc` 1, `clerk` unchanged 18. Low counts reflect the loaded data, not the search. Expansion phrases were chosen to avoid spelling variants (organisation/organization).
+
+Verification: live search checks (English, Hindi abbreviations, title) after deployment; result recorded with the next code push.

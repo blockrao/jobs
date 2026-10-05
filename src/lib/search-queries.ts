@@ -14,6 +14,7 @@
 import { getDbV2 } from "@/db";
 import { detectLanguage, normalizeHinglishPhonetics } from "@/lib/query-engine/language-detector";
 import { extractFilters } from "@/lib/query-engine/filter-extractor";
+import { analyzeQuery, latinizeKnownAbbreviations } from "@/lib/search-aliases";
 
 /** Same rule as the listing guard in queries.ts (A-067): the last date itself still counts (UTC day); an unknown date is not excluded. */
 const SEARCH_NOT_PAST_LAST_DATE =
@@ -60,7 +61,7 @@ export async function searchPostings(filters: SearchFilters): Promise<SearchResu
   if (!db) return [];
 
   const {
-    query,
+    query: rawQuery,
     announcementState,
     closingState,
     organizationId,
@@ -69,6 +70,10 @@ export async function searchPostings(filters: SearchFilters): Promise<SearchResu
     limit = 50,
     offset = 0,
   } = filters;
+
+  // A query written only in known Devanagari abbreviations (एसएससी) is searched
+  // as its Latin form; any other Hindi query keeps the Hindi filter path.
+  const query = rawQuery ? latinizeKnownAbbreviations(rawQuery) : rawQuery;
 
   // Detect language if not specified
   let language = filters.language;
@@ -105,6 +110,21 @@ export async function searchPostings(filters: SearchFilters): Promise<SearchResu
 }
 
 /**
+ * Full-text query for the English path. Each word is matched as itself OR, for a
+ * known abbreviation, as its spelled-out phrase; words are ANDed (SEARCH-001).
+ * For a query with no abbreviation this is the same as plainto_tsquery(query).
+ */
+function buildTsQuerySql(query: string, add: (v: any) => string): string {
+  const terms = analyzeQuery(query);
+  if (terms.length === 0) return `plainto_tsquery('english', ${add(query)})`;
+  const parts = terms.map((t) => {
+    const word = `plainto_tsquery('english', ${add(t.word)})`;
+    return t.expansion ? `(${word} || plainto_tsquery('english', ${add(t.expansion)}))` : word;
+  });
+  return parts.join(" && ");
+}
+
+/**
  * English full-text search using PostgreSQL FTS
  */
 async function searchPostingsEnglish(
@@ -127,7 +147,7 @@ async function searchPostingsEnglish(
     params.push(v);
     return `$${params.length}`;
   };
-  const queryPh = query ? add(query) : null;
+  const tsQuery = query ? buildTsQuerySql(query, add) : null;
   const announcementPh = announcementState ? add(announcementState) : null;
   const closingPh = closingState ? add(closingState) : null;
   const organizationPh = organizationId ? add(organizationId) : null;
@@ -170,7 +190,7 @@ async function searchPostingsEnglish(
       AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
       AND p.is_expired = FALSE
       AND ${SEARCH_NOT_PAST_LAST_DATE}
-      ${queryPh ? `AND p.search_text @@ plainto_tsquery('english', ${queryPh})` : ""}
+      ${tsQuery ? `AND p.search_text @@ ${tsQuery}` : ""}
       ${announcementPh ? `AND p.announcement_state = ${announcementPh}` : ""}
       ${closingPh ? `AND p.closing_state = ${closingPh}` : ""}
       ${organizationPh ? `AND p.organization_id = ${organizationPh}` : ""}
@@ -178,7 +198,7 @@ async function searchPostingsEnglish(
     ORDER BY
       ${
         sortBy === "relevance" && query
-          ? `ts_rank(p.search_text, plainto_tsquery('english', ${queryPh ?? "''"})) DESC`
+          ? `ts_rank(p.search_text, ${tsQuery ?? "plainto_tsquery('english', '')"}) DESC`
           : sortBy === "closing_soonest"
             ? "p.days_to_closing ASC NULLS LAST"
             : sortBy === "most_urgent"

@@ -5,7 +5,7 @@
  * required, and source/verification state stays on the row.
  */
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { postings, sourceObservations } from "../db/schema";
 
@@ -117,6 +117,16 @@ export async function promotePending(db: Db, opts: { apply?: boolean; now?: Date
       }
     } else {
       for (const f of verdict.failed) report.failedReasons[f] = (report.failedReasons[f] ?? 0) + 1;
+    }
+  }
+  // SEARCH-001: newly published rows are searchable only once search_text is
+  // filled by refresh_posting_urgency_states(). Best effort: scratch databases
+  // without the function, or a transient error, must not undo the promotion.
+  if (opts.apply && report.promoted > 0) {
+    try {
+      await db.execute(sql.raw("SELECT * FROM refresh_posting_urgency_states()"));
+    } catch (error) {
+      console.error("Search text refresh after promotion failed:", error);
     }
   }
   return report;

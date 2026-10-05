@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { sql } from "drizzle-orm";
 import { getDbV2 } from "@/db";
 
 async function run(request: NextRequest) {
@@ -43,9 +44,21 @@ async function run(request: NextRequest) {
       last_refreshed: new Date(),
     };
 
+    // SEARCH-001: search reads postings.search_text, which only this function
+    // fills. Running it here keeps every newly published posting searchable
+    // within a day. Best effort: a failure must not fail the lifecycle update.
+    let searchTextRefreshed: number | null = null;
+    try {
+      const refreshed = await db.execute(sql.raw("SELECT * FROM refresh_posting_urgency_states()"));
+      searchTextRefreshed = Number(refreshed[0]?.updated_postings ?? 0);
+    } catch (error) {
+      console.error("Search text refresh error:", error);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Recruitment lifecycle updated",
+      search_text_refreshed: searchTextRefreshed,
       results: {
         expired_postings: lifecycle.expired_postings,
         archived_recruitments: lifecycle.archived_recruitments,
