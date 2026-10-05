@@ -10,8 +10,7 @@ import { fetchHtml, sleep, CLAUDE_UA } from "@/ingest/adapters/util";
 import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
 
 async function main() {
-  const [outFile, skipCsv = ""] = process.argv.slice(2);
-  const [, , , listFile] = process.argv;
+  const [outFile, skipCsv = "", listFile] = process.argv.slice(2);
   const skip = new Set(skipCsv.split(",").filter(Boolean).map(Number));
   const rows = readFileSync(listFile, "utf8").split("\n").filter(Boolean).map((l) => {
     const [id, source_url] = l.split("\t");
