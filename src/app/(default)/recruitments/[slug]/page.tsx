@@ -66,9 +66,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    // Not a canonical public projection until Canonical Read Migration
-    // (SEO-001 D2): noindex, follow.
-    ...pageSeo(`/recruitments/${recruitment.slug}`, { index: false }),
+    ...pageSeo(`/recruitments/${recruitment.slug}`),
     openGraph: {
       title,
       description,

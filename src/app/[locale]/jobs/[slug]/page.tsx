@@ -75,17 +75,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = factsDescription ?? plainTextSnippet(displayDescriptionSource, displayTitle);
   const ogImages = [{ url: "/og-default.png", width: 1200, height: 630, alt: "JobOye government jobs" }];
 
-  // Tier B/C postings stay crawlable and linkable but are kept out of the
-  // index until they pass the content-quality gate (src/lib/content-quality/
-  // gate.ts) — this is independent of whether Hindi content exists. A
-  // Tier-A English page must stay indexable even when no hi translation
-  // exists yet; only the /hi/ page itself needs hasHindi to be indexable.
+  // All approved postings (Tier A and B) are indexable; Tier C (non-job,
+  // duplicate, or expired) are excluded from indexing. The quality gate
+  // (src/lib/content-quality/gate.ts) still classifies completeness but
+  // indexability is no longer gated on reaching Tier A.
   const seo = entitySeo({
     base: "/jobs",
     slug: posting.slug,
     locale,
     hasHindi,
-    eligible: posting.indexTier === "A",
+    eligible: posting.indexTier !== "C",
   });
 
   return {

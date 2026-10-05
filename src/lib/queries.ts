@@ -224,16 +224,14 @@ export async function getPostingSlugsPageForSitemap(
       titleHi: postings.titleHi,
     })
     .from(postings)
-    // Sitemap = Tier A only (src/lib/content-quality/gate.ts). Approved-but-
-    // incomplete, duplicate, or non-job postings stay crawlable on-site but
-    // out of the sitemap and noindex'd — see generateMetadata in
-    // src/app/jobs/[slug]/page.tsx.
-    // An expired posting leaves the sitemap even if its stored tier is still A
-    // (the lifecycle job sets is_expired; it does not recompute the tier).
+    // Sitemap = Tier A and B (all approved, non-expired postings with content).
+    // Tier C (non-job, duplicate, expired) are excluded.
+    // An expired posting leaves the sitemap even if its stored tier hasn't
+    // been recomputed yet (the lifecycle job sets is_expired separately).
     .where(
       and(
         eq(postings.reviewStatus, "APPROVED"),
-        eq(postings.indexTier, "A"),
+        sql`${postings.indexTier} IN ('A', 'B')`,
         sql`${postings.isExpired} IS NOT TRUE`,
         notPastLastDate,
       ),
