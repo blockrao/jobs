@@ -1,0 +1,22 @@
+name: enrich-dry-run
+# PQ-008: fetch source pages, extract facts, upload JSON. No database, no secrets.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/formalise-lifecycle-and-verification]
+    paths: ["data/enrich/batch-*.json", ".github/workflows/enrich-dry-run.yml"]
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: |
+          mkdir -p out
+          for f in data/enrich/batch-*.json; do
+            npx tsx src/scripts/enrich-run.ts "$f" "out/$(basename "$f" .json)-result.json"
+          done
+      - uses: actions/upload-artifact@v4
+        with: { name: enrich-results, path: out/ }
