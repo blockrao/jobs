@@ -12,7 +12,7 @@ import {
 } from "./util";
 import { parseSarkariDetail, type DetailFields } from "./sarkari-detail";
 
-const SOURCE = "sarkariresult";
+const SOURCE = "ext-2";
 const BASE = "https://www.sarkariresult.com";
 const MAX_LISTING_PAGES = 2;
 const MAX_DETAIL_PAGES = 50;

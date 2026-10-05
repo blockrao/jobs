@@ -15,7 +15,7 @@ import {
 } from "./util";
 import { buildTableBag, findLink, splitPostNames } from "./sarkari-detail";
 
-const SOURCE = "freejobalert";
+const SOURCE = "ext-1";
 const BASE = "https://www.freejobalert.com";
 const MAX_LISTING_PAGES = 3;
 const MAX_DETAIL_PAGES = 50;

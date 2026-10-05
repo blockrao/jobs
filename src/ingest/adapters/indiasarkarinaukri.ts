@@ -12,7 +12,7 @@ import {
 } from "./util";
 import { parseRscSarkariDetail, type DetailFields } from "./sarkari-detail";
 
-const SOURCE = "indiasarkarinaukri";
+const SOURCE = "ext-4";
 const BASE = "https://www.indiasarkarinaukri.com";
 // This portal WAF-blocks non-browser agents and occasionally blocks even a
 // browser UA, so detail fetches retry once after 2s. Detail cap is lower to

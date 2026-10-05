@@ -46,12 +46,8 @@ function recruitmentYear(raw: NormalizedPosting): number | null {
 async function getOrCreateSource(db: ReturnType<typeof getDb>, portalSlug: string, sampleUrl: string) {
   const existing = await db.query.sources.findFirst({ where: eq(sources.slug, portalSlug) });
   if (existing) return existing;
-  let origin = sampleUrl;
-  try {
-    origin = new URL(sampleUrl).origin;
-  } catch {
-    /* keep sampleUrl as-is if it isn't a parseable URL */
-  }
+  void sampleUrl; // the portal address is not stored (provenance policy); sources.url is NOT NULL, so empty
+  const origin = "";
   const [created] = await db
     .insert(sources)
     .values({
@@ -86,7 +82,9 @@ async function getOrCreateSourceDocument(
     .insert(sourceDocuments)
     .values({
       sourceId,
-      sourceUrl,
+      // Provenance policy (owner direction 2026-10-05): the source address is used in memory only
+      // (hashing) and is never stored.
+      sourceUrl: null,
       documentType: "posting",
       externalId,
       contentHash: hashContent(sourceUrl, rawContent),
@@ -206,7 +204,7 @@ async function recordObservation(
     .values({
       source,
       externalId: norm.externalId,
-      sourceUrl: norm.sourceUrl,
+      sourceUrl: null, // not stored (provenance policy)
       observedAt: norm.observedAt ?? new Date(),
       contentHash,
       facts,
@@ -339,7 +337,7 @@ export async function writePostingsToDB(
           rawName: norm.organizationName,
           normalizedName: resolution.normalizedName,
           source: sourcePortal,
-          sourceUrl: norm.sourceUrl,
+          sourceUrl: null, // not stored (provenance policy)
           evidence: {
             title: norm.title,
             fromLabel: norm.organizationFromLabel ?? false,
@@ -503,7 +501,7 @@ export async function writePostingsToDB(
             slug: norm.slug,
             source: sourcePortal,
             externalId: norm.externalId,
-            sourceUrl: norm.sourceUrl,
+            sourceUrl: null, // not stored (provenance policy)
             ingestedAt: new Date(),
             // Ingestion is not publication: confidence never approves.
             reviewStatus: "PENDING",

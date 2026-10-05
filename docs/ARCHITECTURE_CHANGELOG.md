@@ -1202,3 +1202,21 @@ PQ-004 RESULT (observed on production, UPSC JTO page, 2026-10-05): title "UPSC J
 **Code.** `src/lib/aggregators.ts`: host pattern now catches look-alike hosts (sarkari-naukri.in), `stripAggregatorTag`, `publicLink`. Job page: timeline titles and links, apply and official links, and the JSON-LD timeline text all pass through them, so a future ingest cannot leak an aggregator even if the data is wrong. Tests added to `verify-live.test.ts`.
 
 **Open.** Find and fix the original writer of "(via <source>)" update titles (not in the current source tree). Add an aggregator check to the approval step.
+
+---
+
+## PQ-011 — Provenance neutralised; brand name unified (owner direction 2026-10-05)
+
+| Field | Value |
+| --- | --- |
+| Change ID | PQ-011 |
+| Date | 2026-10-05 |
+| Status | Data changed, code deployed with the next push |
+
+**Direction.** Aggregators are competitors: no stored indication of them, and one brand name, JobOye, everywhere.
+
+**Data (backups `backup_20261005.prov_*`, `prov_articles_author`).** Source keys renamed to neutral codes `ext-1` to `ext-5` in `postings.source`, `source_portals`, `source_observations.source`, `organization_candidates.source`, `sources` (slug and name; url emptied, column is NOT NULL). Stored addresses removed: `postings.source_url`, `recruitments.source_url`, `source_observations.source_url`, `source_documents.source_url`, `organization_candidates.source_url`. Aggregator names and URLs scrubbed from stored raw text (`source_observations.raw`, `source_documents.raw_content`). Article byline "RojgarSetu Editorial" (old code name) changed to "JobOye Editorial". The unique keys (source, external_id) are unchanged in meaning, so ingestion identity is preserved.
+
+**Code.** Adapters emit the neutral codes; the writer never stores a source address (used in memory for hashing only); `sources.url` stored empty. The enrichment CI jobs and `data/enrich` (lists of source addresses) are removed: enrichment needed the stored address and its job is done.
+
+**Consequences.** A posting can no longer be traced back to its source page from the database; re-enrichment of a posting means re-finding it. Backups of the old values sit in schema `backup_20261005` and can be dropped once the owner is satisfied (drop the schema to erase the last copy). The read-only role `enrich_ro` and its policy remain (the policy now matches nothing); dropping them was blocked in this session.

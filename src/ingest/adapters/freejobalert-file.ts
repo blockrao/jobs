@@ -7,7 +7,7 @@
  * through the real ingestion path (dedupe -> normalize -> write) and not a
  * special importer.
  *
- * Same source key ("freejobalert") and external id (the article id) as the live
+ * Same source key ("ext-1") and external id (the article id) as the live
  * adapter, so records already in JobOye are matched by identity and updated in
  * place, never duplicated.
  *
@@ -21,7 +21,7 @@ import type { RawPosting } from "../types";
 import { FACTS_ONLY_DESCRIPTION_MARKER } from "../../lib/content-quality/gate";
 import { collapse, parseIndianDate, scoreConfidence, extractVacancies } from "./util";
 
-const SOURCE = "freejobalert";
+const SOURCE = "ext-1";
 
 interface FileRecord {
   id: string;

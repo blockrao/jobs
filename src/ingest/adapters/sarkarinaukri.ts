@@ -16,7 +16,7 @@ import {
 } from "./util";
 import { findLink } from "./sarkari-detail";
 
-const SOURCE = "sarkarinaukri";
+const SOURCE = "ext-3";
 const BASE = "https://www.sarkari-naukri.in";
 const SITEMAP_INDEX = `${BASE}/sitemap_index.xml`;
 const MAX_LISTING_PAGES = 3; // post-sitemap*.xml files

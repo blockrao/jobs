@@ -133,7 +133,7 @@ export async function upsertCandidate(
       rawName: input.rawName.slice(0, 300),
       normalizedName: input.normalizedName.slice(0, 200),
       source: input.source,
-      sourceUrl: input.sourceUrl ?? null,
+      sourceUrl: null, // not stored (provenance policy)
       evidence: input.evidence ?? null,
       confidence: input.confidence ?? null,
       reason: input.reason,
