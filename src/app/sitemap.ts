@@ -8,6 +8,7 @@ import {
   getPostingSlugsPageForSitemap,
   listCommissionsWithExams,
 } from "@/lib/queries";
+import { pickSitemapLastmod } from "@/lib/freshness/lastmod";
 import { sitemapAlternates } from "@/lib/seo";
 
 // Single sitemap at /sitemap.xml — clean canonical URL that robots.txt and
@@ -44,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const postingEntries: MetadataRoute.Sitemap = postingRows.map((row) => ({
     url: `${SITE_URL}/jobs/${row.slug}`,
-    lastModified: row.updatedAt,
+    lastModified: pickSitemapLastmod(row.contentChangedAt, row.updatedAt),
     changeFrequency: "daily",
     priority: 0.8,
     ...sitemapAlternates("/jobs", row.slug, Boolean((row as any).titleHi)),

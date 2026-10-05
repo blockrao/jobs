@@ -217,6 +217,7 @@ export async function getPostingSlugsPageForSitemap(
     .select({
       slug: postings.slug,
       updatedAt: postings.updatedAt,
+      contentChangedAt: postings.contentChangedAt,
       // Carried through so the sitemap can emit a hi alternate only for
       // postings that actually have translated content — see
       // src/app/[locale]/jobs/[slug]/page.tsx.

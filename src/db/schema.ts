@@ -407,6 +407,9 @@ export const postings = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // PQ-004: last meaningful change to reader-visible facts; sitemap lastmod =
+    // coalesce(contentChangedAt, updatedAt). Nullable, additive. Migration first, then code.
+    contentChangedAt: timestamp("content_changed_at", { withTimezone: true }),
 
     // Deliberately NOT declared here, though they're real live columns
     // (verified against information_schema): official_application_url,
