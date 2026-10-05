@@ -70,7 +70,7 @@ function build(item: ListItem, detail: DetailFields): RawPosting {
     postNames: detail.postNames,
     description:
       detail.description ||
-      `${title} — recruitment notification via India Sarkari Naukri.`,
+      `${title}.`,
     eligibility: detail.eligibility,
     totalVacancies: detail.totalVacancies,
     applicationFeeGeneral: detail.applicationFeeGeneral,

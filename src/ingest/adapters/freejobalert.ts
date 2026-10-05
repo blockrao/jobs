@@ -126,7 +126,7 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     organizationName: detail.organizationName || inferred.organizationName,
     organizationSector: inferred.organizationSector,
     organizationState: inferred.organizationState,
-    description: detail.description || `${title} — notification via FreeJobAlert.`,
+    description: detail.description || `${title}.`,
     eligibility: detail.eligibility,
     totalVacancies: detail.totalVacancies ?? extractVacancies(title),
     salaryMin: detail.salaryMin,

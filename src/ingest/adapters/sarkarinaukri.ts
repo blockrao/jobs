@@ -111,7 +111,7 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     organizationName: org.organizationName,
     organizationSector: org.organizationSector,
     organizationState: detail.locationRegion || org.organizationState,
-    description: detail.description || `${title} — recruitment via Sarkari Naukri.`,
+    description: detail.description || `${title}.`,
     eligibility: detail.eligibility,
     totalVacancies: detail.totalVacancies,
     salaryMin: detail.salaryMin,

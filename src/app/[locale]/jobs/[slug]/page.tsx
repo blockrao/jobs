@@ -230,7 +230,6 @@ export default async function LocaleJobPage({ params }: Props) {
     sourceDerived: isHi
       ? "यह जानकारी स्रोत से ली गई है और अधूरी हो सकती है। आवेदन से पहले आधिकारिक अधिसूचना देखें।"
       : "This information is derived from a published source and may be incomplete. Check the official notification before applying.",
-    checkSource: isHi ? "स्रोत / आधिकारिक अधिसूचना देखें" : "Check source / official notification",
     examDate: isHi ? "परीक्षा तिथि" : "Exam Date",
     lastVerified: isHi ? "अंतिम सत्यापन" : "Last Verified",
     applyNow: isHi ? "अभी आवेदन करें" : "Apply Now",
@@ -416,16 +415,6 @@ export default async function LocaleJobPage({ params }: Props) {
             className="rounded-md border border-black/20 px-5 py-2.5 text-sm font-semibold hover:bg-neutral-50"
           >
             {L.officialNotification}
-          </a>
-        )}
-        {!posting.officialNotificationUrl && (posting as any).sourceUrl && (
-          <a
-            href={(posting as any).sourceUrl}
-            target="_blank"
-            rel="noopener nofollow"
-            className="rounded-md border border-black/20 px-5 py-2.5 text-sm font-semibold hover:bg-neutral-50"
-          >
-            {L.checkSource}
           </a>
         )}
       </div>
