@@ -1,3 +1,4 @@
+import { getStateBySlug } from "@/lib/states/states";
 import { entitySeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -185,6 +186,7 @@ export default async function LocaleJobPage({ params }: Props) {
   const displayOrgName = isHi && orgNameHi ? orgNameHi : org.name;
   // Only link into the Hindi org page when it actually has Hindi content.
   const orgHref = isHi && orgNameHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
+  const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting, isHi, displayTitle, displayOrgName, displayEligibility);
   const timeline = [...(posting.updates ?? [])].sort(
@@ -293,6 +295,12 @@ export default async function LocaleJobPage({ params }: Props) {
           {kindLabels[posting.kind]}
         </Link>{" "}
         / <Link href={orgHref} className="hover:underline">{displayOrgName}</Link>
+        {stateHub && (
+          <>
+            {" / "}
+            <Link href={`/states/${stateHub.slug}`} className="hover:underline">{isHi ? stateHub.nameHi : stateHub.name}</Link>
+          </>
+        )}
       </nav>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -306,7 +314,13 @@ export default async function LocaleJobPage({ params }: Props) {
           {displayOrgName}
         </Link>
         {displayLocationCity ? ` · ${displayLocationCity}` : ""}
-        {posting.locationRegion ? `, ${posting.locationRegion}` : ""}
+        {posting.locationRegion && !stateHub ? `, ${posting.locationRegion}` : ""}
+        {stateHub && (
+          <>
+            {", "}
+            <Link href={`/states/${stateHub.slug}`} className="hover:underline">{isHi ? stateHub.nameHi : stateHub.name}</Link>
+          </>
+        )}
       </p>
 
       {L.notice && (

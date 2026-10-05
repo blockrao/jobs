@@ -14,9 +14,9 @@ const r = (i: In) =>
   });
 
 describe("STATES", () => {
-  test("37 unique slugs with Hindi names, lookup works", () => {
-    expect(STATES.length).toBe(37);
-    expect(new Set(STATES.map((s) => s.slug)).size).toBe(37);
+  test("36 unique slugs with Hindi names, lookup works", () => {
+    expect(STATES.length).toBe(36);
+    expect(new Set(STATES.map((s) => s.slug)).size).toBe(36);
     for (const s of STATES) expect(s.nameHi).toMatch(/[ऀ-ॿ]/);
     expect(getStateBySlug("jammu-kashmir")?.name).toBe("Jammu and Kashmir");
     expect(getStateBySlug("andaman-nicobar")?.name).toBe("Andaman and Nicobar Islands");
@@ -151,7 +151,7 @@ describe("central bodies and denylist never resolve from names", () => {
     ["Railways", { organizationName: "Indian Railways", title: "Railway Group D Gujarat" }],
     ["NTPC", { organizationName: "NTPC", title: "NTPC Odisha Executive" }],
     ["ISRO", { organizationName: "ISRO", title: "ISRO Kerala Scientist" }],
-    ["AIIMS other branch", { organizationName: "AIIMS Rishikesh", title: "Nursing Officer" }],
+    ["AIIMS with no place or state", { organizationName: "AIIMS", title: "Nursing Officer" }],
     ["BSF", { organizationName: "BSF", title: "BSF Punjab Frontier Constable" }],
     ["Goa Shipyard (central PSU)", { organizationName: "Goa Shipyard Limited" }],
     ["unknown / no evidence", { title: "Junior Engineer Recruitment 2026" }],

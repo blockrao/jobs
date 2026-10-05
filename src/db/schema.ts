@@ -309,6 +309,8 @@ export const postings = pgTable(
       .default("ONSITE"),
     locationCity: varchar("location_city", { length: 120 }),
     locationRegion: varchar("location_region", { length: 120 }),
+    // State hub pages: slug from src/lib/states/states.ts; NULL = national or unresolved.
+    stateSlug: varchar("state_slug", { length: 120 }),
     locationCountry: varchar("location_country", { length: 120 }).default(
       "India",
     ),

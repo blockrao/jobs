@@ -1,3 +1,5 @@
+import { STATES } from "@/lib/states/states";
+import { countCurrentByState } from "@/lib/states/queries";
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import {
@@ -39,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/categories`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/articles`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/organizations`, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE_URL}/states`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/exams`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/news`, changeFrequency: "daily", priority: 0.5 },
   ];
@@ -85,8 +88,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
+  // State hubs enter the sitemap only while they list at least one current job (thin hubs are noindex).
+  const stateCounts = await countCurrentByState().catch(() => ({}) as Record<string, number>);
+  const stateEntries: MetadataRoute.Sitemap = STATES.filter((st) => (stateCounts[st.slug] ?? 0) > 0).map((st) => ({
+    url: `${SITE_URL}/states/${st.slug}`,
+    changeFrequency: "daily",
+    priority: 0.5,
+  }));
+
   return [
     ...staticEntries,
+    ...stateEntries,
     ...postingEntries,
     ...articleEntries,
     ...categoryEntries,

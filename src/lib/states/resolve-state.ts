@@ -9,6 +9,13 @@
  *                           national / central bodies (their state is only HQ)
  *   3. organization_name  - state name or state-level body alias in the name
  *   4. title              - the same, in the title
+ *   5. place              - a reviewed, unambiguous city/town/district named in
+ *                           the organization name (then, for a single workplace,
+ *                           the title): "Indian Institute of Management Lucknow".
+ *                           This is the only tier that may resolve institutions
+ *                           on the central-body list (IIT, IIM, AIIMS, CSIR, ...)
+ *                           because their physical location is what is named.
+ *                           National bodies, banks and railways never resolve.
  * Central bodies (UPSC, SSC, IBPS, SBI, RRB, ...) and central bodies whose
  * names embed a state (Punjab National Bank, Assam Rifles, ...) never resolve
  * from a name or title mention. Location evidence is still honoured.
@@ -17,9 +24,10 @@
  * replaced by a single space, then phrase matched between spaces. That is
  * Unicode-safe and gives true word boundaries without regex lookbehind.
  */
+import { PLACE_TO_STATE } from "./place-state";
 import { STATES } from "./states";
 
-export type StateBasis = "location_region" | "organization_state" | "organization_name" | "title";
+export type StateBasis = "location_region" | "organization_state" | "organization_name" | "title" | "place";
 
 export interface ResolveStateInput {
   title: string;
@@ -83,8 +91,7 @@ const STATE_NAME_TERMS: Record<string, string[]> = {
   "west-bengal": ["west bengal"],
   "andaman-nicobar": ["andaman and nicobar islands", "andaman and nicobar", "andaman nicobar"],
   chandigarh: ["chandigarh"],
-  "dadra-nagar-haveli": ["dadra and nagar haveli", "dadra nagar haveli"],
-  "daman-diu": ["daman and diu", "daman diu"],
+  "dadra-nagar-haveli-daman-diu": ["dadra and nagar haveli", "dadra nagar haveli", "daman and diu", "daman diu"],
   delhi: ["delhi", "nct of delhi"],
   ladakh: ["ladakh"],
   lakshadweep: ["lakshadweep"],
@@ -390,6 +397,109 @@ function parseLocation(raw: string | null, useCities: boolean): LocResult {
   return { kind: "none" };
 }
 
+// ---------- place evidence ----------
+
+const PLACE_ENTRIES: Array<[string, string]> = Object.entries(PLACE_TO_STATE).sort(
+  (a, b) => b[0].length - a[0].length,
+);
+
+/**
+ * Bodies whose name or title never counts as place evidence: national
+ * recruiters, forces, banks and railways. A place in their text is a posting
+ * or branch location, not where the employer is.
+ */
+const PLACE_BLOCK_TERMS: string[] = [
+  "ssc",
+  "staff selection commission",
+  "upsc",
+  "union public service commission",
+  "ibps",
+  "institute of banking personnel selection",
+  "sbi",
+  "state bank of india",
+  "bank",
+  "banks",
+  "banking",
+  "rrb",
+  "rrc",
+  "railway",
+  "railways",
+  "rpf",
+  "army",
+  "indian army",
+  "navy",
+  "air force",
+  "coast guard",
+  "armed forces",
+  "agniveer",
+  "bsf",
+  "crpf",
+  "cisf",
+  "itbp",
+  "indo tibetan border police",
+  "ssb",
+  "assam rifles",
+  "nsg",
+  "nia",
+  "cbi",
+  "central bureau of investigation",
+  "cabinet secretariat",
+  "government emarketplace",
+  "nic",
+  "national informatics centre",
+  "icmr",
+  "indian council of medical research",
+  "rbi",
+  "reserve bank of india",
+  "nabard",
+  "sebi",
+  "lic",
+  "life insurance corporation",
+  "epfo",
+  "nta",
+  "national testing agency",
+  "india post",
+  "indian post",
+  "gramin dak sevak",
+  "ugc",
+  "cbse",
+  "cuet",
+  "supreme court of india",
+];
+
+function isPlaceBlocked(text: string | null): boolean {
+  const n = norm(text);
+  if (!n) return false;
+  const padded = pad(n.replace(STATE_SSC_RE, "$1"));
+  return PLACE_BLOCK_TERMS.some((t) => hasPhrase(padded, t));
+}
+
+/** Mapped places in `text`; a place nested in a longer matched place is dropped. */
+function placesIn(text: string | null): Array<{ place: string; slug: string }> {
+  const n = norm(text);
+  if (!n) return [];
+  const padded = pad(n);
+  const hits: Array<{ place: string; slug: string }> = [];
+  for (const [place, slug] of PLACE_ENTRIES) {
+    if (!hasPhrase(padded, place)) continue;
+    if (hits.some((h) => h.place.includes(place))) continue;
+    hits.push({ place, slug });
+  }
+  return hits;
+}
+
+const placeSlugs = (hits: Array<{ slug: string }>) => new Set(hits.map((h) => h.slug));
+
+/** "Central University of Haryana": a university named for its own state. */
+function centralUniversityState(org: string | null): string | null {
+  const m = / central university of (.+)$/.exec(pad(norm(org)).trimEnd());
+  if (!m) return null;
+  const names = stateNamesIn(pad(m[1]));
+  return names.size === 1 ? [...names][0] : null;
+}
+
+const INSTITUTION_RE = /(institute|university|college|hospital|aiims|iit|iim|nit|iiser|iiit|laborator)/;
+
 const CENTRALISH_ORG_RE = /(^| )(india|indian|bharat|bharatiya|national|central|union|hindustan|all india)( |$)/;
 
 // ---------- public API ----------
@@ -397,6 +507,14 @@ const CENTRALISH_ORG_RE = /(^| )(india|indian|bharat|bharatiya|national|central|
 export function resolveState(input: ResolveStateInput): ResolvedState | null {
   const org = input.organizationName;
   const orgClass = classifySource(org);
+  const orgNorm = norm(org);
+  const orgPlaceBlocked = isPlaceBlocked(org);
+  const orgPlaces = orgPlaceBlocked ? [] : placesIn(org);
+  const orgPlaceStates = placeSlugs(orgPlaces);
+  // A place in the organization name that contradicts a state-level finding
+  // (or names two states) makes the whole posting unresolved.
+  const contradicts = (slug: string) =>
+    orgPlaceStates.size > 0 && !(orgPlaceStates.size === 1 && orgPlaceStates.has(slug));
 
   // 1. Posting location.
   const loc = parseLocation(input.locationRegion, true);
@@ -405,27 +523,62 @@ export function resolveState(input: ResolveStateInput): ResolvedState | null {
 
   // 2. Organization's recorded state, unless the org looks national/central.
   if (orgClass.kind !== "blocked") {
-    const orgNorm = norm(org);
     const centralish = orgClass.kind === "none" && CENTRALISH_ORG_RE.test(orgNorm);
     if (!centralish) {
       const os = parseLocation(input.organizationState, false);
       if (os.kind === "multi") return null;
-      if (os.kind === "state") return { slug: os.slug, basis: "organization_state" };
+      if (os.kind === "state") return contradicts(os.slug) ? null : { slug: os.slug, basis: "organization_state" };
     }
   }
 
   // 3. Organization name.
   const titleClass = classifySource(input.title);
-  if (orgClass.kind === "state") return { slug: orgClass.slug, basis: "organization_name" };
-  if (orgClass.kind === "blocked") {
-    if (orgClass.reason === "aiims") return aiims(org, input.title);
-    return null;
+  if (orgClass.kind === "state") {
+    return contradicts(orgClass.slug) ? null : { slug: orgClass.slug, basis: "organization_name" };
   }
+  if (orgClass.kind === "blocked") {
+    if (orgClass.reason === "aiims") {
+      const a = aiims(org, input.title);
+      if (a) return contradicts(a.slug) ? null : a;
+    }
+    const cu = centralUniversityState(org);
+    if (cu) return contradicts(cu) ? null : { slug: cu, basis: "place" };
+    if (orgPlaceStates.size === 1) return { slug: [...orgPlaceStates][0], basis: "place" };
+    if (orgPlaceStates.size > 1) return null;
+    return titlePlace(input.title, orgNorm, orgPlaceBlocked, true);
+  }
+  if (orgPlaceStates.size === 1) return { slug: [...orgPlaceStates][0], basis: "place" };
+  if (orgPlaceStates.size > 1) return null;
 
   // 4. Title.
   if (titleClass.kind === "state") return { slug: titleClass.slug, basis: "title" };
-  if (titleClass.kind === "blocked" && titleClass.reason === "aiims") return aiims(null, input.title);
-  return null;
+  if (titleClass.kind === "blocked" && titleClass.reason === "aiims") {
+    return aiims(null, input.title) ?? titlePlace(input.title, orgNorm, orgPlaceBlocked, true);
+  }
+  // 5. A single mapped place in the title.
+  return titlePlace(input.title, orgNorm, orgPlaceBlocked, false);
+}
+
+/**
+ * Place in the title: only when exactly one mapped place appears, the title
+ * names no state and is not an all-India notice, and the employer is not a
+ * national body. Centrally flavoured employers qualify only when they are
+ * institutions (a campus has a location; "National Insurance" does not).
+ */
+function titlePlace(
+  title: string,
+  orgNorm: string,
+  orgPlaceBlocked: boolean,
+  institutionOrg: boolean,
+): ResolvedState | null {
+  if (orgPlaceBlocked || isPlaceBlocked(title)) return null;
+  if (CENTRALISH_ORG_RE.test(orgNorm) && !institutionOrg && !INSTITUTION_RE.test(orgNorm)) return null;
+  const padded = pad(norm(title));
+  if (stateNamesIn(padded).size > 0) return null;
+  for (const p of ALL_INDIA_PHRASES) if (hasPhrase(padded, p)) return null;
+  const hits = placesIn(title);
+  if (hits.length !== 1) return null;
+  return { slug: hits[0].slug, basis: "place" };
 }
 
 /** AIIMS is central: only an explicit state name in its own name/title counts. */

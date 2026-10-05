@@ -53,8 +53,8 @@ export const STATES: IndianState[] = [
   s("west-bengal", "West Bengal", "पश्चिम बंगाल"),
   s("andaman-nicobar", "Andaman and Nicobar Islands", "अंडमान और निकोबार द्वीपसमूह", "union_territory"),
   s("chandigarh", "Chandigarh", "चंडीगढ़", "union_territory"),
-  s("dadra-nagar-haveli", "Dadra and Nagar Haveli", "दादरा और नगर हवेली", "union_territory"),
-  s("daman-diu", "Daman and Diu", "दमन और दीव", "union_territory"),
+  // Merged into one union territory in 2020.
+  s("dadra-nagar-haveli-daman-diu", "Dadra and Nagar Haveli and Daman and Diu", "दादरा और नगर हवेली और दमन और दीव", "union_territory"),
   s("delhi", "Delhi", "दिल्ली", "union_territory"),
   s("ladakh", "Ladakh", "लद्दाख", "union_territory"),
   s("lakshadweep", "Lakshadweep", "लक्षद्वीप", "union_territory"),

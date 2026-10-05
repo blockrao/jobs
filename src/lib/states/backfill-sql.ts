@@ -74,10 +74,18 @@ export function buildBackfill(inputRows: BackfillRow[]): BackfillResult {
   }
 
   // (c) region text is filled only where no location data exists at all, and
-  // only for bases that are not themselves location evidence.
+  // only for bases that are not themselves location evidence. 'place' (an
+  // employer named after the place it sits in) is treated like
+  // organization_name: it may fill region only when region AND city are blank.
+  const REGION_FILL_BASES: ReadonlySet<StateBasis> = new Set<StateBasis>([
+    "organization_state",
+    "organization_name",
+    "title",
+    "place",
+  ]);
   const regionFill = resolved.filter(
     (x) =>
-      x.basis !== "location_region" &&
+      REGION_FILL_BASES.has(x.basis) &&
       blank(x.row.locationRegion) &&
       blank(x.row.locationCity) &&
       blank(x.row.currentLocationRegion),
