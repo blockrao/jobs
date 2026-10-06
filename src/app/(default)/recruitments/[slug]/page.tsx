@@ -1,25 +1,20 @@
 /**
  * Recruitment hub page — /recruitments/[slug]
  *
- * Universal 5-question structure for multi-post government recruitments:
- *   Q1  What is this recruitment?         (overview, org, dates, official number)
- *   Q2  Can I apply / am I eligible?      (vacancy comparison table by category)
- *   Q3  What do I need to qualify?        (per-post eligibility, age, fee)
- *   Q4  How does the process work?        (selection stages, exam dates)
- *   Q5  What's next / where do I apply?   (important links, per-post CTA)
- *
- * The hub slug is recruitments.slug (internal DB slug).
- * The advertisementNumber field (e.g. "12/2026") is shown as a breadcrumb
- * label once available; it is also indexed for lookup but does not change
- * the public URL (that stays /recruitments/[internal-slug]).
+ * Universal 5-question structure (JobOye Universal Job Page Structure):
+ *   Q1  What is this?              — status, title, org, 8-fact grid, CTAs, provenance
+ *   Q2  Can I apply?               — vacancy breakdown table by post & category
+ *   Q3  What do I need?            — per-post eligibility, age, fee
+ *   Q4  How does it work?          — important dates / process timeline
+ *   Q5  What's next?               — official links, per-post CTA strip
  */
 
+import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/db";
-import { recruitments, posts, postings } from "@/db/schema";
-import type { ReservationMatrix } from "@/db/schema";
+import { recruitments, postings } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { eq, inArray } from "drizzle-orm";
 import { safeQuery } from "@/lib/safe-query";
@@ -35,6 +30,7 @@ import {
   CheckCircle,
   Info,
   AlertTriangle,
+  Hash,
 } from "lucide-react";
 
 export const revalidate = 300;
@@ -154,25 +150,7 @@ function payLabel(payLevel: Record<string, unknown> | null | undefined): string 
   return null;
 }
 
-function statusInfo(status: string, daysToClose: number | null): {
-  label: string;
-  color: "green" | "amber" | "red" | "neutral";
-} {
-  if (daysToClose !== null && daysToClose <= 0)
-    return { label: "Closed", color: "red" };
-  if (daysToClose !== null && daysToClose <= 3)
-    return { label: `Closing in ${daysToClose}d`, color: "red" };
-  const map: Record<string, { label: string; color: "green" | "amber" | "red" | "neutral" }> = {
-    ACTIVE:         { label: "Applications Open",  color: "green" },
-    UPCOMING:       { label: "Upcoming",            color: "amber" },
-    CLOSED:         { label: "Closed",              color: "neutral" },
-    RESULT_PENDING: { label: "Result Pending",      color: "amber" },
-    COMPLETED:      { label: "Completed",           color: "neutral" },
-  };
-  return map[status] ?? { label: status, color: "neutral" };
-}
-
-// ── Section layout helpers ─────────────────────────────────────────────────────
+// ── Layout helpers ────────────────────────────────────────────────────────────
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -185,14 +163,34 @@ function SectionCard({ children, className = "" }: { children: React.ReactNode; 
 function SectionHeader({
   icon: Icon,
   title,
+  label,
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   title: string;
+  label?: string;
 }) {
   return (
     <div className="flex items-center gap-2 border-b border-black/8 px-5 py-4">
       {Icon && <Icon className="h-4 w-4 flex-shrink-0 text-neutral-400" />}
-      <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+      <h2 className="flex-1 text-base font-semibold text-neutral-900">{title}</h2>
+      {label && (
+        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+          {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SubDivider() {
+  return <div className="mx-5 border-t border-black/5" />;
+}
+
+function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="px-5 py-4">
+      <h3 className="mb-3 text-sm font-semibold text-neutral-700">{title}</h3>
+      {children}
     </div>
   );
 }
@@ -254,12 +252,26 @@ export default async function RecruitmentHubPage({ params }: Props) {
   const daysToClose = hub.applicationEndDate
     ? Math.ceil((hub.applicationEndDate.getTime() - now) / 86_400_000)
     : null;
-  const status = statusInfo(hub.status, daysToClose);
+
+  // Status pill
+  const statusInfo = (): { label: string; color: "green" | "amber" | "red" | "neutral" } => {
+    if (daysToClose !== null && daysToClose <= 0) return { label: "Closed", color: "neutral" };
+    if (daysToClose !== null && daysToClose <= 3) return { label: `Closing in ${daysToClose}d`, color: "red" };
+    const map: Record<string, { label: string; color: "green" | "amber" | "red" | "neutral" }> = {
+      ACTIVE:         { label: "Applications Open",  color: "green" },
+      UPCOMING:       { label: "Upcoming",            color: "amber" },
+      CLOSED:         { label: "Closed",              color: "neutral" },
+      RESULT_PENDING: { label: "Result Pending",      color: "amber" },
+      COMPLETED:      { label: "Completed",           color: "neutral" },
+    };
+    return map[hub.status] ?? { label: hub.status, color: "neutral" };
+  };
+  const status = statusInfo();
 
   const statusStyles = {
-    green:   { pill: "bg-green-100 text-green-800 border-green-200",   dot: "bg-green-500" },
-    amber:   { pill: "bg-amber-100 text-amber-800 border-amber-200",   dot: "bg-amber-500" },
-    red:     { pill: "bg-red-100 text-red-800 border-red-200",         dot: "bg-red-500" },
+    green:   { pill: "bg-green-100 text-green-800 border-green-200",       dot: "bg-green-500" },
+    amber:   { pill: "bg-amber-100 text-amber-800 border-amber-200",       dot: "bg-amber-500" },
+    red:     { pill: "bg-red-100 text-red-800 border-red-200",             dot: "bg-red-500" },
     neutral: { pill: "bg-neutral-100 text-neutral-700 border-neutral-200", dot: "bg-neutral-400" },
   };
 
@@ -274,19 +286,28 @@ export default async function RecruitmentHubPage({ params }: Props) {
     ?? (hub.updatedAt ? new Date(hub.updatedAt) : null);
 
   const stageLabels: Record<string, string> = {
-    APPLICATION_OPEN: "Applications Open",
-    APPLICATION_CLOSED: "Applications Closed",
+    APPLICATION_OPEN:    "Applications Open",
+    APPLICATION_CLOSED:  "Applications Closed",
     ADMIT_CARD_RELEASED: "Admit Card Released",
-    EXAM_SCHEDULED: "Exam Scheduled",
-    RESULT_OUT: "Result Out",
-    FINAL_RESULT_OUT: "Final Result",
-    NOTIFICATION_OUT: "Notification Out",
+    EXAM_SCHEDULED:      "Exam Scheduled",
+    RESULT_OUT:          "Result Out",
+    FINAL_RESULT_OUT:    "Final Result",
+    NOTIFICATION_OUT:    "Notification Out",
   };
+
+  // Important dates list for Q4
+  const importantDates = [
+    { label: "Notification Released", date: hub.notificationDate,     highlight: false },
+    { label: "Application Opens",     date: hub.applicationStartDate, highlight: false },
+    { label: "Last Date to Apply",    date: hub.applicationEndDate,   highlight: true  },
+    { label: "Exam Date",             date: hub.examDate,             highlight: false },
+    { label: "Result",                date: hub.resultDate,           highlight: false },
+  ].filter((r) => r.date);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 text-sm">
 
-      {/* ── Breadcrumb ─────────────────────────────────────────────────────── */}
+      {/* ── Breadcrumb ──────────────────────────────────────────────────────── */}
       <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1 text-xs text-neutral-400">
         <Link href="/jobs" className="hover:text-neutral-700 hover:underline">Jobs</Link>
         <ChevronRight className="h-3 w-3" />
@@ -301,10 +322,11 @@ export default async function RecruitmentHubPage({ params }: Props) {
         </span>
       </nav>
 
-      {/* ── Q1: What is this? ──────────────────────────────────────────────── */}
-      <div className="mb-6">
-        {/* Status badge + meta pills */}
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+      {/* ── Q1: What is this recruitment? ───────────────────────────────────── */}
+      <SectionCard className="mb-4">
+
+        {/* Status bar */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-black/5 px-5 py-3">
           <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-semibold ${statusStyles[status.color].pill}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${statusStyles[status.color].dot}`} aria-hidden="true" />
             {status.label}
@@ -319,110 +341,130 @@ export default async function RecruitmentHubPage({ params }: Props) {
               {hubPosts.length} post{hubPosts.length !== 1 ? "s" : ""}
             </span>
           )}
-        </div>
-
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">{hub.name}</h1>
-
-        {org && (
-          <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-neutral-500">
-            <Building2 className="h-3.5 w-3.5" />
-            {org.slug
-              ? <Link href={`/commissions/${org.slug}`} className="font-medium text-neutral-700 hover:underline">{org.name}</Link>
-              : <span className="font-medium text-neutral-700">{org.name}</span>}
-            {advNo && <span className="text-neutral-400">· Advt. No. {advNo}</span>}
-          </p>
-        )}
-
-        {hub.description && (
-          <p className="mt-3 leading-relaxed text-neutral-700">{hub.description}</p>
-        )}
-      </div>
-
-      {/* ── Hero stat strip ─────────────────────────────────────────────────── */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {/* Total Vacancies */}
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-500">
-            <Users className="h-3.5 w-3.5" />
-            Total Vacancies
-          </div>
-          <p className="mt-1.5 text-2xl font-bold text-indigo-900">
-            {totalVacancies > 0 ? totalVacancies.toLocaleString("en-IN") : "—"}
-          </p>
-          {hubPosts.length > 1 && (
-            <p className="mt-0.5 text-xs text-indigo-600">{hubPosts.length} posts</p>
+          {daysToClose !== null && daysToClose >= 0 && daysToClose <= 30 && (
+            <span className={`text-xs font-semibold ${daysToClose <= 7 ? "text-red-600" : "text-amber-600"}`}>
+              {daysToClose === 0 ? "Closes today!" : `${daysToClose} day${daysToClose === 1 ? "" : "s"} left`}
+            </span>
           )}
+          <span className="ml-auto rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+            Q1
+          </span>
         </div>
 
-        {/* Last Date */}
-        <div className={`rounded-xl border p-4 ${
-          daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
-            ? "border-red-200 bg-red-50"
-            : daysToClose !== null && daysToClose >= 0 && daysToClose <= 30
-              ? "border-amber-100 bg-amber-50"
-              : hub.applicationEndDate
-                ? "border-green-100 bg-green-50"
-                : "border-neutral-100 bg-neutral-50"
-        }`}>
-          <div className={`flex items-center gap-1.5 text-xs font-medium ${
-            daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
-              ? "text-red-500"
-              : daysToClose !== null && daysToClose >= 0 && daysToClose <= 30
-                ? "text-amber-600"
-                : hub.applicationEndDate
-                  ? "text-green-600"
-                  : "text-neutral-500"
-          }`}>
-            <Calendar className="h-3.5 w-3.5" />
-            Last Date
-          </div>
-          <p className={`mt-1.5 text-base font-bold ${
-            daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
-              ? "text-red-900"
-              : daysToClose !== null && daysToClose >= 0 && daysToClose <= 30
-                ? "text-amber-900"
-                : hub.applicationEndDate
-                  ? "text-green-900"
-                  : "text-neutral-700"
-          }`}>
-            {hub.applicationEndDate ? fmtDateShort(hub.applicationEndDate) : "—"}
-          </p>
-          {daysToClose !== null && daysToClose >= 0 && (
-            <p className={`mt-0.5 text-xs font-medium ${daysToClose <= 7 ? "text-red-600" : "text-amber-600"}`}>
-              {daysToClose === 0 ? "Today!" : `${daysToClose} day${daysToClose === 1 ? "" : "s"} left`}
+        {/* Title + org */}
+        <div className="px-5 pt-4 pb-3">
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">{hub.name}</h1>
+          {org && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-neutral-500">
+              <Building2 className="h-3.5 w-3.5 shrink-0" />
+              {org.slug
+                ? <Link href={`/commissions/${org.slug}`} className="font-medium text-neutral-700 hover:underline">{org.name}</Link>
+                : <span className="font-medium text-neutral-700">{org.name}</span>}
+              {advNo && <span className="text-neutral-400">· Advt. No. {advNo}</span>}
+              {exam?.name && <span className="text-neutral-400">· {exam.name}</span>}
             </p>
           )}
-          {daysToClose !== null && daysToClose < 0 && (
-            <p className="mt-0.5 text-xs text-neutral-500">Closed</p>
-          )}
         </div>
 
-        {/* Exam Date */}
-        <div className={`rounded-xl border p-4 ${hub.examDate ? "border-blue-100 bg-blue-50" : "border-neutral-100 bg-neutral-50"}`}>
-          <div className={`flex items-center gap-1.5 text-xs font-medium ${hub.examDate ? "text-blue-500" : "text-neutral-400"}`}>
-            <ClipboardList className="h-3.5 w-3.5" />
-            Exam Date
+        {/* 8-fact grid */}
+        <div className="grid grid-cols-2 gap-px border-t border-black/5 bg-black/5 sm:grid-cols-4">
+          {/* Total Vacancies — always indigo */}
+          <div className="bg-white px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500">Total Vacancies</div>
+            <div className="mt-1 text-xl font-bold text-indigo-900">
+              {totalVacancies > 0 ? totalVacancies.toLocaleString("en-IN") : "—"}
+            </div>
+            {hubPosts.length > 1 && (
+              <div className="mt-0.5 text-xs text-indigo-400">{hubPosts.length} posts</div>
+            )}
           </div>
-          <p className={`mt-1.5 text-base font-bold ${hub.examDate ? "text-blue-900" : "text-neutral-400"}`}>
-            {hub.examDate ? fmtDateShort(hub.examDate) : "—"}
-          </p>
-        </div>
 
-        {/* Notification Date */}
-        <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-400">
-            <FileText className="h-3.5 w-3.5" />
-            Notification
+          {/* Last Date — urgency-coloured */}
+          <div className={`px-4 py-3 ${
+            daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
+              ? "bg-red-50"
+              : daysToClose !== null && daysToClose >= 0 && daysToClose <= 30
+                ? "bg-amber-50"
+                : "bg-white"
+          }`}>
+            <div className={`text-[10px] font-semibold uppercase tracking-wider ${
+              daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
+                ? "text-red-500"
+                : daysToClose !== null && daysToClose >= 0 && daysToClose <= 30
+                  ? "text-amber-600"
+                  : "text-neutral-400"
+            }`}>Last Date</div>
+            <div className={`mt-1 text-base font-bold ${
+              daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
+                ? "text-red-900"
+                : daysToClose !== null && daysToClose >= 0 && daysToClose <= 30
+                  ? "text-amber-900"
+                  : "text-neutral-900"
+            }`}>
+              {hub.applicationEndDate ? fmtDateShort(hub.applicationEndDate) : "—"}
+            </div>
+            {daysToClose !== null && daysToClose >= 0 && daysToClose <= 30 && (
+              <div className={`mt-0.5 text-xs font-medium ${daysToClose <= 7 ? "text-red-600" : "text-amber-600"}`}>
+                {daysToClose === 0 ? "Today!" : `${daysToClose}d left`}
+              </div>
+            )}
           </div>
-          <p className="mt-1.5 text-base font-bold text-neutral-700">
-            {hub.notificationDate ? fmtDateShort(hub.notificationDate) : "—"}
-          </p>
-        </div>
-      </div>
 
-      {/* CTA row */}
-      {(notificationUrl || applyUrl) && (
-        <div className="mb-8 flex flex-col gap-2 sm:flex-row">
+          {/* Exam Date */}
+          <div className={`px-4 py-3 ${hub.examDate ? "bg-blue-50" : "bg-white"}`}>
+            <div className={`text-[10px] font-semibold uppercase tracking-wider ${hub.examDate ? "text-blue-500" : "text-neutral-400"}`}>
+              Exam Date
+            </div>
+            <div className={`mt-1 text-base font-bold ${hub.examDate ? "text-blue-900" : "text-neutral-400"}`}>
+              {hub.examDate ? fmtDateShort(hub.examDate) : "—"}
+            </div>
+          </div>
+
+          {/* Notification No. */}
+          <div className="bg-white px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Notification No.</div>
+            <div className="mt-1 text-base font-bold text-neutral-900">
+              {advNo ?? "—"}
+            </div>
+          </div>
+
+          {/* Notification Date */}
+          <div className="bg-white px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Notification Date</div>
+            <div className="mt-1 text-base font-bold text-neutral-900">
+              {hub.notificationDate ? fmtDateShort(hub.notificationDate) : "—"}
+            </div>
+          </div>
+
+          {/* Application Opens */}
+          <div className="bg-white px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Apply From</div>
+            <div className="mt-1 text-base font-bold text-neutral-900">
+              {hub.applicationStartDate ? fmtDateShort(hub.applicationStartDate) : "—"}
+            </div>
+          </div>
+
+          {/* Result Date */}
+          <div className="bg-white px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Result</div>
+            <div className="mt-1 text-base font-bold text-neutral-900">
+              {hub.resultDate ? fmtDateShort(hub.resultDate) : "—"}
+            </div>
+          </div>
+
+          {/* Linked exam / year */}
+          <div className="bg-white px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              {exam?.name ? "Exam" : "Year"}
+            </div>
+            <div className="mt-1 text-base font-bold text-neutral-900">
+              {exam?.name ?? hub.year ?? "—"}
+            </div>
+          </div>
+        </div>
+
+        {/* CTAs */}
+        <div className="flex flex-col gap-2 border-t border-black/5 px-5 py-4 sm:flex-row sm:flex-wrap">
           {applyUrl && status.color === "green" && (
             <a
               href={applyUrl}
@@ -445,212 +487,258 @@ export default async function RecruitmentHubPage({ params }: Props) {
               Official Notification (PDF)
             </a>
           )}
+          {!applyUrl && !notificationUrl && (
+            <p className="py-1 text-xs italic text-neutral-400">
+              Official links not on file — verify against the official notification before applying.
+            </p>
+          )}
+        </div>
+
+        {/* Provenance footer */}
+        {lastVerified && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-black/5 bg-neutral-50 px-5 py-3 text-xs text-neutral-400 rounded-b-xl">
+            <span>
+              Information from official government notification
+              {org?.name && <> by {org.name}</>}
+              {advNo && <> · Advt. No. {advNo}</>}
+            </span>
+            <span className="ml-auto">
+              Last verified: {lastVerified.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
+            </span>
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ── "Part of" pill strip ─────────────────────────────────────────────── */}
+      {(exam || org) && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-black/8 bg-white px-5 py-3 text-sm shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Part of</span>
+          {org?.slug && (
+            <Link href={`/commissions/${org.slug}`} className="flex items-center gap-1.5 text-neutral-700 hover:text-indigo-700 hover:underline">
+              <Building2 className="h-3.5 w-3.5 text-neutral-400" />
+              {org.name}
+              <ChevronRight className="h-3.5 w-3.5 text-neutral-300" />
+            </Link>
+          )}
+          {exam?.name && (
+            <span className="flex items-center gap-1.5 text-neutral-600">
+              <ClipboardList className="h-3.5 w-3.5 text-neutral-400" />
+              {exam.name}
+            </span>
+          )}
         </div>
       )}
 
       <div className="space-y-4">
 
-        {/* ── Q2: Vacancy Breakdown ──────────────────────────────────────────── */}
+        {/* ── Q2: Can I apply? — Vacancy Breakdown ────────────────────────────── */}
         <SectionCard>
-          <SectionHeader icon={Users} title="Vacancy Breakdown" />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[36rem] border-collapse text-xs">
-              <thead>
-                <tr className="bg-neutral-50">
-                  <th className="border-b border-black/8 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">Post</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">Total</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">UR</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">EWS</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">OBC</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">SC</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">ST</th>
-                  <th className="border-b border-black/8 px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">PwBD</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hubPosts.map((post: any, ri: number) => {
-                  const lp = postingMap.get(post.id);
-                  const vd: any =
-                    post.vacancyDetails ??
-                    lp?.extraContent?.reservationMatrix?.rows?.[0] ??
-                    null;
+          <SectionHeader icon={Users} title="Can I Apply?" label="Q2" />
 
-                  return (
-                    <tr
-                      key={post.id}
-                      className={`border-b border-black/5 last:border-0 hover:bg-neutral-50 ${ri % 2 !== 0 ? "bg-neutral-50/50" : ""}`}
-                    >
-                      <td className="px-4 py-2.5">
-                        {lp ? (
-                          <Link href={`/jobs/${lp.slug}`} className="font-medium text-indigo-700 hover:underline">
-                            {post.name}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-neutral-800">{post.name}</span>
-                        )}
+          <SubSection title="Vacancy Breakdown by Post">
+            <div className="overflow-x-auto -mx-5">
+              <table className="w-full min-w-[36rem] border-collapse text-xs">
+                <thead>
+                  <tr className="bg-neutral-50">
+                    {["Post", "Total", "UR", "EWS", "OBC", "SC", "ST", "PwBD"].map((h, i) => (
+                      <th
+                        key={h}
+                        className={`border-b border-black/8 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500 ${i === 0 ? "text-left" : "text-right"}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {hubPosts.map((post: any, ri: number) => {
+                    const lp = postingMap.get(post.id);
+                    const vd: any =
+                      post.vacancyDetails ??
+                      lp?.extraContent?.reservationMatrix?.rows?.[0] ??
+                      null;
+
+                    return (
+                      <tr
+                        key={post.id}
+                        className={`border-b border-black/5 last:border-0 hover:bg-neutral-50 ${ri % 2 !== 0 ? "bg-neutral-50/50" : ""}`}
+                      >
+                        <td className="px-4 py-2.5">
+                          {lp ? (
+                            <Link href={`/jobs/${lp.slug}`} className="font-medium text-indigo-700 hover:underline">
+                              {post.name}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-neutral-800">{post.name}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-semibold text-neutral-900">
+                          {post.vacancyTotal ?? vd?.total ?? "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.ur ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.ews ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.obc ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.sc ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.st ?? "—"}</td>
+                        <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.pwbdHorizontal ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Totals row */}
+                  {hubPosts.length > 1 && (
+                    <tr className="border-t-2 border-black/10 bg-indigo-50 font-semibold">
+                      <td className="px-4 py-2.5 text-indigo-900">Total</td>
+                      <td className="px-4 py-2.5 text-right text-indigo-900">
+                        {totalVacancies > 0 ? totalVacancies : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-neutral-900">
-                        {post.vacancyTotal ?? vd?.total ?? "—"}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.ur ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.ews ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.obc ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.sc ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.st ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-600">{vd?.pwbdHorizontal ?? "—"}</td>
-                    </tr>
-                  );
-                })}
-                {/* Totals row */}
-                {hubPosts.length > 1 && (
-                  <tr className="border-t-2 border-black/10 bg-indigo-50 font-semibold">
-                    <td className="px-4 py-2.5 text-indigo-900">Total</td>
-                    <td className="px-4 py-2.5 text-right text-indigo-900">{totalVacancies > 0 ? totalVacancies : "—"}</td>
-                    {(["ur","ews","obc","sc","st"] as const).map((cat) => {
-                      const sum = hubPosts.reduce((s: number, p: any) => {
-                        const lp = postingMap.get(p.id);
-                        const vd: any = p.vacancyDetails ?? lp?.extraContent?.reservationMatrix?.rows?.[0] ?? null;
-                        return s + (vd?.[cat] ?? 0);
-                      }, 0);
-                      return <td key={cat} className="px-4 py-2.5 text-right text-indigo-900">{sum > 0 ? sum : "—"}</td>;
-                    })}
-                    <td className="px-4 py-2.5 text-right text-indigo-900">
-                      {(() => {
+                      {(["ur", "ews", "obc", "sc", "st"] as const).map((cat) => {
                         const sum = hubPosts.reduce((s: number, p: any) => {
                           const lp = postingMap.get(p.id);
                           const vd: any = p.vacancyDetails ?? lp?.extraContent?.reservationMatrix?.rows?.[0] ?? null;
-                          return s + (vd?.pwbdHorizontal ?? 0);
+                          return s + (vd?.[cat] ?? 0);
                         }, 0);
-                        return sum > 0 ? sum : "—";
-                      })()}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <p className="px-4 py-2.5 text-xs text-neutral-400">
-            UR = Unreserved · EWS = Economically Weaker Sections · OBC = OBC (Non-Creamy Layer) · PwBD = Persons with Benchmark Disabilities (horizontal)
-          </p>
+                        return (
+                          <td key={cat} className="px-4 py-2.5 text-right text-indigo-900">
+                            {sum > 0 ? sum : "—"}
+                          </td>
+                        );
+                      })}
+                      <td className="px-4 py-2.5 text-right text-indigo-900">
+                        {(() => {
+                          const sum = hubPosts.reduce((s: number, p: any) => {
+                            const lp = postingMap.get(p.id);
+                            const vd: any = p.vacancyDetails ?? lp?.extraContent?.reservationMatrix?.rows?.[0] ?? null;
+                            return s + (vd?.pwbdHorizontal ?? 0);
+                          }, 0);
+                          return sum > 0 ? sum : "—";
+                        })()}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-neutral-400">
+              UR = Unreserved · EWS = Economically Weaker Sections · OBC = OBC (Non-Creamy Layer) · PwBD = Persons with Benchmark Disabilities (horizontal reservation)
+            </p>
+          </SubSection>
         </SectionCard>
 
-        {/* ── Q3: Eligibility at a Glance ───────────────────────────────────── */}
+        {/* ── Q3: What do I need? — Per-post eligibility ──────────────────────── */}
         {hubPosts.length > 0 && (
           <SectionCard>
-            <SectionHeader icon={CheckCircle} title="Eligibility at a Glance" />
-            <div className="divide-y divide-black/5">
-              {hubPosts.map((post: any) => {
-                const lp = postingMap.get(post.id);
-                const pl = payLabel((post as any).payLevel);
-                const ageMin = lp?.ageLimitMin;
-                const ageMax = lp?.ageLimitMax;
-                const ageStr = ageMin && ageMax
-                  ? `${ageMin}–${ageMax} years`
-                  : ageMax
-                    ? `Up to ${ageMax} years`
-                    : ageMin
-                      ? `Min ${ageMin} years`
-                      : null;
+            <SectionHeader icon={ClipboardList} title="What Do I Need?" label="Q3" />
 
-                return (
-                  <div key={post.id} className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        {lp ? (
-                          <Link href={`/jobs/${lp.slug}`} className="font-semibold text-indigo-700 hover:underline">
-                            {post.name}
+            <SubSection title="Eligibility by Post">
+              <div className="divide-y divide-black/5">
+                {hubPosts.map((post: any) => {
+                  const lp = postingMap.get(post.id);
+                  const pl = payLabel((post as any).payLevel);
+                  const ageMin = lp?.ageLimitMin;
+                  const ageMax = lp?.ageLimitMax;
+                  const ageStr = ageMin && ageMax
+                    ? `${ageMin}–${ageMax} years`
+                    : ageMax
+                      ? `Up to ${ageMax} years`
+                      : ageMin
+                        ? `Min ${ageMin} years`
+                        : null;
+
+                  return (
+                    <div key={post.id} className="py-4 first:pt-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          {lp ? (
+                            <Link href={`/jobs/${lp.slug}`} className="font-semibold text-indigo-700 hover:underline">
+                              {post.name}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-neutral-900">{post.name}</span>
+                          )}
+                          {(post as any).position?.name && (
+                            <span className="ml-2 text-xs text-neutral-400">
+                              · {(post as any).position.name}
+                            </span>
+                          )}
+                        </div>
+                        {post.vacancyTotal && (
+                          <div className="shrink-0 text-right">
+                            <div className="text-xl font-bold text-indigo-700">{post.vacancyTotal}</div>
+                            <div className="text-xs text-neutral-400">vacancies</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
+                        {lp?.eligibility && (
+                          <div>
+                            <span className="font-medium text-neutral-600">Eligibility: </span>
+                            <span className="text-neutral-500">{lp.eligibility}</span>
+                          </div>
+                        )}
+                        {ageStr && (
+                          <div>
+                            <span className="font-medium text-neutral-600">Age: </span>
+                            <span className="text-neutral-500">
+                              {ageStr}
+                              {lp?.ageRelaxationNotes && (
+                                <span className="text-neutral-400"> (relaxation applies)</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        {pl && (
+                          <div>
+                            <span className="font-medium text-neutral-600">Pay: </span>
+                            <span className="text-neutral-500">{pl}</span>
+                          </div>
+                        )}
+                        {lp?.applicationFeeGeneral != null && (
+                          <div>
+                            <span className="font-medium text-neutral-600">Fee: </span>
+                            <span className="text-neutral-500">
+                              {lp.applicationFeeGeneral === 0
+                                ? "No fee"
+                                : `₹${lp.applicationFeeGeneral} (General)`}
+                              {lp.applicationFeeReserved != null && lp.applicationFeeReserved !== lp.applicationFeeGeneral
+                                ? lp.applicationFeeReserved === 0
+                                  ? " · Nil (SC/ST/PwBD)"
+                                  : ` · ₹${lp.applicationFeeReserved} (SC/ST/PwBD)`
+                                : ""}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {lp && (
+                        <div className="mt-3">
+                          <Link
+                            href={`/jobs/${lp.slug}`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
+                          >
+                            Full eligibility, age table &amp; interactive checker
+                            <ChevronRight className="h-3 w-3" />
                           </Link>
-                        ) : (
-                          <span className="font-semibold text-neutral-900">{post.name}</span>
-                        )}
-                        {(post as any).position?.name && (
-                          <span className="ml-2 text-xs text-neutral-400">
-                            · {(post as any).position.name}
-                          </span>
-                        )}
-                      </div>
-                      {post.vacancyTotal && (
-                        <div className="shrink-0 text-right">
-                          <div className="text-xl font-bold text-indigo-700">{post.vacancyTotal}</div>
-                          <div className="text-xs text-neutral-400">vacancies</div>
                         </div>
                       )}
                     </div>
-
-                    <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
-                      {lp?.eligibility && (
-                        <div>
-                          <span className="font-medium text-neutral-600">Eligibility: </span>
-                          <span className="text-neutral-500">{lp.eligibility}</span>
-                        </div>
-                      )}
-                      {ageStr && (
-                        <div>
-                          <span className="font-medium text-neutral-600">Age: </span>
-                          <span className="text-neutral-500">
-                            {ageStr}
-                            {lp?.ageRelaxationNotes && (
-                              <span className="text-neutral-400"> (relaxation applies)</span>
-                            )}
-                          </span>
-                        </div>
-                      )}
-                      {pl && (
-                        <div>
-                          <span className="font-medium text-neutral-600">Pay: </span>
-                          <span className="text-neutral-500">{pl}</span>
-                        </div>
-                      )}
-                      {lp?.applicationFeeGeneral != null && (
-                        <div>
-                          <span className="font-medium text-neutral-600">Fee: </span>
-                          <span className="text-neutral-500">
-                            {lp.applicationFeeGeneral === 0
-                              ? "No fee"
-                              : `₹${lp.applicationFeeGeneral} (General)`}
-                            {lp.applicationFeeReserved != null && lp.applicationFeeReserved !== lp.applicationFeeGeneral
-                              ? lp.applicationFeeReserved === 0
-                                ? " · Nil (SC/ST/PwBD)"
-                                : ` · ₹${lp.applicationFeeReserved} (SC/ST/PwBD)`
-                              : ""}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {lp && (
-                      <div className="mt-3">
-                        <Link
-                          href={`/jobs/${lp.slug}`}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
-                        >
-                          Full eligibility, age table &amp; interactive checker
-                          <ChevronRight className="h-3 w-3" />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </SubSection>
           </SectionCard>
         )}
 
-        {/* ── Q4: Important Dates ───────────────────────────────────────────── */}
-        {(hub.notificationDate || hub.applicationStartDate || hub.applicationEndDate || hub.examDate || hub.resultDate) && (
+        {/* ── Q4: How does it work? — Important Dates ─────────────────────────── */}
+        {importantDates.length > 0 && (
           <SectionCard>
-            <SectionHeader icon={Clock} title="Important Dates" />
-            <table className="w-full border-collapse text-sm">
-              <tbody>
-                {[
-                  { label: "Notification Released", date: hub.notificationDate },
-                  { label: "Application Opens",     date: hub.applicationStartDate },
-                  { label: "Last Date to Apply",    date: hub.applicationEndDate, highlight: true },
-                  { label: "Exam Date",             date: hub.examDate },
-                  { label: "Result",                date: hub.resultDate },
-                ]
-                  .filter((r) => r.date)
-                  .map(({ label, date, highlight }) => (
+            <SectionHeader icon={Calendar} title="How Does It Work?" label="Q4" />
+
+            <SubSection title="Important Dates">
+              <table className="w-full border-collapse text-sm">
+                <tbody>
+                  {importantDates.map(({ label, date, highlight }) => (
                     <tr
                       key={label}
                       className={`border-b border-black/5 last:border-0 ${
@@ -659,8 +747,8 @@ export default async function RecruitmentHubPage({ params }: Props) {
                           : ""
                       }`}
                     >
-                      <td className="px-5 py-3 font-medium text-neutral-700">{label}</td>
-                      <td className={`px-5 py-3 ${
+                      <td className="py-3 pr-4 font-medium text-neutral-700 w-1/2">{label}</td>
+                      <td className={`py-3 ${
                         highlight && daysToClose !== null && daysToClose >= 0 && daysToClose <= 7
                           ? "font-semibold text-red-700"
                           : "text-neutral-800"
@@ -674,155 +762,137 @@ export default async function RecruitmentHubPage({ params }: Props) {
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </SubSection>
+
+            {/* Current stage indicators for each post */}
+            {hubPosts.some((p: any) => postingMap.get(p.id)?.currentStage) && (
+              <>
+                <SubDivider />
+                <SubSection title="Current Stage by Post">
+                  <div className="space-y-2">
+                    {hubPosts.map((post: any) => {
+                      const lp = postingMap.get(post.id);
+                      if (!lp?.currentStage) return null;
+                      return (
+                        <div key={post.id} className="flex items-center justify-between gap-3 text-xs">
+                          <span className="font-medium text-neutral-700">{post.name}</span>
+                          <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-neutral-600 font-medium">
+                            {stageLabels[lp.currentStage] ?? lp.currentStage}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SubSection>
+              </>
+            )}
           </SectionCard>
         )}
 
-        {/* ── Q5: Official Links ─────────────────────────────────────────────── */}
+        {/* ── Q5: What's next? — Official links + per-post CTAs ───────────────── */}
         <SectionCard>
-          <SectionHeader icon={ExternalLink} title="Official Links" />
-          <div className="p-4 space-y-2">
-            {notificationUrl && (
-              <a
-                href={notificationUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 hover:bg-neutral-100 transition-colors"
-              >
-                <FileText className="h-4 w-4 flex-shrink-0 text-neutral-400" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-neutral-800">Official Notification</div>
-                  <div className="text-xs text-neutral-500">
-                    {advNo ? `Advt. No. ${advNo}` : "Official PDF"} — {org?.name ?? "Issuing authority"}
-                  </div>
-                </div>
-                <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />
-              </a>
-            )}
-            {org?.websiteUrl && (
-              <a
-                href={org.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 hover:bg-neutral-100 transition-colors"
-              >
-                <Building2 className="h-4 w-4 flex-shrink-0 text-neutral-400" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-neutral-800">Official Website</div>
-                  <div className="text-xs text-neutral-500">{org.name}</div>
-                </div>
-                <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />
-              </a>
-            )}
-            {!notificationUrl && !org?.websiteUrl && (
-              <p className="py-2 text-xs italic text-neutral-400">
-                Official links not on file — verify against the official notification before applying.
-              </p>
-            )}
+          <SectionHeader icon={ExternalLink} title="What's Next?" label="Q5" />
 
-            {/* Per-post apply links */}
-            {hubPosts.some((p: any) => postingMap.get(p.id)?.applyUrl) && (
-              <div className="pt-2">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Apply per post</p>
-                <div className="space-y-2">
+          {/* Official document links */}
+          <SubSection title="Official Links">
+            <div className="space-y-2">
+              {notificationUrl && (
+                <a
+                  href={notificationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 hover:bg-neutral-100 transition-colors"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-neutral-400" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-neutral-800">Official Notification (PDF)</div>
+                    <div className="text-xs text-neutral-500">
+                      {advNo ? `Advt. No. ${advNo}` : "Official PDF"} — {org?.name ?? "Issuing authority"}
+                    </div>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                </a>
+              )}
+              {org?.websiteUrl && (
+                <a
+                  href={org.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 hover:bg-neutral-100 transition-colors"
+                >
+                  <Building2 className="h-4 w-4 shrink-0 text-neutral-400" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-neutral-800">Official Website</div>
+                    <div className="text-xs text-neutral-500">{org.name}</div>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                </a>
+              )}
+              {!notificationUrl && !org?.websiteUrl && (
+                <p className="text-xs italic text-neutral-400">
+                  Official links not on file — verify against the official notification before applying.
+                </p>
+              )}
+            </div>
+          </SubSection>
+
+          {/* Per-post apply strip */}
+          {hubPosts.length > 0 && (
+            <>
+              <SubDivider />
+              <SubSection title="Posts in This Recruitment">
+                <div className="divide-y divide-black/5">
                   {hubPosts.map((post: any) => {
                     const lp = postingMap.get(post.id);
-                    if (!lp?.applyUrl) return null;
                     return (
-                      <a
-                        key={post.id}
-                        href={lp.applyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 hover:bg-indigo-100 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-indigo-900">Apply — {post.name}</div>
-                          <div className="text-xs text-indigo-600">Official portal</div>
+                      <div key={post.id} className="flex items-center justify-between gap-3 py-3 first:pt-0">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-neutral-900">
+                            {lp ? (
+                              <Link href={`/jobs/${lp.slug}`} className="text-indigo-700 hover:underline">
+                                {post.name}
+                              </Link>
+                            ) : (
+                              post.name
+                            )}
+                          </div>
+                          {lp?.currentStage && (
+                            <div className="mt-0.5 text-xs text-neutral-500">
+                              {stageLabels[lp.currentStage] ?? lp.currentStage}
+                              {lp.validThrough && (
+                                <> · Last date {fmtDateShort(lp.validThrough)}</>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-indigo-400" />
-                      </a>
+                        <div className="flex shrink-0 items-center gap-3">
+                          {post.vacancyTotal && (
+                            <span className="text-xs font-semibold text-indigo-700">
+                              {post.vacancyTotal} vacancies
+                            </span>
+                          )}
+                          {lp && (
+                            <Link
+                              href={`/jobs/${lp.slug}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
+                            >
+                              View details
+                              <ChevronRight className="h-3 w-3" />
+                            </Link>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </div>
-        </SectionCard>
-
-        {/* ── Posts in this Recruitment ─────────────────────────────────────── */}
-        <SectionCard>
-          <SectionHeader icon={ClipboardList} title="Posts in This Recruitment" />
-          <div className="divide-y divide-black/5">
-            {hubPosts.map((post: any) => {
-              const lp = postingMap.get(post.id);
-              const stage = lp?.currentStage;
-
-              return (
-                <div key={post.id} className="flex items-center justify-between gap-3 px-5 py-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-neutral-900">
-                      {lp ? (
-                        <Link href={`/jobs/${lp.slug}`} className="text-indigo-700 hover:underline">
-                          {post.name}
-                        </Link>
-                      ) : (
-                        post.name
-                      )}
-                    </div>
-                    {stage && (
-                      <div className="mt-0.5 text-xs text-neutral-500">
-                        {stageLabels[stage] ?? stage}
-                        {lp?.validThrough && (
-                          <> · Last date {fmtDateShort(lp.validThrough)}</>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    {post.vacancyTotal && (
-                      <span className="text-xs font-semibold text-indigo-700">
-                        {post.vacancyTotal} vacancies
-                      </span>
-                    )}
-                    {lp && (
-                      <Link
-                        href={`/jobs/${lp.slug}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
-                      >
-                        View details
-                        <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+              </SubSection>
+            </>
+          )}
         </SectionCard>
 
       </div>
-
-      {/* ── Source & trust footer ──────────────────────────────────────────── */}
-      <div className="mt-6 rounded-xl border border-black/8 bg-neutral-50 p-5 text-sm">
-        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
-          <CheckCircle className="h-3.5 w-3.5" />
-          Source &amp; Verification
-        </p>
-        <p className="text-xs text-neutral-600">
-          All information is drawn from the official government notification published by{" "}
-          {org?.name ?? "the issuing authority"}.
-          {advNo && ` Advertisement No. ${advNo}.`}
-          {" "}Verify details in the official notification before applying.
-        </p>
-        {lastVerified && (
-          <p className="mt-2 text-xs text-neutral-400">
-            Last verified: {lastVerified.toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
-          </p>
-        )}
-      </div>
-
     </div>
   );
 }
