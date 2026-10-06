@@ -54,6 +54,23 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
 import { EligibilityChecker } from "@/components/eligibility-checker";
+import {
+  Calendar,
+  Users,
+  Banknote,
+  Clock,
+  FileText,
+  CheckCircle,
+  ChevronRight,
+  AlertTriangle,
+  Info,
+  ExternalLink,
+  BookOpen,
+  Building2,
+  MapPin,
+  GraduationCap,
+  ClipboardList,
+} from "lucide-react";
 
 export const revalidate = 300;
 
@@ -74,8 +91,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const org = posting.organization;
   const extraContent = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
-  // Use per-posting SEO overrides when present (e.g. for pages with unusually
-  // long titles or where auto-generation misses key facts like vacancy count).
   const seoOverride = extraContent?.seo;
   const title = seoOverride?.title ?? composeJobMetaTitle(posting.title, [org.name]);
   const factsDescription = composeJobMetaDescription({
@@ -86,8 +101,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   const description = seoOverride?.description ?? factsDescription ?? plainTextSnippet(posting.description, posting.title);
 
-  // This is the canonical English page — use pageSeo (single-language,
-  // no locale branching). hreflang is emitted by the sitemap, not here.
   const seo = pageSeo(`/jobs/${slug}`);
   const ogImages = [{ url: "/og-default.png", width: 1200, height: 630, alt: "JobOye government jobs" }];
 
@@ -155,23 +168,39 @@ function recruitmentStatusLabel(
   hiringOpen: boolean,
   applicationStartDate?: Date | null,
 ): { label: string; color: "green" | "amber" | "red" | "neutral" } {
-  // If stage is APPLICATION_OPEN but the opening date is in the future, show
-  // "Notification Out" — the window hasn't opened yet.
   if (stage === "APPLICATION_OPEN" && applicationStartDate && new Date() < new Date(applicationStartDate))
-    return { label: "🟡 Notification Out – Applications Open Soon", color: "amber" };
+    return { label: "Notification Out – Applications Open Soon", color: "amber" };
   if (stage === "APPLICATION_OPEN" && hiringOpen)
-    return { label: "🟢 Applications Open", color: "green" };
+    return { label: "Applications Open", color: "green" };
   if (stage === "APPLICATION_CLOSED" || (!hiringOpen && validThrough && new Date() > validThrough))
-    return { label: "🔴 Applications Closed", color: "red" };
+    return { label: "Applications Closed", color: "red" };
   if (stage === "NOTIFICATION_OUT")
-    return { label: "🟡 Notification Out", color: "amber" };
+    return { label: "Notification Out", color: "amber" };
   if (["EXAM_SCHEDULED", "EXAM_CONDUCTED", "ADMIT_CARD_RELEASED"].includes(stage))
-    return { label: "📋 Exam Stage", color: "amber" };
+    return { label: "Exam Stage", color: "amber" };
   if (["RESULT_OUT", "MERIT_LIST_OUT", "FINAL_RESULT_OUT"].includes(stage))
-    return { label: "✅ Result Available", color: "green" };
+    return { label: "Result Available", color: "green" };
   if (stage === "INTERVIEW_SCHEDULED")
-    return { label: "🗓️ Interview Scheduled", color: "amber" };
+    return { label: "Interview Scheduled", color: "amber" };
   return { label: "Status Unknown", color: "neutral" };
+}
+
+// ── Reusable section card wrapper ─────────────────────────────────────────────
+function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-xl border border-black/8 bg-white shadow-sm ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, title }: { icon?: React.ComponentType<{ className?: string }>; title: string }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-black/8 px-5 py-4">
+      {Icon && <Icon className="h-4 w-4 text-neutral-400 flex-shrink-0" />}
+      <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+    </div>
+  );
 }
 
 export default async function JobPage({ params }: Props) {
@@ -224,9 +253,6 @@ export default async function JobPage({ params }: Props) {
     eventDate: new Date(r.eventDate),
   }));
 
-  // ── Phase 4: Lifecycle placeholders ────────────────────────────────────────
-  // Always show upcoming stages as TBA so candidates understand the full
-  // recruitment lifecycle without blank sections after the application deadline.
   const LIFECYCLE_STAGES_IN_ORDER = [
     "NOTIFICATION_OUT",
     "APPLICATION_OPEN",
@@ -259,9 +285,6 @@ export default async function JobPage({ params }: Props) {
     posting.currentStage as (typeof LIFECYCLE_STAGES_IN_ORDER)[number],
   );
 
-  // Add TBA placeholders for stages beyond the current one that are not
-  // already represented — but skip EXAM_CONDUCTED if no exam is scheduled,
-  // and skip final stages for postings that are purely notification-only.
   const lifecyclePlaceholders = LIFECYCLE_STAGES_IN_ORDER
     .slice(Math.max(0, currentStageIdx + 1))
     .filter((stage) => {
@@ -307,27 +330,30 @@ export default async function JobPage({ params }: Props) {
     posting.salaryMax,
     posting.salaryCurrency ?? "INR",
     posting.salaryPeriod ?? "MONTH",
-    // Government pay-matrix ranges are not a per-period rate; suppress "/mo" or "/yr"
     posting.kind === "GOVERNMENT",
   );
 
   const recruitmentStatus = recruitmentStatusLabel(posting.currentStage, posting.validThrough, hiringOpen, posting.canonicalRecruitment?.applicationStartDate);
 
-  const statusColorMap = {
-    green: "border-green-200 bg-green-50 text-green-800",
-    amber: "border-amber-200 bg-amber-50 text-amber-800",
-    red: "border-red-200 bg-red-50 text-red-800",
-    neutral: "border-neutral-200 bg-neutral-50 text-neutral-700",
+  const statusStyles = {
+    green: { pill: "bg-green-100 text-green-800 border-green-200", dot: "bg-green-500" },
+    amber: { pill: "bg-amber-100 text-amber-800 border-amber-200", dot: "bg-amber-500" },
+    red:   { pill: "bg-red-100 text-red-800 border-red-200",       dot: "bg-red-500" },
+    neutral: { pill: "bg-neutral-100 text-neutral-700 border-neutral-200", dot: "bg-neutral-400" },
   };
 
   const hasEntityGraph = posting.canonicalPosition || posting.canonicalRecruitment || posting.exam;
-
   const sv = extraContent?.sourceVerification;
 
   const notice = !hiringOpen
     ? `This recruitment has moved past the application stage (${
         STAGE_LABELS[posting.currentStage] ?? posting.currentStage
       }). Details below are kept for reference — see the timeline for the latest update.`
+    : null;
+
+  // Compute days left
+  const daysLeft = posting.validThrough
+    ? Math.ceil((new Date(posting.validThrough).getTime() - Date.now()) / 86400000)
     : null;
 
   return (
@@ -338,64 +364,54 @@ export default async function JobPage({ params }: Props) {
       />
 
       {/* ── Breadcrumb ── */}
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-neutral-500">
-        <Link href="/" className="hover:underline">Home</Link>{" / "}
-        {posting.canonicalPosition && (
-          <>
-            <Link href={`/positions/${posting.canonicalPosition.slug}`} className="hover:underline">
-              {posting.canonicalPosition.name}
-            </Link>
-            {" / "}
-          </>
-        )}
+      <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1 text-xs text-neutral-400">
+        <Link href="/" className="hover:text-neutral-700 hover:underline">Home</Link>
+        <ChevronRight className="h-3 w-3" />
         {posting.canonicalRecruitment && (
           <>
-            <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="hover:underline">
+            <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="hover:text-neutral-700 hover:underline">
               {posting.canonicalRecruitment.name}
             </Link>
-            {" / "}
+            <ChevronRight className="h-3 w-3" />
           </>
         )}
-        <Link href={`/jobs?kind=${posting.kind === "GOVERNMENT" ? "GOVERNMENT" : "PRIVATE"}`} className="hover:underline">
-          {KIND_LABELS[posting.kind]}
-        </Link>{" / "}
-        <Link href={orgHref} className="hover:underline">{org.name}</Link>
-        {stateHub && (
-          <>
-            {" / "}
-            <Link href={`/states/${stateHub.slug}`} className="hover:underline">
-              {stateHub.name}
-            </Link>
-          </>
-        )}
+        <Link href={orgHref} className="hover:text-neutral-700 hover:underline">{org.name}</Link>
+        <ChevronRight className="h-3 w-3" />
+        <span className="text-neutral-600">{posting.title}</span>
       </nav>
 
       {/* ── 1. JOB IDENTITY ── */}
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <Badge tone="brand">{KIND_LABELS[posting.kind]}</Badge>
-        <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-semibold ${statusColorMap[recruitmentStatus.color]}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-semibold ${statusStyles[recruitmentStatus.color].pill}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${statusStyles[recruitmentStatus.color].dot}`} aria-hidden="true" />
           {recruitmentStatus.label}
         </span>
       </div>
 
-      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{posting.title}</h1>
-      <p className="mt-1 text-neutral-600">
-        <Link href={orgHref} className="hover:underline">{org.name}</Link>
-        {posting.locationCity ? ` · ${posting.locationCity}` : ""}
-        {posting.locationRegion && !stateHub ? `, ${posting.locationRegion}` : ""}
-        {stateHub && (
-          <>
-            {", "}
-            <Link href={`/states/${stateHub.slug}`} className="hover:underline">
-              {stateHub.name}
-            </Link>
-          </>
-        )}
-      </p>
+      <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">{posting.title}</h1>
 
-      {/* Hindi version link */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-500">
+        <span className="inline-flex items-center gap-1.5">
+          <Building2 className="h-3.5 w-3.5" />
+          <Link href={orgHref} className="text-neutral-700 font-medium hover:underline">{org.name}</Link>
+        </span>
+        {(posting.locationCity || stateHub) && (
+          <span className="inline-flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>
+              {posting.locationCity ? posting.locationCity : ""}
+              {posting.locationCity && stateHub ? ", " : ""}
+              {stateHub ? (
+                <Link href={`/states/${stateHub.slug}`} className="hover:underline">{stateHub.name}</Link>
+              ) : posting.locationRegion ? posting.locationRegion : ""}
+            </span>
+          </span>
+        )}
+      </div>
+
       {(posting as any).titleHi && (
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="mt-2 text-xs text-neutral-400">
           <Link href={`/hi/jobs/${posting.slug}`} className="underline hover:no-underline" hrefLang="hi">
             हिंदी में पढ़ें
           </Link>
@@ -408,32 +424,35 @@ export default async function JobPage({ params }: Props) {
             <Link
               key={article.id}
               href={`/articles/${article.slug}`}
-              className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100"
+              className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100"
             >
-              📄 {article.title}
+              <BookOpen className="h-3 w-3" />
+              {article.title}
             </Link>
           ))}
         </div>
       )}
 
-      {/* Warnings */}
+      {/* Alerts */}
       {notice && (
-        <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {notice}
+        <div className="mt-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+          <span>{notice}</span>
         </div>
       )}
       {(!posting.validThrough || !posting.officialNotificationUrl || posting.totalVacancies == null) && (
-        <div className="mt-4 rounded-md border border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-800">
-          This information is derived from a published source and may be incomplete. Check the official notification before applying.
+        <div className="mt-3 flex gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-400" />
+          <span>This information is derived from a published source and may be incomplete. Check the official notification before applying.</span>
         </div>
       )}
 
       {(extraContent?.highlights ?? []).length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {(extraContent!.highlights!).map((h) => (
             <span
               key={h.text}
-              className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-neutral-50 px-3 py-1 text-sm font-medium"
+              className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 py-1 text-sm font-medium shadow-sm"
             >
               <span aria-hidden="true">{h.icon}</span>
               {h.text}
@@ -442,94 +461,145 @@ export default async function JobPage({ params }: Props) {
         </div>
       )}
 
-      {/* ── 2. CRITICAL FACTS (stats grid) ── */}
-      <dl className="mt-6 grid grid-cols-2 gap-4 rounded-lg border border-black/10 p-4 text-sm sm:grid-cols-3">
-        <div>
-          <dt className="text-neutral-500">Vacancies</dt>
-          <dd className="font-medium">{posting.totalVacancies != null ? posting.totalVacancies : "Not specified"}</dd>
-        </div>
-        {posting.postNames && posting.postNames.length > 0 && (
-          <div className="col-span-2 sm:col-span-1">
-            <dt className="text-neutral-500">Post(s)</dt>
-            <dd className="font-medium">{posting.postNames.join(", ")}</dd>
+      {/* ── 2. HERO STAT STRIP ── */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Vacancies — always show */}
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-500">
+            <Users className="h-3.5 w-3.5" />
+            Vacancies
           </div>
-        )}
-        <div>
-          <dt className="text-neutral-500">Employment Type</dt>
-          <dd className="font-medium">{EMPLOYMENT_TYPE_LABELS[posting.employmentType]}</dd>
+          <p className="mt-1.5 text-2xl font-bold text-indigo-900">
+            {posting.totalVacancies != null ? posting.totalVacancies.toLocaleString("en-IN") : "—"}
+          </p>
+          {posting.postNames && posting.postNames.length > 1 && (
+            <p className="mt-0.5 text-xs text-indigo-600">{posting.postNames.length} posts</p>
+          )}
         </div>
-        <div>
-          <dt className="text-neutral-500">Work Mode</dt>
-          <dd className="font-medium">{WORKPLACE_TYPE_LABELS[posting.workplaceType]}</dd>
+
+        {/* Last Date */}
+        <div className={`rounded-xl border p-4 ${
+          daysLeft !== null && daysLeft >= 0 && daysLeft <= 7
+            ? "border-red-200 bg-red-50"
+            : daysLeft !== null && daysLeft >= 0 && daysLeft <= 30
+              ? "border-amber-100 bg-amber-50"
+              : "border-green-100 bg-green-50"
+        }`}>
+          <div className={`flex items-center gap-1.5 text-xs font-medium ${
+            daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 ? "text-red-500"
+              : daysLeft !== null && daysLeft >= 0 && daysLeft <= 30 ? "text-amber-600"
+              : "text-green-600"
+          }`}>
+            <Calendar className="h-3.5 w-3.5" />
+            Last Date
+          </div>
+          <p className={`mt-1.5 text-base font-bold ${
+            daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 ? "text-red-900"
+              : daysLeft !== null && daysLeft >= 0 && daysLeft <= 30 ? "text-amber-900"
+              : "text-green-900"
+          }`}>
+            {posting.validThrough ? formatDate(posting.validThrough, "en-IN") : "—"}
+          </p>
+          {daysLeft !== null && daysLeft >= 0 && (
+            <p className={`mt-0.5 text-xs font-medium ${daysLeft <= 7 ? "text-red-600" : "text-amber-600"}`}>
+              {daysLeft === 0 ? "Today!" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
+            </p>
+          )}
+          {daysLeft !== null && daysLeft < 0 && (
+            <p className="mt-0.5 text-xs text-neutral-500">Closed</p>
+          )}
         </div>
+
+        {/* Pay Scale */}
         {salaryText && (
-          <div>
-            <dt className="text-neutral-500">{posting.kind === "GOVERNMENT" ? "Pay Scale" : "Salary"}</dt>
-            <dd className="font-medium">{salaryText}</dd>
+          <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+              <Banknote className="h-3.5 w-3.5" />
+              {posting.kind === "GOVERNMENT" ? "Pay Scale" : "Salary"}
+            </div>
+            <p className="mt-1.5 text-sm font-bold text-neutral-900 leading-snug">{salaryText}</p>
           </div>
         )}
+
+        {/* Exam Date */}
+        {posting.examDate ? (
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-blue-500">
+              <ClipboardList className="h-3.5 w-3.5" />
+              Exam Date
+            </div>
+            <p className="mt-1.5 text-base font-bold text-blue-900">{formatDate(posting.examDate, "en-IN")}</p>
+          </div>
+        ) : !salaryText ? (
+          /* If no salary and no exam, show Employment Type */
+          <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+              <FileText className="h-3.5 w-3.5" />
+              Type
+            </div>
+            <p className="mt-1.5 text-sm font-bold text-neutral-900">{EMPLOYMENT_TYPE_LABELS[posting.employmentType]}</p>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Secondary facts strip */}
+      <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 rounded-xl border border-black/8 bg-white px-5 py-4 text-sm sm:grid-cols-3">
+        {posting.postNames && posting.postNames.length > 0 && (
+          <div>
+            <dt className="text-xs text-neutral-400">Post(s)</dt>
+            <dd className="mt-0.5 font-medium text-neutral-800">{posting.postNames.join(", ")}</dd>
+          </div>
+        )}
+        <div>
+          <dt className="text-xs text-neutral-400">Employment Type</dt>
+          <dd className="mt-0.5 font-medium text-neutral-800">{EMPLOYMENT_TYPE_LABELS[posting.employmentType]}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-neutral-400">Work Mode</dt>
+          <dd className="mt-0.5 font-medium text-neutral-800">{WORKPLACE_TYPE_LABELS[posting.workplaceType]}</dd>
+        </div>
         {(extraContent?.seo?.ageDisplay || formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)) && (
           <div>
-            <dt className="text-neutral-500">Age Limit</dt>
-            <dd className="font-medium">
+            <dt className="text-xs text-neutral-400">Age Limit</dt>
+            <dd className="mt-0.5 font-medium text-neutral-800">
               {extraContent?.seo?.ageDisplay ?? formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)}
               {!extraContent?.seo?.ageDisplay && posting.ageRelaxationNotes && (
-                <span className="font-normal text-neutral-500"> (varies by category)</span>
+                <span className="font-normal text-neutral-400"> (varies)</span>
               )}
             </dd>
           </div>
         )}
         {formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, false) && (
           <div>
-            <dt className="text-neutral-500">Application Fee</dt>
-            <dd className="font-medium">{formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, false)}</dd>
+            <dt className="text-xs text-neutral-400">Application Fee</dt>
+            <dd className="mt-0.5 font-medium text-neutral-800">{formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, false)}</dd>
           </div>
         )}
         {posting.datePosted && (
           <div>
-            <dt className="text-neutral-500">Posted On</dt>
-            <dd className="font-medium">{formatDate(posting.datePosted, "en-IN")}</dd>
-          </div>
-        )}
-        <div>
-          <dt className="text-neutral-500">Last Date to Apply</dt>
-          <dd className="font-medium">
-            {posting.validThrough ? (
-              <>
-                {formatDate(posting.validThrough, "en-IN")}
-                {(() => {
-                  const diff = Math.ceil((new Date(posting.validThrough).getTime() - Date.now()) / 86400000);
-                  if (diff > 0 && diff <= 30) return <span className="ml-1.5 text-xs font-normal text-amber-700">({diff} day{diff === 1 ? "" : "s"} left)</span>;
-                  return null;
-                })()}
-              </>
-            ) : "Not available"}
-          </dd>
-        </div>
-        {posting.examDate && (
-          <div>
-            <dt className="text-neutral-500">Exam Date</dt>
-            <dd className="font-medium">{formatDate(posting.examDate, "en-IN")}</dd>
+            <dt className="text-xs text-neutral-400">Posted On</dt>
+            <dd className="mt-0.5 font-medium text-neutral-800">{formatDate(posting.datePosted, "en-IN")}</dd>
           </div>
         )}
         {posting.lastVerifiedAt && (
           <div>
-            <dt className="text-neutral-500">Last Verified</dt>
-            <dd className="font-medium">{formatDate(posting.lastVerifiedAt, "en-IN")}</dd>
+            <dt className="text-xs text-neutral-400">Last Verified</dt>
+            <dd className="mt-0.5 font-medium text-neutral-800">{formatDate(posting.lastVerifiedAt, "en-IN")}</dd>
           </div>
         )}
       </dl>
 
       {/* ── 3. PRIMARY ACTIONS ── */}
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {publicLink(posting.applyUrl) && hiringOpen && (
           <a
             href={publicLink(posting.applyUrl) as string}
             target="_blank"
             rel="noopener nofollow"
-            className="rounded-md bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-700 active:scale-[0.98] transition-all"
           >
             Apply Now
+            <ExternalLink className="h-3.5 w-3.5" />
           </a>
         )}
         {publicLink(posting.officialNotificationUrl) && (
@@ -537,454 +607,481 @@ export default async function JobPage({ params }: Props) {
             href={publicLink(posting.officialNotificationUrl) as string}
             target="_blank"
             rel="noopener nofollow"
-            className="rounded-md border border-black/20 px-5 py-2.5 text-sm font-semibold hover:bg-neutral-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-black/15 bg-white px-6 py-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 active:scale-[0.98] transition-all"
           >
+            <FileText className="h-3.5 w-3.5" />
             Official Notification (PDF)
           </a>
         )}
       </div>
 
-      {/* ── 4. RECRUITMENT STATUS / TIMELINE ── */}
+      {/* ── 4. TIMELINE ── */}
       {timeline.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Timeline</h2>
-          <ol className="mt-3 space-y-3 border-l border-black/10 pl-4">
-            {timeline.map((update: any) => (
-              <li key={update.id} className={update.isPlaceholder ? "opacity-50" : ""}>
-                <p className="text-xs text-neutral-500">
-                  {update.isPlaceholder
-                    ? "TBA"
-                    : formatDate(update.eventDate, "en-IN")}
-                </p>
-                <p className={`font-medium ${update.isPlaceholder ? "text-neutral-400" : ""}`}>
-                  {update.isPlaceholder
-                    ? update.title
-                    : String(update.id).startsWith("derived-")
-                      ? stripAggregatorTag(update.title)
-                      : `${STAGE_LABELS[update.stage] ?? update.stage}: ${stripAggregatorTag(update.title)}`}
-                </p>
-                {update.description && !update.isPlaceholder && (
-                  <p className="text-sm text-neutral-600">{update.description}</p>
-                )}
-                {publicLink(update.linkUrl) && !update.isPlaceholder && (
-                  <a
-                    href={publicLink(update.linkUrl) as string}
-                    target="_blank"
-                    rel="noopener nofollow"
-                    className="text-sm text-neutral-900 underline"
-                  >
-                    View
-                  </a>
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
+        <div className="mt-8">
+          <SectionCard>
+            <SectionHeader icon={Clock} title="Recruitment Timeline" />
+            <ol className="px-5 py-4 space-y-0">
+              {timeline.map((update: any, idx: number) => {
+                const isLast = idx === timeline.length - 1;
+                return (
+                  <li key={update.id} className={`relative flex gap-4 ${!isLast ? "pb-5" : ""}`}>
+                    {/* Vertical line */}
+                    {!isLast && (
+                      <div
+                        className={`absolute left-[11px] top-6 bottom-0 w-px ${update.isPlaceholder ? "border-l border-dashed border-neutral-200" : "bg-neutral-200"}`}
+                        aria-hidden="true"
+                      />
+                    )}
+                    {/* Dot */}
+                    <div className={`relative mt-0.5 h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center ${
+                      update.isPlaceholder
+                        ? "border-2 border-dashed border-neutral-300 bg-white"
+                        : "bg-indigo-600"
+                    }`}>
+                      {!update.isPlaceholder && (
+                        <CheckCircle className="h-3.5 w-3.5 text-white" />
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs ${update.isPlaceholder ? "text-neutral-400" : "text-neutral-500"}`}>
+                        {update.isPlaceholder ? "Date TBA" : formatDate(update.eventDate, "en-IN")}
+                      </p>
+                      <p className={`text-sm font-medium leading-snug ${update.isPlaceholder ? "text-neutral-400" : "text-neutral-900"}`}>
+                        {update.isPlaceholder
+                          ? update.title
+                          : String(update.id).startsWith("derived-")
+                            ? stripAggregatorTag(update.title)
+                            : `${STAGE_LABELS[update.stage] ?? update.stage}: ${stripAggregatorTag(update.title)}`}
+                      </p>
+                      {update.description && !update.isPlaceholder && (
+                        <p className="mt-0.5 text-xs text-neutral-500">{update.description}</p>
+                      )}
+                      {publicLink(update.linkUrl) && !update.isPlaceholder && (
+                        <a
+                          href={publicLink(update.linkUrl) as string}
+                          target="_blank"
+                          rel="noopener nofollow"
+                          className="mt-1 inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline"
+                        >
+                          View <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </SectionCard>
+        </div>
       )}
 
       {/* ── 5. JOB CONTEXT / ENTITY GRAPH ── */}
       {hasEntityGraph && (
-        <section className="mt-8 rounded-lg border border-black/10 bg-neutral-50 p-4">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            Job Context
-          </p>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            {posting.canonicalPosition && (
-              <div>
-                <span className="text-neutral-500">Position</span>
-                {" · "}
-                <Link href={`/positions/${posting.canonicalPosition.slug}`} className="font-medium text-neutral-900 hover:underline">
-                  {posting.canonicalPosition.name}
-                </Link>
+        <SectionCard className="mt-4">
+          <div className="px-5 py-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+              Part of
+            </p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {posting.canonicalPosition && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-neutral-400 text-xs">Position</span>
+                  <Link href={`/positions/${posting.canonicalPosition.slug}`} className="font-medium text-indigo-700 hover:underline">
+                    {posting.canonicalPosition.name}
+                  </Link>
+                </div>
+              )}
+              {posting.canonicalRecruitment && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-neutral-400 text-xs">Recruitment</span>
+                  <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="font-medium text-indigo-700 hover:underline">
+                    {posting.canonicalRecruitment.name}
+                  </Link>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="text-neutral-400 text-xs">Organisation</span>
+                <Link href={orgHref} className="font-medium text-indigo-700 hover:underline">{org.name}</Link>
               </div>
-            )}
-            {posting.canonicalRecruitment && (
-              <div>
-                <span className="text-neutral-500">Recruitment</span>
-                {" · "}
-                <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="font-medium text-neutral-900 hover:underline">
-                  {posting.canonicalRecruitment.name}
-                </Link>
-              </div>
-            )}
-            <div>
-              <span className="text-neutral-500">Organisation</span>
-              {" · "}
-              <Link href={orgHref} className="font-medium text-neutral-900 hover:underline">{org.name}</Link>
+              {posting.exam && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-neutral-400 text-xs">Exam</span>
+                  <Link href={`/exams/${posting.exam.slug}`} className="font-medium text-indigo-700 hover:underline">
+                    {posting.exam.label}
+                  </Link>
+                </div>
+              )}
             </div>
-            {posting.exam && (
-              <div>
-                <span className="text-neutral-500">Exam</span>
-                {" · "}
-                <Link href={`/exams/${posting.exam.slug}`} className="font-medium text-neutral-900 hover:underline">
-                  {posting.exam.label}
-                </Link>
-              </div>
-            )}
           </div>
-        </section>
+        </SectionCard>
       )}
 
       {/* ── MAIN CONTENT ── */}
-      <section className="prose prose-neutral mt-10 max-w-none">
+      <div className="mt-6 space-y-4">
 
         {/* ── 6. OVERVIEW ── */}
-        <h2 className="text-lg font-semibold">Overview</h2>
-        <p className="whitespace-pre-line">{posting.description}</p>
-
-        {(extraContent?.notices ?? []).map((n) => (
-          <div key={n.title}>
-            <h2 className="text-lg font-semibold">{n.title}</h2>
-            <p className="whitespace-pre-line">{n.body}</p>
+        <SectionCard>
+          <SectionHeader icon={Info} title="Overview" />
+          <div className="px-5 py-4 text-sm text-neutral-700 leading-relaxed">
+            <p className="whitespace-pre-line">{posting.description}</p>
+            {(extraContent?.notices ?? []).map((n) => (
+              <div key={n.title} className="mt-4">
+                <h3 className="font-semibold text-neutral-900 mb-1">{n.title}</h3>
+                <p className="whitespace-pre-line">{n.body}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        </SectionCard>
 
-        {/* ── 7. VACANCY / POST STRUCTURE ── */}
+        {/* ── 7. VACANCY / POST STRUCTURE (extra tables) ── */}
         {(extraContent?.tables ?? []).map((t) => (
-          <div key={t.title}>
-            <h2 className="text-lg font-semibold">{t.title}</h2>
-            <div className="not-prose overflow-x-auto">
+          <SectionCard key={t.title}>
+            <SectionHeader icon={Users} title={t.title} />
+            <div className="overflow-x-auto">
               <table className="w-full min-w-[20rem] border-collapse text-sm">
                 <thead>
-                  <tr>
+                  <tr className="bg-neutral-50">
                     {t.headers.map((h) => (
-                      <th key={h} className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">
+                      <th key={h} className="border-b border-black/8 px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {t.rows.map((r) => (
-                    <tr key={r.join("|")}>
+                  {t.rows.map((r, ri) => (
+                    <tr key={r.join("|")} className={ri % 2 === 0 ? "" : "bg-neutral-50/50"}>
                       {r.map((c, i) => (
-                        <td key={i} className="border border-black/10 px-3 py-2">{c}</td>
+                        <td key={i} className="border-b border-black/5 px-4 py-2.5 text-neutral-700">{c}</td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </SectionCard>
         ))}
 
         {/* ── 8. ELIGIBILITY ── */}
-        {/* Q2: Can I Apply? — EligibilityChecker (interactive, runs in browser) */}
-        {extraContent?.eligibilityRules && (
-          <div className="not-prose mb-6">
-            <EligibilityChecker
-              rules={extraContent.eligibilityRules}
-              closingDate={posting.validThrough ? new Date(posting.validThrough).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)}
-            />
-          </div>
-        )}
+        <SectionCard>
+          <SectionHeader icon={GraduationCap} title="Eligibility" />
+          <div className="px-5 py-4 space-y-5">
 
-        {/* Q3: What Do I Need? — Structured eligibility criteria */}
-        <h2 className="text-lg font-semibold">Eligibility Criteria</h2>
-
-        {/* Age table: structured by category with relaxations */}
-        {(extraContent?.ageTable ?? []).length > 0 ? (
-          <div className="not-prose mb-4 overflow-x-auto">
-            <h3 className="mb-2 font-semibold text-neutral-800">Age Limit</h3>
-            <table className="w-full min-w-[24rem] border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Category</th>
-                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Max Age</th>
-                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">PwBD Relaxation</th>
-                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">PwBD Max</th>
-                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Note</th>
-                </tr>
-              </thead>
-              <tbody>
-                {extraContent!.ageTable!.map((row, i) => (
-                  <tr key={i}>
-                    <td className="border border-black/10 px-3 py-2 font-medium">{row.category}</td>
-                    <td className="border border-black/10 px-3 py-2">{row.baseMax} yrs</td>
-                    <td className="border border-black/10 px-3 py-2">{row.pwbdRelaxation != null ? `+${row.pwbdRelaxation} yrs` : "—"}</td>
-                    <td className="border border-black/10 px-3 py-2">{row.pwbdMax != null ? `${row.pwbdMax} yrs` : "—"}</td>
-                    <td className="border border-black/10 px-3 py-2 text-neutral-600">{row.note ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : posting.ageRelaxationNotes ? (
-          <div className="not-prose mb-4">
-            <h3 className="mb-1 font-semibold text-neutral-800">Age Limit</h3>
-            <p className="whitespace-pre-line text-sm text-neutral-700">{posting.ageRelaxationNotes}</p>
-          </div>
-        ) : (
-          <div className="not-prose mb-4">
-            <h3 className="mb-1 font-semibold text-neutral-800">Age Limit</h3>
-            {(extraContent?.seo?.ageDisplay || formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false))
-              ? <p className="text-sm text-neutral-700">{extraContent?.seo?.ageDisplay ?? formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)}</p>
-              : <p className="text-sm text-neutral-400 italic">Not mentioned in notification</p>
-            }
-          </div>
-        )}
-
-        {/* Reservation / vacancy matrix */}
-        {extraContent?.reservationMatrix && (extraContent.reservationMatrix.rows ?? []).length > 0 && (
-          <div className="not-prose mb-4 overflow-x-auto">
-            <h3 className="mb-2 font-semibold text-neutral-800">Vacancy Breakdown</h3>
-            <table className="w-full min-w-[28rem] border-collapse text-sm">
-              <thead>
-                <tr>
-                  {extraContent.reservationMatrix.rows[0]?.post !== undefined && (
-                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Post</th>
-                  )}
-                  {["UR", "EWS", "OBC", "SC", "ST", "Total"].map((h) => (
-                    <th key={h} className="border border-black/10 bg-neutral-50 px-3 py-2 text-right font-semibold">{h}</th>
-                  ))}
-                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">PwBD (H)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {extraContent.reservationMatrix.rows.map((row, i) => (
-                  <tr key={i}>
-                    {row.post !== undefined && (
-                      <td className="border border-black/10 px-3 py-2 font-medium">{row.post}</td>
-                    )}
-                    {([row.ur, row.ews, row.obc, row.sc, row.st, row.total] as number[]).map((v, j) => (
-                      <td key={j} className="border border-black/10 px-3 py-2 text-right">{v ?? "—"}</td>
-                    ))}
-                    <td className="border border-black/10 px-3 py-2 text-sm text-neutral-600">
-                      {row.pwbdHorizontal != null ? `${row.pwbdHorizontal} (${row.pwbdCategory ?? "—"})` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {extraContent.reservationMatrix.sourcePage != null && (
-              <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.reservationMatrix.sourcePage}</p>
+            {/* Q2: Interactive eligibility checker */}
+            {extraContent?.eligibilityRules && (
+              <EligibilityChecker
+                rules={extraContent.eligibilityRules}
+                closingDate={posting.validThrough ? new Date(posting.validThrough).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)}
+              />
             )}
-          </div>
-        )}
 
-        {/* PwBD suitability matrix */}
-        {extraContent?.pwbdMatrix && (
-          <div className="not-prose mb-4">
-            <h3 className="mb-2 font-semibold text-neutral-800">Suitability for PwBD Candidates</h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
-              {extraContent.pwbdMatrix.suitable.length > 0 && (
-                <div>
-                  <p className="mb-1 font-medium text-green-700">Suitable disabilities</p>
-                  <ul className="space-y-0.5 text-neutral-700">
-                    {extraContent.pwbdMatrix.suitable.map((s, i) => (
-                      <li key={i} className="flex gap-1.5"><span className="text-green-600">✓</span>{s}</li>
-                    ))}
-                  </ul>
+            {/* Age limit */}
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-neutral-700">Age Limit</h3>
+              {(extraContent?.ageTable ?? []).length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-black/8">
+                  <table className="w-full min-w-[24rem] border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-neutral-50">
+                        {["Category", "Max Age", "PwBD Relaxation", "PwBD Max", "Note"].map((h) => (
+                          <th key={h} className="border-b border-black/8 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {extraContent!.ageTable!.map((row, i) => (
+                        <tr key={i} className={i % 2 === 0 ? "" : "bg-neutral-50/50"}>
+                          <td className="border-b border-black/5 px-3 py-2 font-medium text-neutral-800">{row.category}</td>
+                          <td className="border-b border-black/5 px-3 py-2 text-neutral-700">{row.baseMax} yrs</td>
+                          <td className="border-b border-black/5 px-3 py-2 text-neutral-700">{row.pwbdRelaxation != null ? `+${row.pwbdRelaxation} yrs` : "—"}</td>
+                          <td className="border-b border-black/5 px-3 py-2 text-neutral-700">{row.pwbdMax != null ? `${row.pwbdMax} yrs` : "—"}</td>
+                          <td className="border-b border-black/5 px-3 py-2 text-neutral-500 text-xs">{row.note ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-              {extraContent.pwbdMatrix.notSuitable.length > 0 && (
-                <div>
-                  <p className="mb-1 font-medium text-red-700">Not suitable disabilities</p>
-                  <ul className="space-y-0.5 text-neutral-700">
-                    {extraContent.pwbdMatrix.notSuitable.map((s, i) => (
-                      <li key={i} className="flex gap-1.5"><span className="text-red-500">✗</span>{s}</li>
-                    ))}
-                  </ul>
-                </div>
+              ) : posting.ageRelaxationNotes ? (
+                <p className="whitespace-pre-line text-sm text-neutral-700">{posting.ageRelaxationNotes}</p>
+              ) : (
+                <p className="text-sm text-neutral-700">
+                  {extraContent?.seo?.ageDisplay ?? formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false) ?? (
+                    <span className="italic text-neutral-400">Not mentioned in notification</span>
+                  )}
+                </p>
               )}
             </div>
-            {extraContent.pwbdMatrix.sourcePage != null && (
-              <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.pwbdMatrix.sourcePage}</p>
-            )}
-          </div>
-        )}
 
-        {/* Checklist groups (legacy + new documentChecklist) */}
-        {(extraContent?.documentChecklist ?? []).length > 0 ? (
-          <div className="not-prose mb-4">
-            <h3 className="mb-2 font-semibold text-neutral-800">Documents Required</h3>
-            <ul className="space-y-1.5">
-              {extraContent!.documentChecklist!.map((item, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm">
-                  <span className={`mt-0.5 flex-shrink-0 ${item.required ? "text-red-500" : "text-neutral-400"}`} aria-hidden="true">
-                    {item.required ? "✱" : "○"}
-                  </span>
-                  <span>
-                    {item.text}
-                    {(item.requiredFor ?? []).length > 0 && (
-                      <span className="ml-1 text-xs text-neutral-500">({item.requiredFor!.join(", ")})</span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (extraContent?.checklist ?? []).length > 0 ? (
-          <>
-            {(extraContent!.checklist!).map((group) => (
-              <div key={group.heading} className="not-prose mb-4">
-                <h3 className="mb-2 font-semibold text-neutral-800">{group.heading}</h3>
-                <ul className="space-y-1.5">
-                  {group.items.map((item, idx) => (
-                    <li key={idx} className="flex gap-2 text-sm">
-                      <span className="mt-0.5 flex-shrink-0 text-neutral-400" aria-hidden="true">▸</span>
-                      <span>{item.text}</span>
+            {/* Reservation / vacancy matrix */}
+            {extraContent?.reservationMatrix && (extraContent.reservationMatrix.rows ?? []).length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">Vacancy Breakdown by Category</h3>
+                <div className="overflow-x-auto rounded-lg border border-black/8">
+                  <table className="w-full min-w-[28rem] border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-neutral-50">
+                        {extraContent.reservationMatrix.rows[0]?.post !== undefined && (
+                          <th className="border-b border-black/8 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">Post</th>
+                        )}
+                        {["UR", "EWS", "OBC", "SC", "ST", "Total"].map((h) => (
+                          <th key={h} className="border-b border-black/8 px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500">{h}</th>
+                        ))}
+                        <th className="border-b border-black/8 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">PwBD (H)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {extraContent.reservationMatrix.rows.map((row, i) => (
+                        <tr key={i} className={i % 2 === 0 ? "" : "bg-neutral-50/50"}>
+                          {row.post !== undefined && (
+                            <td className="border-b border-black/5 px-3 py-2 font-medium text-neutral-800">{row.post}</td>
+                          )}
+                          {([row.ur, row.ews, row.obc, row.sc, row.st, row.total] as number[]).map((v, j) => (
+                            <td key={j} className="border-b border-black/5 px-3 py-2 text-right font-mono text-neutral-700">{v ?? "—"}</td>
+                          ))}
+                          <td className="border-b border-black/5 px-3 py-2 text-xs text-neutral-500">
+                            {row.pwbdHorizontal != null ? `${row.pwbdHorizontal} (${row.pwbdCategory ?? "—"})` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {extraContent.reservationMatrix.sourcePage != null && (
+                  <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.reservationMatrix.sourcePage}</p>
+                )}
+              </div>
+            )}
+
+            {/* PwBD matrix */}
+            {extraContent?.pwbdMatrix && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">PwBD Suitability</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+                  {extraContent.pwbdMatrix.suitable.length > 0 && (
+                    <div className="rounded-lg border border-green-100 bg-green-50 p-3">
+                      <p className="mb-1.5 text-xs font-semibold text-green-700 uppercase tracking-wide">Suitable</p>
+                      <ul className="space-y-1 text-neutral-700">
+                        {extraContent.pwbdMatrix.suitable.map((s, i) => (
+                          <li key={i} className="flex gap-1.5 text-xs"><span className="text-green-600 font-bold">✓</span>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {extraContent.pwbdMatrix.notSuitable.length > 0 && (
+                    <div className="rounded-lg border border-red-100 bg-red-50 p-3">
+                      <p className="mb-1.5 text-xs font-semibold text-red-700 uppercase tracking-wide">Not Suitable</p>
+                      <ul className="space-y-1 text-neutral-700">
+                        {extraContent.pwbdMatrix.notSuitable.map((s, i) => (
+                          <li key={i} className="flex gap-1.5 text-xs"><span className="text-red-500 font-bold">✗</span>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                {extraContent.pwbdMatrix.sourcePage != null && (
+                  <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.pwbdMatrix.sourcePage}</p>
+                )}
+              </div>
+            )}
+
+            {/* Documents checklist */}
+            {(extraContent?.documentChecklist ?? []).length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">Documents Required</h3>
+                <ul className="space-y-2">
+                  {extraContent!.documentChecklist!.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-sm">
+                      <span className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        item.required ? "bg-red-100 text-red-600" : "bg-neutral-100 text-neutral-400"
+                      }`} aria-hidden="true">
+                        {item.required ? "✱" : "○"}
+                      </span>
+                      <span className="text-neutral-700">
+                        {item.text}
+                        {(item.requiredFor ?? []).length > 0 && (
+                          <span className="ml-1 text-xs text-neutral-400">({item.requiredFor!.join(", ")})</span>
+                        )}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </div>
-            ))}
-          </>
-        ) : posting.eligibility ? (
-          <p className="whitespace-pre-line text-sm text-neutral-700">{posting.eligibility}</p>
-        ) : (
-          <p className="text-sm text-neutral-400 italic">Not mentioned in notification</p>
-        )}
+            ) : (extraContent?.checklist ?? []).length > 0 ? (
+              <>
+                {(extraContent!.checklist!).map((group) => (
+                  <div key={group.heading}>
+                    <h3 className="mb-2 text-sm font-semibold text-neutral-700">{group.heading}</h3>
+                    <ul className="space-y-1.5">
+                      {group.items.map((item, idx) => (
+                        <li key={idx} className="flex gap-2 text-sm text-neutral-700">
+                          <ChevronRight className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />
+                          <span>{item.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </>
+            ) : posting.eligibility ? (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">Eligibility Criteria</h3>
+                <p className="whitespace-pre-line text-sm text-neutral-700">{posting.eligibility}</p>
+              </div>
+            ) : (
+              <p className="text-sm italic text-neutral-400">Not mentioned in notification</p>
+            )}
 
-        {/* Evidence clauses — Phase 5: provenance-backed facts */}
-        {(extraContent?.evidenceClauses ?? []).length > 0 && (
-          <div className="not-prose mb-4">
-            <h3 className="mb-2 font-semibold text-neutral-800">Key Rules from Notification</h3>
-            <ul className="space-y-2">
-              {extraContent!.evidenceClauses!.map((clause, i) => (
-                <li key={i} className="rounded-md border border-black/8 bg-neutral-50 px-3 py-2 text-sm">
-                  <p className="font-medium text-neutral-800">{clause.label}</p>
-                  <p className="mt-0.5 text-neutral-700">{clause.text}</p>
-                  <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {clause.sourcePage}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {posting.responsibilities && (
-          <>
-            <h2 className="text-lg font-semibold">Responsibilities</h2>
-            {/^[-•]/m.test(posting.responsibilities) ? (
-              <ul className="not-prose mt-2 space-y-1.5">
-                {posting.responsibilities
-                  .split("\n")
-                  .map((line: string) => line.replace(/^[-•]\s*/, "").trim())
-                  .filter(Boolean)
-                  .map((line: string, i: number) => (
-                    <li key={i} className="flex gap-2 text-sm">
-                      <span className="mt-0.5 flex-shrink-0 text-neutral-400" aria-hidden="true">▸</span>
-                      <span>{line}</span>
+            {/* Evidence clauses */}
+            {(extraContent?.evidenceClauses ?? []).length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">Key Rules from Notification</h3>
+                <ul className="space-y-2">
+                  {extraContent!.evidenceClauses!.map((clause, i) => (
+                    <li key={i} className="rounded-lg border border-black/8 bg-neutral-50 px-3 py-2.5 text-sm">
+                      <p className="font-semibold text-neutral-800">{clause.label}</p>
+                      <p className="mt-0.5 text-neutral-600">{clause.text}</p>
+                      <p className="mt-1 text-xs text-neutral-400">Official notification, p.{clause.sourcePage}</p>
                     </li>
                   ))}
-              </ul>
-            ) : (
-              <p className="whitespace-pre-line">{posting.responsibilities}</p>
+                </ul>
+              </div>
             )}
-          </>
-        )}
 
-        {posting.requirements && (
-          <>
-            <h2 className="text-lg font-semibold">Requirements</h2>
-            <p className="whitespace-pre-line">{posting.requirements}</p>
-          </>
-        )}
+            {/* Responsibilities / Requirements */}
+            {posting.responsibilities && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">Responsibilities</h3>
+                {/^[-•]/m.test(posting.responsibilities) ? (
+                  <ul className="space-y-1.5">
+                    {posting.responsibilities
+                      .split("\n")
+                      .map((line: string) => line.replace(/^[-•]\s*/, "").trim())
+                      .filter(Boolean)
+                      .map((line: string, i: number) => (
+                        <li key={i} className="flex gap-2 text-sm text-neutral-700">
+                          <ChevronRight className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <p className="whitespace-pre-line text-sm text-neutral-700">{posting.responsibilities}</p>
+                )}
+              </div>
+            )}
+            {posting.requirements && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-neutral-700">Requirements</h3>
+                <p className="whitespace-pre-line text-sm text-neutral-700">{posting.requirements}</p>
+              </div>
+            )}
+          </div>
+        </SectionCard>
 
         {/* ── 9. HOW TO APPLY ── */}
         {(extraContent?.steps ?? []).length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold">How to Apply</h2>
-            <ol className="not-prose mt-3 space-y-4">
+          <SectionCard>
+            <SectionHeader icon={ClipboardList} title="How to Apply" />
+            <ol className="px-5 py-4 space-y-4">
               {(extraContent!.steps!).map((s) => (
-                <li key={s.step} className="flex gap-3">
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">
+                <li key={s.step} className="flex gap-4">
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
                     {s.step}
                   </span>
                   <div>
-                    <p className="font-semibold text-neutral-900">{s.title}</p>
+                    <p className="font-semibold text-neutral-900 text-sm">{s.title}</p>
                     <p className="mt-0.5 text-sm text-neutral-600">{s.body}</p>
                   </div>
                 </li>
               ))}
             </ol>
-          </>
+          </SectionCard>
         )}
 
         {/* ── 9b. EXAM PATTERN ── */}
         {extraContent?.examPattern && (extraContent.examPattern.stages ?? []).length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold">Exam Pattern</h2>
-            <div className="not-prose overflow-x-auto">
+          <SectionCard>
+            <SectionHeader icon={ClipboardList} title="Exam Pattern" />
+            <div className="overflow-x-auto">
               <table className="w-full min-w-[24rem] border-collapse text-sm">
                 <thead>
-                  <tr>
-                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Stage</th>
-                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-right font-semibold">Marks</th>
-                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Duration</th>
-                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Mode</th>
+                  <tr className="bg-neutral-50">
+                    {["Stage", "Marks", "Duration", "Mode"].map((h) => (
+                      <th key={h} className={`border-b border-black/8 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-500 ${h === "Marks" ? "text-right" : "text-left"}`}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {extraContent.examPattern.stages.map((s, i) => (
-                    <tr key={i}>
-                      <td className="border border-black/10 px-3 py-2 font-medium">{s.name}</td>
-                      <td className="border border-black/10 px-3 py-2 text-right">{s.marks}</td>
-                      <td className="border border-black/10 px-3 py-2">{s.duration ?? "—"}</td>
-                      <td className="border border-black/10 px-3 py-2">{s.mode ?? "—"}</td>
+                    <tr key={i} className={i % 2 === 0 ? "" : "bg-neutral-50/50"}>
+                      <td className="border-b border-black/5 px-4 py-2.5 font-medium text-neutral-800">{s.name}</td>
+                      <td className="border-b border-black/5 px-4 py-2.5 text-right font-mono text-neutral-700">{s.marks}</td>
+                      <td className="border-b border-black/5 px-4 py-2.5 text-neutral-700">{s.duration ?? "—"}</td>
+                      <td className="border-b border-black/5 px-4 py-2.5 text-neutral-700">{s.mode ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {extraContent.examPattern.sourcePage != null && (
-                <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.examPattern.sourcePage}</p>
-              )}
             </div>
-          </>
+            {extraContent.examPattern.sourcePage != null && (
+              <p className="px-5 pb-3 text-xs text-neutral-400">Source: official notification, page {extraContent.examPattern.sourcePage}</p>
+            )}
+          </SectionCard>
         )}
 
         {/* ── 10. SELECTION PROCESS ── */}
         {(extraContent?.selectionProcess ?? []).length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold">Selection Process</h2>
-            <ol className="not-prose mt-3 space-y-3">
+          <SectionCard>
+            <SectionHeader icon={CheckCircle} title="Selection Process" />
+            <ol className="px-5 py-4 space-y-3">
               {(extraContent!.selectionProcess!).map((s) => (
                 <li key={s.step} className="flex gap-3">
-                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-neutral-300 text-xs font-bold text-neutral-700">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700">
                     {s.step}
                   </span>
                   <div>
-                    <p className="font-medium text-neutral-900">{s.title}</p>
-                    {s.body && <p className="mt-0.5 text-sm text-neutral-600">{s.body}</p>}
+                    <p className="text-sm font-medium text-neutral-900">{s.title}</p>
+                    {s.body && <p className="mt-0.5 text-xs text-neutral-600">{s.body}</p>}
                   </div>
                 </li>
               ))}
             </ol>
-          </>
+          </SectionCard>
         )}
 
-        {/* ── 11. FEE / PAYMENT / BANK DETAILS ── */}
+        {/* ── 11. FEE & PAYMENT ── */}
         {(extraContent?.bankDetails ?? []).length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold">Fee & Payment Details</h2>
-            <div className="not-prose rounded-md border border-black/10 bg-neutral-50 p-4">
-              <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <SectionCard>
+            <SectionHeader icon={Banknote} title="Fee & Payment Details" />
+            <div className="px-5 py-4">
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {(extraContent!.bankDetails!).map((row) => (
-                  <div key={row.label}>
-                    <dt className="text-neutral-500">{row.label}</dt>
-                    <dd className="font-mono font-medium">{row.value}</dd>
+                  <div key={row.label} className="rounded-lg border border-black/8 bg-neutral-50 px-3 py-2.5">
+                    <dt className="text-xs text-neutral-400">{row.label}</dt>
+                    <dd className="mt-0.5 font-mono text-sm font-medium text-neutral-900">{row.value}</dd>
                   </div>
                 ))}
               </dl>
             </div>
-          </>
+          </SectionCard>
         )}
 
-        {/* ── 12. IMPORTANT LINKS (Q5: What's Next?) ── */}
+        {/* ── 12. IMPORTANT LINKS ── */}
         {(extraContent?.importantLinks ?? []).length > 0 && (
-          <>
-            <h2 className="text-lg font-semibold">Important Links</h2>
-            <div className="not-prose mt-3 flex flex-wrap gap-2">
+          <SectionCard>
+            <SectionHeader icon={ExternalLink} title="Important Links" />
+            <div className="px-5 py-4 flex flex-wrap gap-2">
               {extraContent!.importantLinks!.map((link, i) => {
                 const toneMap: Record<string, string> = {
                   apply: "bg-brand-600 text-white hover:bg-brand-700",
-                  notification: "border border-black/20 hover:bg-neutral-50",
-                  admit_card: "border border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100",
-                  result: "border border-green-300 bg-green-50 text-green-800 hover:bg-green-100",
-                  answer_key: "border border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100",
-                  cut_off: "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100",
-                  syllabus: "border border-black/20 hover:bg-neutral-50",
-                  other: "border border-black/20 hover:bg-neutral-50",
+                  notification: "border border-black/15 bg-white hover:bg-neutral-50 text-neutral-700",
+                  admit_card: "border border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100",
+                  result: "border border-green-200 bg-green-50 text-green-800 hover:bg-green-100",
+                  answer_key: "border border-purple-200 bg-purple-50 text-purple-800 hover:bg-purple-100",
+                  cut_off: "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+                  syllabus: "border border-black/15 bg-white hover:bg-neutral-50 text-neutral-700",
+                  other: "border border-black/15 bg-white hover:bg-neutral-50 text-neutral-700",
                 };
                 return (
                   <a
@@ -992,103 +1089,108 @@ export default async function JobPage({ params }: Props) {
                     href={link.url}
                     target="_blank"
                     rel="noopener nofollow"
-                    className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${toneMap[link.linkType] ?? toneMap.other}`}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors ${toneMap[link.linkType] ?? toneMap.other}`}
                   >
                     {link.label}
+                    <ExternalLink className="h-3 w-3 opacity-70" />
                   </a>
                 );
               })}
             </div>
-          </>
+          </SectionCard>
         )}
-
-      </section>
+      </div>
 
       {/* ── 13. FAQ ── */}
       {faqs.length > 0 && (
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
-          <div className="mt-3 space-y-4">
-            {faqs.map((faq) => (
-              <div key={faq.question}>
-                <p className="font-medium">{faq.question}</p>
-                <p className="text-sm text-neutral-600">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="mt-6">
+          <SectionCard>
+            <SectionHeader title="Frequently Asked Questions" />
+            <div className="divide-y divide-black/5 px-5">
+              {faqs.map((faq) => (
+                <div key={faq.question} className="py-4">
+                  <p className="font-medium text-neutral-900 text-sm">{faq.question}</p>
+                  <p className="mt-1.5 text-sm text-neutral-600 leading-relaxed">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
       )}
 
       {/* ── Related Guides ── */}
       {relatedArticles.length > 0 && (
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold">Related Guides</h2>
-          <ul className="mt-3 space-y-2">
-            {relatedArticles.map((article: any) => (
-              <li key={article.id}>
-                <Link href={`/articles/${article.slug}`} className="font-medium text-neutral-900 underline hover:no-underline">
-                  {article.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div className="mt-6">
+          <SectionCard>
+            <SectionHeader icon={BookOpen} title="Related Guides" />
+            <ul className="divide-y divide-black/5 px-5">
+              {relatedArticles.map((article: any) => (
+                <li key={article.id} className="py-3">
+                  <Link href={`/articles/${article.slug}`} className="flex items-center justify-between gap-2 group">
+                    <span className="text-sm font-medium text-neutral-800 group-hover:text-indigo-700">{article.title}</span>
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-400 group-hover:text-indigo-500" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        </div>
       )}
 
       {/* ── 14. SOURCE & VERIFICATION ── */}
       {(sv || posting.lastVerifiedAt) && (
-        <section className="mt-10 rounded-lg border border-black/10 bg-neutral-50 p-4 text-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+        <div className="mt-6 rounded-xl border border-black/8 bg-neutral-50 p-5 text-sm">
+          <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            <CheckCircle className="h-3.5 w-3.5" />
             Source & Verification
           </p>
           <dl className="space-y-1.5">
             {sv?.sourceType && (
               <div className="flex gap-2">
-                <dd className={`font-medium ${sv.sourceType === "official" ? "text-green-700" : "text-neutral-700"}`}>
-                  {sv.sourceType === "official" ? "✅ Officially Verified" : "ℹ️ Derived from news aggregator"}
+                <dd className={`font-medium text-sm ${sv.sourceType === "official" ? "text-green-700" : "text-neutral-700"}`}>
+                  {sv.sourceType === "official" ? "✅ Officially Verified" : "ℹ️ Derived from published source"}
                 </dd>
               </div>
             )}
             {sv?.sourceName && (
-              <div className="flex gap-2 text-neutral-600">
-                <dt className="flex-shrink-0">Source:</dt>
+              <div className="flex gap-2 text-neutral-600 text-xs">
+                <dt className="flex-shrink-0 text-neutral-400">Source:</dt>
                 <dd>{sv.sourceName}</dd>
               </div>
             )}
             {sv?.advertisementNo && (
-              <div className="flex gap-2 text-neutral-600">
-                <dt className="flex-shrink-0">Advertisement No:</dt>
-                <dd className="font-mono">{sv.advertisementNo}</dd>
+              <div className="flex gap-2 text-xs">
+                <dt className="flex-shrink-0 text-neutral-400">Advertisement No:</dt>
+                <dd className="font-mono text-neutral-700">{sv.advertisementNo}</dd>
               </div>
             )}
             {sv?.lastChecked && (
-              <div className="flex gap-2 text-neutral-600">
-                <dt className="flex-shrink-0">Last checked:</dt>
-                <dd>{formatDate(new Date(sv.lastChecked), "en-IN")}</dd>
+              <div className="flex gap-2 text-xs">
+                <dt className="flex-shrink-0 text-neutral-400">Last checked:</dt>
+                <dd className="text-neutral-600">{formatDate(new Date(sv.lastChecked), "en-IN")}</dd>
               </div>
             )}
             {!sv && posting.lastVerifiedAt && (
-              <div className="flex gap-2 text-neutral-600">
-                <dt className="flex-shrink-0">Last Verified:</dt>
-                <dd>{formatDate(posting.lastVerifiedAt, "en-IN")}</dd>
+              <div className="flex gap-2 text-xs">
+                <dt className="flex-shrink-0 text-neutral-400">Last Verified:</dt>
+                <dd className="text-neutral-600">{formatDate(posting.lastVerifiedAt, "en-IN")}</dd>
               </div>
             )}
           </dl>
           {!posting.officialNotificationUrl && (
-            <p className="mt-2 text-neutral-500">
+            <p className="mt-2 text-xs text-neutral-500">
               No official notification link on file. Visit the organisation&apos;s website directly.
             </p>
           )}
-          {/* Phase 5: Per-field provenance summary */}
           {extraContent?.provenance && Object.keys(extraContent.provenance).length > 0 && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs font-medium text-neutral-500 hover:text-neutral-700">
+              <summary className="cursor-pointer text-xs font-medium text-neutral-400 hover:text-neutral-600">
                 Field-level source references
               </summary>
               <dl className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                 {Object.entries(extraContent.provenance).map(([field, prov]) => (
-                  <div key={field} className="flex gap-1.5 text-neutral-600">
-                    <dt className="font-medium text-neutral-500 capitalize">{field.replace(/_/g, " ")}:</dt>
+                  <div key={field} className="flex gap-1.5 text-neutral-500">
+                    <dt className="font-medium text-neutral-400 capitalize">{field.replace(/_/g, " ")}:</dt>
                     <dd>
                       p.{prov.sourcePage}
                       {prov.confidence !== "high" && (
@@ -1102,13 +1204,13 @@ export default async function JobPage({ params }: Props) {
               </dl>
             </details>
           )}
-        </section>
+        </div>
       )}
 
       {/* ── 15. RELATED CANONICAL ENTITIES ── */}
-      <section className="mt-10 border-t border-black/10 pt-8">
-        <h2 className="text-sm font-semibold text-neutral-500">Related Information</h2>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <section className="mt-8 border-t border-black/8 pt-8">
+        <h2 className="mb-4 text-sm font-semibold text-neutral-400 uppercase tracking-wider">Related Information</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {posting.canonicalPosition && (
             <InfoCard
               tone="brand"
@@ -1148,7 +1250,7 @@ export default async function JobPage({ params }: Props) {
         <Link href="/contact" className="underline hover:text-neutral-600">
           Report it
         </Link>
-        {" "}and we'll fix it.
+        {" "}and we&apos;ll fix it.
       </p>
     </div>
   );

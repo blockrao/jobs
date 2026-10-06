@@ -25,7 +25,6 @@
     "ingest": "dotenv -e .env.local -- tsx src/ingest/run.ts",
     "ingest:raw": "tsx src/ingest/run.ts",
     "approve-jobs": "dotenv -e .env.local -- tsx src/scripts/approve-pending-jobs.ts",
-    "verify:live": "tsx src/scripts/verify-live.ts",
     "test:contracts": "vitest run",
     "test:contracts:watch": "vitest",
     "test:contracts:typecheck": "tsc -p tests/tsconfig.json --noEmit"
@@ -36,6 +35,7 @@
     "axios": "^1.20.0",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.3",
+    "lucide-react": "^1.52.0",
     "next": "16.3.7",
     "next-intl": "^3.23.0",
     "playwright": "^1.63.0",
