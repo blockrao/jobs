@@ -17,6 +17,7 @@
  * - Conversational context support
  */
 
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveQueryProgressively } from "@/lib/query-engine/progressive-resolver";
 import {
@@ -41,7 +42,22 @@ interface NormalizeV2RequestBody {
 const knowledgeGraph = buildKnowledgeGraph();
 
 // Simple in-memory session store (in production, use Redis)
+// Capped to prevent unbounded growth under unauthenticated load (A-039).
+const MAX_SESSIONS = 500;
 const sessionStore = new Map<string, string>();
+
+/**
+ * The LLM path requires the same server-side secret as v1 (A-039).
+ * The rules-based path is intentionally public.
+ */
+function paidPathAuthorized(request: NextRequest): boolean {
+  const secret = process.env.QUERY_NORMALIZE_SECRET;
+  if (!secret) return false;
+  const header = request.headers.get("authorization") ?? "";
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const given = Buffer.from(header);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,13 +103,14 @@ export async function POST(request: NextRequest) {
       session = createSession(sessionId);
     }
 
-    // Prepare LLM fallback function (mocked for now)
-    const llmFallback = body.useLLM
-      ? async (text: string) => {
-          // In production, call Claude API with prompt caching
-          return {};
-        }
-      : undefined;
+    // Prepare LLM fallback function — gated behind server-side secret (A-039)
+    const llmFallback =
+      body.useLLM && paidPathAuthorized(request)
+        ? async (_text: string) => {
+            // In production, call Claude API with prompt caching
+            return {};
+          }
+        : undefined;
 
     // Detect language
     const languageDetection = detectLanguage(input);
@@ -115,7 +132,11 @@ export async function POST(request: NextRequest) {
     // Add turn to session (with conversational refinement)
     session = addTurnToSession(session, input, result.structuredQuery);
 
-    // Save session
+    // Save session — evict oldest entry if cap is reached
+    if (sessionStore.size >= MAX_SESSIONS) {
+      const oldest = sessionStore.keys().next().value;
+      if (oldest) sessionStore.delete(oldest);
+    }
     sessionStore.set(session.sessionId, JSON.stringify(session));
 
     // Build response
