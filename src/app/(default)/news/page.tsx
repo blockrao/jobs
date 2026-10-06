@@ -16,6 +16,11 @@ export const metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Latest Government Job News – JobOye",
+    description: "Stay updated with the latest government job notifications and news.",
+  },
 };
 
 export default async function NewsPage() {

@@ -12,6 +12,11 @@ export const metadata: Metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy – JobOye",
+    description: "What data JobOye collects, how we use it, and your rights.",
+  },
 };
 
 export default function PrivacyPage() {

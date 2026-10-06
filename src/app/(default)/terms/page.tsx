@@ -12,6 +12,11 @@ export const metadata: Metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms of Use – JobOye",
+    description: "Terms governing use of the JobOye website.",
+  },
 };
 
 export default function TermsPage() {

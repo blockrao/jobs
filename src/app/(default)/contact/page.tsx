@@ -12,6 +12,11 @@ export const metadata: Metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact JobOye",
+    description: "Report errors, suggest missing recruitments, or ask a question.",
+  },
 };
 
 export default function ContactPage() {

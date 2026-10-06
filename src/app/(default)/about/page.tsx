@@ -14,6 +14,11 @@ export const metadata: Metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "About JobOye",
+    description: "JobOye is an independent platform that aggregates government job notifications from official sources across India.",
+  },
 };
 
 export default function AboutPage() {

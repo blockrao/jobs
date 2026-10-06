@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Government Jobs by State – JobOye",
+    description: "Browse current government job notifications for every Indian state and union territory.",
+  },
 };
 
 export default async function StatesIndexPage() {

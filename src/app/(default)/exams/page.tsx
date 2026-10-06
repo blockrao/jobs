@@ -15,6 +15,11 @@ export const metadata = {
     siteName: "JobOye",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Browse Government Exams – JobOye",
+    description: "Discover government job exams by commission: SSC, UPSC, Banking, Railways, State, Teaching, Defence, and more.",
+  },
 };
 
 export default async function ExamsPage() {
