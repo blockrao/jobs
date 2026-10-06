@@ -60,6 +60,18 @@ export async function getPostingBySlug(slug: string) {
     }
   }
 
+  // Fallback: fetch recruitment directly when posting has inferred_recruitment_id
+  // but no inferred_post_id (e.g. older postings linked before the posts table existed).
+  if (!canonicalRecruitment && posting.inferredRecruitmentId) {
+    try {
+      canonicalRecruitment = await db.query.recruitments.findFirst({
+        where: eq(recruitments.id, posting.inferredRecruitmentId),
+      });
+    } catch (e) {
+      console.warn("Could not fetch fallback recruitment:", e);
+    }
+  }
+
   // Semantic gate (SEM-001): a value that does not mean what its field means is not displayed.
   return {
     ...applySemanticGate(posting),
