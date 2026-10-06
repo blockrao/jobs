@@ -58,8 +58,11 @@ export function sanitizeExtraContent(ec: ExtraContent | null | undefined): Extra
     const title = cleanText(t.title);
     const headers = t.headers.map(cleanText);
     if (!title || t.headers.length === 0 || headers.some((h) => h == null)) continue;
+    const colCount = headers.length;
     const rows: string[][] = [];
     for (const r of t.rows.slice(0, MAX_TABLE_ROWS)) {
+      // Drop rows whose cell count doesn't match the header (pipeline check H2/section 7 #3).
+      if (r.length !== colCount) continue;
       if (r.some((c) => containsAggregatorReference(c))) continue;
       rows.push(r.map((c) => cleanText(c) ?? ""));
     }
