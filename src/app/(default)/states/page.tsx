@@ -13,6 +13,14 @@ export const metadata: Metadata = {
   description:
     "Browse current government job notifications for every Indian state and union territory: state commissions, boards, universities, courts and central institutions located in each state.",
   ...pageSeo("/states"),
+  openGraph: {
+    title: "Government Jobs by State – JobOye",
+    description:
+      "Browse current government job notifications for every Indian state and union territory.",
+    url: "https://www.joboye.com/states",
+    siteName: "JobOye",
+    type: "website",
+  },
 };
 
 export default async function StatesIndexPage() {

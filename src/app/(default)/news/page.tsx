@@ -9,6 +9,13 @@ export const metadata = {
   title: "Latest Job News",
   description: "Stay updated with the latest government job notifications and news.",
   ...pageSeo("/news"),
+  openGraph: {
+    title: "Latest Government Job News – JobOye",
+    description: "Stay updated with the latest government job notifications and news.",
+    url: "https://www.joboye.com/news",
+    siteName: "JobOye",
+    type: "website",
+  },
 };
 
 export default async function NewsPage() {

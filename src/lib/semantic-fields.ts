@@ -87,7 +87,11 @@ export function validateMonthlyPay(
 }
 
 export function validateVacancies(n: number | null | undefined): number | null {
-  return n != null && Number.isInteger(n) && n >= 1 && n <= 100000 ? n : null;
+  if (n == null || !Number.isInteger(n) || n < 1 || n > 100000) return null;
+  // Reject calendar years — a four-digit number in the range 2000–2099 is
+  // almost certainly the current year parsed out of a date field, not a count.
+  if (n >= 2000 && n <= 2099) return null;
+  return n;
 }
 
 /**

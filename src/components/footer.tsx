@@ -6,7 +6,7 @@ import { SITE_NAME } from "@/lib/site";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 
-const COPY: Record<Locale, { disclaimer: string; allJobs: string; categories: string; articles: string; states: string }> = {
+const COPY: Record<Locale, { disclaimer: string; allJobs: string; categories: string; articles: string; states: string; about: string; contact: string; privacy: string; terms: string }> = {
   en: {
     disclaimer:
       "Job and exam information is aggregated for informational purposes — always verify against the official notification before applying. JobOye is an independent information platform and is not affiliated with, endorsed by, or operated by any government department, commission, or agency named on this site.",
@@ -14,6 +14,10 @@ const COPY: Record<Locale, { disclaimer: string; allJobs: string; categories: st
     categories: "Categories",
     states: "Jobs by State",
     articles: "Articles",
+    about: "About",
+    contact: "Contact",
+    privacy: "Privacy",
+    terms: "Terms",
   },
   hi: {
     disclaimer:
@@ -22,6 +26,10 @@ const COPY: Record<Locale, { disclaimer: string; allJobs: string; categories: st
     categories: "श्रेणियां",
     states: "राज्यवार नौकरियां",
     articles: "लेख",
+    about: "हमारे बारे में",
+    contact: "संपर्क करें",
+    privacy: "गोपनीयता",
+    terms: "उपयोग की शर्तें",
   },
 };
 
@@ -63,6 +71,20 @@ export function Footer() {
           </Link>
           <Link href="/articles" className="hover:underline">
             {t.articles}
+          </Link>
+        </div>
+        <div className="flex flex-wrap gap-x-4 text-xs text-neutral-400">
+          <Link href="/about" className="hover:underline">
+            {t.about}
+          </Link>
+          <Link href="/contact" className="hover:underline">
+            {t.contact}
+          </Link>
+          <Link href="/privacy" className="hover:underline">
+            {t.privacy}
+          </Link>
+          <Link href="/terms" className="hover:underline">
+            {t.terms}
           </Link>
         </div>
       </div>

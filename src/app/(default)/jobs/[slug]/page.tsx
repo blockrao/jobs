@@ -148,7 +148,12 @@ function recruitmentStatusLabel(
   stage: string,
   validThrough: Date | null,
   hiringOpen: boolean,
+  applicationStartDate?: Date | null,
 ): { label: string; color: "green" | "amber" | "red" | "neutral" } {
+  // If stage is APPLICATION_OPEN but the opening date is in the future, show
+  // "Notification Out" — the window hasn't opened yet.
+  if (stage === "APPLICATION_OPEN" && applicationStartDate && new Date() < new Date(applicationStartDate))
+    return { label: "🟡 Notification Out – Applications Open Soon", color: "amber" };
   if (stage === "APPLICATION_OPEN" && hiringOpen)
     return { label: "🟢 Applications Open", color: "green" };
   if (stage === "APPLICATION_CLOSED" || (!hiringOpen && validThrough && new Date() > validThrough))
@@ -236,7 +241,7 @@ export default async function JobPage({ params }: Props) {
     posting.salaryPeriod ?? "MONTH",
   );
 
-  const recruitmentStatus = recruitmentStatusLabel(posting.currentStage, posting.validThrough, hiringOpen);
+  const recruitmentStatus = recruitmentStatusLabel(posting.currentStage, posting.validThrough, hiringOpen, posting.canonicalRecruitment?.applicationStartDate);
 
   const statusColorMap = {
     green: "border-green-200 bg-green-50 text-green-800",

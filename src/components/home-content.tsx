@@ -242,6 +242,12 @@ function JobColumn({
               </p>
               <p className="text-xs text-neutral-400">
                 {formatDate(posting.datePosted, dateLocale)}
+                {(posting as any).totalVacancies != null && (
+                  <> · {(posting as any).totalVacancies.toLocaleString(dateLocale)} {isHi ? "पद" : "posts"}</>
+                )}
+                {(posting as any).validThrough && (
+                  <> · {isHi ? "अंतिम तिथि" : "Last date"}: {formatDate((posting as any).validThrough, dateLocale)}</>
+                )}
               </p>
             </li>
           );

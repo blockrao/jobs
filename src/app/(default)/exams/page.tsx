@@ -8,6 +8,13 @@ export const metadata = {
   title: "Browse by Exam",
   description: "Discover government job exams by commission: SSC, UPSC, Banking, Railways, State, Teaching, Defence, and more.",
   ...pageSeo("/exams"),
+  openGraph: {
+    title: "Browse Government Exams – JobOye",
+    description: "Discover government job exams by commission: SSC, UPSC, Banking, Railways, State, Teaching, Defence, and more.",
+    url: "https://www.joboye.com/exams",
+    siteName: "JobOye",
+    type: "website",
+  },
 };
 
 export default async function ExamsPage() {
