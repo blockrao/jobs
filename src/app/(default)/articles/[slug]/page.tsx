@@ -35,6 +35,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: article.dek ?? undefined,
       type: "article",
       url: seo.url,
+      images: [{ url: "/og-default.png", width: 1200, height: 630, alt: article.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.dek ?? article.body.slice(0, 155),
+      images: ["/og-default.png"],
     },
   };
 }

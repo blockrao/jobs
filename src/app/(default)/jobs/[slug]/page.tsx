@@ -475,7 +475,9 @@ export default async function JobPage({ params }: Props) {
               <li key={update.id}>
                 <p className="text-xs text-neutral-500">{formatDate(update.eventDate, "en-IN")}</p>
                 <p className="font-medium">
-                  {STAGE_LABELS[update.stage] ?? update.stage}: {stripAggregatorTag(update.title)}
+                  {String(update.id).startsWith("derived-")
+                    ? stripAggregatorTag(update.title)
+                    : `${STAGE_LABELS[update.stage] ?? update.stage}: ${stripAggregatorTag(update.title)}`}
                 </p>
                 {update.description && (
                   <p className="text-sm text-neutral-600">{update.description}</p>

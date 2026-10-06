@@ -494,7 +494,9 @@ export default async function LocaleJobPage({ params }: Props) {
               <li key={update.id}>
                 <p className="text-xs text-neutral-500">{formatDate(update.eventDate, dateLocale)}</p>
                 <p className="font-medium">
-                  {stageLabels[update.stage] ?? update.stage}: {stripAggregatorTag(isHi && update.titleHi ? update.titleHi : update.title)}
+                  {String(update.id).startsWith("derived-")
+                    ? stripAggregatorTag(isHi && update.titleHi ? update.titleHi : update.title)
+                    : `${stageLabels[update.stage] ?? update.stage}: ${stripAggregatorTag(isHi && update.titleHi ? update.titleHi : update.title)}`}
                 </p>
                 {update.description && (
                   <p className="text-sm text-neutral-600">

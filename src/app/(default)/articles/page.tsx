@@ -11,6 +11,20 @@ export const metadata: Metadata = {
   description:
     "Syllabus breakdowns, exam patterns, previous papers, salary reports, and interview guides for government and private jobs in India.",
   ...pageSeo("/articles"),
+  openGraph: {
+    title: "Exam Guides & Articles – JobOye",
+    description:
+      "Syllabus breakdowns, exam patterns, previous papers, salary reports, and interview guides for government jobs in India.",
+    url: "https://www.joboye.com/articles",
+    siteName: "JobOye",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Exam Guides & Articles – JobOye",
+    description:
+      "Syllabus breakdowns, exam patterns, previous papers, salary reports, and interview guides for government jobs in India.",
+  },
 };
 
 export default async function ArticlesPage() {
