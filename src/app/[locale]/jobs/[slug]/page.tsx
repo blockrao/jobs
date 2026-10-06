@@ -379,12 +379,12 @@ export default async function LocaleJobPage({ params }: Props) {
             <dd className="font-medium">{salaryText}</dd>
           </div>
         )}
-        {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi) && (
+        {(extraContent?.seo?.ageDisplay || formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi)) && (
           <div>
             <dt className="text-neutral-500">{L.ageLimit}</dt>
             <dd className="font-medium">
-              {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi)}
-              {posting.ageRelaxationNotes && (
+              {extraContent?.seo?.ageDisplay ?? formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, isHi)}
+              {!extraContent?.seo?.ageDisplay && posting.ageRelaxationNotes && (
                 <span className="font-normal text-neutral-500">
                   {" "}
                   {isHi ? "(श्रेणी अनुसार भिन्न)" : "(varies by category)"}
@@ -407,7 +407,18 @@ export default async function LocaleJobPage({ params }: Props) {
         )}
         <div>
           <dt className="text-neutral-500">{L.lastDate}</dt>
-          <dd className="font-medium">{posting.validThrough ? formatDate(posting.validThrough, dateLocale) : L.notAvailable}</dd>
+          <dd className="font-medium">
+            {posting.validThrough ? (
+              <>
+                {formatDate(posting.validThrough, dateLocale)}
+                {!isHi && (() => {
+                  const diff = Math.ceil((new Date(posting.validThrough).getTime() - Date.now()) / 86400000);
+                  if (diff > 0 && diff <= 30) return <span className="ml-1.5 text-xs font-normal text-amber-700">({diff} day{diff === 1 ? "" : "s"} left)</span>;
+                  return null;
+                })()}
+              </>
+            ) : L.notAvailable}
+          </dd>
         </div>
         {posting.examDate && (
           <div>

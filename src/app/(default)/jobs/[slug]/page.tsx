@@ -72,14 +72,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!posting) return {};
 
   const org = posting.organization;
-  const title = composeJobMetaTitle(posting.title, [org.name]);
+  const extraContent = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
+  // Use per-posting SEO overrides when present (e.g. for pages with unusually
+  // long titles or where auto-generation misses key facts like vacancy count).
+  const seoOverride = extraContent?.seo;
+  const title = seoOverride?.title ?? composeJobMetaTitle(posting.title, [org.name]);
   const factsDescription = composeJobMetaDescription({
     postName: posting.postNames?.[0]?.trim() || null,
     orgName: org.name,
     vacancies: posting.totalVacancies,
     lastDate: posting.validThrough ? formatDate(posting.validThrough, "en-IN") : null,
   });
-  const description = factsDescription ?? plainTextSnippet(posting.description, posting.title);
+  const description = seoOverride?.description ?? factsDescription ?? plainTextSnippet(posting.description, posting.title);
 
   // This is the canonical English page — use pageSeo (single-language,
   // no locale branching). hreflang is emitted by the sitemap, not here.
@@ -403,12 +407,12 @@ export default async function JobPage({ params }: Props) {
             <dd className="font-medium">{salaryText}</dd>
           </div>
         )}
-        {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false) && (
+        {(extraContent?.seo?.ageDisplay || formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)) && (
           <div>
             <dt className="text-neutral-500">Age Limit</dt>
             <dd className="font-medium">
-              {formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)}
-              {posting.ageRelaxationNotes && (
+              {extraContent?.seo?.ageDisplay ?? formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)}
+              {!extraContent?.seo?.ageDisplay && posting.ageRelaxationNotes && (
                 <span className="font-normal text-neutral-500"> (varies by category)</span>
               )}
             </dd>
@@ -428,7 +432,18 @@ export default async function JobPage({ params }: Props) {
         )}
         <div>
           <dt className="text-neutral-500">Last Date to Apply</dt>
-          <dd className="font-medium">{posting.validThrough ? formatDate(posting.validThrough, "en-IN") : "Not available"}</dd>
+          <dd className="font-medium">
+            {posting.validThrough ? (
+              <>
+                {formatDate(posting.validThrough, "en-IN")}
+                {(() => {
+                  const diff = Math.ceil((new Date(posting.validThrough).getTime() - Date.now()) / 86400000);
+                  if (diff > 0 && diff <= 30) return <span className="ml-1.5 text-xs font-normal text-amber-700">({diff} day{diff === 1 ? "" : "s"} left)</span>;
+                  return null;
+                })()}
+              </>
+            ) : "Not available"}
+          </dd>
         </div>
         {posting.examDate && (
           <div>
@@ -614,7 +629,22 @@ export default async function JobPage({ params }: Props) {
         {posting.responsibilities && (
           <>
             <h2 className="text-lg font-semibold">Responsibilities</h2>
-            <p className="whitespace-pre-line">{posting.responsibilities}</p>
+            {/^[-•]/m.test(posting.responsibilities) ? (
+              <ul className="not-prose mt-2 space-y-1.5">
+                {posting.responsibilities
+                  .split("\n")
+                  .map((line) => line.replace(/^[-•]\s*/, "").trim())
+                  .filter(Boolean)
+                  .map((line, i) => (
+                    <li key={i} className="flex gap-2 text-sm">
+                      <span className="mt-0.5 flex-shrink-0 text-neutral-400" aria-hidden="true">▸</span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="whitespace-pre-line">{posting.responsibilities}</p>
+            )}
           </>
         )}
 

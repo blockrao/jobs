@@ -79,6 +79,17 @@ export type ExtraContent = {
     advertisementNo?: string;
     lastChecked?: string;
   };
+  /**
+   * Per-posting SEO overrides. When present, these replace the auto-generated
+   * meta title / description for this posting only. Useful for postings where
+   * the computed title is too long or missing key facts (vacancy count, deadline).
+   */
+  seo?: {
+    title?: string;
+    description?: string;
+    /** Compact age display for the stats grid, e.g. "40 (UR/EWS) · 43 (OBC) · 45 (SC)" */
+    ageDisplay?: string;
+  };
 };
 
 export const postingStageEnum = pgEnum("posting_stage", [
