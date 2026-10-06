@@ -8,6 +8,7 @@ import {
   getAllExamSlugsForSitemap,
   getAllOrganizationSlugsForSitemap,
   getPostingSlugsPageForSitemap,
+  getPostSlugsForSitemap,
   listCommissionsWithExams,
 } from "@/lib/queries";
 import { pickSitemapLastmod } from "@/lib/freshness/lastmod";
@@ -26,13 +27,14 @@ const MAX_POSTING_URLS = 45000;
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows] = await Promise.all([
+  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows, postLeafRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
     getAllCategorySlugsForSitemap().catch(() => []),
     getAllOrganizationSlugsForSitemap().catch(() => []),
     getAllExamSlugsForSitemap().catch(() => []),
     listCommissionsWithExams().catch(() => []),
+    getPostSlugsForSitemap().catch(() => []),
   ]);
 
   const staticEntries: MetadataRoute.Sitemap = [
@@ -88,6 +90,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
+  // PQ-006: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
+  // Priority 0.75 (slightly below the notice hub at 0.8; the leaf has the
+  // structured-data JobPosting and the per-post eligibility / vacancy facts).
+  const postLeafEntries: MetadataRoute.Sitemap = postLeafRows.map((row) => ({
+    url: `${SITE_URL}/jobs/${row.recruitmentSlug}/${row.postSlug}`,
+    lastModified: row.updatedAt ?? undefined,
+    changeFrequency: "weekly" as const,
+    priority: 0.75,
+  }));
+
   // State hubs enter the sitemap only while they list at least one current job (thin hubs are noindex).
   const stateCounts = await countCurrentByState().catch(() => ({}) as Record<string, number>);
   const stateEntries: MetadataRoute.Sitemap = STATES.filter((st) => (stateCounts[st.slug] ?? 0) > 0).map((st) => ({
@@ -100,6 +112,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...stateEntries,
     ...postingEntries,
+    ...postLeafEntries,
     ...articleEntries,
     ...categoryEntries,
     ...orgEntries,

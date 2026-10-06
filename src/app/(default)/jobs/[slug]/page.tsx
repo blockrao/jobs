@@ -23,7 +23,7 @@ import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostingBySlug } from "@/lib/queries";
+import { getPostingBySlug, getPostsForRecruitment } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
 import {
   buildBreadcrumbSchema,
@@ -229,6 +229,18 @@ export default async function JobPage({ params }: Props) {
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) notFound();
 
+  // PQ-006 (A-080): Fetch sibling posts when this posting is linked to a canonical
+  // recruitment. When sibling posts exist, this page acts as the "notice hub" and
+  // we suppress the JobPosting schema (Google's rule: one JobPosting per leaf page).
+  const canonicalRecruitmentId: number | null = posting.canonicalRecruitment?.id ?? null;
+  const siblingPosts = canonicalRecruitmentId
+    ? await safeQuery(
+        () => getPostsForRecruitment(canonicalRecruitmentId as number),
+        [] as Awaited<ReturnType<typeof getPostsForRecruitment>>,
+      )
+    : [];
+  const isHubPage = siblingPosts.length > 1;
+
   const org = posting.organization;
   const orgHref = `/organizations/${org.slug}`;
   const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
@@ -336,7 +348,9 @@ export default async function JobPage({ params }: Props) {
     .filter((a: any) => a.status === "PUBLISHED");
 
   const schema = jsonLdGraph(
-    buildJobPostingSchema(posting as any, org as any, relatedArticles.map((a: any) => a.slug)),
+    // PQ-006: suppress JobPosting on hub pages (multiple sibling posts exist — each
+    // has its own leaf at /jobs/{notice-slug}/{post-slug} which carries the JobPosting).
+    isHubPage ? null : buildJobPostingSchema(posting as any, org as any, relatedArticles.map((a: any) => a.slug)),
     buildExamEventSchema(posting as any),
     buildBreadcrumbSchema([
       { name: "Home", path: "/" },
@@ -1227,6 +1241,34 @@ export default async function JobPage({ params }: Props) {
                 );
               })}
             </ol>
+          </SectionCard>
+        )}
+
+        {/* ── PQ-006: Per-post leaf links (hub page) ── */}
+        {isHubPage && siblingPosts.length > 0 && posting.canonicalRecruitment && (
+          <SectionCard>
+            <SectionHeader icon={Hash} title={`Posts in This Notice (${siblingPosts.length})`} />
+            <p className="px-5 pt-3 text-xs text-neutral-500">
+              This notice contains {siblingPosts.length} posts. Each post has its own details page.
+            </p>
+            <ul className="mt-2 divide-y divide-black/5">
+              {siblingPosts.map((p: any) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/jobs/${posting.canonicalRecruitment!.slug}/${p.slug}`}
+                    className="flex items-center justify-between gap-2 px-5 py-3 hover:bg-neutral-50"
+                  >
+                    <div>
+                      <span className="text-sm font-medium text-neutral-900">{p.name}</span>
+                      {p.position?.name && (
+                        <span className="ml-2 text-xs text-neutral-400">{p.position.name}</span>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-300" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </SectionCard>
         )}
 

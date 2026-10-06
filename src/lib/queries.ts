@@ -11,7 +11,7 @@ import {
   postingCategories,
   postings,
 } from "@/db/schema";
-import { posts, recruitments, positions } from "@/db/schema";
+import { posts, recruitments, positions, postAgeRules } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
 
 // Before DATABASE_URL is configured, every query degrades to an empty
@@ -358,6 +358,75 @@ export async function getPostingsByExam(examSlug: string) {
     with: { organization: true },
     orderBy: [desc(postings.datePosted)],
   });
+}
+
+// ── PQ-006: per-post leaf page queries ───────────────────────────────────────
+
+/**
+ * Get a single Post (the canonical entity) by recruitment slug + post slug,
+ * loading everything the leaf page needs: position, recruitment, org, age rules,
+ * eligibilities, vacancies. Returns null when not found.
+ */
+export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
+  if (!hasDb()) return null;
+  const db = getDb();
+
+  // Resolve the recruitment first
+  const recruitment = await db.query.recruitments.findFirst({
+    where: eq(recruitments.slug, recruitmentSlug),
+    with: { organization: true, exam: true },
+  });
+  if (!recruitment) return null;
+
+  const post = await db.query.posts.findFirst({
+    where: and(
+      eq(posts.recruitmentId, recruitment.id),
+      eq(posts.slug, postSlug),
+    ),
+    with: {
+      position: true,
+      eligibilities: true,
+      vacancies: true,
+      ageRules: true,
+      employingOrganization: true,
+    },
+  });
+  if (!post) return null;
+
+  return { post, recruitment };
+}
+
+/**
+ * Get all posts for a recruitment, with minimal fields for the hub page nav strip.
+ */
+export async function getPostsForRecruitment(recruitmentId: number) {
+  if (!hasDb()) return [];
+  const db = getDb();
+  return db.query.posts.findMany({
+    where: eq(posts.recruitmentId, recruitmentId),
+    with: { position: true },
+    orderBy: (p, { asc }) => [asc(p.name)],
+  });
+}
+
+/**
+ * Get all post slugs for a recruitment — used in generateStaticParams.
+ */
+export async function getPostSlugsForSitemap() {
+  if (!hasDb()) return [];
+  const db = getDb();
+  // We only emit leaf-page URLs for posts that have at least one of: own eligibility, age rule, or vacancy.
+  // For now we emit all posts with a slug (the own-facts check happens at render).
+  const rows = await db
+    .select({
+      recruitmentSlug: recruitments.slug,
+      postSlug: posts.slug,
+      updatedAt: posts.updatedAt,
+    })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .orderBy(posts.id);
+  return rows;
 }
 
 // Get postings for a specific commission (all exams under it)

@@ -6,6 +6,7 @@ import {
   integer,
   smallint,
   timestamp,
+  date,
   pgEnum,
   jsonb,
   uniqueIndex,
@@ -1177,6 +1178,10 @@ export const posts = pgTable(
     salaryMax: integer("salary_max"),
     payLevel: jsonb("pay_level").$type<Record<string, unknown>>(),
     vacancyTotal: integer("vacancy_total"),
+    /** FK to the employing organization when it differs from the issuing body (A-080). */
+    employingOrganizationId: integer("employing_organization_id").references(() => organizations.id, { onDelete: "set null" }),
+    /** Code or serial from the official notification, e.g. "Post Code A", "Sl. No. 3". */
+    sourcePostCode: varchar("source_post_code", { length: 100 }),
     // Denormalised vacancy breakdown for the advertisement hub comparison table.
     // Shape mirrors ReservationMatrix.rows[0] from the ExtraContent type.
     // Computed from the vacancies child rows; kept in sync by the ingestion pipeline.
@@ -1210,6 +1215,16 @@ export const eligibilities = pgTable("eligibilities", {
   skillsRequired: jsonb("skills_required").$type<string[]>(),
   citizenship: citizenshipEnum("citizenship"),
   otherConditions: jsonb("other_conditions"),
+  // PQ-006 additions (A-080) — structured fields for leaf pages
+  ageAsOnDate: date("age_as_on_date"),
+  qualificationText: text("qualification_text"),
+  qualificationExpr: jsonb("qualification_expr"),
+  /** Google's educationRequirements credentialCategory — one of five values or null. */
+  educationCategory: varchar("education_category", { length: 50 }),
+  experienceText: text("experience_text"),
+  /** PENDING (extracted, awaiting review) or VERIFIED (checked against official notice). */
+  status: varchar("status", { length: 20 }).notNull().default("PENDING"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
@@ -1245,6 +1260,63 @@ export const vacancies = pgTable("vacancies", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
+// ── PQ-006 new tables (A-080) ─────────────────────────────────────────────────
+
+/** Per-category age caps for a Post (UR, OBC, SC, ST, EWS, PwBD, ExSM, Govt). */
+export const postAgeRules = pgTable("post_age_rules", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  category: varchar("category", { length: 50 }).notNull(),
+  maxAge: smallint("max_age"),
+  relaxationYears: smallint("relaxation_years"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** Category-wise application fee for a Recruitment (General, OBC, SC/ST, EWS, PwBD, All). */
+export const recruitmentFees = pgTable("recruitment_fees", {
+  id: serial("id").primaryKey(),
+  recruitmentId: integer("recruitment_id").notNull().references(() => recruitments.id, { onDelete: "cascade" }),
+  category: varchar("category", { length: 50 }).notNull(),
+  amount: integer("amount"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** Normalised alias → Position mapping for the title-match resolver. */
+export const positionAliases = pgTable("position_aliases", {
+  id: serial("id").primaryKey(),
+  positionId: integer("position_id").notNull().references(() => positions.id, { onDelete: "cascade" }),
+  alias: varchar("alias", { length: 300 }).notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+/** Provenance evidence linking a VERIFIED field value to a source document excerpt. */
+export const evidence = pgTable("evidence", {
+  id: serial("id").primaryKey(),
+  sourceDocumentId: integer("source_document_id"),
+  subjectType: varchar("subject_type", { length: 50 }).notNull(),
+  subjectId: integer("subject_id").notNull(),
+  field: varchar("field", { length: 100 }).notNull(),
+  excerpt: text("excerpt").notNull(),
+  pageRef: varchar("page_ref", { length: 50 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+// ── Relations for PQ-006 tables ───────────────────────────────────────────────
+
+export const postAgeRulesRelations = relations(postAgeRules, ({ one }) => ({
+  post: one(posts, { fields: [postAgeRules.postId], references: [posts.id] }),
+}));
+
+export const recruitmentFeesRelations = relations(recruitmentFees, ({ one }) => ({
+  recruitment: one(recruitments, { fields: [recruitmentFees.recruitmentId], references: [recruitments.id] }),
+}));
+
+export const positionAliasesRelations = relations(positionAliases, ({ one }) => ({
+  position: one(positions, { fields: [positionAliases.positionId], references: [positions.id] }),
+}));
+
 export const sourcesRelations = relations(sources, ({ many }) => ({
   documents: many(sourceDocuments),
 }));
@@ -1266,6 +1338,7 @@ export const recruitmentsRelations = relations(recruitments, ({ one, many }) => 
   exam: one(exams, { fields: [recruitments.examId], references: [exams.id] }),
   posts: many(posts),
   selectionProcesses: many(selectionProcesses),
+  fees: many(recruitmentFees),
 }));
 
 export const selectionProcessesRelations = relations(selectionProcesses, ({ one }) => ({
@@ -1275,8 +1348,10 @@ export const selectionProcessesRelations = relations(selectionProcesses, ({ one 
 export const postsRelations = relations(posts, ({ one, many }) => ({
   recruitment: one(recruitments, { fields: [posts.recruitmentId], references: [recruitments.id] }),
   position: one(positions, { fields: [posts.positionId], references: [positions.id] }),
+  employingOrganization: one(organizations, { fields: [posts.employingOrganizationId], references: [organizations.id] }),
   eligibilities: many(eligibilities),
   vacancies: many(vacancies),
+  ageRules: many(postAgeRules),
 }));
 
 export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
