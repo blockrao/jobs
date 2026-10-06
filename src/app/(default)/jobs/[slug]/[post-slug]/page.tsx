@@ -94,6 +94,65 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // ── Structured data ───────────────────────────────────────────────────────────
 
+/**
+ * Builds a rich description from structured data when post.description is absent.
+ * Google requires a "full description of the job" — a one-liner is penalised.
+ * We compose from vacancy count, eligibility, age rules, salary and apply dates.
+ */
+function buildFallbackDescription({
+  post,
+  org,
+  recruitment,
+}: {
+  post: NonNullable<Awaited<ReturnType<typeof getData>>>["post"];
+  org: { name: string; websiteUrl?: string | null };
+  recruitment: NonNullable<Awaited<ReturnType<typeof getData>>>["recruitment"];
+}): string {
+  const parts: string[] = [];
+
+  parts.push(`${org.name} invites applications for the post of ${post.name}.`);
+
+  if (post.vacancyTotal) {
+    parts.push(`Total vacancies: ${post.vacancyTotal}.`);
+  }
+
+  const verifiedElig = post.eligibilities.find((e: { status: string }) => e.status === "VERIFIED");
+  if (verifiedElig?.qualificationText) {
+    parts.push(`Educational qualification: ${verifiedElig.qualificationText}.`);
+  } else if (verifiedElig?.educationCategory) {
+    parts.push(`Educational qualification: ${verifiedElig.educationCategory}.`);
+  }
+
+  if (verifiedElig?.experienceYearsMin != null) {
+    parts.push(`Minimum experience required: ${verifiedElig.experienceYearsMin} year${verifiedElig.experienceYearsMin === 1 ? "" : "s"}.`);
+  }
+
+  if (post.ageRules?.length) {
+    const ageRule = post.ageRules[0] as { ageMin?: number | null; ageMax?: number | null };
+    if (ageRule.ageMin || ageRule.ageMax) {
+      const ageStr = ageRule.ageMin && ageRule.ageMax
+        ? `${ageRule.ageMin}–${ageRule.ageMax} years`
+        : ageRule.ageMax ? `up to ${ageRule.ageMax} years` : `from ${ageRule.ageMin} years`;
+      parts.push(`Age requirement: ${ageStr}.`);
+    }
+  }
+
+  if (post.salaryMin || post.salaryMax) {
+    const salaryStr = post.salaryMin && post.salaryMax
+      ? `₹${post.salaryMin.toLocaleString("en-IN")} – ₹${post.salaryMax.toLocaleString("en-IN")} per month`
+      : post.salaryMax ? `up to ₹${post.salaryMax.toLocaleString("en-IN")} per month` : `₹${post.salaryMin!.toLocaleString("en-IN")} per month`;
+    parts.push(`Pay scale: ${salaryStr}.`);
+  }
+
+  if (recruitment.applicationEndDate) {
+    parts.push(`Last date to apply: ${formatDate(recruitment.applicationEndDate)}.`);
+  }
+
+  parts.push("This is a central government / public sector position. Selection is based on written examination and/or interview as per the official notification.");
+
+  return parts.join(" ");
+}
+
 function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData>>>) {
   const { post, recruitment } = data;
   const org = recruitment.organization;
@@ -132,6 +191,8 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     "@id": absoluteUrl(`/organizations/${org.slug}#org`),
     name: org.name,
     url: org.websiteUrl ?? absoluteUrl(`/organizations/${org.slug}`),
+    // sameAs lets Google disambiguate the hiring entity via its official website
+    ...(org.websiteUrl && { sameAs: org.websiteUrl }),
   };
 
   return {
@@ -139,13 +200,14 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     "@id": `${url}#jobposting`,
     url,
     title: post.name,
-    description: post.description ?? `${post.name} vacancy under ${org.name}.`,
+    description: post.description ?? buildFallbackDescription({ post, org, recruitment }),
     identifier: {
       "@type": "PropertyValue",
       name: org.name,
       value: post.sourcePostCode ?? String(post.id),
     },
-    datePosted: recruitment.createdAt?.toISOString(),
+    // notificationDate is the actual advertisement/notification date; createdAt is just the DB insert time
+    datePosted: (recruitment.notificationDate ?? recruitment.createdAt)?.toISOString(),
     validThrough: recruitment.applicationEndDate?.toISOString() ?? undefined,
     employmentType: "FULL_TIME",
     hiringOrganization: hiringOrg,
