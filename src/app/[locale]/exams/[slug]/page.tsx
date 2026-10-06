@@ -169,7 +169,7 @@ export default async function ExamPage({ params }: Props) {
                         {/* /recruitments/[slug] has no [locale] counterpart
                             — link to the real page, not a 404ing one. */}
                         <Link
-                          href={`/recruitments/${recruitment.slug}`}
+                          href={`/jobs/${recruitment.slug}`}
                           className="text-lg font-semibold text-blue-600 hover:underline"
                         >
                           {recruitment.name}

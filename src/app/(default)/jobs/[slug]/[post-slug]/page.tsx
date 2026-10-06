@@ -24,7 +24,7 @@ import { getPostBySlug, getPostsForRecruitment, getPostSlugsForSitemap } from "@
 import { safeQuery } from "@/lib/safe-query";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
-import { jsonLdGraph, buildBreadcrumbSchema } from "@/lib/structured-data";
+import { jsonLdGraph, buildBreadcrumbSchema, employmentTypeToSchema } from "@/lib/structured-data";
 import { formatDate, formatAgeRange } from "@/lib/labels";
 import {
   Calendar,
@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `/jobs/${slug}/${postSlug}`,
+      url: absoluteUrl(`/jobs/${slug}/${postSlug}`),
       type: "article",
       images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "JobOye government jobs" }],
     },
@@ -209,7 +209,7 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     // notificationDate is the actual advertisement/notification date; createdAt is just the DB insert time
     datePosted: (recruitment.notificationDate ?? recruitment.createdAt)?.toISOString(),
     validThrough: recruitment.applicationEndDate?.toISOString() ?? undefined,
-    employmentType: "FULL_TIME",
+    employmentType: employmentTypeToSchema(recruitment.employmentType),
     hiringOrganization: hiringOrg,
     jobLocation: {
       "@type": "Place",

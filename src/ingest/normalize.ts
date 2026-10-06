@@ -56,6 +56,19 @@ export function isStageAdvance(from: PostingStage, to: PostingStage): boolean {
   return stageRank(to) > stageRank(from);
 }
 
+/**
+ * Scrubs Unicode replacement characters (U+FFFD) and other common encoding
+ * artefacts introduced by mojibake in scraped content (P0-5).
+ * Also collapses runs of whitespace and trims.
+ */
+export function scrubText(input: string | null | undefined): string | null {
+  if (input == null) return null;
+  return input
+    .replace(/�/g, "")          // replacement character from bad encoding
+    .replace(/\s{3,}/g, "  ")        // collapse runs of 3+ whitespace chars
+    .trim() || null;
+}
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -173,6 +186,10 @@ export function normalize(
       // ...) passes through untouched. Only the fields normalize() itself
       // is responsible for computing are overridden below.
       ...raw,
+      // P0-5: scrub encoding artefacts from user-visible text fields
+      title: scrubText(raw.title) ?? raw.title,
+      description: scrubText(raw.description) ?? raw.description,
+      organizationName: scrubText(deduped.organizationName) ?? deduped.organizationName,
       slug,
       organizationSlug,
       examSlug,

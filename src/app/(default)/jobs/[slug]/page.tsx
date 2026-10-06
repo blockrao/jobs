@@ -437,7 +437,7 @@ export default async function JobPage({ params }: Props) {
         <ChevronRight className="h-3 w-3" />
         {posting.canonicalRecruitment && (
           <>
-            <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="hover:text-neutral-700 hover:underline">
+            <Link href={`/jobs/${posting.canonicalRecruitment.slug}`} className="hover:text-neutral-700 hover:underline">
               {posting.canonicalRecruitment.name}
             </Link>
             <ChevronRight className="h-3 w-3" />
@@ -702,7 +702,7 @@ export default async function JobPage({ params }: Props) {
           {posting.canonicalRecruitment && (
             <div className="flex items-center gap-1.5">
               <span className="text-neutral-400 text-xs">Recruitment</span>
-              <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="font-medium text-indigo-700 hover:underline">
+              <Link href={`/jobs/${posting.canonicalRecruitment.slug}`} className="font-medium text-indigo-700 hover:underline">
                 {posting.canonicalRecruitment.name}
               </Link>
             </div>
@@ -1321,7 +1321,7 @@ export default async function JobPage({ params }: Props) {
           {posting.canonicalRecruitment && (
             <InfoCard
               tone="success"
-              href={`/recruitments/${posting.canonicalRecruitment.slug}`}
+              href={`/jobs/${posting.canonicalRecruitment.slug}`}
               title={posting.canonicalRecruitment.name}
               subtitle="View recruitment timeline and all posts"
             />

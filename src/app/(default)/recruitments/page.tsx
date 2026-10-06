@@ -101,7 +101,7 @@ export default async function RecruitmentsPage() {
           {recruitmentsWithStats.map((recruitment) => (
             <Link
               key={recruitment.id}
-              href={`/recruitments/${recruitment.slug}`}
+              href={`/jobs/${recruitment.slug}`}
               className="block"
             >
               <div className="p-6 border border-gray-200 rounded-lg hover:shadow-lg transition-shadow">

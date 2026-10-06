@@ -138,7 +138,7 @@ export default async function ExamPage({ params }: Props) {
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <Link
-                          href={`/recruitments/${recruitment.slug}`}
+                          href={`/jobs/${recruitment.slug}`}
                           className="text-lg font-semibold text-blue-600 hover:underline"
                         >
                           {recruitment.name}

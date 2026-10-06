@@ -161,7 +161,7 @@ export default async function OrganizationPage({ params }: Props) {
               .map((recruitment) => (
                 <Link
                   key={recruitment.id}
-                  href={`/recruitments/${recruitment.slug}`}
+                  href={`/jobs/${recruitment.slug}`}
                   className="p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3">

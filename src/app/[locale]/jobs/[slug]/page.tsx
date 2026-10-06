@@ -300,7 +300,7 @@ export default async function LocaleJobPage({ params }: Props) {
         )}
         {posting.canonicalRecruitment && (
           <>
-            <Link href={`/recruitments/${posting.canonicalRecruitment.slug}`} className="hover:underline">
+            <Link href={`/jobs/${posting.canonicalRecruitment.slug}`} className="hover:underline">
               {posting.canonicalRecruitment.name}
             </Link>
             {" / "}
@@ -474,7 +474,7 @@ export default async function LocaleJobPage({ params }: Props) {
             {posting.canonicalRecruitment && (
               <InfoCard
                 tone="success"
-                href={`/recruitments/${posting.canonicalRecruitment.slug}`}
+                href={`/jobs/${posting.canonicalRecruitment.slug}`}
                 title={posting.canonicalRecruitment.name}
                 subtitle={L.viewRecruitmentHub}
               />

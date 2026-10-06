@@ -1138,6 +1138,10 @@ export const recruitments = pgTable(
     totalVacancies: integer("total_vacancies"),
     description: text("description"),
     notificationUrl: text("notification_url"),
+    // Employment classification for this recruitment (A-042).
+    // FULL_TIME for most permanent Indian govt positions; APPRENTICESHIP,
+    // DEPUTATION etc. for the extended enum values added in the same migration.
+    employmentType: employmentTypeEnum("employment_type").notNull().default("FULL_TIME"),
     // The real identity-key field. Government recruitments are published
     // with a reference number (e.g. "No. 22/2026-RC") that's far more
     // reliable than matching on year+title. Nullable because not every

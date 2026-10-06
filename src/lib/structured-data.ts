@@ -36,7 +36,19 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   INTERN: "INTERN",
   TEMPORARY: "TEMPORARY",
   OTHER: "OTHER",
+  // Extended values (A-042 — correct classification of Indian govt recruitment types)
+  APPRENTICESHIP: "OTHER",   // schema.org has no APPRENTICESHIP; OTHER is most accurate
+  DEPUTATION: "OTHER",
+  FELLOWSHIP: "INTERN",      // closest schema.org equivalent
+  INTERNSHIP: "INTERN",
+  PERMANENT: "FULL_TIME",
 };
+
+/** Maps a DB employmentType value to the schema.org string used in JobPosting markup. */
+export function employmentTypeToSchema(value: string | null | undefined): string {
+  if (!value) return "FULL_TIME";
+  return EMPLOYMENT_TYPE_MAP[value] ?? "FULL_TIME";
+}
 
 export function buildOrganizationSchema(org: Organization) {
   return {

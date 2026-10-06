@@ -200,7 +200,7 @@ export default async function LocalePositionPage({ params }: Props) {
               return (
                 <Link
                   key={recruitment.id}
-                  href={`/${locale}/recruitments/${recruitment.slug}`}
+                  href={`/jobs/${recruitment.slug}`}
                   className="block"
                 >
                   <div className="p-6 border border-gray-200 rounded-lg hover:shadow-lg hover:border-blue-400 transition-all">
