@@ -123,7 +123,7 @@ function pickFields(
       collapse($("h1").first().text()),
   );
 
-  const eligibility = bag.find(
+  const eligibility = bag.findQualification(
     /eligib/i, /qualification/i, /educational/i,
   );
 

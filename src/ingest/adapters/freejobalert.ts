@@ -91,7 +91,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
   );
   const examDate = parseIndianDate(bag.find(/exam date/i, /date of exam/i, /tier.?i.*date/i));
   const jobLocation = bag.find(/job location/i, /location/i, /place of posting/i);
-  const eligibility = bag.find(/qualification/i, /eligib/i, /educational/i);
+  const eligibility = bag.findQualification(/qualification/i, /eligib/i, /educational/i);
   const { salaryMin, salaryMax } = parseSalary(
     bag.find(/salary|pay scale|pay level|remuneration|pay matrix/i),
   );

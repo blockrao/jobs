@@ -17,6 +17,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { isDateLabel } from "../../lib/semantic-fields";
 import type { RawPosting } from "../types";
 import { FACTS_ONLY_DESCRIPTION_MARKER } from "../../lib/content-quality/gate";
 import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
@@ -61,6 +62,14 @@ function kv(rows: string[][]): Map<string, string> {
 function pick(d: Map<string, string>, ...pats: RegExp[]): { label: string; value: string } | null {
   for (const [k, v] of d) {
     if (pats.some((p) => p.test(k)) && v) return { label: k, value: v };
+  }
+  return null;
+}
+
+/** Qualification pick: never a date, deadline or cut-off label (e.g. "Eligibility Cut-off Date"). */
+function pickQualification(d: Map<string, string>): { label: string; value: string } | null {
+  for (const [k, v] of d) {
+    if (/qualif|eligib/.test(k) && !isDateLabel(k) && v) return { label: k, value: v };
   }
   return null;
 }
@@ -162,7 +171,7 @@ export function recordToRaw(rec: FileRecord, nowForObservation?: Date): RawPosti
   const examDate = pick(d, /exam date/, /date of exam/);
   const vac = pick(d, /^no\.? of posts?$/, /total (vacanc|post)/, /vacanc/);
   const loc = pick(d, /job location/, /^location$/, /place of posting/);
-  const qual = pick(d, /qualif|eligib/);
+  const qual = pickQualification(d);
   const links = extractLinks(rec);
   const table = extractPostTable(rec.rows);
 

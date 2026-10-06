@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from "axios";
 import { chromium, type Browser, type Page } from "playwright";
 import type { RawPosting } from "../types";
+import { isDateLabel } from "../../lib/semantic-fields";
 
 // Rotating user agents to avoid WAF fingerprinting. Mix of recent Chrome/Firefox on different OS.
 const USER_AGENTS = [
@@ -385,6 +386,19 @@ export class LabelBag {
   find(...patterns: RegExp[]): string | undefined {
     for (const p of patterns) {
       const hit = this.pairs.find((pair) => p.test(pair.key));
+      if (hit) return hit.value;
+    }
+    return undefined;
+  }
+
+  /**
+   * Like find(), for a qualification / eligibility value: a label that names
+   * a date, deadline or cut-off ("Eligibility Cut-off Date") is never a
+   * qualification, so it is skipped even though it matches the patterns.
+   */
+  findQualification(...patterns: RegExp[]): string | undefined {
+    for (const p of patterns) {
+      const hit = this.pairs.find((pair) => p.test(pair.key) && !isDateLabel(pair.key));
       if (hit) return hit.value;
     }
     return undefined;
