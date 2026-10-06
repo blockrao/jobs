@@ -101,6 +101,8 @@ export function formatCurrencyRange(
   max: number | null | undefined,
   currency = "INR",
   period = "MONTH",
+  /** Pass true for government pay-matrix ranges where a period suffix is misleading */
+  suppressPeriod = false,
 ) {
   if (!min && !max) return null;
   const fmt = (n: number) =>
@@ -109,10 +111,9 @@ export function formatCurrencyRange(
       currency,
       maximumFractionDigits: 0,
     }).format(n);
-  const periodLabel =
-    { HOUR: "/hr", DAY: "/day", WEEK: "/wk", MONTH: "/mo", YEAR: "/yr" }[
-      period
-    ] ?? "";
+  const periodLabel = suppressPeriod
+    ? ""
+    : ({ HOUR: "/hr", DAY: "/day", WEEK: "/wk", MONTH: "/mo", YEAR: "/yr" }[period] ?? "");
   if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}${periodLabel}`;
   return `${fmt(min ?? max ?? 0)}${periodLabel}`;
 }

@@ -229,6 +229,7 @@ export default async function LocaleJobPage({ params }: Props) {
     posting.salaryMax,
     posting.salaryCurrency ?? "INR",
     posting.salaryPeriod ?? "MONTH",
+    posting.kind === "GOVERNMENT",
   );
 
   const L = {

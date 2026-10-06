@@ -242,6 +242,8 @@ export default async function JobPage({ params }: Props) {
     posting.salaryMax,
     posting.salaryCurrency ?? "INR",
     posting.salaryPeriod ?? "MONTH",
+    // Government pay-matrix ranges are not a per-period rate; suppress "/mo" or "/yr"
+    posting.kind === "GOVERNMENT",
   );
 
   const recruitmentStatus = recruitmentStatusLabel(posting.currentStage, posting.validThrough, hiringOpen, posting.canonicalRecruitment?.applicationStartDate);
