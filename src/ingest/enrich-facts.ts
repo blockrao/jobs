@@ -208,6 +208,12 @@ function textOrNull(v: string | null | undefined, name: string, dropped: string[
     dropped.push(name);
     return null;
   }
+  // Reject text with (cid:N) codes — these are PDF font-encoding failures and
+  // produce unreadable garbled characters on the page (pipeline check H2/section 7 #2).
+  if (t.includes("(cid:")) {
+    dropped.push(`${name}:CID_CORRUPT`);
+    return null;
+  }
   return t || null;
 }
 

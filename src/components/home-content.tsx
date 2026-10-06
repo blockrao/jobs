@@ -50,11 +50,11 @@ export function HomeContent({
 
   const L = {
     heroTitle: isHi
-      ? "सरकारी और निजी नौकरी सूचनाएं, परिणाम और गाइड"
-      : "Govt & Private Job Notifications, Results, and Guides",
+      ? "सरकारी और निजी नौकरी सूचनाएं और गाइड"
+      : "Govt & Private Job Notifications and Guides",
     heroSubtitle: isHi
-      ? "हर अधिसूचना के लिए एक स्थायी पेज — घोषणा से लेकर प्रवेश पत्र और परिणाम तक — साथ ही सिलेबस, परीक्षा पैटर्न और वेतन पर विस्तृत गाइड।"
-      : "One permanent page per notification — from announcement to admit card to result — plus in-depth guides on syllabus, exam pattern, and salary.",
+      ? "हर अधिसूचना के लिए एक स्थायी पेज — तारीखें, पात्रता, शुल्क और आवेदन लिंक — साथ ही सिलेबस, परीक्षा पैटर्न और वेतन पर विस्तृत गाइड।"
+      : "One permanent page per notification — dates, eligibility, fees, and apply links — plus in-depth guides on syllabus, exam pattern, and salary.",
     searchPlaceholder: isHi
       ? "नौकरी, परीक्षा, विभाग खोजें..."
       : "Search jobs, exams, departments...",
