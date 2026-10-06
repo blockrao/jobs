@@ -20,7 +20,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostBySlug, getPostsForRecruitment } from "@/lib/queries";
+import { getPostBySlug, getPostsForRecruitment, getPostSlugsForSitemap } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
@@ -62,7 +62,7 @@ async function getData(slug: string, postSlug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, "post-slug": postSlug } = await params;
-  const data = await safeQuery(() => getData(slug, postSlug), null);
+  const data = await getData(slug, postSlug);
   if (!data) return {};
 
   const { post, recruitment } = data;
@@ -549,7 +549,6 @@ export default async function PostLeafPage({ params }: Props) {
 // ── Static params ─────────────────────────────────────────────────────────────
 
 export async function generateStaticParams() {
-  const { getPostSlugsForSitemap } = await import("@/lib/queries");
   const rows = await safeQuery(() => getPostSlugsForSitemap(), []);
   return rows.map((r) => ({
     slug: r.recruitmentSlug,
