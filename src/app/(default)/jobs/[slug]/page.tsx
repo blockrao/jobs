@@ -192,6 +192,9 @@ export default async function JobPage({ params }: Props) {
     age_max: posting.ageLimitMax ?? null,
     date_posted: posting.datePosted ? new Date(posting.datePosted).toISOString() : null,
     valid_through: posting.validThrough ? new Date(posting.validThrough).toISOString() : null,
+    application_start: posting.canonicalRecruitment?.applicationStartDate
+      ? new Date(posting.canonicalRecruitment.applicationStartDate).toISOString()
+      : null,
     exam_date: posting.examDate ? new Date(posting.examDate).toISOString() : null,
     has_apply: Boolean(publicLink(posting.applyUrl)),
     post_names: ((posting.postNames as string[] | null) ?? []).filter((n) => typeof n === "string"),
@@ -799,6 +802,15 @@ export default async function JobPage({ params }: Props) {
           )}
         </div>
       </section>
+
+      {/* ── REPORT AN ERROR ── */}
+      <p className="mt-8 text-xs text-neutral-400">
+        Spotted an error or outdated information?{" "}
+        <Link href="/contact" className="underline hover:text-neutral-600">
+          Report it
+        </Link>
+        {" "}and we'll fix it.
+      </p>
     </div>
   );
 }

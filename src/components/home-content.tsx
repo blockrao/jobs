@@ -114,16 +114,18 @@ export function HomeContent({
           viewAllLabel={L.viewAll}
           noPostingsLabel={L.noPostings}
         />
-        <JobColumn
-          title={L.latestPrivate}
-          href="/jobs?kind=PRIVATE"
-          postings={privateJobs}
-          isHi={isHi}
-          stageLabels={stageLabels}
-          dateLocale={dateLocale}
-          viewAllLabel={L.viewAll}
-          noPostingsLabel={L.noPostings}
-        />
+        {privateJobs.length > 0 && (
+          <JobColumn
+            title={L.latestPrivate}
+            href="/jobs?kind=PRIVATE"
+            postings={privateJobs}
+            isHi={isHi}
+            stageLabels={stageLabels}
+            dateLocale={dateLocale}
+            viewAllLabel={L.viewAll}
+            noPostingsLabel={L.noPostings}
+          />
+        )}
       </div>
 
       <section className="mt-12">

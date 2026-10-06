@@ -22,6 +22,7 @@ export type NoticeFacts = {
   age_max: number | null;
   date_posted: string | null;
   valid_through: string | null;
+  application_start: string | null;
   exam_date: string | null;
   has_apply: boolean;
   post_names: string[];
@@ -160,7 +161,7 @@ export function buildNoticeFaqs(f: NoticeFacts): NoticeFaq[] {
 }
 
 export type NoticeTimelineRow = {
-  stage: "NOTIFICATION_OUT" | "APPLICATION_OPEN" | "EXAM_SCHEDULED";
+  stage: "NOTIFICATION_OUT" | "APPLICATION_OPEN" | "APPLICATION_CLOSED" | "EXAM_SCHEDULED";
   title: string;
   eventDate: string; // ISO timestamp
 };
@@ -174,7 +175,8 @@ export function buildNoticeTimeline(f: NoticeFacts): NoticeTimelineRow[] {
     rows.push({ stage, title, eventDate: new Date(iso).toISOString() });
   };
   add("NOTIFICATION_OUT", "Notification released", f.date_posted);
-  add("APPLICATION_OPEN", "Last date to apply", f.valid_through);
+  add("APPLICATION_OPEN", "Applications open", f.application_start);
+  add("APPLICATION_CLOSED", "Last date to apply", f.valid_through);
   add("EXAM_SCHEDULED", "Exam scheduled", f.exam_date);
   return rows;
 }
