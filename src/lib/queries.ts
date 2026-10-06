@@ -12,6 +12,7 @@ import {
   postings,
 } from "@/db/schema";
 import { posts, recruitments, positions } from "@/db/schema";
+import { applySemanticGate } from "@/lib/semantic-fields";
 
 // Before DATABASE_URL is configured, every query degrades to an empty
 // result instead of throwing. This lets the site build and deploy (with
@@ -59,8 +60,9 @@ export async function getPostingBySlug(slug: string) {
     }
   }
 
+  // Semantic gate (SEM-001): a value that does not mean what its field means is not displayed.
   return {
-    ...posting,
+    ...applySemanticGate(posting),
     canonicalPost,
     canonicalRecruitment,
     canonicalPosition,

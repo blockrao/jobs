@@ -19,6 +19,7 @@
 import type { ExtraContent } from "@/db/schema";
 import type { ArticleFacts } from "@/enrich/freejobalert-article";
 import { containsAggregatorReference, publicLink, stripAggregatorTag } from "@/lib/aggregators";
+import { validateEligibility } from "@/lib/semantic-fields";
 import type { RawPosting } from "./types";
 
 /** The RawPosting fields the article extractor can supply. */
@@ -194,6 +195,8 @@ export interface StorageHygiene {
   };
   /** Fields removed because they referenced an aggregator. */
   dropped: string[];
+  /** Fields removed because the value did not mean what the field means, as "field:reason". */
+  invalid: string[];
   /** Set when the record itself must not be stored (aggregator in the title). */
   rejectReason?: "AGGREGATOR_IN_TITLE";
 }
@@ -208,6 +211,15 @@ function textOrNull(v: string | null | undefined, name: string, dropped: string[
   return t || null;
 }
 
+/** Semantic gate: a value that is a date, label or placeholder is not an eligibility. */
+function validEligibility(v: string | null, invalid: string[]): string | null {
+  if (v == null) return null;
+  const r = validateEligibility(v);
+  if (r.ok) return r.value;
+  invalid.push(`eligibility:${r.reason}`);
+  return null;
+}
+
 type HygieneInput = Pick<
   RawPosting,
   "title" | "description" | "eligibility" | "ageRelaxationNotes" | "locationCity" | "locationRegion" | "applyUrl" | "officialNotificationUrl" | "extraContent"
@@ -215,6 +227,7 @@ type HygieneInput = Pick<
 
 export function sanitizeForStorage(p: HygieneInput): StorageHygiene {
   const dropped: string[] = [];
+  const invalid: string[] = [];
   const title = stripAggregatorTag(p.title);
   const rejectReason = containsAggregatorReference(title) ? "AGGREGATOR_IN_TITLE" : undefined;
   const ec = sanitizeExtraContent(p.extraContent);
@@ -227,7 +240,7 @@ export function sanitizeForStorage(p: HygieneInput): StorageHygiene {
     clean: {
       title,
       description: textOrNull(p.description, "description", dropped) ?? "",
-      eligibility: textOrNull(p.eligibility, "eligibility", dropped),
+      eligibility: validEligibility(textOrNull(p.eligibility, "eligibility", dropped), invalid),
       ageRelaxationNotes: textOrNull(p.ageRelaxationNotes, "ageRelaxationNotes", dropped),
       locationCity: textOrNull(p.locationCity, "locationCity", dropped),
       locationRegion: textOrNull(p.locationRegion, "locationRegion", dropped),
@@ -236,6 +249,7 @@ export function sanitizeForStorage(p: HygieneInput): StorageHygiene {
       extraContent: ec ?? null,
     },
     dropped,
+    invalid,
     rejectReason,
   };
 }

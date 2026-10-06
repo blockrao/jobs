@@ -236,7 +236,9 @@ export function buildBreadcrumbSchema(
   };
 }
 
-export function buildFAQSchema(qas: { question: string; answer: string }[]) {
+export function buildFAQSchema(input: { question: string; answer: string }[]) {
+  // Defence in depth: a question or answer that is empty is never emitted (SEM-001).
+  const qas = input.filter((qa) => qa.question?.trim() && qa.answer?.trim());
   if (qas.length === 0) return null;
   return {
     "@type": "FAQPage",

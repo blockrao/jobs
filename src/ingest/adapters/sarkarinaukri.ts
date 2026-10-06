@@ -73,7 +73,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     examDate: parseIndianDate(bag.find(/exam date/i, /date of exam/i)),
     datePosted: parseIndianDate(bag.find(/post date/i, /published/i, /notification date/i)),
     totalVacancies: extractVacancies(bag.find(/vacan/i, /total post/i) || title),
-    eligibility: qual ? collapse(qual[1]) : bag.find(/qualification/i, /eligib/i),
+    eligibility: qual ? collapse(qual[1]) : bag.findQualification(/qualification/i, /eligib/i),
     locationCity: loc ? collapse(loc[1]) : undefined,
     locationRegion: loc ? collapse(loc[2]) : undefined,
   };

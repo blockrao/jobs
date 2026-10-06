@@ -1,4 +1,5 @@
 import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/content/notice-faqs";
+import { buildCoreFaqs } from "@/lib/content/faq-gate";
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
 import { entitySeo } from "@/lib/seo";
@@ -110,71 +111,22 @@ function buildFaqs(
   displayOrgName: string,
   displayEligibility: string | null,
 ) {
-  const faqs: { question: string; answer: string }[] = [];
-  // English FAQs name the post, not the whole page headline (PQ-004).
-  const t = isHi ? displayTitle : posting.postNames?.[0]?.trim() || displayTitle;
-  if (posting.totalVacancies) {
-    faqs.push(
-      isHi
-        ? {
-            question: `${t} में कितनी रिक्तियां हैं?`,
-            answer: `${displayOrgName} द्वारा घोषित ${t} में ${posting.totalVacancies} रिक्तियां हैं।`,
-          }
-        : {
-            question: `How many vacancies are there for ${t} at ${displayOrgName}?`,
-            answer: `${displayOrgName} has announced ${vacanciesPhrase(posting.totalVacancies)} for ${t}.`,
-          },
-    );
-  }
-  if (displayEligibility) {
-    faqs.push(
-      isHi
-        ? { question: `${t} के लिए पात्रता क्या है?`, answer: displayEligibility }
-        : { question: `What is the eligibility for ${t}?`, answer: displayEligibility },
-    );
-  }
-  if (posting.validThrough) {
-    const dateStr = formatDate(posting.validThrough, isHi ? "hi-IN" : "en-IN");
-    faqs.push(
-      isHi
-        ? {
-            question: `${t} हेतु आवेदन की अंतिम तिथि क्या है?`,
-            answer: `आवेदन की अंतिम तिथि ${dateStr} है। आवेदन करने से पहले सदैव आधिकारिक अधिसूचना से पुष्टि करें।`,
-          }
-        : {
-            question: `What is the last date to apply for ${t}?`,
-            answer: `The last date to apply is ${dateStr}. Always confirm on the official notification before the deadline.`,
-          },
-    );
-  }
-  if (posting.applicationFeeGeneral != null) {
-    faqs.push(
-      isHi
-        ? {
-            question: `${t} हेतु आवेदन शुल्क क्या है?`,
-            answer: `सामान्य श्रेणी हेतु आवेदन शुल्क ₹${posting.applicationFeeGeneral} है${
-              posting.applicationFeeReserved != null
-                ? ` तथा आरक्षित श्रेणियों हेतु ₹${posting.applicationFeeReserved}`
-                : ""
-            }।`,
-          }
-        : {
-            question: `What is the application fee for ${t}?`,
-            answer: `The application fee is ₹${posting.applicationFeeGeneral} for general category${
-              posting.applicationFeeReserved != null
-                ? ` and ₹${posting.applicationFeeReserved} for reserved categories`
-                : ""
-            }.`,
-          },
-    );
-  }
+  // SEM-001: every FAQ is built from a validated field, or it is not built (see faq-gate.ts).
   const extra = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
-  for (const f of extra?.faqs ?? []) {
-    const question = isHi && f.qHi ? f.qHi : f.q;
-    const answer = isHi && f.aHi ? f.aHi : f.a;
-    if (question && answer && !faqs.some((x) => x.question === question)) faqs.push({ question, answer });
-  }
-  return faqs;
+  return buildCoreFaqs({
+    isHi,
+    displayTitle,
+    displayOrgName,
+    displayEligibility,
+    postNames: (posting.postNames as string[] | null) ?? null,
+    totalVacancies: posting.totalVacancies ?? null,
+    validThrough: posting.validThrough ?? null,
+    datePosted: posting.datePosted ?? null,
+    currentStage: posting.currentStage ?? null,
+    applicationFeeGeneral: posting.applicationFeeGeneral ?? null,
+    applicationFeeReserved: posting.applicationFeeReserved ?? null,
+    extraFaqs: extra?.faqs ?? null,
+  });
 }
 
 export default async function LocaleJobPage({ params }: Props) {
