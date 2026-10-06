@@ -53,6 +53,7 @@ import {
 } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
+import { EligibilityChecker } from "@/components/eligibility-checker";
 
 export const revalidate = 300;
 
@@ -222,9 +223,69 @@ export default async function JobPage({ params }: Props) {
     linkUrl: null,
     eventDate: new Date(r.eventDate),
   }));
-  const timeline = [...(posting.updates ?? []), ...derivedTimeline].sort(
-    (a: any, b: any) => a.eventDate.getTime() - b.eventDate.getTime(),
+
+  // ── Phase 4: Lifecycle placeholders ────────────────────────────────────────
+  // Always show upcoming stages as TBA so candidates understand the full
+  // recruitment lifecycle without blank sections after the application deadline.
+  const LIFECYCLE_STAGES_IN_ORDER = [
+    "NOTIFICATION_OUT",
+    "APPLICATION_OPEN",
+    "APPLICATION_CLOSED",
+    "ADMIT_CARD_RELEASED",
+    "EXAM_SCHEDULED",
+    "EXAM_CONDUCTED",
+    "RESULT_OUT",
+    "MERIT_LIST_OUT",
+    "INTERVIEW_SCHEDULED",
+    "FINAL_RESULT_OUT",
+  ] as const;
+
+  const LIFECYCLE_STAGE_LABELS: Record<string, string> = {
+    NOTIFICATION_OUT: "Notification Released",
+    APPLICATION_OPEN: "Applications Open",
+    APPLICATION_CLOSED: "Applications Close",
+    ADMIT_CARD_RELEASED: "Admit Card",
+    EXAM_SCHEDULED: "Written Exam",
+    EXAM_CONDUCTED: "Exam Conducted",
+    RESULT_OUT: "Result Declared",
+    MERIT_LIST_OUT: "Merit List Published",
+    INTERVIEW_SCHEDULED: "Interview / Document Verification",
+    FINAL_RESULT_OUT: "Final Selection Result",
+  };
+
+  const allUpdates = [...(posting.updates ?? []), ...derivedTimeline];
+  const coveredStages = new Set(allUpdates.map((u: any) => u.stage as string));
+  const currentStageIdx = LIFECYCLE_STAGES_IN_ORDER.indexOf(
+    posting.currentStage as (typeof LIFECYCLE_STAGES_IN_ORDER)[number],
   );
+
+  // Add TBA placeholders for stages beyond the current one that are not
+  // already represented — but skip EXAM_CONDUCTED if no exam is scheduled,
+  // and skip final stages for postings that are purely notification-only.
+  const lifecyclePlaceholders = LIFECYCLE_STAGES_IN_ORDER
+    .slice(Math.max(0, currentStageIdx + 1))
+    .filter((stage) => {
+      if (coveredStages.has(stage)) return false;
+      if (stage === "EXAM_CONDUCTED" && !posting.examDate) return false;
+      if (stage === "MERIT_LIST_OUT" && currentStageIdx < 6) return false;
+      return true;
+    })
+    .map((stage, i) => ({
+      id: `placeholder-${i}`,
+      stage,
+      title: LIFECYCLE_STAGE_LABELS[stage] ?? stage,
+      titleHi: null,
+      description: null,
+      descriptionHi: null,
+      linkUrl: null,
+      eventDate: null as Date | null,
+      isPlaceholder: true,
+    }));
+
+  const timeline = [
+    ...allUpdates.sort((a: any, b: any) => a.eventDate.getTime() - b.eventDate.getTime()),
+    ...lifecyclePlaceholders,
+  ];
 
   const relatedArticles = (posting.postingArticles ?? [])
     .map((pa: any) => pa.article)
@@ -489,17 +550,23 @@ export default async function JobPage({ params }: Props) {
           <h2 className="text-lg font-semibold">Timeline</h2>
           <ol className="mt-3 space-y-3 border-l border-black/10 pl-4">
             {timeline.map((update: any) => (
-              <li key={update.id}>
-                <p className="text-xs text-neutral-500">{formatDate(update.eventDate, "en-IN")}</p>
-                <p className="font-medium">
-                  {String(update.id).startsWith("derived-")
-                    ? stripAggregatorTag(update.title)
-                    : `${STAGE_LABELS[update.stage] ?? update.stage}: ${stripAggregatorTag(update.title)}`}
+              <li key={update.id} className={update.isPlaceholder ? "opacity-50" : ""}>
+                <p className="text-xs text-neutral-500">
+                  {update.isPlaceholder
+                    ? "TBA"
+                    : formatDate(update.eventDate, "en-IN")}
                 </p>
-                {update.description && (
+                <p className={`font-medium ${update.isPlaceholder ? "text-neutral-400" : ""}`}>
+                  {update.isPlaceholder
+                    ? update.title
+                    : String(update.id).startsWith("derived-")
+                      ? stripAggregatorTag(update.title)
+                      : `${STAGE_LABELS[update.stage] ?? update.stage}: ${stripAggregatorTag(update.title)}`}
+                </p>
+                {update.description && !update.isPlaceholder && (
                   <p className="text-sm text-neutral-600">{update.description}</p>
                 )}
-                {publicLink(update.linkUrl) && (
+                {publicLink(update.linkUrl) && !update.isPlaceholder && (
                   <a
                     href={publicLink(update.linkUrl) as string}
                     target="_blank"
@@ -602,9 +669,153 @@ export default async function JobPage({ params }: Props) {
         ))}
 
         {/* ── 8. ELIGIBILITY ── */}
-        {(extraContent?.checklist ?? []).length > 0 ? (
+        {/* Q2: Can I Apply? — EligibilityChecker (interactive, runs in browser) */}
+        {extraContent?.eligibilityRules && (
+          <div className="not-prose mb-6">
+            <EligibilityChecker
+              rules={extraContent.eligibilityRules}
+              closingDate={posting.validThrough ? new Date(posting.validThrough).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)}
+            />
+          </div>
+        )}
+
+        {/* Q3: What Do I Need? — Structured eligibility criteria */}
+        <h2 className="text-lg font-semibold">Eligibility Criteria</h2>
+
+        {/* Age table: structured by category with relaxations */}
+        {(extraContent?.ageTable ?? []).length > 0 ? (
+          <div className="not-prose mb-4 overflow-x-auto">
+            <h3 className="mb-2 font-semibold text-neutral-800">Age Limit</h3>
+            <table className="w-full min-w-[24rem] border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Category</th>
+                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Max Age</th>
+                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">PwBD Relaxation</th>
+                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">PwBD Max</th>
+                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extraContent!.ageTable!.map((row, i) => (
+                  <tr key={i}>
+                    <td className="border border-black/10 px-3 py-2 font-medium">{row.category}</td>
+                    <td className="border border-black/10 px-3 py-2">{row.baseMax} yrs</td>
+                    <td className="border border-black/10 px-3 py-2">{row.pwbdRelaxation != null ? `+${row.pwbdRelaxation} yrs` : "—"}</td>
+                    <td className="border border-black/10 px-3 py-2">{row.pwbdMax != null ? `${row.pwbdMax} yrs` : "—"}</td>
+                    <td className="border border-black/10 px-3 py-2 text-neutral-600">{row.note ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : posting.ageRelaxationNotes ? (
+          <div className="not-prose mb-4">
+            <h3 className="mb-1 font-semibold text-neutral-800">Age Limit</h3>
+            <p className="whitespace-pre-line text-sm text-neutral-700">{posting.ageRelaxationNotes}</p>
+          </div>
+        ) : (
+          <div className="not-prose mb-4">
+            <h3 className="mb-1 font-semibold text-neutral-800">Age Limit</h3>
+            {(extraContent?.seo?.ageDisplay || formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false))
+              ? <p className="text-sm text-neutral-700">{extraContent?.seo?.ageDisplay ?? formatAgeRange(posting.ageLimitMin, posting.ageLimitMax, false)}</p>
+              : <p className="text-sm text-neutral-400 italic">Not mentioned in notification</p>
+            }
+          </div>
+        )}
+
+        {/* Reservation / vacancy matrix */}
+        {extraContent?.reservationMatrix && (extraContent.reservationMatrix.rows ?? []).length > 0 && (
+          <div className="not-prose mb-4 overflow-x-auto">
+            <h3 className="mb-2 font-semibold text-neutral-800">Vacancy Breakdown</h3>
+            <table className="w-full min-w-[28rem] border-collapse text-sm">
+              <thead>
+                <tr>
+                  {extraContent.reservationMatrix.rows[0]?.post !== undefined && (
+                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Post</th>
+                  )}
+                  {["UR", "EWS", "OBC", "SC", "ST", "Total"].map((h) => (
+                    <th key={h} className="border border-black/10 bg-neutral-50 px-3 py-2 text-right font-semibold">{h}</th>
+                  ))}
+                  <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">PwBD (H)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extraContent.reservationMatrix.rows.map((row, i) => (
+                  <tr key={i}>
+                    {row.post !== undefined && (
+                      <td className="border border-black/10 px-3 py-2 font-medium">{row.post}</td>
+                    )}
+                    {([row.ur, row.ews, row.obc, row.sc, row.st, row.total] as number[]).map((v, j) => (
+                      <td key={j} className="border border-black/10 px-3 py-2 text-right">{v ?? "—"}</td>
+                    ))}
+                    <td className="border border-black/10 px-3 py-2 text-sm text-neutral-600">
+                      {row.pwbdHorizontal != null ? `${row.pwbdHorizontal} (${row.pwbdCategory ?? "—"})` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {extraContent.reservationMatrix.sourcePage != null && (
+              <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.reservationMatrix.sourcePage}</p>
+            )}
+          </div>
+        )}
+
+        {/* PwBD suitability matrix */}
+        {extraContent?.pwbdMatrix && (
+          <div className="not-prose mb-4">
+            <h3 className="mb-2 font-semibold text-neutral-800">Suitability for PwBD Candidates</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+              {extraContent.pwbdMatrix.suitable.length > 0 && (
+                <div>
+                  <p className="mb-1 font-medium text-green-700">Suitable disabilities</p>
+                  <ul className="space-y-0.5 text-neutral-700">
+                    {extraContent.pwbdMatrix.suitable.map((s, i) => (
+                      <li key={i} className="flex gap-1.5"><span className="text-green-600">✓</span>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {extraContent.pwbdMatrix.notSuitable.length > 0 && (
+                <div>
+                  <p className="mb-1 font-medium text-red-700">Not suitable disabilities</p>
+                  <ul className="space-y-0.5 text-neutral-700">
+                    {extraContent.pwbdMatrix.notSuitable.map((s, i) => (
+                      <li key={i} className="flex gap-1.5"><span className="text-red-500">✗</span>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            {extraContent.pwbdMatrix.sourcePage != null && (
+              <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.pwbdMatrix.sourcePage}</p>
+            )}
+          </div>
+        )}
+
+        {/* Checklist groups (legacy + new documentChecklist) */}
+        {(extraContent?.documentChecklist ?? []).length > 0 ? (
+          <div className="not-prose mb-4">
+            <h3 className="mb-2 font-semibold text-neutral-800">Documents Required</h3>
+            <ul className="space-y-1.5">
+              {extraContent!.documentChecklist!.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm">
+                  <span className={`mt-0.5 flex-shrink-0 ${item.required ? "text-red-500" : "text-neutral-400"}`} aria-hidden="true">
+                    {item.required ? "✱" : "○"}
+                  </span>
+                  <span>
+                    {item.text}
+                    {(item.requiredFor ?? []).length > 0 && (
+                      <span className="ml-1 text-xs text-neutral-500">({item.requiredFor!.join(", ")})</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (extraContent?.checklist ?? []).length > 0 ? (
           <>
-            <h2 className="text-lg font-semibold">Eligibility Criteria</h2>
             {(extraContent!.checklist!).map((group) => (
               <div key={group.heading} className="not-prose mb-4">
                 <h3 className="mb-2 font-semibold text-neutral-800">{group.heading}</h3>
@@ -620,11 +831,26 @@ export default async function JobPage({ params }: Props) {
             ))}
           </>
         ) : posting.eligibility ? (
-          <>
-            <h2 className="text-lg font-semibold">Eligibility</h2>
-            <p className="whitespace-pre-line">{posting.eligibility}</p>
-          </>
-        ) : null}
+          <p className="whitespace-pre-line text-sm text-neutral-700">{posting.eligibility}</p>
+        ) : (
+          <p className="text-sm text-neutral-400 italic">Not mentioned in notification</p>
+        )}
+
+        {/* Evidence clauses — Phase 5: provenance-backed facts */}
+        {(extraContent?.evidenceClauses ?? []).length > 0 && (
+          <div className="not-prose mb-4">
+            <h3 className="mb-2 font-semibold text-neutral-800">Key Rules from Notification</h3>
+            <ul className="space-y-2">
+              {extraContent!.evidenceClauses!.map((clause, i) => (
+                <li key={i} className="rounded-md border border-black/8 bg-neutral-50 px-3 py-2 text-sm">
+                  <p className="font-medium text-neutral-800">{clause.label}</p>
+                  <p className="mt-0.5 text-neutral-700">{clause.text}</p>
+                  <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {clause.sourcePage}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {posting.responsibilities && (
           <>
@@ -633,9 +859,9 @@ export default async function JobPage({ params }: Props) {
               <ul className="not-prose mt-2 space-y-1.5">
                 {posting.responsibilities
                   .split("\n")
-                  .map((line) => line.replace(/^[-•]\s*/, "").trim())
+                  .map((line: string) => line.replace(/^[-•]\s*/, "").trim())
                   .filter(Boolean)
-                  .map((line, i) => (
+                  .map((line: string, i: number) => (
                     <li key={i} className="flex gap-2 text-sm">
                       <span className="mt-0.5 flex-shrink-0 text-neutral-400" aria-hidden="true">▸</span>
                       <span>{line}</span>
@@ -672,6 +898,38 @@ export default async function JobPage({ params }: Props) {
                 </li>
               ))}
             </ol>
+          </>
+        )}
+
+        {/* ── 9b. EXAM PATTERN ── */}
+        {extraContent?.examPattern && (extraContent.examPattern.stages ?? []).length > 0 && (
+          <>
+            <h2 className="text-lg font-semibold">Exam Pattern</h2>
+            <div className="not-prose overflow-x-auto">
+              <table className="w-full min-w-[24rem] border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Stage</th>
+                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-right font-semibold">Marks</th>
+                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Duration</th>
+                    <th className="border border-black/10 bg-neutral-50 px-3 py-2 text-left font-semibold">Mode</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {extraContent.examPattern.stages.map((s, i) => (
+                    <tr key={i}>
+                      <td className="border border-black/10 px-3 py-2 font-medium">{s.name}</td>
+                      <td className="border border-black/10 px-3 py-2 text-right">{s.marks}</td>
+                      <td className="border border-black/10 px-3 py-2">{s.duration ?? "—"}</td>
+                      <td className="border border-black/10 px-3 py-2">{s.mode ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {extraContent.examPattern.sourcePage != null && (
+                <p className="mt-1 text-xs text-neutral-400">Source: official notification, page {extraContent.examPattern.sourcePage}</p>
+              )}
+            </div>
           </>
         )}
 
@@ -712,11 +970,35 @@ export default async function JobPage({ params }: Props) {
           </>
         )}
 
-        {/* ── 12. AGE RELAXATION ── */}
-        {posting.ageRelaxationNotes && (
+        {/* ── 12. IMPORTANT LINKS (Q5: What's Next?) ── */}
+        {(extraContent?.importantLinks ?? []).length > 0 && (
           <>
-            <h2 className="text-lg font-semibold">Age Limit and Relaxation</h2>
-            <p className="whitespace-pre-line">{posting.ageRelaxationNotes}</p>
+            <h2 className="text-lg font-semibold">Important Links</h2>
+            <div className="not-prose mt-3 flex flex-wrap gap-2">
+              {extraContent!.importantLinks!.map((link, i) => {
+                const toneMap: Record<string, string> = {
+                  apply: "bg-brand-600 text-white hover:bg-brand-700",
+                  notification: "border border-black/20 hover:bg-neutral-50",
+                  admit_card: "border border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100",
+                  result: "border border-green-300 bg-green-50 text-green-800 hover:bg-green-100",
+                  answer_key: "border border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100",
+                  cut_off: "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100",
+                  syllabus: "border border-black/20 hover:bg-neutral-50",
+                  other: "border border-black/20 hover:bg-neutral-50",
+                };
+                return (
+                  <a
+                    key={i}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${toneMap[link.linkType] ?? toneMap.other}`}
+                  >
+                    {link.label}
+                  </a>
+                );
+              })}
+            </div>
           </>
         )}
 
@@ -796,6 +1078,29 @@ export default async function JobPage({ params }: Props) {
             <p className="mt-2 text-neutral-500">
               No official notification link on file. Visit the organisation&apos;s website directly.
             </p>
+          )}
+          {/* Phase 5: Per-field provenance summary */}
+          {extraContent?.provenance && Object.keys(extraContent.provenance).length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-medium text-neutral-500 hover:text-neutral-700">
+                Field-level source references
+              </summary>
+              <dl className="mt-2 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+                {Object.entries(extraContent.provenance).map(([field, prov]) => (
+                  <div key={field} className="flex gap-1.5 text-neutral-600">
+                    <dt className="font-medium text-neutral-500 capitalize">{field.replace(/_/g, " ")}:</dt>
+                    <dd>
+                      p.{prov.sourcePage}
+                      {prov.confidence !== "high" && (
+                        <span className={`ml-1 ${prov.confidence === "low" ? "text-amber-600" : "text-neutral-400"}`}>
+                          ({prov.confidence})
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
           )}
         </section>
       )}

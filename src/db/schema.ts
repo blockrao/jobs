@@ -36,6 +36,121 @@ export const postingKindEnum = pgEnum("posting_kind", [
 // notification->result pipeline; private postings use the ACTIVE/FILLED/
 // CLOSED subset. One enum keeps the timeline table and canonical-page
 // rendering logic simple across both kinds.
+// ── Eligibility rule tree (Layer 2) ─────────────────────────────────────────
+// A structured AND/OR rule tree stored in extraContent.eligibilityRules.
+// Enables the interactive eligibility checker; cannot be derived from prose.
+//
+// Leaf node types:
+//   qualification: e.g. { qualification: "LLB" }
+//   service:       e.g. { service: "state_judicial", min_years: 7 }
+//   experience:    e.g. { experience: "law_teaching_or_research", min_years: 5 }
+//   practitioner:  e.g. { practitioner: true, min_age: 30, min_years_advocate: 7,
+//                          min_years_attorney: 5, combined_min_years: 5 }
+//
+// Composite node types:
+//   all:  all children must be satisfied (AND)
+//   any:  at least one child must be satisfied (OR)
+export type EligibilityLeaf =
+  | { qualification: string }
+  | { service: string; min_years: number }
+  | { experience: string; min_years: number }
+  | { practitioner: true; min_age?: number; min_years_advocate?: number; min_years_attorney?: number; combined_min_years?: number };
+
+export type EligibilityNode =
+  | EligibilityLeaf
+  | { all: EligibilityNode[] }
+  | { any: EligibilityNode[] };
+
+export type EligibilityRules = {
+  /** Root of the AND/OR rule tree. */
+  rules: EligibilityNode;
+  /** Date on which age is computed ("closing_date" or an ISO date string). */
+  as_on: "closing_date" | string;
+  /** Category-specific age caps: maps category key → max age (years). */
+  ageCap?: Record<string, number>;
+  /** Overall age cap regardless of relaxation (e.g. 56 for this post). */
+  ageCapOverall?: number;
+};
+
+// ── Age table (Layer 2) ───────────────────────────────────────────────────────
+// Rendered as a category × age-cap matrix. Computed from the notice; values
+// that the notice doesn't print explicitly are derived and shown with a note.
+export type AgeTableRow = {
+  category: string;        // e.g. "UR / EWS", "OBC", "SC"
+  baseMax: number;         // base age cap
+  pwbdRelaxation?: number; // additional years for PwBD
+  pwbdMax?: number;        // base + PwBD (shown in table)
+  note?: string;           // e.g. "derived — not printed in notice"
+};
+
+// ── Reservation / vacancy matrix (Layer 2) ───────────────────────────────────
+export type ReservationMatrix = {
+  rows: {
+    post?: string;          // omit when the notice covers a single post
+    ur: number; ews: number; obc: number; sc: number; st: number;
+    total: number;
+    pwbdHorizontal?: number;
+    pwbdCategory?: string;  // e.g. "B/LV" (blindness / low vision)
+  }[];
+  sourcePage?: number;
+};
+
+// ── PwBD suitability matrix (Layer 2) ────────────────────────────────────────
+export type PwbdMatrix = {
+  suitable: string[];     // disability codes, e.g. ["B","LV","D","HH","BL","BA"]
+  notSuitable: string[];  // e.g. ["BH","MDy","SD"]
+  sourcePage?: number;
+};
+
+// ── Document checklist (Layer 2) ─────────────────────────────────────────────
+export type DocumentChecklistItem = {
+  text: string;
+  textHi?: string;
+  /** Which applicant categories need this document. Omit = all. */
+  requiredFor?: string[];  // e.g. ["SC","ST","OBC","EWS","PwBD"]
+  required: boolean;       // false = advisory / recommended
+};
+
+// ── Exam pattern (Layer 2) ───────────────────────────────────────────────────
+export type ExamPattern = {
+  stages: {
+    name: string;         // e.g. "Recruitment Test", "Interview"
+    marks: number;
+    duration?: string;    // e.g. "2 hours"
+    minMarks?: Record<string, number>; // category → min qualifying marks
+    mode?: string;        // e.g. "CBT", "Offline", "In-person"
+  }[];
+  sourcePage?: number;
+};
+
+// ── Important links (Layer 2) ────────────────────────────────────────────────
+// Links to official pages only — no aggregators.
+export type ImportantLink = {
+  label: string;
+  labelHi?: string;
+  url: string;
+  linkType: "apply" | "notification" | "admit_card" | "result" | "answer_key" | "cut_off" | "syllabus" | "other";
+};
+
+// ── Evidence clause (Layer 3) ────────────────────────────────────────────────
+// Anything unusual that doesn't fit a typed module.
+// Stored verbatim; shown on the page as a sourced quote.
+export type EvidenceClause = {
+  label: string;          // e.g. "Bond service obligation"
+  text: string;           // exact wording from the notice
+  sourcePage: number;
+  sourceTextSpan?: string; // short identifying excerpt
+};
+
+// ── Provenance (Layer 3) ─────────────────────────────────────────────────────
+// Field-level sourcing shown as "Source: official notice, page X".
+export type FieldProvenance = {
+  sourcePage: number;
+  sourceTextSpan?: string;
+  confidence: "high" | "medium" | "low";
+  extractedAt?: string;   // ISO date
+};
+
 export type ExtraContent = {
   /**
    * Qualitative differentiators shown as chip pills below the title.
@@ -90,6 +205,74 @@ export type ExtraContent = {
     /** Compact age display for the stats grid, e.g. "40 (UR/EWS) · 43 (OBC) · 45 (SC)" */
     ageDisplay?: string;
   };
+
+  // ── Layer 2: typed optional modules ─────────────────────────────────────────
+  // Add a module only when the notice contains that kind of data.
+
+  /**
+   * Structured AND/OR eligibility rule tree.
+   * Powers the interactive eligibility checker.
+   * When present, replaces the prose `eligibility` field and the `checklist` groups
+   * for the machine-readable path; `checklist` may still be set for the readable display.
+   */
+  eligibilityRules?: EligibilityRules;
+
+  /**
+   * Category-wise age cap table, including PwBD relaxation.
+   * Rendered as a compact matrix in the Q3 section.
+   * Values not stated explicitly in the notice are derived and flagged with a note.
+   */
+  ageTable?: AgeTableRow[];
+
+  /**
+   * Reservation / vacancy matrix broken down by category.
+   * Must sum to the total vacancy count (validated at ingest).
+   */
+  reservationMatrix?: ReservationMatrix;
+
+  /**
+   * PwBD disability codes — suitable and not-suitable.
+   * Shown as a two-column list under "Eligibility Criteria".
+   */
+  pwbdMatrix?: PwbdMatrix;
+
+  /**
+   * Category-aware document checklist.
+   * Shown in Q3 with required-for filters so each applicant sees their own list.
+   */
+  documentChecklist?: DocumentChecklistItem[];
+
+  /**
+   * Exam pattern: stages, marks, duration, and minimum qualifying marks by category.
+   * Shown in Q4 alongside the selection-process steps.
+   */
+  examPattern?: ExamPattern;
+
+  /**
+   * Interview minimum marks by category (shorthand when only the interview info is known).
+   * Superseded by examPattern.stages[n].minMarks when both are present.
+   */
+  interviewMinMarks?: Record<string, number>; // e.g. { UR: 50, OBC: 45, "SC/ST/PH": 40 }
+
+  /**
+   * Official links only (apply portal, notification PDF, admit card, result).
+   * No aggregator URLs. Shown in Q5 / "Important Links" section.
+   */
+  importantLinks?: ImportantLink[];
+
+  // ── Layer 3: evidence-backed clauses ─────────────────────────────────────────
+  // For unusual or one-off rules that don't fit any typed module.
+  // Stored verbatim; shown on the page as a sourced quote with page reference.
+
+  /** Unusual rules, conditions, and obligations verbatim from the notice. */
+  evidenceClauses?: EvidenceClause[];
+
+  /**
+   * Field-level provenance for core Layer-1 facts.
+   * Keys match column names on the posting or well-known extraContent keys.
+   * Shown as "Source: official notice, page N" next to the relevant field.
+   */
+  provenance?: Record<string, FieldProvenance>;
 };
 
 export const postingStageEnum = pgEnum("posting_stage", [
@@ -962,6 +1145,10 @@ export const recruitments = pgTable(
     // Provenance of the official notification/apply link on this recruitment:
     // MANUAL_VERIFIED | AGGREGATOR_DISCOVERED. Null = no link. (A-070)
     officialLinkSource: varchar("official_link_source", { length: 40 }),
+    // Official advertisement/notification number as printed in the notice,
+    // e.g. "12/2026" for UPSC Advt. No. 12/2026. Used to build the hub-page
+    // URL slug and breadcrumb. Nullable — not all sources capture it.
+    advertisementNumber: varchar("advertisement_number", { length: 80 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -990,6 +1177,14 @@ export const posts = pgTable(
     salaryMax: integer("salary_max"),
     payLevel: jsonb("pay_level").$type<Record<string, unknown>>(),
     vacancyTotal: integer("vacancy_total"),
+    // Denormalised vacancy breakdown for the advertisement hub comparison table.
+    // Shape mirrors ReservationMatrix.rows[0] from the ExtraContent type.
+    // Computed from the vacancies child rows; kept in sync by the ingestion pipeline.
+    vacancyDetails: jsonb("vacancy_details").$type<{
+      ur: number; ews: number; obc: number; sc: number; st: number;
+      total: number;
+      pwbdHorizontal?: number; pwbdCategory?: string;
+    }>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
