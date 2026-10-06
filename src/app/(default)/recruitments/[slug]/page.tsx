@@ -1,39 +1,37 @@
-import { pageSeo } from "@/lib/seo";
+/**
+ * Recruitment hub page — /recruitments/[slug]
+ *
+ * Universal 5-question structure for multi-post government recruitments:
+ *   Q1  What is this recruitment?         (overview, org, dates, official number)
+ *   Q2  Can I apply / am I eligible?      (vacancy comparison table by category)
+ *   Q3  What do I need to qualify?        (per-post eligibility, age, fee)
+ *   Q4  How does the process work?        (selection stages, exam dates)
+ *   Q5  What's next / where do I apply?   (important links, per-post CTA)
+ *
+ * The hub slug is recruitments.slug (internal DB slug).
+ * The advertisementNumber field (e.g. "12/2026") is shown as a breadcrumb
+ * label once available; it is also indexed for lookup but does not change
+ * the public URL (that stays /recruitments/[internal-slug]).
+ */
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/db";
-import { recruitments, postings } from "@/db/schema";
+import { recruitments, posts, postings } from "@/db/schema";
+import type { ReservationMatrix } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { eq, inArray } from "drizzle-orm";
 import { safeQuery } from "@/lib/safe-query";
 
-export const revalidate = 300; // 5 minutes
+export const revalidate = 300;
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Props = { params: Promise<{ slug: string }> };
 
-async function getRecruitmentBySlug(slug: string) {
-  const db = getDb();
-  if (!db) return null;
-
-  const result = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, slug),
-    with: {
-      organization: true,
-      exam: true,
-      posts: {
-        with: {
-          position: true,
-        },
-      },
-    },
-  });
-
-  return result || null;
-}
-
-// Expanded posting fields needed for per-post content on this page.
 type PostingSlot = {
+  inferredPostId: number | null;
   slug: string;
   title: string;
   eligibility: string | null;
@@ -44,14 +42,38 @@ type PostingSlot = {
   applyUrl: string | null;
   applicationFeeGeneral: number | null;
   applicationFeeReserved: number | null;
+  currentStage: string;
+  validThrough: Date | null;
+  extraContent: any;
   datePosted: Date;
   updatedAt: Date;
 };
 
-async function getPostingSlugsForPosts(postIds: number[]) {
-  if (postIds.length === 0) return new Map<number, PostingSlot & { postId: number }>();
+// ── Data fetching ─────────────────────────────────────────────────────────────
+
+async function getHub(slug: string) {
   const db = getDb();
-  if (!db) return new Map<number, PostingSlot & { postId: number }>();
+  if (!db) return null;
+
+  const result = await db.query.recruitments.findFirst({
+    where: eq(recruitments.slug, slug),
+    with: {
+      organization: true,
+      exam: true,
+      posts: {
+        with: { position: true },
+        orderBy: (p, { asc }) => [asc(p.name)],
+      },
+    },
+  });
+
+  return result ?? null;
+}
+
+async function getPostingsForPosts(postIds: number[]): Promise<Map<number, PostingSlot>> {
+  if (postIds.length === 0) return new Map();
+  const db = getDb();
+  if (!db) return new Map();
 
   const rows = await db
     .select({
@@ -66,69 +88,45 @@ async function getPostingSlugsForPosts(postIds: number[]) {
       applyUrl: postings.applyUrl,
       applicationFeeGeneral: postings.applicationFeeGeneral,
       applicationFeeReserved: postings.applicationFeeReserved,
+      currentStage: postings.currentStage,
+      validThrough: postings.validThrough,
+      extraContent: postings.extraContent,
       datePosted: postings.datePosted,
       updatedAt: postings.updatedAt,
     })
     .from(postings)
     .where(inArray(postings.inferredPostId, postIds));
 
-  const map = new Map<number, PostingSlot & { postId: number }>();
+  const map = new Map<number, PostingSlot>();
   for (const row of rows) {
     if (row.inferredPostId != null) {
-      map.set(row.inferredPostId, {
-        postId: row.inferredPostId,
-        slug: row.slug,
-        title: row.title,
-        eligibility: row.eligibility,
-        ageLimitMin: row.ageLimitMin,
-        ageLimitMax: row.ageLimitMax,
-        ageRelaxationNotes: row.ageRelaxationNotes,
-        officialNotificationUrl: row.officialNotificationUrl,
-        applyUrl: row.applyUrl,
-        applicationFeeGeneral: row.applicationFeeGeneral,
-        applicationFeeReserved: row.applicationFeeReserved,
-        datePosted: row.datePosted,
-        updatedAt: row.updatedAt,
-      });
+      map.set(row.inferredPostId, row as PostingSlot);
     }
   }
   return map;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const recruitment = await safeQuery(() => getRecruitmentBySlug(slug), null);
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-  if (!recruitment) return {};
-
-  const title = `${recruitment.name} — Government Job Recruitment`;
-  const description =
-    recruitment.description ||
-    `${recruitment.name} recruitment - ${recruitment.posts?.length || 0} posts, vacancies, eligibility, application dates, and official notification.`;
-
-  return {
-    title,
-    description,
-    ...pageSeo(`/recruitments/${recruitment.slug}`),
-    openGraph: {
-      title,
-      description,
-      url: absoluteUrl(`/recruitments/${recruitment.slug}`),
-      type: "website",
-    },
-  };
-}
-
-function formatDate(date: Date | null | undefined): string {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("en-IN", {
+function fmtDate(d: Date | null | undefined): string {
+  if (!d) return "Not mentioned in notification";
+  return new Date(d).toLocaleDateString("en-IN", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 }
 
-function formatPayLevel(payLevel: Record<string, unknown> | null | undefined): string | null {
+function fmtDateShort(d: Date | null | undefined): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function payLabel(payLevel: Record<string, unknown> | null | undefined): string | null {
   if (!payLevel) return null;
   const level = payLevel.level as string | undefined;
   const scheme = payLevel.scheme as string | undefined;
@@ -143,341 +141,365 @@ function formatPayLevel(payLevel: Record<string, unknown> | null | undefined): s
   return null;
 }
 
-export default async function RecruitmentPage({ params }: Props) {
+function statusBadge(status: string, daysToClose: number | null) {
+  if (daysToClose !== null && daysToClose <= 0)
+    return { label: "Closed", cls: "bg-red-100 text-red-800 border-red-200" };
+  if (daysToClose !== null && daysToClose <= 3)
+    return { label: `Closing in ${daysToClose}d`, cls: "bg-orange-100 text-orange-800 border-orange-200" };
+  const map: Record<string, { label: string; cls: string }> = {
+    ACTIVE:    { label: "Applications Open", cls: "bg-green-100 text-green-800 border-green-200" },
+    UPCOMING:  { label: "Upcoming",          cls: "bg-blue-100 text-blue-800 border-blue-200" },
+    CLOSED:    { label: "Closed",            cls: "bg-neutral-100 text-neutral-700 border-neutral-200" },
+    RESULT_PENDING: { label: "Result Pending", cls: "bg-purple-100 text-purple-800 border-purple-200" },
+    COMPLETED: { label: "Completed",         cls: "bg-neutral-100 text-neutral-600 border-neutral-200" },
+  };
+  return map[status] ?? { label: status, cls: "bg-neutral-100 text-neutral-700 border-neutral-200" };
+}
+
+// ── Metadata ──────────────────────────────────────────────────────────────────
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const recruitment = await safeQuery(() => getRecruitmentBySlug(slug), null);
+  const hub = await safeQuery(() => getHub(slug), null);
+  if (!hub) return {};
 
-  if (!recruitment) {
-    notFound();
-  }
+  const org = hub.organization as any;
+  const totalVac = (hub.posts || []).reduce((s: number, p: any) => s + (p.vacancyTotal || 0), 0);
+  const advNo = hub.advertisementNumber ?? hub.officialNotificationNumber;
 
-  const posts_data = recruitment.posts || [];
-  const totalVacancies = posts_data.reduce((sum, p) => sum + (p.vacancyTotal || 0), 0);
-  const postingBySlotId = await safeQuery(
-    () => getPostingSlugsForPosts(posts_data.map((p) => p.id)),
-    new Map<number, PostingSlot & { postId: number }>(),
+  const title = advNo
+    ? `${hub.name} — Advt. No. ${advNo} — ${hub.year}`
+    : `${hub.name} — ${hub.year} Recruitment`;
+
+  const description =
+    hub.description ||
+    `${hub.name}${totalVac ? ` · ${totalVac} vacancies` : ""}${hub.applicationEndDate ? ` · Last date ${fmtDateShort(hub.applicationEndDate)}` : ""}. Eligibility, application dates, vacancy breakdown and official links — ${org?.name ?? "official"}.`;
+
+  const canonical = `/recruitments/${hub.slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: absoluteUrl(canonical) },
+    openGraph: {
+      title,
+      description,
+      url: absoluteUrl(canonical),
+      type: "website",
+    },
+  };
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default async function RecruitmentHubPage({ params }: Props) {
+  const { slug } = await params;
+  const hub = await safeQuery(() => getHub(slug), null);
+  if (!hub) notFound();
+
+  const org = hub.organization as any;
+  const exam = (hub as any).exam;
+  const hubPosts: any[] = hub.posts ?? [];
+
+  const postingMap = await safeQuery(
+    () => getPostingsForPosts(hubPosts.map((p: any) => p.id)),
+    new Map<number, PostingSlot>(),
   );
 
-  const org = (recruitment.organization as any);
-  const exam = (recruitment as any).exam;
+  const totalVacancies = hubPosts.reduce((s: number, p: any) => s + (p.vacancyTotal || 0), 0);
+  const advNo = hub.advertisementNumber ?? hub.officialNotificationNumber;
 
-  // Calculate days to closing from applicationEndDate
-  const daysToClosing = recruitment.applicationEndDate
-    ? Math.ceil((recruitment.applicationEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const now = Date.now();
+  const daysToClose = hub.applicationEndDate
+    ? Math.ceil((hub.applicationEndDate.getTime() - now) / 86_400_000)
     : null;
-  const isClosingSoon = daysToClosing !== null && daysToClosing <= 3 && daysToClosing > 0;
-  const isClosed = daysToClosing !== null && daysToClosing <= 0;
+  const badge = statusBadge(hub.status, daysToClose);
 
-  // Collect a representative apply URL and notification URL from postings when
-  // the recruitment-level fields are absent.
-  const anyPosting = postingBySlotId.size > 0 ? [...postingBySlotId.values()][0] : null;
-  const notificationUrl = recruitment.notificationUrl || anyPosting?.officialNotificationUrl || null;
-  const applyUrl = anyPosting?.applyUrl || null;
+  // Representative URLs from any linked posting when hub itself lacks them
+  const anyPosting = postingMap.size > 0 ? [...postingMap.values()][0] : null;
+  const notificationUrl = hub.notificationUrl ?? anyPosting?.officialNotificationUrl ?? null;
+  const applyUrl = anyPosting?.applyUrl ?? null;
 
-  // Last verified date: most recent updatedAt across all linked postings.
-  const lastVerified: Date | null = [...postingBySlotId.values()]
+  const lastVerified = [...postingMap.values()]
     .map((p) => p.updatedAt)
-    .reduce<Date | null>((latest, d) => (!latest || d > latest ? d : latest), null)
-    ?? (recruitment.updatedAt ? new Date(recruitment.updatedAt) : null);
+    .reduce<Date | null>((best, d) => (!best || d > best ? d : best), null)
+    ?? (hub.updatedAt ? new Date(hub.updatedAt) : null);
 
-  // FAQs: generate only where data gives a meaningful answer.
-  const faqs: { q: string; a: string }[] = [];
+  // ── Vacancy comparison table ───────────────────────────────────────────────
+  // Does any post have category-level breakdown?
+  const hasMatrix = hubPosts.some((p: any) => {
+    const lp = postingMap.get(p.id);
+    return lp?.extraContent?.reservationMatrix?.rows?.length;
+  });
 
-  // How to apply — only if there is an actual apply URL.
-  if (applyUrl) {
-    faqs.push({
-      q: `How do I apply for ${recruitment.name}?`,
-      a: `Submit the online application through the official portal before ${formatDate(recruitment.applicationEndDate)}. Verify all details in the official notification before applying.`,
-    });
-  }
-
-  // Total vacancies — only when we have a non-zero number.
-  if (totalVacancies > 0) {
-    faqs.push({
-      q: `How many vacancies are there in ${recruitment.name}?`,
-      a: `There are ${totalVacancies} total vacancies across ${posts_data.length} post${posts_data.length > 1 ? "s" : ""}.`,
-    });
-  }
-
-  // Last date — only when applicationEndDate is set.
-  if (recruitment.applicationEndDate) {
-    faqs.push({
-      q: `What is the last date to apply for ${recruitment.name}?`,
-      a: `The application deadline is ${formatDate(recruitment.applicationEndDate)}.`,
-    });
-  }
+  const SECTION = "mb-8 rounded-xl border border-black/8 bg-white dark:border-white/8 dark:bg-neutral-900";
+  const SECTION_HEAD = "border-b border-black/8 px-5 py-4 font-semibold dark:border-white/8";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
-          <Link href="/recruitments" className="hover:text-blue-600">Recruitments</Link>
-          <span>/</span>
-          <span>{recruitment.name}</span>
-        </div>
+    <div className="mx-auto max-w-5xl px-4 py-8 text-sm">
 
-        <h1 className="text-4xl font-bold mb-4">{recruitment.name}</h1>
-
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <span className={`inline-block w-3 h-3 rounded-full ${
-              isClosingSoon ? 'bg-orange-500' :
-              isClosed ? 'bg-red-500' :
-              recruitment.status === 'UPCOMING' ? 'bg-blue-500' :
-              recruitment.status === 'ACTIVE' ? 'bg-green-500' :
-              'bg-gray-400'
-            }`}></span>
-            <span className="font-medium">{isClosingSoon ? 'CLOSING SOON' : isClosed ? 'CLOSED' : recruitment.status}</span>
-          </div>
-
-          {totalVacancies > 0 && (
-            <div className="text-lg font-semibold text-blue-600">{totalVacancies} Vacancies</div>
-          )}
-
-          {recruitment.applicationEndDate && (
-            <div className="text-sm">
-              <span className="font-medium">Last Date:</span> {formatDate(recruitment.applicationEndDate)}
-            </div>
-          )}
-        </div>
-
-        {isClosingSoon && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-            <p className="text-orange-900 font-medium">
-              ⚠️ Applications close in {daysToClosing} day{daysToClosing! > 1 ? 's' : ''}. Apply now.
-            </p>
-          </div>
+      {/* ── Breadcrumb ───────────────────────────────────────────────────── */}
+      <nav className="mb-4 flex items-center gap-1.5 text-xs text-neutral-500">
+        <Link href="/jobs" className="hover:underline">Jobs</Link>
+        <span>/</span>
+        {org?.slug && (
+          <>
+            <Link href={`/commissions/${org.slug}`} className="hover:underline">{org.name}</Link>
+            <span>/</span>
+          </>
         )}
+        <span className="truncate text-neutral-700 dark:text-neutral-300">
+          {advNo ? `Advt. No. ${advNo}` : hub.name}
+        </span>
+      </nav>
 
-        {isClosed && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-900 font-medium">
-              This recruitment has closed.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Quick Overview */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-        <h2 className="text-xl font-bold mb-6">Quick Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <div className="text-sm text-gray-600 font-medium mb-1">Organization</div>
-            <div className="text-lg font-semibold">{org?.name || 'Organization'}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600 font-medium mb-1">Total Vacancies</div>
-            <div className="text-lg font-semibold text-green-600">{totalVacancies > 0 ? totalVacancies : '—'}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600 font-medium mb-1">Posts</div>
-            <div className="text-lg font-semibold">{posts_data.length}</div>
-          </div>
-          {recruitment.year && (
-            <div>
-              <div className="text-sm text-gray-600 font-medium mb-1">Year</div>
-              <div className="text-lg font-semibold">{recruitment.year}</div>
-            </div>
-          )}
-          {recruitment.officialNotificationNumber && (
-            <div>
-              <div className="text-sm text-gray-600 font-medium mb-1">Advertisement No.</div>
-              <div className="text-lg font-semibold">{recruitment.officialNotificationNumber}</div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Entity Graph — Position → Recruitment → Organization → Exam */}
-      {(org || exam || posts_data.some((p) => (p as any).position)) && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">About this Recruitment</h2>
-          <div className="flex flex-wrap gap-2 items-center text-sm">
-            {org && (
-              <>
-                {org.slug ? (
-                  <Link href={`/commissions/${org.slug}`} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-800 rounded-full hover:bg-blue-100 font-medium">
-                    🏛️ {org.name}
-                  </Link>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full font-medium">
-                    🏛️ {org.name}
-                  </span>
-                )}
-                <span className="text-gray-400">›</span>
-              </>
-            )}
-            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-800 rounded-full font-medium">
-              📋 {recruitment.name}
+      {/* ── Q1: What is this? ────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge.cls}`}>
+            {badge.label}
+          </span>
+          {hub.year && (
+            <span className="rounded-full border border-black/10 px-2.5 py-0.5 text-xs text-neutral-600 dark:border-white/10 dark:text-neutral-400">
+              {hub.year}
             </span>
-            {exam && (
-              <>
-                <span className="text-gray-400">›</span>
-                {exam.slug ? (
-                  <Link href={`/exams/${exam.slug}`} className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-800 rounded-full hover:bg-purple-100 font-medium">
-                    📝 {exam.name}
-                  </Link>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full font-medium">
-                    📝 {exam.name}
-                  </span>
-                )}
-              </>
-            )}
+          )}
+          {hubPosts.length > 0 && (
+            <span className="rounded-full border border-black/10 px-2.5 py-0.5 text-xs text-neutral-600 dark:border-white/10 dark:text-neutral-400">
+              {hubPosts.length} post{hubPosts.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+
+        <h1 className="text-2xl font-bold tracking-tight">{hub.name}</h1>
+
+        {org && (
+          <p className="mt-1 text-neutral-500">
+            {org.slug
+              ? <Link href={`/commissions/${org.slug}`} className="hover:underline">{org.name}</Link>
+              : org.name}
+            {advNo && <> · Advt. No. {advNo}</>}
+          </p>
+        )}
+
+        {hub.description && (
+          <p className="mt-3 leading-relaxed text-neutral-700 dark:text-neutral-300">{hub.description}</p>
+        )}
+      </div>
+
+      {/* ── Key stats strip ──────────────────────────────────────────────── */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          {
+            label: "Total Vacancies",
+            value: totalVacancies > 0 ? totalVacancies.toLocaleString("en-IN") : "—",
+            highlight: totalVacancies > 0,
+          },
+          {
+            label: "Last Date",
+            value: hub.applicationEndDate ? fmtDateShort(hub.applicationEndDate) : "—",
+            highlight: daysToClose !== null && daysToClose <= 7 && daysToClose > 0,
+          },
+          {
+            label: "Exam Date",
+            value: hub.examDate ? fmtDateShort(hub.examDate) : "—",
+            highlight: false,
+          },
+          {
+            label: "Notification",
+            value: hub.notificationDate ? fmtDateShort(hub.notificationDate) : "—",
+            highlight: false,
+          },
+        ].map(({ label, value, highlight }) => (
+          <div
+            key={label}
+            className={`rounded-lg border p-3 ${highlight ? "border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950" : "border-black/8 dark:border-white/8"}`}
+          >
+            <div className="text-xs text-neutral-500">{label}</div>
+            <div className={`mt-0.5 font-semibold ${highlight ? "text-orange-800 dark:text-orange-300" : ""}`}>
+              {value}
+            </div>
           </div>
-          {posts_data.length > 0 && posts_data.some((p) => (p as any).position) && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {posts_data.map((post) => {
-                const pos = (post as any).position;
-                if (!pos) return null;
+        ))}
+      </div>
+
+      {/* ── Q2: Can I apply? — Vacancy comparison table ──────────────────── */}
+      <div className={SECTION}>
+        <div className={SECTION_HEAD}>Vacancy Breakdown</div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-black/8 bg-neutral-50 text-left dark:border-white/8 dark:bg-neutral-800">
+                <th className="px-4 py-2.5 font-medium">Post</th>
+                <th className="px-4 py-2.5 font-medium text-right">Total</th>
+                <th className="px-4 py-2.5 font-medium text-right">UR</th>
+                <th className="px-4 py-2.5 font-medium text-right">EWS</th>
+                <th className="px-4 py-2.5 font-medium text-right">OBC</th>
+                <th className="px-4 py-2.5 font-medium text-right">SC</th>
+                <th className="px-4 py-2.5 font-medium text-right">ST</th>
+                <th className="px-4 py-2.5 font-medium text-right">PwBD</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hubPosts.map((post: any) => {
+                const lp = postingMap.get(post.id);
+                // Prefer vacancyDetails on the post row (denormalised),
+                // fall back to reservationMatrix first row in extraContent.
+                const vd: any =
+                  post.vacancyDetails ??
+                  lp?.extraContent?.reservationMatrix?.rows?.[0] ??
+                  null;
+
                 return (
-                  <Link
+                  <tr
                     key={post.id}
-                    href={`/positions/${pos.slug}`}
-                    className="text-xs px-2 py-1 bg-green-50 text-green-800 rounded hover:bg-green-100"
+                    className="border-b border-black/5 last:border-0 hover:bg-neutral-50 dark:border-white/5 dark:hover:bg-neutral-800"
                   >
-                    {pos.name}
-                  </Link>
+                    <td className="px-4 py-2.5">
+                      {lp ? (
+                        <Link href={`/jobs/${lp.slug}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                          {post.name}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{post.name}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-semibold">
+                      {post.vacancyTotal ?? vd?.total ?? "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">{vd?.ur ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-right">{vd?.ews ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-right">{vd?.obc ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-right">{vd?.sc ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-right">{vd?.st ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-right">{vd?.pwbdHorizontal ?? "—"}</td>
+                  </tr>
                 );
               })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Important Dates */}
-      {(recruitment.notificationDate || recruitment.applicationStartDate || recruitment.applicationEndDate || recruitment.examDate) && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold mb-6">Important Dates</h2>
-          <table className="w-full text-sm">
-            <tbody>
-              {recruitment.notificationDate && (
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 font-medium text-gray-700">Notification</td>
-                  <td className="py-3">{formatDate(recruitment.notificationDate)}</td>
-                </tr>
-              )}
-              {recruitment.applicationStartDate && (
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 font-medium text-gray-700">Application Starts</td>
-                  <td className="py-3">{formatDate(recruitment.applicationStartDate)}</td>
-                </tr>
-              )}
-              {recruitment.applicationEndDate && (
-                <tr className={`border-b border-gray-100 ${isClosingSoon || isClosed ? 'bg-orange-50' : ''}`}>
-                  <td className="py-3 font-medium text-gray-700">Last Date to Apply</td>
-                  <td className="py-3 font-semibold">{formatDate(recruitment.applicationEndDate)}</td>
-                </tr>
-              )}
-              {recruitment.examDate && (
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 font-medium text-gray-700">Exam Date</td>
-                  <td className="py-3">{formatDate(recruitment.examDate)}</td>
-                </tr>
-              )}
-              {recruitment.resultDate && (
-                <tr>
-                  <td className="py-3 font-medium text-gray-700">Result Date</td>
-                  <td className="py-3">{formatDate(recruitment.resultDate)}</td>
+              {/* Totals row */}
+              {hubPosts.length > 1 && (
+                <tr className="border-t-2 border-black/10 bg-neutral-50 font-semibold dark:border-white/10 dark:bg-neutral-800">
+                  <td className="px-4 py-2.5">Total</td>
+                  <td className="px-4 py-2.5 text-right">{totalVacancies > 0 ? totalVacancies : "—"}</td>
+                  {(["ur","ews","obc","sc","st"] as const).map((cat) => {
+                    const sum = hubPosts.reduce((s: number, p: any) => {
+                      const lp = postingMap.get(p.id);
+                      const vd: any = p.vacancyDetails ?? lp?.extraContent?.reservationMatrix?.rows?.[0] ?? null;
+                      return s + (vd?.[cat] ?? 0);
+                    }, 0);
+                    return <td key={cat} className="px-4 py-2.5 text-right">{sum > 0 ? sum : "—"}</td>;
+                  })}
+                  <td className="px-4 py-2.5 text-right">
+                    {(() => {
+                      const sum = hubPosts.reduce((s: number, p: any) => {
+                        const lp = postingMap.get(p.id);
+                        const vd: any = p.vacancyDetails ?? lp?.extraContent?.reservationMatrix?.rows?.[0] ?? null;
+                        return s + (vd?.pwbdHorizontal ?? 0);
+                      }, 0);
+                      return sum > 0 ? sum : "—";
+                    })()}
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      )}
+        <p className="px-4 py-2.5 text-xs text-neutral-500">
+          UR = Unreserved · EWS = Economically Weaker Sections · OBC = OBC (Non-Creamy Layer) · PwBD = Persons with Benchmark Disabilities (horizontal reservation)
+        </p>
+      </div>
 
-      {/* Posts Available — per-post detail where data exists */}
-      {posts_data.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold mb-6">Posts Available</h2>
-          <div className="space-y-6">
-            {posts_data.map((post) => {
-              const livePosting = postingBySlotId.get(post.id);
-              const payLabel = formatPayLevel((post as any).payLevel);
+      {/* ── Q3: What do I need? — Per-post eligibility ───────────────────── */}
+      {hubPosts.length > 0 && (
+        <div className={SECTION}>
+          <div className={SECTION_HEAD}>Eligibility at a Glance</div>
+          <div className="divide-y divide-black/5 dark:divide-white/5">
+            {hubPosts.map((post: any) => {
+              const lp = postingMap.get(post.id);
+              const pl = payLabel((post as any).payLevel);
+              const ageMin = lp?.ageLimitMin;
+              const ageMax = lp?.ageLimitMax;
+              const ageStr = ageMin && ageMax
+                ? `${ageMin}–${ageMax} years`
+                : ageMax
+                  ? `Up to ${ageMax} years`
+                  : ageMin
+                    ? `Min ${ageMin} years`
+                    : null;
 
               return (
-                <div key={post.id} className="border border-gray-100 rounded-lg p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      {livePosting ? (
-                        <Link
-                          href={`/jobs/${livePosting.slug}`}
-                          className="font-semibold text-blue-600 hover:underline text-lg"
-                        >
+                <div key={post.id} className="px-5 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      {lp ? (
+                        <Link href={`/jobs/${lp.slug}`} className="font-semibold text-blue-600 hover:underline dark:text-blue-400">
                           {post.name}
                         </Link>
                       ) : (
-                        <h3 className="font-semibold text-gray-900 text-lg">{post.name}</h3>
+                        <span className="font-semibold">{post.name}</span>
                       )}
                       {(post as any).position?.name && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Position:{" "}
-                          <Link href={`/positions/${(post as any).position.slug}`} className="hover:underline">
-                            {(post as any).position.name}
-                          </Link>
-                        </div>
+                        <span className="ml-2 text-xs text-neutral-500">
+                          · {(post as any).position.name}
+                        </span>
                       )}
                     </div>
-                    {post.vacancyTotal ? (
-                      <div className="text-right shrink-0 ml-4">
-                        <div className="text-2xl font-bold text-green-600">{post.vacancyTotal}</div>
-                        <div className="text-xs text-gray-600">Vacancies</div>
+                    {post.vacancyTotal && (
+                      <div className="shrink-0 text-right">
+                        <div className="text-lg font-bold text-green-700 dark:text-green-400">{post.vacancyTotal}</div>
+                        <div className="text-xs text-neutral-500">vacancies</div>
                       </div>
-                    ) : null}
+                    )}
                   </div>
 
-                  {/* Per-post facts from linked posting */}
-                  {livePosting && (
-                    <div className="mt-3 space-y-2 text-sm text-gray-700">
-                      {livePosting.eligibility && (
-                        <div>
-                          <span className="font-medium text-gray-800">Eligibility: </span>
-                          {livePosting.eligibility}
-                        </div>
-                      )}
-                      {(livePosting.ageLimitMin || livePosting.ageLimitMax) && (
-                        <div>
-                          <span className="font-medium text-gray-800">Age Limit: </span>
-                          {livePosting.ageLimitMin && livePosting.ageLimitMax
-                            ? `${livePosting.ageLimitMin}–${livePosting.ageLimitMax} years`
-                            : livePosting.ageLimitMax
-                              ? `Up to ${livePosting.ageLimitMax} years`
-                              : `Min ${livePosting.ageLimitMin} years`}
-                          {livePosting.ageRelaxationNotes && (
-                            <span className="text-gray-500"> ({livePosting.ageRelaxationNotes})</span>
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
+                    {lp?.eligibility && (
+                      <div>
+                        <span className="font-medium text-neutral-700 dark:text-neutral-300">Eligibility: </span>
+                        <span className="text-neutral-600 dark:text-neutral-400">{lp.eligibility}</span>
+                      </div>
+                    )}
+                    {ageStr && (
+                      <div>
+                        <span className="font-medium text-neutral-700 dark:text-neutral-300">Age: </span>
+                        <span className="text-neutral-600 dark:text-neutral-400">
+                          {ageStr}
+                          {lp?.ageRelaxationNotes && (
+                            <span className="text-neutral-400"> (relaxation applies)</span>
                           )}
-                        </div>
-                      )}
-                      {payLabel && (
-                        <div>
-                          <span className="font-medium text-gray-800">Pay Scale: </span>
-                          {payLabel}
-                        </div>
-                      )}
-                      {(livePosting.applicationFeeGeneral != null) && (
-                        <div>
-                          <span className="font-medium text-gray-800">Application Fee: </span>
-                          {livePosting.applicationFeeGeneral === 0
+                        </span>
+                      </div>
+                    )}
+                    {pl && (
+                      <div>
+                        <span className="font-medium text-neutral-700 dark:text-neutral-300">Pay: </span>
+                        <span className="text-neutral-600 dark:text-neutral-400">{pl}</span>
+                      </div>
+                    )}
+                    {lp?.applicationFeeGeneral != null && (
+                      <div>
+                        <span className="font-medium text-neutral-700 dark:text-neutral-300">Fee: </span>
+                        <span className="text-neutral-600 dark:text-neutral-400">
+                          {lp.applicationFeeGeneral === 0
                             ? "No fee"
-                            : `₹${livePosting.applicationFeeGeneral} (General)`}
-                          {livePosting.applicationFeeReserved != null && livePosting.applicationFeeReserved !== livePosting.applicationFeeGeneral && (
-                            <span className="text-gray-500">
-                              {livePosting.applicationFeeReserved === 0
-                                ? " · Nil (SC/ST/PH)"
-                                : ` · ₹${livePosting.applicationFeeReserved} (SC/ST/PH)`}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            : `₹${lp.applicationFeeGeneral} (General)`}
+                          {lp.applicationFeeReserved != null && lp.applicationFeeReserved !== lp.applicationFeeGeneral
+                            ? lp.applicationFeeReserved === 0
+                              ? " · Nil (SC/ST/PwBD)"
+                              : ` · ₹${lp.applicationFeeReserved} (SC/ST/PwBD)`
+                            : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                  {livePosting && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <Link href={`/jobs/${livePosting.slug}`} className="text-sm text-blue-600 hover:underline">
-                        View full details, eligibility &amp; apply →
+                  {lp && (
+                    <div className="mt-3">
+                      <Link
+                        href={`/jobs/${lp.slug}`}
+                        className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Full eligibility, age table &amp; interactive checker →
                       </Link>
                     </div>
                   )}
@@ -488,116 +510,185 @@ export default async function RecruitmentPage({ params }: Props) {
         </div>
       )}
 
-      {/* Source & Verification */}
-      <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 mb-8">
-        <h3 className="text-lg font-semibold text-green-900 mb-4">Source &amp; Verification</h3>
-        <p className="text-sm text-gray-700 mb-4">
-          All information on this page is drawn from the official government notification. Verify details there before applying.
-        </p>
+      {/* ── Q4: How does the process work? — Dates ───────────────────────── */}
+      {(hub.notificationDate || hub.applicationStartDate || hub.applicationEndDate || hub.examDate || hub.resultDate) && (
+        <div className={SECTION}>
+          <div className={SECTION_HEAD}>Important Dates</div>
+          <table className="w-full text-sm">
+            <tbody>
+              {[
+                { label: "Notification Released", date: hub.notificationDate },
+                { label: "Application Opens",     date: hub.applicationStartDate },
+                { label: "Last Date to Apply",    date: hub.applicationEndDate, highlight: true },
+                { label: "Exam Date",             date: hub.examDate },
+                { label: "Result",                date: hub.resultDate },
+              ]
+                .filter((r) => r.date)
+                .map(({ label, date, highlight }) => (
+                  <tr
+                    key={label}
+                    className={`border-b border-black/5 last:border-0 dark:border-white/5 ${highlight && daysToClose !== null && daysToClose <= 3 ? "bg-orange-50 dark:bg-orange-950" : ""}`}
+                  >
+                    <td className="px-5 py-3 font-medium text-neutral-700 dark:text-neutral-300">{label}</td>
+                    <td className="px-5 py-3">{fmtDate(date)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        <div className="space-y-3">
-          {org && (
-            <div className="flex items-start gap-3 p-3 bg-white border border-green-100 rounded text-sm">
-              <span className="text-green-700 mt-0.5">🏛️</span>
-              <div>
-                <span className="font-medium text-gray-800">Issuing Authority: </span>
-                <span className="text-gray-700">{org.name}</span>
+      {/* ── Q5: What's next? — Official links + per-post apply CTAs ─────── */}
+      <div className={SECTION}>
+        <div className={SECTION_HEAD}>Official Links</div>
+        <div className="divide-y divide-black/5 p-4 dark:divide-white/5">
+
+          {/* Hub-level links */}
+          <div className="space-y-2 pb-4">
+            {notificationUrl && (
+              <a
+                href={notificationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+              >
+                <span>📄</span>
+                <div className="flex-1">
+                  <div className="font-medium">Official Notification</div>
+                  <div className="text-xs text-neutral-500">
+                    {advNo ? `Advt. No. ${advNo}` : "Official PDF"} — {org?.name ?? "Issuing authority"}
+                  </div>
+                </div>
+                <span className="text-neutral-400">→</span>
+              </a>
+            )}
+            {org?.websiteUrl && (
+              <a
+                href={org.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+              >
+                <span>🌐</span>
+                <div className="flex-1">
+                  <div className="font-medium">Official Website</div>
+                  <div className="text-xs text-neutral-500">{org.name}</div>
+                </div>
+                <span className="text-neutral-400">→</span>
+              </a>
+            )}
+            {!notificationUrl && !org?.websiteUrl && (
+              <p className="py-2 text-xs text-neutral-500">
+                Official links — verify against the official notification before applying.
+              </p>
+            )}
+          </div>
+
+          {/* Per-post apply links */}
+          {hubPosts.some((p: any) => postingMap.get(p.id)?.applyUrl) && (
+            <div className="pt-4">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">Apply per post</div>
+              <div className="space-y-2">
+                {hubPosts.map((post: any) => {
+                  const lp = postingMap.get(post.id);
+                  if (!lp?.applyUrl) return null;
+                  return (
+                    <a
+                      key={post.id}
+                      href={lp.applyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:hover:bg-blue-900"
+                    >
+                      <span>✏️</span>
+                      <div className="flex-1">
+                        <div className="font-medium text-blue-900 dark:text-blue-100">Apply — {post.name}</div>
+                        <div className="text-xs text-blue-700 dark:text-blue-400">Official portal</div>
+                      </div>
+                      <span className="text-blue-400">→</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
-          )}
-
-          {recruitment.officialNotificationNumber && (
-            <div className="flex items-start gap-3 p-3 bg-white border border-green-100 rounded text-sm">
-              <span className="text-green-700 mt-0.5">🔖</span>
-              <div>
-                <span className="font-medium text-gray-800">Advertisement No.: </span>
-                <span className="text-gray-700">{recruitment.officialNotificationNumber}</span>
-              </div>
-            </div>
-          )}
-
-          {notificationUrl && (
-            <a
-              href={notificationUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 bg-white border border-green-200 rounded hover:bg-green-50"
-            >
-              <span>📄</span>
-              <div>
-                <div className="font-medium text-green-900">Official Notification</div>
-                <div className="text-xs text-green-700">PDF — {org?.name || 'Issuing authority'}</div>
-              </div>
-              <span className="ml-auto">→</span>
-            </a>
-          )}
-
-          {applyUrl && (
-            <a
-              href={applyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 bg-white border border-blue-200 rounded hover:bg-blue-50"
-            >
-              <span>✏️</span>
-              <div>
-                <div className="font-medium text-blue-900">Apply Online</div>
-                <div className="text-xs text-blue-700">Official application portal</div>
-              </div>
-              <span className="ml-auto">→</span>
-            </a>
-          )}
-
-          {org?.website && (
-            <a
-              href={org.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 bg-white border border-blue-200 rounded hover:bg-blue-50"
-            >
-              <span>🌐</span>
-              <div>
-                <div className="font-medium text-blue-900">Official Website</div>
-                <div className="text-xs text-blue-700">{org.name}</div>
-              </div>
-              <span className="ml-auto">→</span>
-            </a>
           )}
         </div>
+      </div>
 
+      {/* ── Per-post detail cards (deep link to 5-question pages) ────────── */}
+      <div className={SECTION}>
+        <div className={SECTION_HEAD}>Posts in This Recruitment</div>
+        <div className="divide-y divide-black/5 dark:divide-white/5">
+          {hubPosts.map((post: any) => {
+            const lp = postingMap.get(post.id);
+            const stage = lp?.currentStage;
+            const stageLabels: Record<string, string> = {
+              APPLICATION_OPEN: "Applications Open",
+              APPLICATION_CLOSED: "Applications Closed",
+              ADMIT_CARD_RELEASED: "Admit Card Released",
+              EXAM_SCHEDULED: "Exam Scheduled",
+              RESULT_OUT: "Result Out",
+              FINAL_RESULT_OUT: "Final Result",
+              NOTIFICATION_OUT: "Notification Out",
+            };
+
+            return (
+              <div key={post.id} className="flex items-center justify-between gap-3 px-5 py-4">
+                <div>
+                  <div className="font-medium">
+                    {lp ? (
+                      <Link href={`/jobs/${lp.slug}`} className="text-blue-600 hover:underline dark:text-blue-400">
+                        {post.name}
+                      </Link>
+                    ) : (
+                      post.name
+                    )}
+                  </div>
+                  {stage && (
+                    <div className="mt-0.5 text-xs text-neutral-500">
+                      {stageLabels[stage] ?? stage}
+                      {lp?.validThrough && (
+                        <> · Last date {fmtDateShort(lp.validThrough)}</>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {post.vacancyTotal && (
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-400">
+                      {post.vacancyTotal} vacancies
+                    </span>
+                  )}
+                  {lp && (
+                    <Link
+                      href={`/jobs/${lp.slug}`}
+                      className="rounded-md bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700"
+                    >
+                      View details
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Source & trust footer ─────────────────────────────────────────── */}
+      <div className="rounded-xl border border-green-200 bg-green-50 p-5 dark:border-green-900 dark:bg-green-950">
+        <p className="font-semibold text-green-900 dark:text-green-200">Source &amp; Verification</p>
+        <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
+          All information is drawn from the official government notification published by {org?.name ?? "the issuing authority"}.
+          {advNo && ` Advertisement No. ${advNo}.`}
+          {" "}Verify details in the official notification before applying.
+        </p>
         {lastVerified && (
-          <p className="text-xs text-gray-500 mt-4">
+          <p className="mt-2 text-xs text-neutral-500">
             Last verified: {lastVerified.toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}
           </p>
         )}
       </div>
 
-      {/* FAQs — only when data supports a meaningful answer */}
-      {faqs.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold mb-6">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            {faqs.map((faq, i) => (
-              <div key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-                <div className="font-semibold text-gray-900 mb-1">{faq.q}</div>
-                <div className="text-sm text-gray-700">{faq.a}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Trust Statement */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-        <p className="text-sm text-amber-900">
-          <strong>JobOye is an independent job information platform.</strong> Always verify details in the official notification before applying.
-        </p>
-        {lastVerified && (
-          <p className="text-xs text-amber-700 mt-2">
-            Last updated: {lastVerified.toLocaleDateString("en-IN")}
-          </p>
-        )}
-      </div>
     </div>
   );
 }
