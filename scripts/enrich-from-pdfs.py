@@ -119,12 +119,17 @@ def parse_date(text: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 def extract_city(text: str) -> Optional[str]:
-    search_area = text[:2000]
+    # Only search the first 800 chars (header/letterhead area) to avoid
+    # picking up cities mentioned in posting locations or eligibility text
+    header = text[:800]
     for pattern, canonical in CITY_PATTERNS:
-        if re.search(pattern, search_area, re.IGNORECASE):
+        if re.search(pattern, header, re.IGNORECASE):
             return canonical
-    for pattern, canonical in CITY_PATTERNS:
-        if re.search(pattern, text, re.IGNORECASE):
+    # Fallback: first 2000 chars, but only city-level patterns (not state fallbacks)
+    city_only = CITY_PATTERNS[:-14]  # excludes the state-level fallbacks at the end
+    search_area = text[:2000]
+    for pattern, canonical in city_only:
+        if re.search(pattern, search_area, re.IGNORECASE):
             return canonical
     return None
 
@@ -152,36 +157,85 @@ def extract_post_names(text: str) -> list[dict]:
     """Extract post names with vacancy counts as [{name, count}]."""
     results = []
     seen = set()
-    # Pattern: post name followed by count, or count followed by post name
+
+    # Known post/job title keywords — must appear in the name to qualify
+    JOB_KEYWORDS = re.compile(
+        r'\b(officer|engineer|manager|assistant|clerk|inspector|constable|'
+        r'teacher|professor|lecturer|director|scientist|analyst|technician|'
+        r'operator|supervisor|executive|consultant|nurse|doctor|pharmacist|'
+        r'accountant|auditor|registrar|librarian|driver|guard|helper|'
+        r'researcher|fellow|associate|specialist|coordinator|advisor|'
+        r'superintendent|commissioner|secretary|peon|sepoy|havaldar|'
+        r'sub-inspector|head constable|junior|senior|deputy|chief|principal|'
+        r'post graduate|graduate|diploma)\b',
+        re.IGNORECASE
+    )
+
+    # Words that indicate a line is NOT a post name
+    SKIP_WORDS = {
+        'total', 'category', 'general', 'obc', 'sc', 'st', 'ews', 'pwd', 'pwbd',
+        'male', 'female', 'age', 'fee', 'date', 'salary', 'pay', 'india', 'indian',
+        'punjab', 'sector', 'phone', 'email', 'terms', 'conditions', 'annexure',
+        'enclosure', 'important', 'note', 'signature', 'applicant', 'candidate',
+        'address', 'post', 'box', 'pin', 'code', 'website', 'www',
+    }
+
+    # Sanity bounds for vacancy counts
+    MAX_REASONABLE_VACANCIES = 100000
+
+    # Patterns that reliably indicate a post listing line:
+    # "Post Name: N posts" or "N posts of Post Name" or tabular "Post Name | N"
     patterns = [
-        r'([A-Z][A-Za-z\s/()-]{3,50}?)\s*[:\-–]\s*(\d+)\s*(?:posts?|vacancies?|nos?\.?)?',
-        r'(\d+)\s+(?:posts?\s+of\s+)?([A-Z][A-Za-z\s/()-]{3,50})',
+        # "Post Name : 5" or "Post Name – 05 Posts"
+        r'^([A-Z][A-Za-z\s/().-]{4,55}?)\s*[:\-–|]\s*(\d{1,5})\s*(?:posts?|vacancies?|nos?\.?|seats?)?\s*$',
+        # "05 Posts of Post Name" or "5 Post Name"
+        r'^\s*(\d{1,5})\s+(?:posts?\s+of\s+)?([A-Z][A-Za-z\s/().-]{4,55})\s*$',
     ]
-    for pattern in patterns:
-        for m in re.finditer(pattern, text):
-            if pattern.startswith(r'(\d+)'):
+
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line or len(line) > 120:
+            continue
+        for pattern in patterns:
+            m = re.match(pattern, line, re.IGNORECASE)
+            if not m:
+                continue
+            if pattern.startswith(r'^\s*(\d'):
                 count_str, name = m.group(1), m.group(2).strip()
             else:
                 name, count_str = m.group(1).strip(), m.group(2)
-            name = re.sub(r'\s+', ' ', name).strip(' -–:')
-            if len(name) < 4 or len(name) > 60:
+
+            name = re.sub(r'\s+', ' ', name).strip(' -–:|')
+            if len(name) < 5 or len(name) > 60:
                 continue
-            # Skip lines that are clearly not post names
-            skip_words = {'total', 'category', 'general', 'obc', 'sc', 'st', 'ews',
-                         'male', 'female', 'age', 'fee', 'date', 'salary', 'pay'}
-            if name.lower().split()[0] in skip_words:
+
+            first_word = name.lower().split()[0]
+            if first_word in SKIP_WORDS:
                 continue
+
+            # Must contain a job-related keyword
+            if not JOB_KEYWORDS.search(name):
+                continue
+
+            try:
+                count = int(count_str.replace(',', ''))
+            except ValueError:
+                continue
+
+            # Reject obviously wrong counts (years, phone numbers, PINs)
+            if count > MAX_REASONABLE_VACANCIES or count == 0:
+                continue
+
             key = name.lower()
             if key not in seen:
                 seen.add(key)
-                try:
-                    results.append({'name': name, 'count': int(count_str.replace(',', ''))})
-                except ValueError:
-                    results.append({'name': name, 'count': None})
-            if len(results) >= 20:
+                results.append({'name': name, 'count': count})
+
+            if len(results) >= 15:
                 break
-        if results:
+        if len(results) >= 15:
             break
+
     return results
 
 
@@ -215,10 +269,10 @@ def extract_age_limits(text: str) -> tuple[Optional[int], Optional[int]]:
 def extract_fee(text: str) -> Optional[int]:
     """Extract general/UR category application fee in INR."""
     patterns = [
-        r'(?:general|ur|unreserved|open)[^.]{0,60}?(?:fee|fees)[:\s]+(?:rs\.?|inr\.?)?\s*(\d+)',
-        r'(?:application\s+fee)[^.]{0,60}?(?:general|ur)[^.]{0,30}?(?:rs\.?|inr\.?)?\s*(\d+)',
-        r'(?:rs\.?|inr\.?)\s*(\d+)[^.]{0,40}?(?:general|ur|unreserved)',
-        r'application\s+fee[:\s]+(?:rs\.?|inr\.?)?\s*(\d+)',
+        r'(?:general|ur|unreserved|open)[^.]{0,60}?(?:fee|fees)[:\s]+(?:rs\.?|inr\.?|₹)?\s*(\d+)',
+        r'(?:application\s+fee)[^.]{0,60}?(?:general|ur)[^.]{0,30}?(?:rs\.?|inr\.?|₹)?\s*(\d+)',
+        r'(?:rs\.?|inr\.?|₹)\s*(\d+)[^.]{0,40}?(?:general|ur|unreserved)',
+        r'application\s+fee[:\s]+(?:rs\.?|inr\.?|₹)?\s*(\d+)',
         r'(?:rs\.?|₹)\s*(\d+)\s*(?:for\s+(?:general|ur|open))',
     ]
     for pattern in patterns:
@@ -226,7 +280,9 @@ def extract_fee(text: str) -> Optional[int]:
         if m:
             try:
                 fee = int(m.group(1).replace(',', ''))
-                if 0 < fee < 10000:  # sanity check
+                # Realistic fee range: ₹25 to ₹2000
+                # Rejects: 1, 2 (version/list numbers), 50000 (salary figures)
+                if 25 <= fee <= 2000:
                     return fee
             except ValueError:
                 pass
