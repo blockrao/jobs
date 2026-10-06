@@ -19,6 +19,20 @@ export const metadata: Metadata = {
     url: SITE_URL,
     type: "website",
     siteName: SITE_NAME,
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} — Government Job Notifications India`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — Govt & Private Job Notifications, Results, Guides`,
+    description: "Latest government and private job notifications across India — admit cards, exam dates, answer keys, results, and in-depth guides, all in one place.",
+    images: ["/og-default.png"],
   },
 };
 
