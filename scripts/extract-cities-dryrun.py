@@ -123,21 +123,35 @@ def fetch_pdf_text(url: str) -> str | None:
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
     }
-    try:
-        r = requests.get(url, headers=headers, timeout=20)
-        if r.status_code != 200:
-            print(f"  HTTP {r.status_code}")
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    # Try twice: first with SSL verification, then without (common for .gov.in domains)
+    for verify in (True, False):
+        try:
+            r = requests.get(url, headers=headers, timeout=30, verify=verify)
+            if r.status_code != 200:
+                print(f"  HTTP {r.status_code}")
+                return None
+            # Check it's actually a PDF
+            if not r.content[:4] == b'%PDF':
+                print(f"  Not a PDF (got {r.content[:20]})")
+                return None
+            with pdfplumber.open(io.BytesIO(r.content)) as pdf:
+                text = ""
+                for page in pdf.pages[:3]:
+                    t = page.extract_text()
+                    if t:
+                        text += t + "\n"
+                return text if text.strip() else None
+        except requests.exceptions.SSLError:
+            if verify:
+                continue  # retry without SSL verification
+            print(f"  SSL error even without verification")
             return None
-        with pdfplumber.open(io.BytesIO(r.content)) as pdf:
-            text = ""
-            for page in pdf.pages[:3]:
-                t = page.extract_text()
-                if t:
-                    text += t + "\n"
-            return text if text.strip() else None
-    except Exception as e:
-        print(f"  ERROR: {e}")
-        return None
+        except Exception as e:
+            print(f"  ERROR: {e}")
+            return None
+    return None
 
 
 def main():
