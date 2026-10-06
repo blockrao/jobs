@@ -119,16 +119,10 @@ def parse_date(text: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 def extract_city(text: str) -> Optional[str]:
-    # Only search the first 800 chars (header/letterhead area) to avoid
-    # picking up cities mentioned in posting locations or eligibility text
-    header = text[:800]
+    # Search first 1500 chars (header/letterhead) — broad enough for varied PDFs
+    # but avoids eligibility / posting-location body text
+    search_area = text[:1500]
     for pattern, canonical in CITY_PATTERNS:
-        if re.search(pattern, header, re.IGNORECASE):
-            return canonical
-    # Fallback: first 2000 chars, but only city-level patterns (not state fallbacks)
-    city_only = CITY_PATTERNS[:-14]  # excludes the state-level fallbacks at the end
-    search_area = text[:2000]
-    for pattern, canonical in city_only:
         if re.search(pattern, search_area, re.IGNORECASE):
             return canonical
     return None
@@ -158,62 +152,54 @@ def extract_post_names(text: str) -> list[dict]:
     results = []
     seen = set()
 
-    # Known post/job title keywords — must appear in the name to qualify
+    SKIP_FIRST_WORDS = {
+        'total', 'category', 'general', 'obc', 'sc', 'st', 'ews', 'pwd', 'pwbd',
+        'male', 'female', 'age', 'fee', 'date', 'salary', 'pay', 'india', 'indian',
+        'sector', 'phone', 'email', 'terms', 'conditions', 'annexure',
+        'enclosure', 'important', 'note', 'address', 'website', 'www',
+        'unreserved', 'reserved', 'horizontal', 'vertical',
+    }
+
     JOB_KEYWORDS = re.compile(
         r'\b(officer|engineer|manager|assistant|clerk|inspector|constable|'
         r'teacher|professor|lecturer|director|scientist|analyst|technician|'
         r'operator|supervisor|executive|consultant|nurse|doctor|pharmacist|'
-        r'accountant|auditor|registrar|librarian|driver|guard|helper|'
+        r'accountant|auditor|registrar|librarian|driver|guard|helper|peon|'
         r'researcher|fellow|associate|specialist|coordinator|advisor|'
-        r'superintendent|commissioner|secretary|peon|sepoy|havaldar|'
-        r'sub-inspector|head constable|junior|senior|deputy|chief|principal|'
-        r'post graduate|graduate|diploma)\b',
+        r'superintendent|commissioner|secretary|sepoy|havaldar|'
+        r'sub.inspector|head constable|junior|senior|deputy|chief|principal)\b',
         re.IGNORECASE
     )
 
-    # Words that indicate a line is NOT a post name
-    SKIP_WORDS = {
-        'total', 'category', 'general', 'obc', 'sc', 'st', 'ews', 'pwd', 'pwbd',
-        'male', 'female', 'age', 'fee', 'date', 'salary', 'pay', 'india', 'indian',
-        'punjab', 'sector', 'phone', 'email', 'terms', 'conditions', 'annexure',
-        'enclosure', 'important', 'note', 'signature', 'applicant', 'candidate',
-        'address', 'post', 'box', 'pin', 'code', 'website', 'www',
-    }
-
-    # Sanity bounds for vacancy counts
-    MAX_REASONABLE_VACANCIES = 100000
-
-    # Patterns that reliably indicate a post listing line:
-    # "Post Name: N posts" or "N posts of Post Name" or tabular "Post Name | N"
-    patterns = [
-        # "Post Name : 5" or "Post Name – 05 Posts"
-        r'^([A-Z][A-Za-z\s/().-]{4,55}?)\s*[:\-–|]\s*(\d{1,5})\s*(?:posts?|vacancies?|nos?\.?|seats?)?\s*$',
-        # "05 Posts of Post Name" or "5 Post Name"
-        r'^\s*(\d{1,5})\s+(?:posts?\s+of\s+)?([A-Z][A-Za-z\s/().-]{4,55})\s*$',
-    ]
+    # Pattern 1: "Post Name : N" or "Post Name – N Posts" (inline)
+    inline = re.compile(
+        r'([A-Z][A-Za-z\s/().-]{4,55}?)\s*[:\-–]\s*(\d{1,5})\s*(?:posts?|vacancies?|nos?\.?|seats?)?\b',
+        re.IGNORECASE
+    )
+    # Pattern 2: "N Post Name" on its own line
+    count_first = re.compile(
+        r'^\s*(\d{1,5})\s+([A-Z][A-Za-z\s/().-]{4,55})\s*$',
+        re.IGNORECASE
+    )
 
     for line in text.split('\n'):
         line = line.strip()
-        if not line or len(line) > 120:
+        if not line:
             continue
-        for pattern in patterns:
-            m = re.match(pattern, line, re.IGNORECASE)
+
+        for m, swap in [(inline.search(line), False), (count_first.match(line), True)]:
             if not m:
                 continue
-            if pattern.startswith(r'^\s*(\d'):
+            if swap:
                 count_str, name = m.group(1), m.group(2).strip()
             else:
                 name, count_str = m.group(1).strip(), m.group(2)
 
             name = re.sub(r'\s+', ' ', name).strip(' -–:|')
-            if len(name) < 5 or len(name) > 60:
+            if len(name) < 5 or len(name) > 65:
                 continue
-
-            first_word = name.lower().split()[0]
-            if first_word in SKIP_WORDS:
+            if name.lower().split()[0] in SKIP_FIRST_WORDS:
                 continue
-
-            # Must contain a job-related keyword
             if not JOB_KEYWORDS.search(name):
                 continue
 
@@ -222,8 +208,8 @@ def extract_post_names(text: str) -> list[dict]:
             except ValueError:
                 continue
 
-            # Reject obviously wrong counts (years, phone numbers, PINs)
-            if count > MAX_REASONABLE_VACANCIES or count == 0:
+            # Reject years (1900-2099), phone fragments, PIN codes, zero
+            if count == 0 or (1900 <= count <= 2099) or count > 50000:
                 continue
 
             key = name.lower()
@@ -233,6 +219,7 @@ def extract_post_names(text: str) -> list[dict]:
 
             if len(results) >= 15:
                 break
+
         if len(results) >= 15:
             break
 
