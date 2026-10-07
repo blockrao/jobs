@@ -436,18 +436,30 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
   // (postings.inferred_recruitment_id → recruitment.id).
   // These live on postings not recruitments, and the leaf page needs both.
   const postingFields = await db
-    .select({ applyUrl: postings.applyUrl, employmentType: postings.employmentType })
+    .select({
+      applyUrl: postings.applyUrl,
+      employmentType: postings.employmentType,
+      officialNotificationUrl: postings.officialNotificationUrl,
+    })
     .from(postings)
     .where(eq(postings.inferredRecruitmentId, recruitment.id))
     .limit(1)
     .catch(() => [])
-    .then((rows) => rows[0] ?? { applyUrl: null, employmentType: null });
+    .then((rows) => rows[0] ?? { applyUrl: null, employmentType: null, officialNotificationUrl: null });
 
   return {
     post,
     recruitment,
     applyUrl: postingFields.applyUrl,
     postingEmploymentType: postingFields.employmentType,
+    // Official notification URL: prefer the verified column on the recruitment
+    // (populated from the official source), fall back to postings discovery value.
+    // Leaf page uses this for the "Official Notification" button.
+    officialNotificationUrl:
+      recruitment.officialNotificationUrl ??
+      postingFields.officialNotificationUrl ??
+      recruitment.notificationUrl ??
+      null,
     // Convenience aliases surfaced explicitly so leaf-page code doesn't need
     // to dig into recruitment for these high-value fields.
     selectionProcesses: recruitment.selectionProcesses ?? [],

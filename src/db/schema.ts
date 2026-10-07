@@ -1150,6 +1150,13 @@ export const recruitments = pgTable(
     totalVacancies: integer("total_vacancies"),
     description: text("description"),
     notificationUrl: text("notification_url"),
+    // Official notification PDF/page URL from the issuing body's own website.
+    // Populated from postings.official_notification_url during ingestion (A-082).
+    // 699 of 774 live recruitments have this column populated in the DB.
+    officialNotificationUrl: text("official_notification_url"),
+    // Official online application portal URL from the issuing body's website.
+    // Populated from postings.official_application_url during ingestion (A-082).
+    officialApplicationUrl: text("official_application_url"),
     // Employment classification for this recruitment (A-042).
     // FULL_TIME for most permanent Indian govt positions; APPRENTICESHIP,
     // DEPUTATION etc. for the extended enum values added in the same migration.

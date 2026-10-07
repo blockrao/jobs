@@ -153,11 +153,11 @@ function buildFallbackDescription({
       : post.salaryMax
         ? `up to ₹${post.salaryMax.toLocaleString("en-IN")} per month`
         : `₹${post.salaryMin!.toLocaleString("en-IN")} per month`;
-    parts.push(`The pay scale for this post is ${salaryStr} as per the 7th Central Pay Commission.`);
+    parts.push(`The pay scale for this post is ${salaryStr}.`);
   } else if (post.payLevel) {
     const pl = post.payLevel as Record<string, unknown>;
     const levelStr = pl.levelLabel ?? (pl.level ? `Level ${pl.level}` : null);
-    if (levelStr) parts.push(`Pay is at ${levelStr} of the Pay Matrix as per the 7th Central Pay Commission.`);
+    if (levelStr) parts.push(`Pay is at ${levelStr} of the Pay Matrix.`);
   }
 
   // § Eligibility
@@ -247,7 +247,7 @@ function buildFallbackDescription({
   }
 
   // § Closing — how to apply + always-present disclaimer
-  if (recruitment.notificationUrl) {
+  if (data.officialNotificationUrl) {
     parts.push(
       `Eligible candidates should read the official notification carefully before applying. ` +
       `All details including the application procedure, required documents, and eligibility criteria are specified in the official advertisement.`
@@ -298,7 +298,9 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     "@type": "GovernmentOrganization",
     "@id": absoluteUrl(`/organizations/${org.slug}#org`),
     name: org.name,
-    url: org.websiteUrl ?? absoluteUrl(`/organizations/${org.slug}`),
+    // Only emit url when we have a verified official website; do not fall back
+    // to an internal /organizations/ page — that is not the org's own URL (P0-9).
+    ...(org.websiteUrl && { url: org.websiteUrl }),
     // sameAs lets Google disambiguate the hiring entity via its official website
     ...(org.websiteUrl && { sameAs: org.websiteUrl }),
   };
@@ -398,7 +400,7 @@ export default async function PostLeafPage({ params }: Props) {
     notFound();
   }
 
-  const { post, recruitment, siblings, applyUrl, postingEmploymentType, selectionProcesses, fees } = data;
+  const { post, recruitment, siblings, applyUrl, officialNotificationUrl, postingEmploymentType, selectionProcesses, fees } = data;
   const org = recruitment.organization;
   const exam = recruitment.exam;
 
@@ -469,7 +471,7 @@ export default async function PostLeafPage({ params }: Props) {
         </nav>
 
         {/* ── Data-sparse banner ───────────────────────────────────────── */}
-        {!hasOwnFacts && recruitment.notificationUrl && (
+        {!hasOwnFacts && officialNotificationUrl && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
             <p className="text-sm font-medium text-amber-900">
               Detailed information for this post is available in the official notification.
@@ -479,7 +481,7 @@ export default async function PostLeafPage({ params }: Props) {
               Visit the official document for complete details.
             </p>
             <a
-              href={recruitment.notificationUrl}
+              href={officialNotificationUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
@@ -489,7 +491,7 @@ export default async function PostLeafPage({ params }: Props) {
             </a>
           </div>
         )}
-        {!hasOwnFacts && !recruitment.notificationUrl && (
+        {!hasOwnFacts && !officialNotificationUrl && (
           <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-4">
             <p className="text-sm text-neutral-600">
               Detailed eligibility, vacancy, and salary information for this post has not yet been extracted.
@@ -618,9 +620,9 @@ export default async function PostLeafPage({ params }: Props) {
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </a>
             )}
-            {recruitment.notificationUrl && (
+            {officialNotificationUrl && (
               <a
-                href={recruitment.notificationUrl}
+                href={officialNotificationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
@@ -692,8 +694,8 @@ export default async function PostLeafPage({ params }: Props) {
               {!verifiedElig.ageMax && !verifiedElig.qualificationText && (
                 <p className="text-sm text-neutral-500">
                   Eligibility details not yet extracted. Check the{" "}
-                  {recruitment.notificationUrl ? (
-                    <a href={recruitment.notificationUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                  {officialNotificationUrl ? (
+                    <a href={officialNotificationUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
                       official notification
                     </a>
                   ) : "official notification"}.
@@ -802,11 +804,11 @@ export default async function PostLeafPage({ params }: Props) {
               </p>
             ) : applyUrl ? (
               <p>
-                Apply online through the{" "}
+                Apply online at the{" "}
                 <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">
-                  official {org.name} portal
+                  official application link
                 </a>
-                . Do not use third-party services.
+                . Verify that it matches the official notification before submitting.
               </p>
             ) : (
               <p>
@@ -842,12 +844,12 @@ export default async function PostLeafPage({ params }: Props) {
             </>
           )}
 
-          {recruitment.notificationUrl && (
+          {officialNotificationUrl && (
             <>
               <SubDivider />
               <div className="px-5 py-3">
                 <a
-                  href={recruitment.notificationUrl}
+                  href={officialNotificationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900"
