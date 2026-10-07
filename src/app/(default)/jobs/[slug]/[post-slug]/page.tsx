@@ -731,6 +731,34 @@ export default async function PostLeafPage({ params }: Props) {
         {/* ── Q4: How does it work? ─────────────────────────────────────── */}
         <SectionCard className="mb-4">
           <SectionHeader icon={ClipboardList} title="How to Apply" />
+
+          {/* Selection process stages */}
+          {selectionProcesses.length > 0 && (() => {
+            // selectionProcesses rows: { id, processType, stages: string[] | null, details }
+            // Flatten all stages arrays into a single ordered list for display.
+            const allStages: string[] = selectionProcesses.flatMap((sp) => sp.stages ?? []);
+            if (allStages.length === 0) return null;
+            return (
+              <>
+                <div className="px-5 pt-4 pb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-3">
+                    Selection Process
+                  </p>
+                  <ol className="relative border-l border-neutral-200">
+                    {allStages.map((stage, i) => (
+                      <li key={i} className="mb-3 ml-4 last:mb-0">
+                        <div className="absolute -left-1.5 mt-0.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-400" />
+                        <p className="text-sm font-medium text-neutral-900">{stage}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <SubDivider />
+              </>
+            );
+          })()}
+
+          {/* Apply instructions */}
           <div className="px-5 py-4 space-y-2 text-sm text-neutral-700">
             {(postingEmploymentType as string | null) === "DEPUTATION" ? (
               <p>
@@ -752,6 +780,34 @@ export default async function PostLeafPage({ params }: Props) {
               </p>
             )}
           </div>
+
+          {/* Fee table */}
+          {fees.length > 0 && (
+            <>
+              <SubDivider />
+              <div className="px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">
+                  Application Fee
+                </p>
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-black/5">
+                    {fees.map((fee) => (
+                      <tr key={fee.id}>
+                        <td className="py-1.5 text-neutral-700">{fee.category ?? "General"}</td>
+                        <td className="py-1.5 text-right font-semibold text-neutral-900">
+                          {fee.amount != null ? `₹${Number(fee.amount).toLocaleString("en-IN")}` : "Nil"}
+                        </td>
+                        {fee.note && (
+                          <td className="py-1.5 pl-3 text-xs text-neutral-500">{fee.note}</td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
           {recruitment.notificationUrl && (
             <>
               <SubDivider />

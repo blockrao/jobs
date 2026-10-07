@@ -258,14 +258,40 @@ export default async function JobsListPage({ searchParams }: Props) {
             const examDate = (posting as any).examDate as Date | null | undefined;
             const lastVerifiedAt = (posting as any).lastVerifiedAt as Date | null | undefined;
 
+            const totalVacancies = (posting as any).totalVacancies as number | null | undefined;
+            const validThrough = (posting as any).validThrough as Date | null | undefined;
+
+            // "Closing soon" = last date within 7 days from now (and not already past)
+            const closingSoon = (() => {
+              if (!validThrough) return false;
+              const now = Date.now();
+              const end = new Date(validThrough).getTime();
+              const daysLeft = (end - now) / (1000 * 60 * 60 * 24);
+              return daysLeft >= 0 && daysLeft <= 7;
+            })();
+
             return (
               <li key={posting.id} className="py-4">
-                <Link
-                  href={detailHref}
-                  className="text-base font-semibold hover:underline"
-                >
-                  {displayTitle}
-                </Link>
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    href={detailHref}
+                    className="text-base font-semibold hover:underline"
+                  >
+                    {displayTitle}
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+                    {closingSoon && (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                        {isHi ? "जल्द बंद" : "Closing soon"}
+                      </span>
+                    )}
+                    {totalVacancies != null && totalVacancies > 0 && (
+                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                        {totalVacancies.toLocaleString("en-IN")} {isHi ? "पद" : "posts"}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <p className="text-sm text-neutral-600">
                   {displayOrgName}
                   {displayCity ? ` · ${displayCity}` : ""}
