@@ -12,6 +12,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeQuery, normalizeQueryQuick } from "@/lib/query-engine/query-normalizer";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface NormalizeRequestBody {
   input: string;
@@ -36,6 +37,20 @@ function paidPathAuthorized(request: NextRequest): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 20 requests per minute per IP (A-039).
+    // Tighter than the search endpoint — this path can invoke the LLM.
+    const clientIp = getClientIp(request);
+    const rateLimitResult = rateLimit(clientIp, 20, 60000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests", message: "Rate limit exceeded. Please wait before retrying." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)) },
+        }
+      );
+    }
+
     const body: NormalizeRequestBody = await request.json();
 
     // Validate input
