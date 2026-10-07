@@ -13,3 +13,4 @@ npm-debug.log*
 scraper_output.json
 *.tsbuildinfo
 supabase/.temp/
+.claude/
