@@ -68,10 +68,42 @@ export const ROLE_REGISTRY: RoleDefinition[] = [
   {
     slug: "office-assistant-jobs",
     name: "Office Assistant",
-    aliases: ["Office Assistant"],
+    aliases: [
+      "Office Assistant",
+      "Office Assistant (Multipurpose)",
+      "Office Assistant Multipurpose",
+    ],
     sector: "Administration",
     description:
-      "Office Assistant positions are recruited across central ministries, autonomous bodies, and state government departments. Duties include file management, correspondence, and general administrative support. Eligibility is typically a graduation degree with basic computer proficiency.",
+      "Office Assistant posts are recruited across central ministries, autonomous bodies, and state government departments. The designation 'Office Assistant (Multipurpose)' is the official post name for the IBPS RRB Clerk recruitment for Regional Rural Banks. Eligibility is typically a graduation degree with proficiency in the local language.",
+  },
+  {
+    slug: "lower-division-clerk-jobs",
+    name: "Lower Division Clerk",
+    aliases: [
+      "Lower Division Clerk",
+      "LDC",
+      "Junior Secretariat Assistant",
+      "JSA",
+      "Lower Division Clerk (LDC)",
+    ],
+    sector: "Administration",
+    description:
+      "Lower Division Clerk (LDC) and Junior Secretariat Assistant (JSA) posts are recruited through SSC CHSL for central government ministries, departments, and Parliament Secretariats. Candidates require 10+2 with a typing speed of 35 wpm in English or 30 wpm in Hindi. LDC is one of the largest central clerical recruitment channels.",
+  },
+  {
+    slug: "postal-assistant-jobs",
+    name: "Postal Assistant",
+    aliases: [
+      "Postal Assistant",
+      "Sorting Assistant",
+      "Postal Assistant (PA)",
+      "Sorting Assistant (SA)",
+      "PA/SA",
+    ],
+    sector: "Administration",
+    description:
+      "Postal Assistant (PA) and Sorting Assistant (SA) are Group C posts under India Post, recruited through SSC CHSL. Candidates require 10+2 with a typing speed of 35 wpm in English or 30 wpm in Hindi. Postal Assistant handles post office counter work; Sorting Assistant handles mail sorting at postal sorting offices.",
   },
   {
     slug: "data-entry-operator-jobs",
@@ -303,24 +335,96 @@ export const ROLE_REGISTRY: RoleDefinition[] = [
       "Assistant Loco Pilot (ALP) is a Group C post under Indian Railways recruited through the Railway Recruitment Board (RRB). Candidates require a 10th pass plus an ITI trade certificate or diploma in a relevant engineering discipline. ALP is one of the highest-volume railway recruitment drives, with lakhs of vacancies in each cycle.",
   },
   {
-    slug: "railway-clerk-jobs",
-    name: "Railway Clerk",
+    slug: "railway-technician-jobs",
+    name: "Railway Technician",
+    aliases: [
+      "Technician Grade I Signal",
+      "Technician Grade I",
+      "Technician Gr. I Signal",
+      "Technician Grade III",
+      "Technician Gr. III",
+      "Technician",
+      "Railway Technician",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Railway Technician posts (Grade I and Grade III) are recruited through the RRB Technician CEN. Technician Grade III requires a 10th pass with ITI in a relevant trade; Grade I Signal requires a degree or diploma in electronics, electrical, or computer science. These are technical maintenance posts covering Signal & Telecommunication, Electrical, and Mechanical departments.",
+  },
+  {
+    slug: "track-maintainer-jobs",
+    name: "Track Maintainer",
+    aliases: [
+      "Track Maintainer Grade-IV",
+      "Track Maintainer Grade IV",
+      "Track Maintainer",
+      "Trackman",
+      "Gangman",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Track Maintainer Grade-IV is a Group D (Level 1) post under Indian Railways, Engineering Department, responsible for inspection and maintenance of railway tracks. Candidates require a 10th pass. Selection is through the RRC Group D examination. Track Maintainer is one of the largest single-post recruitments in Indian Railways.",
+  },
+  {
+    slug: "pointsman-jobs",
+    name: "Pointsman",
+    aliases: [
+      "Pointsman",
+      "Points Man",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Pointsman is a Group D (Level 1) post under the Traffic Department of Indian Railways. The role involves operating railway points and signals to ensure safe train movements. Candidates require a 10th pass. Selection is through the RRC Group D examination.",
+  },
+  {
+    slug: "commercial-ticket-clerk-jobs",
+    name: "Commercial cum Ticket Clerk",
+    aliases: [
+      "Commercial cum Ticket Clerk",
+      "Commercial-cum-Ticket Clerk",
+      "Ticket Clerk",
+      "Commercial Clerk",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Commercial cum Ticket Clerk is a Group C (NTPC Undergraduate) post under Indian Railways responsible for passenger ticketing, goods booking, and station commercial work. Candidates require 10+2. Selection is through the RRB NTPC examination. It is the highest-volume post in the NTPC Undergraduate category with over 2,400 vacancies per cycle.",
+  },
+  {
+    slug: "junior-clerk-typist-jobs",
+    name: "Junior Clerk cum Typist",
     aliases: [
       "Junior Clerk cum Typist",
       "Junior Clerk-cum-Typist",
-      "Accounts Clerk cum Typist",
-      "Accounts Clerk-cum-Typist",
-      "Trains Clerk",
-      "Commercial cum Ticket Clerk",
-      "Commercial-cum-Ticket Clerk",
-      "Senior Clerk",
-      "Senior Clerk cum Typist",
-      "Senior Time Keeper",
+      "Junior Clerk",
       "Office Clerk",
     ],
     sector: "Railway & Transport",
     description:
-      "Railway Clerk posts (including Junior Clerk cum Typist, Accounts Clerk cum Typist, and Commercial cum Ticket Clerk) are Group D and Group C clerical posts under Indian Railways recruited through RRB and RRC. Candidates require 10+2 with basic typing skills. These posts cover station ticketing, accounts, and general administration.",
+      "Junior Clerk cum Typist is a Group C (NTPC Undergraduate) post in the administrative offices of Indian Railways. Candidates require 10+2 with a typing speed of 30 wpm in English or 25 wpm in Hindi. Selection is through the RRB NTPC examination.",
+  },
+  {
+    slug: "accounts-clerk-typist-jobs",
+    name: "Accounts Clerk cum Typist",
+    aliases: [
+      "Accounts Clerk cum Typist",
+      "Accounts Clerk-cum-Typist",
+      "Accounts Clerk",
+      "Senior Accounts Clerk",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Accounts Clerk cum Typist is a Group C (NTPC Undergraduate) post in the Accounts departments of Indian Railways. Candidates require 10+2 with a typing speed of 30 wpm in English or 25 wpm in Hindi. Selection is through the RRB NTPC examination.",
+  },
+  {
+    slug: "trains-clerk-jobs",
+    name: "Trains Clerk",
+    aliases: [
+      "Trains Clerk",
+      "Train Clerk",
+      "Senior Time Keeper",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Trains Clerk is a Group C (NTPC Undergraduate) post under Indian Railways responsible for maintaining train running records, preparation of reports, and clerical work related to train operations. Candidates require 10+2. Selection is through the RRB NTPC examination.",
   },
   {
     slug: "goods-train-manager-jobs",
@@ -452,14 +556,27 @@ export const ROLE_REGISTRY: RoleDefinition[] = [
     aliases: [
       "Clerk",
       "Bank Clerk",
-      "Clerk (Junior Associate)",
-      "Junior Associate",
       "Clerical Cadre",
-      "Office Assistant (Multipurpose)",
+      "Clerk-cum-Cashier",
+      "Single Window Operator",
     ],
     sector: "Banking & Finance",
     description:
-      "Bank Clerk (Junior Associate) posts are recruited by IBPS CRP Clerk and SBI Clerk examinations for public sector banks. Candidates require a graduation degree with proficiency in the official language of the state. Bank Clerk is one of the most-applied government examinations in India.",
+      "Bank Clerk posts in public sector banks are recruited through IBPS CRP Clerk for nationalised banks. The official IBPS designation is Clerk (Clerical Cadre). Candidates require a graduation degree with proficiency in the official language of the state or local language. Bank Clerk is one of the most-applied government examinations in India.",
+  },
+  {
+    slug: "junior-associate-jobs",
+    name: "Junior Associate",
+    aliases: [
+      "Junior Associate",
+      "Junior Associate (Customer Support & Sales)",
+      "Junior Associate (JA)",
+      "SBI Clerk",
+      "Clerk (SBI)",
+    ],
+    sector: "Banking & Finance",
+    description:
+      "Junior Associate (Customer Support & Sales) is the official post name for the SBI Clerk recruitment. It is a clerical cadre post in State Bank of India branches responsible for customer service, cash handling, and account operations. Candidates require a graduation degree. SBI Clerk is one of the most competitive banking examinations in India.",
   },
 ];
 
