@@ -791,3 +791,78 @@ export async function getJobsControlCenter(): Promise<{
 
   return { stats, deadlineBuckets, topOrgs, jobs, roles };
 }
+
+export interface ClosingSoonJob {
+  slug: string;
+  name: string;
+  orgName: string;
+  applicationEndDate: Date;
+  totalVacancies: number | null;
+}
+
+export interface HomepageStats {
+  totalVacancies: number;
+  activeRecruitments: number;
+  closingThisWeek: number;
+  orgsHiring: number;
+}
+
+export async function getHomepageStats(): Promise<{
+  stats: HomepageStats;
+  closingSoon: ClosingSoonJob[];
+}> {
+  if (!hasDb()) {
+    return {
+      stats: { totalVacancies: 0, activeRecruitments: 0, closingThisWeek: 0, orgsHiring: 0 },
+      closingSoon: [],
+    };
+  }
+  const db = getDb();
+
+  const [statsRows, closingRows] = await Promise.all([
+    db.execute(sql`
+      SELECT
+        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        COUNT(DISTINCT r.id)::int AS active_recruitments,
+        COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_this_week,
+        COUNT(DISTINCT r.organization_id)::int AS orgs_hiring
+      FROM public.recruitments r
+      JOIN public.posts po ON po.recruitment_id = r.id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+    `),
+    db.execute(sql`
+      SELECT
+        r.slug,
+        r.name,
+        o.name AS org_name,
+        r.application_end_date,
+        COALESCE(r.total_vacancies, SUM(po.vacancy_total)::int) AS total_vacancies
+      FROM public.recruitments r
+      JOIN public.organizations o ON o.id = r.organization_id
+      JOIN public.posts po ON po.recruitment_id = r.id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '10 days'
+      GROUP BY r.id, r.slug, r.name, r.application_end_date, r.total_vacancies, o.name
+      ORDER BY r.application_end_date ASC
+      LIMIT 6
+    `),
+  ]);
+
+  const s = (statsRows as unknown as Record<string, unknown>[])[0] ?? {};
+  const stats: HomepageStats = {
+    totalVacancies: Number(s.total_vacancies ?? 0),
+    activeRecruitments: Number(s.active_recruitments ?? 0),
+    closingThisWeek: Number(s.closing_this_week ?? 0),
+    orgsHiring: Number(s.orgs_hiring ?? 0),
+  };
+
+  const closingSoon: ClosingSoonJob[] = (closingRows as unknown as Record<string, unknown>[]).map((r) => ({
+    slug: String(r.slug),
+    name: String(r.name),
+    orgName: String(r.org_name),
+    applicationEndDate: new Date(String(r.application_end_date)),
+    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+  }));
+
+  return { stats, closingSoon };
+}
