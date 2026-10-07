@@ -12,6 +12,7 @@ import {
   KIND_LABELS_HI,
   formatDate,
 } from "@/lib/labels";
+import { ChevronRight } from "lucide-react";
 
 // This page deliberately stays at the plain /jobs URL rather than gaining a
 // /hi variant: it's an aggregator view, not unique content that should rank
@@ -56,6 +57,25 @@ export async function generateMetadata({
     ...listingSeo("/jobs", { kind, q, page: parsePage(page) > 1 ? page : undefined }),
   };
 }
+
+// Stage pill color mapping
+const STAGE_COLORS: Record<string, string> = {
+  APPLICATION_OPEN: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  NOTIFICATION_OUT: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  APPLICATION_CLOSED: "bg-neutral-100 text-neutral-600 ring-neutral-500/20",
+  ADMIT_CARD_RELEASED: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  EXAM_SCHEDULED: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  EXAM_CONDUCTED: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  ANSWER_KEY_OUT: "bg-sky-50 text-sky-700 ring-sky-600/20",
+  OBJECTION_WINDOW: "bg-orange-50 text-orange-700 ring-orange-600/20",
+  RESULT_OUT: "bg-teal-50 text-teal-700 ring-teal-600/20",
+  MERIT_LIST_OUT: "bg-teal-50 text-teal-700 ring-teal-600/20",
+  INTERVIEW_SCHEDULED: "bg-purple-50 text-purple-700 ring-purple-600/20",
+  FINAL_RESULT_OUT: "bg-teal-50 text-teal-700 ring-teal-600/20",
+  ACTIVE: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  FILLED: "bg-neutral-100 text-neutral-500 ring-neutral-400/20",
+  CLOSED: "bg-neutral-100 text-neutral-500 ring-neutral-400/20",
+};
 
 export default async function JobsListPage({ searchParams }: Props) {
   const { kind, q, page: pageParam, filter: filterParam } = await searchParams;
@@ -112,6 +132,16 @@ export default async function JobsListPage({ searchParams }: Props) {
     posted: isHi ? "प्रकाशित" : "Posted",
     verified: isHi ? "सत्यापित" : "Verified",
     examOn: isHi ? "परीक्षा" : "Exam",
+    daysLeft: (n: number) => isHi ? `${n} दिन बचे` : `${n}d left`,
+    previous: isHi ? "पिछला" : "Previous",
+    next: isHi ? "अगला" : "Next",
+    pageOf: (p: number) => isHi ? `पृष्ठ ${p}` : `Page ${p}`,
+    liveJobs: isHi ? "लाइव नौकरियां" : "Live Jobs",
+    heroSubtitle: isHi
+      ? "सरकारी और सार्वजनिक क्षेत्र की नौकरियों की आधिकारिक अधिसूचनाएं, एक ही जगह।"
+      : "Official notifications for government and public-sector openings, all in one place.",
+    vacancies: isHi ? "पद" : "posts",
+    jobsUnit: isHi ? "नौकरियां" : "jobs",
   };
 
   // Heading: combine kind + filter
@@ -143,9 +173,44 @@ export default async function JobsListPage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight">{pageHeading()}</h1>
 
-      <form className="mt-4 flex gap-2" action="/jobs" method="get">
+      {/* ── Hero strip ───────────────────────────────────────────────────── */}
+      <div className="mb-8 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white px-6 py-7 sm:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              {/* live pulse dot */}
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-600 opacity-60" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-indigo-600" />
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-widest text-indigo-600">
+                {L.liveJobs}
+              </span>
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">
+              {pageHeading()}
+            </h1>
+            <p className="mt-1 max-w-xl text-sm text-neutral-500">
+              {L.heroSubtitle}
+            </p>
+          </div>
+          {/* Stat chip */}
+          <div className="shrink-0">
+            <div className="inline-flex flex-col items-center rounded-xl border border-indigo-100 bg-white px-5 py-3 shadow-sm">
+              <span className="text-2xl font-bold text-indigo-600">
+                {results.length}{hasNext ? "+" : ""}
+              </span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+                {L.jobsUnit}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Search bar ───────────────────────────────────────────────────── */}
+      <form className="flex gap-2" action="/jobs" method="get">
         {validKind && <input type="hidden" name="kind" value={validKind} />}
         {validFilter && <input type="hidden" name="filter" value={validFilter} />}
         <input
@@ -153,21 +218,25 @@ export default async function JobsListPage({ searchParams }: Props) {
           name="q"
           defaultValue={q ?? ""}
           placeholder={L.searchPlaceholder}
-          className="w-full rounded-md border border-black/20 px-3 py-2 text-sm"
+          className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm shadow-sm placeholder:text-neutral-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <button
           type="submit"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+          className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600/40 active:scale-95 transition-all"
         >
           {L.search}
         </button>
       </form>
 
-      {/* Kind filter row */}
-      <div className="mt-4 flex gap-3 text-sm">
+      {/* ── Kind filter row ───────────────────────────────────────────────── */}
+      <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <Link
           href={kindHref(undefined)}
-          className={!validKind ? "font-semibold underline" : "text-neutral-600"}
+          className={
+            !validKind
+              ? "rounded-full bg-neutral-900 px-4 py-1.5 font-semibold text-white shadow-sm"
+              : "rounded-full border border-neutral-200 px-4 py-1.5 text-neutral-600 hover:border-neutral-400 transition-colors"
+          }
         >
           {L.all}
         </Link>
@@ -175,8 +244,8 @@ export default async function JobsListPage({ searchParams }: Props) {
           href={kindHref("GOVERNMENT")}
           className={
             validKind === "GOVERNMENT"
-              ? "font-semibold underline"
-              : "text-neutral-600"
+              ? "rounded-full bg-indigo-600 px-4 py-1.5 font-semibold text-white shadow-sm"
+              : "rounded-full border border-neutral-200 px-4 py-1.5 text-neutral-600 hover:border-neutral-400 transition-colors"
           }
         >
           {L.government}
@@ -185,22 +254,22 @@ export default async function JobsListPage({ searchParams }: Props) {
           href={kindHref("PRIVATE")}
           className={
             validKind === "PRIVATE"
-              ? "font-semibold underline"
-              : "text-neutral-600"
+              ? "rounded-full bg-indigo-600 px-4 py-1.5 font-semibold text-white shadow-sm"
+              : "rounded-full border border-neutral-200 px-4 py-1.5 text-neutral-600 hover:border-neutral-400 transition-colors"
           }
         >
           {L.private}
         </Link>
       </div>
 
-      {/* Status / time filter row */}
-      <div className="mt-2 flex gap-2 text-xs">
+      {/* ── Status / time filter pills ────────────────────────────────────── */}
+      <div className="mt-2 flex flex-wrap gap-2 text-xs">
         <Link
           href={filterHref(undefined)}
           className={
             !validFilter
-              ? "rounded-full border border-neutral-900 bg-neutral-900 px-3 py-1 font-semibold text-white"
-              : "rounded-full border border-black/20 px-3 py-1 text-neutral-600 hover:border-black/40"
+              ? "rounded-full border border-indigo-600 bg-indigo-600 px-3 py-1 font-semibold text-white"
+              : "rounded-full border border-neutral-200 px-3 py-1 text-neutral-600 hover:border-neutral-400 transition-colors"
           }
         >
           {L.all}
@@ -209,8 +278,8 @@ export default async function JobsListPage({ searchParams }: Props) {
           href={filterHref("newly-added")}
           className={
             validFilter === "newly-added"
-              ? "rounded-full border border-neutral-900 bg-neutral-900 px-3 py-1 font-semibold text-white"
-              : "rounded-full border border-black/20 px-3 py-1 text-neutral-600 hover:border-black/40"
+              ? "rounded-full border border-indigo-600 bg-indigo-600 px-3 py-1 font-semibold text-white"
+              : "rounded-full border border-neutral-200 px-3 py-1 text-neutral-600 hover:border-neutral-400 transition-colors"
           }
         >
           {L.newlyAdded}
@@ -219,20 +288,17 @@ export default async function JobsListPage({ searchParams }: Props) {
           href={filterHref("open")}
           className={
             validFilter === "open"
-              ? "rounded-full border border-green-700 bg-green-700 px-3 py-1 font-semibold text-white"
-              : "rounded-full border border-green-600/40 px-3 py-1 text-green-700 hover:border-green-600"
+              ? "rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1 font-semibold text-white"
+              : "rounded-full border border-emerald-200 px-3 py-1 text-emerald-700 hover:border-emerald-400 transition-colors"
           }
         >
           {L.open}
         </Link>
       </div>
 
+      {/* ── Job list ─────────────────────────────────────────────────────── */}
       <div className="mt-6">
-        <div className="mb-4 text-sm text-neutral-600">
-          {L.showing(results.length)}
-        </div>
-
-        <ul className="divide-y divide-black/10">
+        <ul className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
           {results.map((posting) => {
             const titleHi = (posting as any).titleHi as string | null;
             const locationCityHi = (posting as any).locationCityHi as
@@ -258,79 +324,142 @@ export default async function JobsListPage({ searchParams }: Props) {
 
             const examDate = (posting as any).examDate as Date | null | undefined;
             const lastVerifiedAt = (posting as any).lastVerifiedAt as Date | null | undefined;
-
             const totalVacancies = (posting as any).totalVacancies as number | null | undefined;
             const validThrough = (posting as any).validThrough as Date | null | undefined;
 
             // "Closing soon" = last date within 7 days from now (and not already past)
-            const closingSoon = (() => {
-              if (!validThrough) return false;
+            const daysLeftNum = (() => {
+              if (!validThrough) return null;
               const now = Date.now();
               const end = new Date(validThrough).getTime();
-              const daysLeft = (end - now) / (1000 * 60 * 60 * 24);
-              return daysLeft >= 0 && daysLeft <= 7;
+              const d = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+              return d >= 0 && d <= 7 ? d : null;
             })();
+            const closingSoon = daysLeftNum !== null;
+
+            const stageColor =
+              STAGE_COLORS[posting.currentStage] ??
+              "bg-neutral-100 text-neutral-600 ring-neutral-500/20";
+            const stageLabel =
+              stageLabels[posting.currentStage] ?? posting.currentStage;
+
+            const locationLine = [
+              displayOrgName,
+              displayCity
+                ? posting.locationRegion
+                  ? `${displayCity}, ${posting.locationRegion}`
+                  : displayCity
+                : posting.locationRegion ?? null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
 
             return (
-              <li key={posting.id} className="py-4">
-                <div className="flex items-start justify-between gap-2">
-                  <Link
-                    href={detailHref}
-                    className="text-base font-semibold hover:underline"
-                  >
-                    {displayTitle}
-                  </Link>
-                  <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
-                    {closingSoon && (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-                        {isHi ? "जल्द बंद" : "Closing soon"}
+              <li key={posting.id} className="group relative">
+                <Link
+                  href={detailHref}
+                  className="flex items-start gap-4 px-5 py-5 transition-colors hover:bg-indigo-50/40 sm:px-6"
+                >
+                  {/* Left: text content */}
+                  <div className="min-w-0 flex-1">
+                    {/* Title + closing badge row */}
+                    <div className="flex flex-wrap items-start gap-2">
+                      <span className="text-base font-semibold text-neutral-900 group-hover:text-indigo-600 transition-colors leading-snug">
+                        {displayTitle}
                       </span>
+                      {/* Closing soon badge */}
+                      {closingSoon && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 ring-1 ring-red-500/20">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                          </span>
+                          {daysLeftNum === 0
+                            ? (isHi ? "आज बंद" : "Closes today")
+                            : L.daysLeft(daysLeftNum!)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Org + location */}
+                    {locationLine && (
+                      <p className="mt-1 text-sm text-neutral-500 leading-snug">
+                        {locationLine}
+                      </p>
                     )}
-                    {totalVacancies != null && totalVacancies > 0 && (
-                      <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600">
-                        {totalVacancies.toLocaleString("en-IN")} {isHi ? "पद" : "posts"}
+
+                    {/* Badges row: stage + vacancies */}
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${stageColor}`}
+                      >
+                        {stageLabel}
                       </span>
-                    )}
+                      {totalVacancies != null && totalVacancies > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                          {totalVacancies.toLocaleString("en-IN")} {L.vacancies}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Metadata row */}
+                    <p className="mt-2 text-xs text-neutral-400 leading-relaxed">
+                      {L.posted} {formatDate(posting.datePosted, dateLocale)}
+                      {examDate && (
+                        <> · {L.examOn}: {formatDate(examDate, dateLocale)}</>
+                      )}
+                      {lastVerifiedAt && (
+                        <> · {L.verified} {formatDate(lastVerifiedAt, dateLocale)}</>
+                      )}
+                    </p>
                   </div>
-                </div>
-                <p className="text-sm text-neutral-600">
-                  {displayOrgName}
-                  {displayCity ? ` · ${displayCity}` : ""}
-                  {posting.locationRegion ? `, ${posting.locationRegion}` : ""}{" "}
-                  ·{" "}
-                  {stageLabels[posting.currentStage] ?? posting.currentStage}
-                </p>
-                <p className="text-xs text-neutral-400">
-                  {L.posted} {formatDate(posting.datePosted, dateLocale)}
-                  {examDate && (
-                    <> · {L.examOn}: {formatDate(examDate, dateLocale)}</>
-                  )}
-                  {lastVerifiedAt && (
-                    <> · {L.verified} {formatDate(lastVerifiedAt, dateLocale)}</>
-                  )}
-                </p>
+
+                  {/* Right: chevron (visible on hover) */}
+                  <div className="mt-1 shrink-0 text-neutral-300 transition-all group-hover:translate-x-0.5 group-hover:text-indigo-600">
+                    <ChevronRight className="h-5 w-5" />
+                  </div>
+                </Link>
               </li>
             );
           })}
+
           {results.length === 0 && (
-            <li className="py-8 text-center text-sm text-neutral-500">
-              {L.noResults}
+            <li className="py-16 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-2xl">
+                🔍
+              </div>
+              <p className="text-sm font-medium text-neutral-600">{L.noResults}</p>
             </li>
           )}
         </ul>
+
+        {/* ── Pagination ─────────────────────────────────────────────────── */}
         {(page > 1 || hasNext) && (
-          <nav aria-label="Pagination" className="mt-6 flex items-center justify-between text-sm">
+          <nav
+            aria-label="Pagination"
+            className="mt-6 flex items-center justify-between gap-4"
+          >
             {page > 1 ? (
-              <Link rel="prev" href={pageHref("/jobs", { kind: validKind, q, filter: validFilter }, page - 1)} className="hover:underline">
-                {isHi ? "← पिछला" : "← Previous"}
+              <Link
+                rel="prev"
+                href={pageHref("/jobs", { kind: validKind, q, filter: validFilter }, page - 1)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 hover:border-neutral-300 transition-colors"
+              >
+                ← {L.previous}
               </Link>
             ) : (
               <span />
             )}
-            <span className="text-neutral-500">{isHi ? `पृष्ठ ${page}` : `Page ${page}`}</span>
+            <span className="text-sm text-neutral-400">
+              {L.pageOf(page)}
+            </span>
             {hasNext ? (
-              <Link rel="next" href={pageHref("/jobs", { kind: validKind, q, filter: validFilter }, page + 1)} className="hover:underline">
-                {isHi ? "अगला →" : "Next →"}
+              <Link
+                rel="next"
+                href={pageHref("/jobs", { kind: validKind, q, filter: validFilter }, page + 1)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-600 bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+              >
+                {L.next} →
               </Link>
             ) : (
               <span />
