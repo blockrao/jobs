@@ -65,6 +65,7 @@ import {
   ClipboardList,
   Hash,
 } from "lucide-react";
+import { CanonicalPostCard, LegacyPostCard } from "@/components/ui/post-card";
 
 export const revalidate = 300;
 export const dynamicParams = true;
@@ -1245,33 +1246,55 @@ export default async function JobPage({ params }: Props) {
           </SectionCard>
         )}
 
-        {/* ── PQ-006: Per-post leaf links (hub page) ── */}
-        {isHubPage && siblingPosts.length > 0 && posting.canonicalRecruitment && (
-          <SectionCard>
-            <SectionHeader icon={Hash} title={`Posts in This Notice (${siblingPosts.length})`} />
-            <p className="px-5 pt-3 text-xs text-neutral-500">
-              This notice contains {siblingPosts.length} posts. Each post has its own details page.
-            </p>
-            <ul className="mt-2 divide-y divide-black/5">
-              {siblingPosts.map((p: any) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/jobs/${posting.canonicalRecruitment!.slug}/${p.slug}`}
-                    className="flex items-center justify-between gap-2 px-5 py-3 hover:bg-neutral-50"
-                  >
-                    <div>
-                      <span className="text-sm font-medium text-neutral-900">{p.name}</span>
-                      {p.position?.name && (
-                        <span className="ml-2 text-xs text-neutral-400">{p.position.name}</span>
-                      )}
-                    </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-300" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </SectionCard>
-        )}
+        {/* ── Posts in This Notice (PQ-006, A-080) ────────────────────────────
+            Renders a distinct card per post regardless of whether canonical
+            post rows exist:
+              • Canonical: /jobs/[recruitment-slug]/[post-slug] — clickable
+              • Legacy (postNames only): informational card, no sub-page yet
+        ──────────────────────────────────────────────────────────────────── */}
+        {(() => {
+          // Canonical path: posts table rows exist for this recruitment
+          if (siblingPosts.length > 0 && posting.canonicalRecruitment) {
+            return (
+              <SectionCard>
+                <SectionHeader icon={Hash} title={`Posts in This Notice (${siblingPosts.length})`} />
+                <div className="space-y-3 p-5">
+                  {siblingPosts.map((p: any, i: number) => (
+                    <CanonicalPostCard
+                      key={p.id}
+                      name={p.name}
+                      slug={p.slug}
+                      recruitmentSlug={posting.canonicalRecruitment!.slug}
+                      vacancyTotal={p.vacancyTotal}
+                      vacancyDetails={p.vacancyDetails}
+                      salaryMin={p.salaryMin}
+                      salaryMax={p.salaryMax}
+                      positionName={p.position?.name}
+                      index={i}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+            );
+          }
+
+          // Legacy path: postNames string[] on the posting itself
+          const legacyNames = (posting.postNames as string[] | null) ?? [];
+          if (legacyNames.length > 0) {
+            return (
+              <SectionCard>
+                <SectionHeader icon={Hash} title={`Posts in This Notice (${legacyNames.length})`} />
+                <div className="space-y-3 p-5">
+                  {legacyNames.map((name: string, i: number) => (
+                    <LegacyPostCard key={name} name={name} index={i} />
+                  ))}
+                </div>
+              </SectionCard>
+            );
+          }
+
+          return null;
+        })()}
 
         {/* ── FAQ ── */}
         {faqs.length > 0 && (
