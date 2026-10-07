@@ -81,6 +81,22 @@ function applicationStatusLabel(applicationEndDate: Date | null | undefined, rec
   return "";
 }
 
+/** Extract first fee amount from fee note (e.g. "Rs. 500" from "SC/ST/PwBD: NIL; All Others: Rs. 500") */
+function extractFeeAmount(feeNote: string | null | undefined): string | null {
+  if (!feeNote) return null;
+  const match = feeNote.match(/₹?\s*(\d+)/);
+  if (match) return `₹${match[1]}`;
+  return null;
+}
+
+/** Extract age range from age note (e.g. "20-28 years" from "Age limit: 20-28 years; Relaxation...") */
+function extractAgeRange(ageNote: string | null | undefined): string | null {
+  if (!ageNote) return null;
+  const match = ageNote.match(/(\d+)-(\d+)\s*years?/);
+  if (match) return `${match[1]}-${match[2]} yrs`;
+  return null;
+}
+
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
   const role = getRoleBySlug(slug);
@@ -233,6 +249,27 @@ export default async function PostPage({ params }: Props) {
                             )}
                           </div>
 
+                          {/* Enrichment badges — fee, age, selection */}
+                          {(extractFeeAmount(p.enrichmentFeeNote) || extractAgeRange(p.enrichmentAgeNote) || p.enrichmentSelectionProcess) && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {extractFeeAmount(p.enrichmentFeeNote) && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-medium border border-amber-200">
+                                  Fee: {extractFeeAmount(p.enrichmentFeeNote)}
+                                </span>
+                              )}
+                              {extractAgeRange(p.enrichmentAgeNote) && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-900 text-xs font-medium border border-blue-200">
+                                  Age: {extractAgeRange(p.enrichmentAgeNote)}
+                                </span>
+                              )}
+                              {p.enrichmentSelectionProcess && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-900 text-xs font-medium border border-purple-200 truncate">
+                                  {p.enrichmentSelectionProcess.split("→")[0].trim()}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {/* Pay */}
                           {(p.salaryMin || p.salaryMax) && (
                             <div className="text-sm text-neutral-500 mt-1.5">
@@ -265,15 +302,15 @@ export default async function PostPage({ params }: Props) {
                               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           </Link>
-                          {p.notificationUrl && (
+                          {(p.notificationUrl || p.enrichmentApplyUrl) && (
                             <a
-                              href={p.notificationUrl}
+                              href={p.notificationUrl || p.enrichmentApplyUrl || "#"}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                              aria-label={`Official notification for ${p.recruitmentName}`}
+                              aria-label={`${p.notificationUrl ? "Official notification" : "Application"} for ${p.recruitmentName}`}
                             >
-                              Official notice ↗
+                              {p.notificationUrl ? "Official notice" : "Apply"} ↗
                             </a>
                           )}
                         </div>

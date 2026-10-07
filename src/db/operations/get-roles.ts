@@ -25,6 +25,11 @@ export interface RolePost {
   organizationSlug: string;
   /** State name from organizations.state — only present for GOVERNMENT_STATE orgs */
   organizationState: string | null;
+  // Enrichment fields from canonical recruitment
+  enrichmentFeeNote: string | null;
+  enrichmentSelectionProcess: string | null;
+  enrichmentAgeNote: string | null;
+  enrichmentApplyUrl: string | null;
 }
 
 export interface RoleStats {
@@ -68,6 +73,10 @@ export async function getPostsForRole(role: RoleDefinition): Promise<RolePost[]>
       organizationName: organizations.name,
       organizationSlug: organizations.slug,
       organizationState: organizations.state,
+      enrichmentFeeNote: recruitments.feeNote,
+      enrichmentSelectionProcess: recruitments.selectionProcess,
+      enrichmentAgeNote: recruitments.ageNote,
+      enrichmentApplyUrl: recruitments.applyUrl,
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))

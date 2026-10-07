@@ -428,7 +428,19 @@ export default async function JobPage({ params }: Props) {
   const hasExamPattern =
     extraContent?.examPattern && (extraContent.examPattern.stages ?? []).length > 0;
   const hasImportantLinks = (extraContent?.importantLinks ?? []).length > 0;
-  const hasQ4 = hasSteps || hasSelectionProcess || hasExamPattern;
+
+  // Enrichment data from canonical recruitment
+  const enrichmentFee = posting.canonicalRecruitment?.feeNote ?? null;
+  const enrichmentSelectionProcess = posting.canonicalRecruitment?.selectionProcess ?? null;
+  const enrichmentAgeNote = posting.canonicalRecruitment?.ageNote ?? null;
+  const enrichmentApplyUrl = posting.canonicalRecruitment?.applyUrl ?? null;
+
+  const hasEnrichmentFee = Boolean(enrichmentFee);
+  const hasEnrichmentSelectionProcess = Boolean(enrichmentSelectionProcess);
+  const hasEnrichmentAgeNote = Boolean(enrichmentAgeNote);
+  const hasEnrichmentApplyUrl = Boolean(enrichmentApplyUrl);
+
+  const hasQ4 = hasSteps || hasSelectionProcess || hasExamPattern || hasEnrichmentSelectionProcess;
 
   // Important dates for the Dates card
   const applicationStart = posting.canonicalRecruitment?.applicationStartDate
@@ -688,9 +700,9 @@ export default async function JobPage({ params }: Props) {
 
           {/* CTAs */}
           <div className="flex flex-col gap-2 border-t border-black/5 px-5 py-4 sm:flex-row sm:flex-wrap">
-            {publicLink(posting.applyUrl) && hiringOpen && (
+            {(publicLink(posting.applyUrl) || enrichmentApplyUrl) && hiringOpen && (
               <a
-                href={publicLink(posting.applyUrl) as string}
+                href={publicLink(posting.applyUrl) || enrichmentApplyUrl as string}
                 target="_blank"
                 rel="noopener nofollow"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-700 active:scale-[0.98]"
@@ -1049,6 +1061,8 @@ export default async function JobPage({ params }: Props) {
                     </div>
                   ) : posting.ageRelaxationNotes ? (
                     <p className="whitespace-pre-line text-sm text-neutral-700">{posting.ageRelaxationNotes}</p>
+                  ) : hasEnrichmentAgeNote ? (
+                    <p className="whitespace-pre-line text-sm text-neutral-700">{enrichmentAgeNote}</p>
                   ) : (
                     <p className="text-sm text-neutral-700">
                       {extraContent?.seo?.ageDisplay ??
@@ -1136,13 +1150,20 @@ export default async function JobPage({ params }: Props) {
               )}
 
               {/* Application Fee */}
-              {hasFee && (extraContent?.bankDetails ?? []).length === 0 && (
+              {(hasFee || hasEnrichmentFee) && (extraContent?.bankDetails ?? []).length === 0 && (
                 <>
                   <SubDivider />
                   <SubSection title="Application Fee">
-                    <p className="text-sm text-neutral-700">
-                      {formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, false)}
-                    </p>
+                    {formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, false) && (
+                      <p className="text-sm text-neutral-700 mb-2">
+                        {formatFee(posting.applicationFeeGeneral, posting.applicationFeeReserved, false)}
+                      </p>
+                    )}
+                    {hasEnrichmentFee && (
+                      <p className="text-sm text-neutral-700 whitespace-pre-line">
+                        {enrichmentFee}
+                      </p>
+                    )}
                   </SubSection>
                 </>
               )}
@@ -1208,21 +1229,27 @@ export default async function JobPage({ params }: Props) {
             <SectionCard id="selection">
               <SectionHeader icon={CheckCircle} title="How Does It Work?" label="Q4" />
 
-              {hasSelectionProcess && (
+              {(hasSelectionProcess || hasEnrichmentSelectionProcess) && (
                 <SubSection title="Selection Process">
-                  <ol className="space-y-3">
-                    {(extraContent!.selectionProcess!).map((s) => (
-                      <li key={s.step} className="flex gap-3">
-                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700">
-                          {s.step}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium text-neutral-900">{s.title}</p>
-                          {s.body && <p className="mt-0.5 text-xs text-neutral-600">{s.body}</p>}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
+                  {hasSelectionProcess ? (
+                    <ol className="space-y-3">
+                      {(extraContent!.selectionProcess!).map((s) => (
+                        <li key={s.step} className="flex gap-3">
+                          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700">
+                            {s.step}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-neutral-900">{s.title}</p>
+                            {s.body && <p className="mt-0.5 text-xs text-neutral-600">{s.body}</p>}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : hasEnrichmentSelectionProcess ? (
+                    <p className="text-sm text-neutral-700 whitespace-pre-line">
+                      {enrichmentSelectionProcess}
+                    </p>
+                  ) : null}
                 </SubSection>
               )}
 
