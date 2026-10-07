@@ -19,7 +19,7 @@ authoritative), A-064, A-065 and A-066 stand.
 | --- | --- |
 | MIG-001, SEC-001, ARC-001 | CLOSED |
 | SEO-001 public representation (`SEO001_PUBLIC_REPRESENTATION.md`) | **CLOSED 2026-10-07** — Steps 1–3 live and verified; A-052 (no hreflang HTTP header) and A-053 (no language redirect) confirmed in production |
-| A-039, A-041 (bounded maintenance) | Not started; independent of the data track |
+| A-039, A-041 (bounded maintenance) | **CLOSED** per ledger 2026-10-04 |
 | Pre-data safety gate | Not started; backups not yet checked |
 | ORG-001A registry contract and primitives | On hold with the data track; may be replaced by the write-path fix proposed below |
 | DATA-000 bounded audit | ON HOLD: plan written (`DATA000_EXECUTION_PLAN.md`) but not approved; no audit work started |
@@ -58,16 +58,9 @@ once verified with the data deployment. Do not push before the backup gate.
 
 ~~1. **Close SEO-001.**~~ **DONE 2026-10-07** — A-052 (no hreflang HTTP header) and A-053 (no language redirect on English entity URLs) both verified in production. SEO-001 CLOSED.
 
-1. **Bounded maintenance** (isolated changes, own verification, not roadmap
-   increments, SEC-001 not reopened): A-039 secure the unauthenticated
-   paid-API endpoint `/api/query/normalize`; A-041 assess the database
-   function that reads a missing table and fix if bounded. They do not wait
-   for the data track.
-2. **Pre-data safety gate.** Before any production data is modified, backup
-   and restore must be *tested*: snapshot exists, a restore is actually
-   performed, the procedure is documented, the recovery point suits the first
-   mutation. What backups the database plan provides has not been checked
-   yet. DOC-001 and DATA-004 cannot write to production without it.
+~~1. **Bounded maintenance** (A-039, A-041).~~ **DONE** — Both closed per ledger: A-039 CLOSED 2026-10-04 (paid-path auth + rate limit deployed); A-041 CLOSED 2026-10-04 (`refresh_posting_urgency_states` repaired and run).
+
+1. **Pre-data safety gate.** Per A-069 the owner waived the tested backup/restore gate for the launch load (daily backup process suffices); however merges, backfills and destructive migrations still require an approved pre-change report. DOC-001 and DATA-004 cannot write to production without one.
 4. **Data track: owner decision pending.** DATA-000 is on hold and must not be
    started. A smaller replacement is proposed in the next section.
 5. **ORG-001A pre-change report** (on hold; may be replaced by the write-path
