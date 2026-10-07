@@ -396,7 +396,14 @@ export default async function PostLeafPage({ params }: Props) {
               label="Pay Level"
               value={
                 post.payLevel
-                  ? (post.payLevel as any).levelLabel ?? JSON.stringify(post.payLevel)
+                  ? (() => {
+                      const pl = post.payLevel as any;
+                      if (pl.levelLabel) return pl.levelLabel;
+                      const level = pl.level ? `Level ${pl.level}` : null;
+                      const scheme = pl.scheme ?? null;
+                      if (level && scheme) return `${level} (${scheme})`;
+                      return level ?? scheme ?? JSON.stringify(post.payLevel);
+                    })()
                   : post.salaryMin != null
                   ? `₹${post.salaryMin.toLocaleString("en-IN")}${post.salaryMax ? "–" + post.salaryMax.toLocaleString("en-IN") : ""}/mo`
                   : "Not mentioned in notification"
