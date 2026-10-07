@@ -73,8 +73,23 @@ export async function getPostingBySlug(slug: string) {
   }
 
   // Semantic gate (SEM-001): a value that does not mean what its field means is not displayed.
+  const gated = applySemanticGate(posting);
+
+  // Normalise postNames: the DB column is typed string[] but older ingest
+  // records stored objects { name, count } instead of plain strings.
+  // Every consumer (structured-data, page metadata, gate) expects strings.
+  const rawPostNames: unknown = (gated as any).postNames;
+  const normalizedPostNames: string[] = Array.isArray(rawPostNames)
+    ? rawPostNames.map((entry: unknown) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof (entry as any).name === "string") return (entry as any).name;
+        return String(entry ?? "");
+      }).filter(Boolean)
+    : [];
+
   return {
-    ...applySemanticGate(posting),
+    ...gated,
+    postNames: normalizedPostNames,
     canonicalPost,
     canonicalRecruitment,
     canonicalPosition,
