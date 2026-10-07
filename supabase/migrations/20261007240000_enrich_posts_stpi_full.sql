@@ -31,7 +31,7 @@ SELECT
   '2026-10-12'::date,
   'BACHELORS',
   'VERIFIED',
-  'official_notification',
+  'OFFICIAL_NOTIFICATION',
   'https://stpi.in/sites/default/files/career-documents/notice_26.pdf',
   NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM public.eligibilities WHERE post_id = 1247);
@@ -54,7 +54,7 @@ SELECT
   '2026-10-12'::date,
   'ASSOCIATE',
   'VERIFIED',
-  'official_notification',
+  'OFFICIAL_NOTIFICATION',
   'https://stpi.in/sites/default/files/career-documents/notice_26.pdf',
   NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM public.eligibilities WHERE post_id = 1248);
@@ -75,7 +75,7 @@ SELECT
   '2026-10-12'::date,
   'ASSOCIATE',
   'VERIFIED',
-  'official_notification',
+  'OFFICIAL_NOTIFICATION',
   'https://stpi.in/sites/default/files/career-documents/notice_26.pdf',
   NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM public.eligibilities WHERE post_id = 1249);
@@ -97,7 +97,7 @@ SELECT
   '2026-10-12'::date,
   'BACHELORS',
   'VERIFIED',
-  'official_notification',
+  'OFFICIAL_NOTIFICATION',
   'https://stpi.in/sites/default/files/career-documents/notice_26.pdf',
   NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM public.eligibilities WHERE post_id = 1250);
@@ -119,7 +119,7 @@ SELECT
   '2026-10-12'::date,
   'HIGH_SCHOOL',
   'VERIFIED',
-  'official_notification',
+  'OFFICIAL_NOTIFICATION',
   'https://stpi.in/sites/default/files/career-documents/notice_26.pdf',
   NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM public.eligibilities WHERE post_id = 1251);
