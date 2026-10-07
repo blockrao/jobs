@@ -11,7 +11,7 @@ import {
   postingCategories,
   postings,
 } from "@/db/schema";
-import { posts, recruitments, positions, postAgeRules } from "@/db/schema";
+import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
 
 // Before DATABASE_URL is configured, every query degrades to an empty
@@ -389,10 +389,10 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
   }
   const db = getDb();
 
-  // Resolve the recruitment first — inferred type includes { organization, exam }
+  // Resolve the recruitment first — inferred type includes { organization, exam, selectionProcesses, fees }
   const recruitment = await db.query.recruitments.findFirst({
     where: eq(recruitments.slug, recruitmentSlug),
-    with: { organization: true, exam: true },
+    with: { organization: true, exam: true, selectionProcesses: true, fees: true },
   }).catch((err: unknown) => {
     console.error("[getPostBySlug] recruitments query threw", {
       recruitmentSlug,
@@ -443,7 +443,16 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     .catch(() => [])
     .then((rows) => rows[0] ?? { applyUrl: null, employmentType: null });
 
-  return { post, recruitment, applyUrl: postingFields.applyUrl, postingEmploymentType: postingFields.employmentType };
+  return {
+    post,
+    recruitment,
+    applyUrl: postingFields.applyUrl,
+    postingEmploymentType: postingFields.employmentType,
+    // Convenience aliases surfaced explicitly so leaf-page code doesn't need
+    // to dig into recruitment for these high-value fields.
+    selectionProcesses: recruitment.selectionProcesses ?? [],
+    fees: recruitment.fees ?? [],
+  };
 }
 
 /**

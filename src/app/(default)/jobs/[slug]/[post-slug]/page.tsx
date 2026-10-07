@@ -24,7 +24,7 @@ import { getPostBySlug, getPostsForRecruitment, getPostSlugsForSitemap } from "@
 import { safeQuery } from "@/lib/safe-query";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
-import { jsonLdGraph, buildBreadcrumbSchema, employmentTypeToSchema } from "@/lib/structured-data";
+import { jsonLdGraph, buildBreadcrumbSchema, employmentTypeToSchema, isOnSiteUrl } from "@/lib/structured-data";
 import { formatDate, formatAgeRange } from "@/lib/labels";
 import { CanonicalPostCard } from "@/components/ui/post-card";
 import {
@@ -105,60 +105,157 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // ── Structured data ───────────────────────────────────────────────────────────
 
 /**
- * Builds a rich description from structured data when post.description is absent.
- * Google requires a "full description of the job" — a one-liner is penalised.
- * We compose from vacancy count, eligibility, age rules, salary and apply dates.
+ * Builds a rich, 200+ word description from structured data when post.description
+ * is absent. Google requires a substantive description — a thin one is penalised
+ * and suppressed in Google Jobs. We draw from every available structured field:
+ * vacancy counts, eligibility, age rules, salary, selection stages, fees, and dates.
  */
 function buildFallbackDescription({
   post,
   org,
   recruitment,
+  selectionProcesses,
+  fees,
 }: {
   post: NonNullable<Awaited<ReturnType<typeof getData>>>["post"];
   org: { name: string; websiteUrl?: string | null };
   recruitment: NonNullable<Awaited<ReturnType<typeof getData>>>["recruitment"];
+  selectionProcesses: NonNullable<Awaited<ReturnType<typeof getData>>>["selectionProcesses"];
+  fees: NonNullable<Awaited<ReturnType<typeof getData>>>["fees"];
 }): string {
   const parts: string[] = [];
 
-  parts.push(`${org.name} invites applications for the post of ${post.name}.`);
+  // § Opening — role + org
+  parts.push(`${org.name} invites applications from eligible Indian citizens for the post of ${post.name}.`);
 
+  // § Vacancy
   if (post.vacancyTotal) {
-    parts.push(`Total vacancies: ${post.vacancyTotal}.`);
-  }
-
-  const verifiedElig = post.eligibilities.find((e: { status: string }) => e.status === "VERIFIED");
-  if (verifiedElig?.qualificationText) {
-    parts.push(`Educational qualification: ${verifiedElig.qualificationText}.`);
-  } else if (verifiedElig?.educationCategory) {
-    parts.push(`Educational qualification: ${verifiedElig.educationCategory}.`);
-  }
-
-  if (verifiedElig?.experienceYearsMin != null) {
-    parts.push(`Minimum experience required: ${verifiedElig.experienceYearsMin} year${verifiedElig.experienceYearsMin === 1 ? "" : "s"}.`);
-  }
-
-  if (post.ageRules?.length) {
-    const ageRule = post.ageRules[0] as { ageMin?: number | null; ageMax?: number | null };
-    if (ageRule.ageMin || ageRule.ageMax) {
-      const ageStr = ageRule.ageMin && ageRule.ageMax
-        ? `${ageRule.ageMin}–${ageRule.ageMax} years`
-        : ageRule.ageMax ? `up to ${ageRule.ageMax} years` : `from ${ageRule.ageMin} years`;
-      parts.push(`Age requirement: ${ageStr}.`);
+    parts.push(`A total of ${post.vacancyTotal} ${post.vacancyTotal === 1 ? "vacancy is" : "vacancies are"} available.`);
+    if (post.vacancyDetails) {
+      const vd = post.vacancyDetails;
+      const breakdownParts: string[] = [];
+      if (vd.ur && vd.ur > 0) breakdownParts.push(`UR: ${vd.ur}`);
+      if (vd.ews && vd.ews > 0) breakdownParts.push(`EWS: ${vd.ews}`);
+      if (vd.obc && vd.obc > 0) breakdownParts.push(`OBC: ${vd.obc}`);
+      if (vd.sc && vd.sc > 0) breakdownParts.push(`SC: ${vd.sc}`);
+      if (vd.st && vd.st > 0) breakdownParts.push(`ST: ${vd.st}`);
+      if (breakdownParts.length > 0) {
+        parts.push(`Category-wise breakdown: ${breakdownParts.join(", ")}.`);
+      }
     }
   }
 
+  // § Pay
   if (post.salaryMin || post.salaryMax) {
-    const salaryStr = post.salaryMin && post.salaryMax
-      ? `₹${post.salaryMin.toLocaleString("en-IN")} – ₹${post.salaryMax.toLocaleString("en-IN")} per month`
-      : post.salaryMax ? `up to ₹${post.salaryMax.toLocaleString("en-IN")} per month` : `₹${post.salaryMin!.toLocaleString("en-IN")} per month`;
-    parts.push(`Pay scale: ${salaryStr}.`);
+    const salaryStr = post.salaryMin && post.salaryMax && post.salaryMin !== post.salaryMax
+      ? `₹${post.salaryMin.toLocaleString("en-IN")} to ₹${post.salaryMax.toLocaleString("en-IN")} per month`
+      : post.salaryMax
+        ? `up to ₹${post.salaryMax.toLocaleString("en-IN")} per month`
+        : `₹${post.salaryMin!.toLocaleString("en-IN")} per month`;
+    parts.push(`The pay scale for this post is ${salaryStr} as per the 7th Central Pay Commission.`);
+  } else if (post.payLevel) {
+    const pl = post.payLevel as Record<string, unknown>;
+    const levelStr = pl.levelLabel ?? (pl.level ? `Level ${pl.level}` : null);
+    if (levelStr) parts.push(`Pay is at ${levelStr} of the Pay Matrix as per the 7th Central Pay Commission.`);
   }
 
+  // § Eligibility
+  const verifiedElig = post.eligibilities.find((e: { status: string }) => e.status === "VERIFIED")
+    ?? post.eligibilities[0];
+  if (verifiedElig?.qualificationText) {
+    parts.push(`Educational qualification required: ${verifiedElig.qualificationText}.`);
+  } else if (verifiedElig?.educationCategory) {
+    const catMap: Record<string, string> = {
+      "DOCTORATE": "doctoral degree",
+      "MASTERS": "master's degree",
+      "BACHELORS": "bachelor's degree",
+      "ASSOCIATE": "associate degree or diploma",
+      "HIGH_SCHOOL": "high school certificate (10+2 or equivalent)",
+    };
+    const catLabel = catMap[verifiedElig.educationCategory] ?? verifiedElig.educationCategory;
+    parts.push(`The minimum educational qualification required is a ${catLabel}.`);
+  }
+  if (verifiedElig?.experienceText) {
+    parts.push(`Experience requirement: ${verifiedElig.experienceText}.`);
+  } else if (verifiedElig?.experienceYearsMin != null) {
+    parts.push(`A minimum of ${verifiedElig.experienceYearsMin} year${verifiedElig.experienceYearsMin === 1 ? "" : "s"} of relevant experience is required.`);
+  }
+
+  // § Age
+  const urRule = post.ageRules?.find((r: { category: string }) => r.category === "UR");
+  if (urRule?.maxAge != null) {
+    parts.push(`The upper age limit for general (UR) candidates is ${urRule.maxAge} years. Relaxation in the upper age limit is provided to SC/ST, OBC, PwBD, Ex-Servicemen and other reserved categories as per government norms.`);
+  } else if (verifiedElig?.ageMax != null) {
+    parts.push(`The upper age limit is ${verifiedElig.ageMax} years${verifiedElig.ageMin ? ` (minimum ${verifiedElig.ageMin} years)` : ""}. Age relaxation as per government rules applies to reserved categories.`);
+  }
+
+  // § Selection process
+  if (selectionProcesses.length > 0) {
+    const sp = selectionProcesses[0];
+    if (sp.stages && sp.stages.length > 0) {
+      parts.push(`The selection process consists of: ${sp.stages.join(", ")}.`);
+    } else {
+      const typeLabel: Record<string, string> = {
+        EXAM: "written examination",
+        INTERVIEW: "interview",
+        DIRECT: "direct recruitment based on merit",
+        PHYSICAL_TEST: "physical efficiency test",
+        SKILL_TEST: "skill test",
+        MERIT: "merit list",
+        MEDICAL: "medical examination",
+        DOCUMENT_VERIFICATION: "document verification",
+        HYBRID: "written examination followed by interview",
+      };
+      const label = typeLabel[sp.processType] ?? "screening as per official notification";
+      parts.push(`The selection method is ${label}.`);
+    }
+  } else {
+    parts.push("Selection will be made through a process as described in the official notification, which may include written examination, interview, or document verification.");
+  }
+
+  // § Application fee
+  if (fees.length > 0) {
+    const general = fees.find((f: { category: string }) =>
+      ["General", "UR", "All", "GEN", "OBC"].includes(f.category)
+    );
+    const scSt = fees.find((f: { category: string }) =>
+      ["SC/ST", "SC", "ST", "PwBD", "EWS"].includes(f.category)
+    );
+    if (general?.amount != null) {
+      parts.push(
+        `Application fee: ₹${general.amount.toLocaleString("en-IN")} for General/OBC candidates` +
+        (scSt?.amount != null ? `; ₹${scSt.amount.toLocaleString("en-IN")} for SC/ST/PwBD candidates` : "; SC/ST/PwBD/women candidates may be exempt — refer to official notification") +
+        "."
+      );
+    }
+  }
+
+  // § Dates
+  const dateLines: string[] = [];
+  if (recruitment.applicationStartDate) {
+    dateLines.push(`Online applications open from ${formatDate(recruitment.applicationStartDate, "en-IN")}`);
+  }
   if (recruitment.applicationEndDate) {
-    parts.push(`Last date to apply: ${formatDate(recruitment.applicationEndDate)}.`);
+    dateLines.push(`last date to apply is ${formatDate(recruitment.applicationEndDate, "en-IN")}`);
+  }
+  if (recruitment.examDate) {
+    dateLines.push(`written examination is scheduled on ${formatDate(recruitment.examDate, "en-IN")}`);
+  }
+  if (dateLines.length > 0) {
+    parts.push(`Important dates: ${dateLines.join("; ")}.`);
   }
 
-  parts.push("This is a central government / public sector position. Selection is based on written examination and/or interview as per the official notification.");
+  // § Closing — how to apply + always-present disclaimer
+  if (recruitment.notificationUrl) {
+    parts.push(
+      `Eligible candidates should read the official notification carefully before applying. ` +
+      `All details including the application procedure, required documents, and eligibility criteria are specified in the official advertisement.`
+    );
+  }
+  parts.push(
+    `This is a government of India / public sector position. Candidates must fulfil all eligibility conditions as on the closing date. ` +
+    `JobOye displays information compiled from official sources; candidates are advised to verify details from the official notification before applying.`
+  );
 
   return parts.join(" ");
 }
@@ -210,7 +307,13 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     "@id": `${url}#jobposting`,
     url,
     title: post.name,
-    description: post.description ?? buildFallbackDescription({ post, org, recruitment }),
+    description: post.description ?? buildFallbackDescription({
+      post,
+      org,
+      recruitment,
+      selectionProcesses: data.selectionProcesses,
+      fees: data.fees,
+    }),
     identifier: {
       "@type": "PropertyValue",
       name: org.name,
@@ -218,6 +321,7 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     },
     // notificationDate is the actual advertisement/notification date; createdAt is just the DB insert time
     datePosted: (recruitment.notificationDate ?? recruitment.createdAt)?.toISOString(),
+    dateModified: (post.updatedAt ?? recruitment.updatedAt)?.toISOString(),
     validThrough: recruitment.applicationEndDate?.toISOString() ?? undefined,
     employmentType: employmentTypeToSchema(data.postingEmploymentType),
     hiringOrganization: hiringOrg,
@@ -227,7 +331,9 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     },
     baseSalary,
     totalJobOpenings: post.vacancyTotal ?? undefined,
-    directApply: false,
+    // applyUrl from the posting row (null for offline/deputation posts)
+    ...(data.applyUrl && { apply: data.applyUrl }),
+    directApply: isOnSiteUrl(data.applyUrl),
     ...(educationReq && { educationRequirements: educationReq }),
     ...(experienceReq && { experienceRequirements: experienceReq }),
   };
@@ -286,7 +392,7 @@ export default async function PostLeafPage({ params }: Props) {
     notFound();
   }
 
-  const { post, recruitment, siblings, applyUrl, postingEmploymentType } = data;
+  const { post, recruitment, siblings, applyUrl, postingEmploymentType, selectionProcesses, fees } = data;
   const org = recruitment.organization;
   const exam = recruitment.exam;
 
