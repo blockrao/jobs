@@ -570,7 +570,7 @@ export default async function PostLeafPage({ params }: Props) {
               value={(() => {
                 // Prefer age_rules table (most precise); fall back to eligibility ageMax;
                 // then fall back to posting-level age limits surfaced via recruitment.
-                const urRule = post.ageRules.find((r: { category: string }) => r.category === "UR");
+                const urRule = post.ageRules.find((r: { category: string }) => r.category === "GENERAL" || r.category === "UR");
                 if (urRule?.maxAge != null) return `Up to ${urRule.maxAge} years`;
                 if (verifiedElig?.ageMax != null) return `Up to ${verifiedElig.ageMax} years`;
                 return "—";
@@ -588,7 +588,11 @@ export default async function PostLeafPage({ params }: Props) {
             />
             <FactCell
               label="Position"
-              value={post.position?.name ?? post.name}
+              value={
+                post.position?.name && post.position.name !== "Other"
+                  ? post.position.name
+                  : post.name
+              }
             />
           </div>
 
