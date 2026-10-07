@@ -937,10 +937,15 @@ export const sourceAuthorityEnum = pgEnum("source_authority", [
 ]);
 
 export const qualificationLevelEnum = pgEnum("qualification_level", [
+  // Extended in ELIG-001 (2026-10-07). Order matches DB enum sort order.
+  "BELOW_10TH",
   "SECONDARY",
+  "ITI",
+  "DIPLOMA",
   "SENIOR_SECONDARY",
   "BACHELOR",
   "MASTER",
+  "PROFESSIONAL",
   "PHD",
 ]);
 
@@ -1240,6 +1245,36 @@ export const eligibilities = pgTable("eligibilities", {
   /** PENDING (extracted, awaiting review) or VERIFIED (checked against official notice). */
   status: varchar("status", { length: 20 }).notNull().default("PENDING"),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
+
+  // ELIG-001 additions (2026-10-07) — normalized eligibility model.
+  // Architectural invariant: qualificationExpr is canonical; flat columns
+  // below are query/index projections that must never contradict it.
+
+  /** Typed education level — normalized projection from qualificationExpr. */
+  educationLevel: qualificationLevelEnum("education_level"),
+  /** Discipline strings from qualificationExpr; implicit OR between elements. ["Any"] = no restriction. */
+  disciplines: text("disciplines").array(),
+  /** Role of this requirement: MINIMUM (must meet) or PREFERRED (scored higher). */
+  qualificationStatus: varchar("qualification_status", { length: 20 }),
+  /** Minimum percentage marks threshold (e.g. 70.0 for "70% or above"). */
+  minMarksPct: text("min_marks_pct"), // stored as numeric(5,2) in DB
+  /** Minimum CGPA threshold (e.g. 7.5 for "CGPA 7.5 or above"). */
+  minCgpa: text("min_cgpa"), // stored as numeric(4,2) in DB
+  /** Earliest passing year accepted (from qualificationExpr.passingYears). */
+  passingYearMin: smallint("passing_year_min"),
+  /** Latest passing year accepted (from qualificationExpr.passingYears). */
+  passingYearMax: smallint("passing_year_max"),
+
+  // Provenance: where the eligibility fact came from and how it was derived.
+  /** OFFICIAL_NOTIFICATION | AGGREGATOR | INFERRED */
+  sourceType: varchar("source_type", { length: 30 }),
+  /** URL or document ID of the source. */
+  sourceRef: text("source_ref"),
+  /** Section/page/paragraph within the source document. */
+  sourceLocator: text("source_locator"),
+  /** DIRECT (verbatim) | NORMALIZED (structured from text) | INFERRED (context only). */
+  derivation: varchar("derivation", { length: 20 }),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
@@ -1285,6 +1320,17 @@ export const postAgeRules = pgTable("post_age_rules", {
   maxAge: smallint("max_age"),
   relaxationYears: smallint("relaxation_years"),
   note: text("note"),
+  // ELIG-001 additions (2026-10-07).
+  /**
+   * Machine-readable classification of this age rule.
+   * ARITHMETIC     = base + relaxation_years = effective max
+   * GOVT_ORDER     = "as per Govt. rules" — no arithmetic; requires external lookup
+   * NO_UPPER_LIMIT = explicitly no upper age limit
+   * ABSOLUTE_CEILING = maximum that cannot be exceeded even with relaxation
+   */
+  ruleType: varchar("rule_type", { length: 30 }),
+  /** Human-readable condition for this rule (e.g. "Ex-serviceman with min 6 years service"). */
+  conditionText: text("condition_text"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
