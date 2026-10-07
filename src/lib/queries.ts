@@ -368,30 +368,59 @@ export async function getPostingsByExam(examSlug: string) {
  * eligibilities, vacancies. Returns null when not found.
  */
 export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
-  if (!hasDb()) return null;
+  if (!hasDb()) {
+    console.warn("[getPostBySlug] no DATABASE_URL — returning null");
+    return null;
+  }
   const db = getDb();
 
   // Resolve the recruitment first
-  const recruitment = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, recruitmentSlug),
-    with: { organization: true, exam: true },
-  });
-  if (!recruitment) return null;
+  let recruitment: Awaited<ReturnType<typeof db.query.recruitments.findFirst>> | undefined;
+  try {
+    recruitment = await db.query.recruitments.findFirst({
+      where: eq(recruitments.slug, recruitmentSlug),
+      with: { organization: true, exam: true },
+    });
+  } catch (err) {
+    console.error("[getPostBySlug] recruitments query threw", {
+      recruitmentSlug,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    throw err; // re-throw so safeQuery logs it properly
+  }
+  if (!recruitment) {
+    console.info("[getPostBySlug] recruitment not found", { recruitmentSlug });
+    return null;
+  }
 
-  const post = await db.query.posts.findFirst({
-    where: and(
-      eq(posts.recruitmentId, recruitment.id),
-      eq(posts.slug, postSlug),
-    ),
-    with: {
-      position: true,
-      eligibilities: true,
-      vacancies: true,
-      ageRules: true,
-      employingOrganization: true,
-    },
-  });
-  if (!post) return null;
+  let post: Awaited<ReturnType<typeof db.query.posts.findFirst>> | undefined;
+  try {
+    post = await db.query.posts.findFirst({
+      where: and(
+        eq(posts.recruitmentId, recruitment.id),
+        eq(posts.slug, postSlug),
+      ),
+      with: {
+        position: true,
+        eligibilities: true,
+        vacancies: true,
+        ageRules: true,
+        employingOrganization: true,
+      },
+    });
+  } catch (err) {
+    console.error("[getPostBySlug] posts query threw", {
+      recruitmentSlug,
+      postSlug,
+      recruitmentId: recruitment.id,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+  if (!post) {
+    console.info("[getPostBySlug] post not found", { recruitmentSlug, postSlug, recruitmentId: recruitment.id });
+    return null;
+  }
 
   return { post, recruitment };
 }
