@@ -7,7 +7,11 @@ Status as of 2026-10-07, IST. Read this first in a new session, then
 
 Increments closed: MIG-001, SEC-001, ARC-001 (frozen), **SEO-001 (closed 2026-10-07)**.
 
-**Open items, the real work, in order:** (1) A-039, (2) A-041, (3) tested backup and restore. See "Immediate pending items".
+**ELIG-001 scope freeze (A-082, 2026-10-07):** The full eligibility engine (qualificationExpr contract, GradeThreshold, ExperienceLeaf, MINIMUM/PREFERRED, age-rule computation, candidate verdicts) is deferred to Phase 2. The schema work done is preserved as Phase 2 preparation and must not become a Phase 1 dependency. Phase 1 stores eligibility facts as display text only (qualification_text, experience_text, age info, source reference). No "Can I apply?" logic in Phase 1.
+
+**Phase 1 priority is discoverability:** Every valid Post must have a canonical URL, rich factual content, correct structured data, sitemap coverage, and no fabricated/inferred facts. See "Phase 1 P0 items" below.
+
+**Open items, in order:** See "Phase 1 P0 items" below.
 
 **Data track: UNDER REVIEW, do not start DATA-000.** The owner challenged the
 scope on 2026-10-03 night as an endless-cycle risk. The sequence recorded in
@@ -54,22 +58,31 @@ locally (`evaluateJobPostingEligibility`, tests SD-09a..j). Unit rule: one
 JobPosting per resolved Post, none for unresolved multi-post notices. Freeze
 once verified with the data deployment. Do not push before the backup gate.
 
-## Immediate pending items (items 1–2 are the real work; do these first)
+## Phase 1 P0 items (the real work now)
 
-~~1. **Close SEO-001.**~~ **DONE 2026-10-07** — A-052 (no hreflang HTTP header) and A-053 (no language redirect on English entity URLs) both verified in production. SEO-001 CLOSED.
+Owner direction 2026-10-07 (A-082). Phase 1 = discoverability. All items below serve indexability and factual richness of individual Posts.
 
-~~1. **Bounded maintenance** (A-039, A-041).~~ **DONE** — Both closed per ledger: A-039 CLOSED 2026-10-04 (paid-path auth + rate limit deployed); A-041 CLOSED 2026-10-04 (`refresh_posting_urgency_states` repaired and run).
+1. **Decompose remaining recruitments into individual Posts.** Every recruitment that contains multiple roles must produce one Post row per role. The Post is the Phase 1 product object.
+2. **Canonical, indexable URL for every valid Post.** `/jobs/{recruitment-slug}/{post-slug}` — no missing pages, no 404s, correct self-canonical, bidirectional nav.
+3. **Sitemap and internal linking.** Every live Post URL in sitemap. Role pages (`/posts/{role-slug}`) link to Post leaf pages. No orphan Posts.
+4. **Post page factual richness.** Each Post page must include where available: title, vacancy count, qualification (text), salary/pay scale, age limits, location, key dates (open/close/exam), application URL, official source link.
+5. **Resolve 22 unlinked Posts.** Identify and link them.
+6. **Official-source coverage.** Increase Posts that have a confirmed official source URL.
+7. **JobPosting structured data.** Verify correct schema.org/JobPosting on individual Post pages.
+8. **Lifecycle / expired jobs.** Represent correctly — expired posts must not show misleading active state.
+9. **Eliminate fabricated/inferred facts.** No invented URLs, no inferred salaries, no title-derived organization names promoted to canonical facts.
 
-1. **Pre-data safety gate.** Per A-069 the owner waived the tested backup/restore gate for the launch load (daily backup process suffices); however merges, backfills and destructive migrations still require an approved pre-change report. DOC-001 and DATA-004 cannot write to production without one.
-4. **Data track: owner decision pending.** DATA-000 is on hold and must not be
-   started. A smaller replacement is proposed in the next section.
-5. **ORG-001A pre-change report** (on hold; may be replaced by the write-path
-   fix proposed below; analysis only until approved). Ledger:
-   A-003, A-014, A-062. The ORG-001 specification is the contract. Open
-   proposed points are listed in A-062. Baseline: about 108 of 201 postings
-   have organization problems (54 in 6 bucket organizations, 44 with
-   title-derived names, about 10 misfiled); 125 organization rows. These
-   records are not cleaned before ORG-001B.
+## Closed / on hold (for reference)
+
+~~**Close SEO-001.**~~ **DONE 2026-10-07** — A-052 (no hreflang HTTP header) and A-053 (no language redirect on English entity URLs) both verified in production. SEO-001 CLOSED.
+
+~~**Bounded maintenance** (A-039, A-041).~~ **DONE** — Both closed per ledger: A-039 CLOSED 2026-10-04 (paid-path auth + rate limit deployed); A-041 CLOSED 2026-10-04 (`refresh_posting_urgency_states` repaired and run).
+
+**ELIG-001 eligibility engine:** Deferred to Phase 2 (A-082). Schema work preserved; must not become Phase 1 dependency.
+
+**Data track (DATA-000 → GATE-001):** On hold pending owner decision. Do not start.
+
+**ORG-001A:** On hold with data track.
 
 ## Proposed replacement for the data track (owner decision pending)
 
