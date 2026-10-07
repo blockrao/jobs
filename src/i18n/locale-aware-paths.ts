@@ -13,11 +13,14 @@
 // redirects).
 
 // Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4
+// NOTE: /jobs/ is special — only single-slug paths (/jobs/[slug]) have a
+// [locale] counterpart. Post leaf pages (/jobs/[slug]/[post-slug]) only
+// exist in (default) and must NOT pass through next-intl's middleware.
+// That special case is handled explicitly in isLocaleAwarePath below.
 export const LOCALE_AWARE_PREFIXES = [
   '/articles/',
   '/exams/',
   '/organizations/',
-  '/jobs/',
 ] as const;
 
 // Entity / listing prefixes: the path itself (with no further slug) is
@@ -49,6 +52,15 @@ export function isLocaleAwarePath(pathname: string): boolean {
   if (LOCALE_AWARE_PREFIXES.some(
     (prefix) => stripped.startsWith(prefix) && stripped.length > prefix.length,
   )) return true;
+
+  // /jobs/[slug] — locale-aware (src/app/[locale]/jobs/[slug]/page.tsx exists)
+  // /jobs/[slug]/[post-slug] — NOT locale-aware (only in (default) tree)
+  // Distinguish by counting segments after /jobs/: exactly one → locale-aware.
+  if (stripped.startsWith('/jobs/')) {
+    const afterPrefix = stripped.slice('/jobs/'.length); // e.g. "bpsc-tre-4" or "bpsc-tre-4/some-post"
+    if (afterPrefix.length > 0 && !afterPrefix.includes('/')) return true;
+    // Two or more segments (post leaf): fall through, not locale-aware.
+  }
 
   // Entity prefixes: require a slug after the prefix (same rule as above).
   if (LOCALE_AWARE_ENTITIES.some(
