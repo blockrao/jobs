@@ -612,11 +612,19 @@ export interface JobRow {
   locationStateCode: string | null;
 }
 
+export interface RoleRow {
+  name: string;
+  occurrenceCount: number;
+  totalVacancies: number;
+  earliestDeadline: Date | null;
+}
+
 export async function getJobsControlCenter(): Promise<{
   stats: ControlCenterStats;
   deadlineBuckets: DeadlineBucket[];
   topOrgs: TopOrg[];
   jobs: JobRow[];
+  roles: RoleRow[];
 }> {
   if (!hasDb()) {
     return {
@@ -624,11 +632,12 @@ export async function getJobsControlCenter(): Promise<{
       deadlineBuckets: [],
       topOrgs: [],
       jobs: [],
+      roles: [],
     };
   }
   const db = getDb();
 
-  const [statsRows, bucketRows, orgRows, jobRows] = await Promise.all([
+  const [statsRows, bucketRows, orgRows, jobRows, roleRows] = await Promise.all([
     // Headline stats
     db.execute(sql`
       SELECT
@@ -692,7 +701,7 @@ export async function getJobsControlCenter(): Promise<{
         r.status,
         r.application_end_date,
         r.application_start_date,
-        r.total_vacancies,
+        COALESCE(r.total_vacancies, SUM(po.vacancy_total)::int) AS total_vacancies,
         COUNT(po.id)::int AS post_count,
         STRING_AGG(po.name, ' · ' ORDER BY po.vacancy_total DESC NULLS LAST) AS post_names,
         EXTRACT(DAY FROM (r.application_end_date - NOW()))::int AS days_remaining,
@@ -705,6 +714,22 @@ export async function getJobsControlCenter(): Promise<{
       GROUP BY r.id, o.name
       ORDER BY r.application_end_date ASC NULLS LAST
       LIMIT 300
+    `),
+
+    // Role heatmap — top post names by total vacancies
+    db.execute(sql`
+      SELECT
+        po.name,
+        COUNT(po.id)::int AS occurrence_count,
+        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        MIN(r.application_end_date) AS earliest_deadline
+      FROM public.posts po
+      JOIN public.recruitments r ON r.id = po.recruitment_id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
+      GROUP BY po.name
+      ORDER BY total_vacancies DESC NULLS LAST
+      LIMIT 50
     `),
   ]);
 
@@ -757,5 +782,12 @@ export async function getJobsControlCenter(): Promise<{
     locationStateCode: r.location_state_code ? String(r.location_state_code) : null,
   }));
 
-  return { stats, deadlineBuckets, topOrgs, jobs };
+  const roles: RoleRow[] = (roleRows as unknown as Record<string, unknown>[]).map((r) => ({
+    name: String(r.name),
+    occurrenceCount: Number(r.occurrence_count),
+    totalVacancies: Number(r.total_vacancies),
+    earliestDeadline: r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null,
+  }));
+
+  return { stats, deadlineBuckets, topOrgs, jobs, roles };
 }

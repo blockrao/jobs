@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { pageSeo } from "@/lib/seo";
-import { getJobsControlCenter, type JobRow, type DeadlineBucket, type TopOrg } from "@/lib/queries";
+import { getJobsControlCenter, type JobRow, type DeadlineBucket, type TopOrg, type RoleRow } from "@/lib/queries";
 import { Building2, Calendar, Clock, TrendingUp, Briefcase, MapPin, ChevronRight, AlertTriangle, Users } from "lucide-react";
 
 export const revalidate = 300; // 5-minute ISR — data is live, not static
@@ -244,6 +244,53 @@ function JobTable({ jobs }: { jobs: JobRow[] }) {
   );
 }
 
+function RoleHeatmap({ roles }: { roles: RoleRow[] }) {
+  const max = roles[0]?.totalVacancies ?? 1;
+  return (
+    <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-black/5">
+        <Users className="h-4 w-4 text-neutral-400" />
+        <h2 className="font-semibold text-neutral-900">Top Hiring Roles</h2>
+        <span className="ml-auto text-xs text-neutral-400">by total vacancies</span>
+      </div>
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0">
+        {roles.map((role) => {
+          const pct = Math.max(4, Math.round((role.totalVacancies / max) * 100));
+          const isUrgent = role.earliestDeadline &&
+            (role.earliestDeadline.getTime() - Date.now()) < 7 * 86_400_000;
+          const barColor = isUrgent
+            ? "bg-red-400"
+            : role.totalVacancies > 2000
+              ? "bg-indigo-500"
+              : role.totalVacancies > 500
+                ? "bg-indigo-400"
+                : "bg-indigo-300";
+          return (
+            <div key={role.name} className="py-2 border-b border-black/4 last:border-0">
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <span className="text-xs font-medium text-neutral-700 truncate max-w-[200px]" title={role.name}>
+                  {role.name}
+                </span>
+                <span className="text-xs font-semibold tabular-nums text-neutral-800 shrink-0">
+                  {role.totalVacancies.toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-neutral-100">
+                <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+              </div>
+              {isUrgent && role.earliestDeadline && (
+                <div className="text-[10px] text-red-500 mt-0.5">
+                  closes {fmtDate(role.earliestDeadline)}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function PostsControlCenterPage() {
@@ -257,7 +304,7 @@ export default async function PostsControlCenterPage() {
     );
   }
 
-  const { stats, deadlineBuckets, topOrgs, jobs } = data;
+  const { stats, deadlineBuckets, topOrgs, jobs, roles } = data;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
@@ -343,6 +390,9 @@ export default async function PostsControlCenterPage() {
         <DeadlineHeatmap buckets={deadlineBuckets} />
         <TopOrgsTable orgs={topOrgs} />
       </div>
+
+      {/* ── Role Heatmap ────────────────────────────────────────────────── */}
+      {roles.length > 0 && <RoleHeatmap roles={roles} />}
 
       {/* ── Full Job Table ──────────────────────────────────────────────── */}
       <JobTable jobs={jobs} />
