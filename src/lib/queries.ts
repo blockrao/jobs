@@ -453,7 +453,7 @@ export async function getPostsForRecruitment(recruitmentId: number) {
   const db = getDb();
   return db.query.posts.findMany({
     where: eq(posts.recruitmentId, recruitmentId),
-    with: { position: true },
+    with: { position: true, ageRules: true },
     orderBy: (p, { asc }) => [asc(p.name)],
   });
 }

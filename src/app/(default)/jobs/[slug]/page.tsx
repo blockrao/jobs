@@ -1262,20 +1262,34 @@ export default async function JobPage({ params }: Props) {
               <SectionCard>
                 <SectionHeader icon={Hash} title={`Posts in This Notice (${siblingPosts.length})`} />
                 <div className="space-y-3 p-5">
-                  {siblingPosts.map((p: any, i: number) => (
-                    <CanonicalPostCard
-                      key={p.id}
-                      name={p.name}
-                      slug={p.slug}
-                      recruitmentSlug={posting.canonicalRecruitment!.slug}
-                      vacancyTotal={p.vacancyTotal}
-                      vacancyDetails={p.vacancyDetails}
-                      salaryMin={p.salaryMin}
-                      salaryMax={p.salaryMax}
-                      positionName={p.position?.name}
-                      index={i}
-                    />
-                  ))}
+                  {siblingPosts.map((p: any, i: number) => {
+                    // Derive age range from post's ageRules rows (same logic as leaf page)
+                    const ageRules: any[] = p.ageRules ?? [];
+                    const ageMin = ageRules.length > 0
+                      ? Math.min(...ageRules.map((r: any) => r.minAge ?? Infinity).filter(isFinite))
+                      : null;
+                    const ageMax = ageRules.length > 0
+                      ? Math.max(...ageRules.map((r: any) => r.maxAge ?? -Infinity).filter(isFinite))
+                      : null;
+                    return (
+                      <CanonicalPostCard
+                        key={p.id}
+                        name={p.name}
+                        slug={p.slug}
+                        recruitmentSlug={posting.canonicalRecruitment!.slug}
+                        vacancyTotal={p.vacancyTotal}
+                        vacancyDetails={p.vacancyDetails}
+                        salaryMin={p.salaryMin}
+                        salaryMax={p.salaryMax}
+                        positionName={p.position?.name}
+                        ageMin={ageMin !== Infinity && ageMin !== null ? ageMin : null}
+                        ageMax={ageMax !== -Infinity && ageMax !== null ? ageMax : null}
+                        applyUrl={publicLink(posting.applyUrl) ?? null}
+                        employmentType={posting.employmentType ?? null}
+                        index={i}
+                      />
+                    );
+                  })}
                 </div>
               </SectionCard>
             );

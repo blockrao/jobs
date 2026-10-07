@@ -13,7 +13,7 @@
  */
 
 import Link from "next/link";
-import { Users, Banknote, ChevronRight, FileText } from "lucide-react";
+import { Users, Banknote, ChevronRight, FileText, CalendarDays, Briefcase, ArrowUpRight } from "lucide-react";
 
 function formatSalary(min?: number | null, max?: number | null): string | null {
   if (!min && !max) return null;
@@ -27,6 +27,24 @@ function formatSalary(min?: number | null, max?: number | null): string | null {
 
 // ── Canonical post card (has its own page) ────────────────────────────────────
 
+function formatEmploymentType(type?: string | null): string | null {
+  if (!type) return null;
+  const map: Record<string, string> = {
+    FULL_TIME: "Full-time",
+    PART_TIME: "Part-time",
+    TEMPORARY: "Contract / Fixed-term",
+    PERMANENT: "Permanent",
+    CONTRACTOR: "Consultancy",
+    DEPUTATION: "Deputation",
+    APPRENTICESHIP: "Apprenticeship",
+    INTERNSHIP: "Internship",
+    FELLOWSHIP: "Fellowship",
+    INTERN: "Intern",
+    OTHER: "Other",
+  };
+  return map[type] ?? type;
+}
+
 interface CanonicalPostCardProps {
   name: string;
   slug: string;
@@ -38,6 +56,10 @@ interface CanonicalPostCardProps {
   salaryMin?: number | null;
   salaryMax?: number | null;
   positionName?: string | null;
+  ageMin?: number | null;
+  ageMax?: number | null;
+  applyUrl?: string | null;
+  employmentType?: string | null;
   index: number;
 }
 
@@ -50,58 +72,83 @@ export function CanonicalPostCard({
   salaryMin,
   salaryMax,
   positionName,
+  ageMin,
+  ageMax,
+  applyUrl,
+  employmentType,
   index,
 }: CanonicalPostCardProps) {
   const href = `/jobs/${recruitmentSlug}/${slug}`;
   const salary = formatSalary(salaryMin, salaryMax);
   const vac = vacancyTotal ?? vacancyDetails?.total ?? null;
+  const ageLabel = ageMin && ageMax
+    ? `${ageMin}–${ageMax} years`
+    : ageMax
+    ? `Up to ${ageMax} years`
+    : ageMin
+    ? `${ageMin}+ years`
+    : null;
+  const empType = formatEmploymentType(employmentType);
+
+  // Count how many facts we have for layout decisions
+  const facts = [salary, vac != null ? "vac" : null, ageLabel, empType].filter(Boolean);
 
   return (
-    <Link
-      href={href}
-      className="group block rounded-xl border border-black/8 bg-white p-5 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md hover:bg-indigo-50/30 focus-visible:outline-2 focus-visible:outline-indigo-500"
-      aria-label={`View details for ${name}`}
-    >
-      {/* Number badge + name */}
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 group-hover:bg-indigo-200">
+    <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden">
+      {/* Header row: number + name + arrow link */}
+      <div className="flex items-start gap-3 px-5 pt-5 pb-3">
+        <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
           {index + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug text-neutral-900 group-hover:text-indigo-900">
-            {name}
-          </p>
+          <p className="text-sm font-semibold leading-snug text-neutral-900">{name}</p>
           {positionName && positionName !== name && (
             <p className="mt-0.5 text-xs text-neutral-400">{positionName}</p>
           )}
         </div>
-        <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-neutral-300 group-hover:text-indigo-400 transition-colors" />
+        <Link
+          href={href}
+          className="ml-2 flex-shrink-0 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-0.5 whitespace-nowrap"
+          aria-label={`Full details for ${name}`}
+        >
+          Details
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
-      {/* Key facts row */}
-      {(vac != null || salary) && (
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 pl-9">
-          {vac != null && (
-            <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-              <Users className="h-3.5 w-3.5 text-indigo-400" />
-              <span>
-                <span className="font-semibold text-neutral-800">{vac.toLocaleString("en-IN")}</span>
-                {" "}vacancies
-              </span>
-            </span>
-          )}
+      {/* Facts grid */}
+      {facts.length > 0 && (
+        <div className="grid grid-cols-2 gap-px bg-black/5 border-t border-black/5 mx-5 rounded-lg overflow-hidden mb-4">
           {salary && (
-            <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-              <Banknote className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="font-medium text-neutral-700">{salary}</span>
-            </span>
+            <div className="bg-white px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-wide text-neutral-400 font-medium mb-0.5">Pay</p>
+              <p className="text-sm font-semibold text-emerald-700 leading-tight">{salary}</p>
+            </div>
+          )}
+          {vac != null && (
+            <div className="bg-white px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-wide text-neutral-400 font-medium mb-0.5">Vacancies</p>
+              <p className="text-sm font-semibold text-neutral-800 leading-tight">{vac.toLocaleString("en-IN")}</p>
+            </div>
+          )}
+          {ageLabel && (
+            <div className="bg-white px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-wide text-neutral-400 font-medium mb-0.5">Age limit</p>
+              <p className="text-sm font-semibold text-neutral-800 leading-tight">{ageLabel}</p>
+            </div>
+          )}
+          {empType && (
+            <div className="bg-white px-3 py-2.5">
+              <p className="text-[10px] uppercase tracking-wide text-neutral-400 font-medium mb-0.5">Type</p>
+              <p className="text-sm font-semibold text-neutral-800 leading-tight">{empType}</p>
+            </div>
           )}
         </div>
       )}
 
-      {/* Category breakdown (compact, only when meaningful) */}
+      {/* Category breakdown */}
       {vacancyDetails && (vacancyDetails.ur || vacancyDetails.obc || vacancyDetails.sc || vacancyDetails.st) && (
-        <div className="mt-2 pl-9 flex flex-wrap gap-x-3 gap-y-0.5">
+        <div className="px-5 pb-3 flex flex-wrap gap-x-3 gap-y-0.5">
           {vacancyDetails.ur != null && vacancyDetails.ur > 0 && (
             <span className="text-[11px] text-neutral-400">UR {vacancyDetails.ur}</span>
           )}
@@ -119,7 +166,29 @@ export function CanonicalPostCard({
           )}
         </div>
       )}
-    </Link>
+
+      {/* CTA footer */}
+      <div className="flex items-center gap-3 px-5 pb-5 pt-1">
+        {applyUrl && (
+          <a
+            href={applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+          >
+            Apply Now
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </a>
+        )}
+        <Link
+          href={href}
+          className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+        >
+          View full details
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    </div>
   );
 }
 
