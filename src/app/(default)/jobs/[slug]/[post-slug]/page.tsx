@@ -40,7 +40,13 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-export const revalidate = 300;
+// Force dynamic rendering — no ISR/edge caching on this page.
+// Post leaf pages are few in number, low in traffic, and were being cached
+// as 404 by Vercel's edge (s-maxage from revalidate=300 applied to notFound()
+// responses too). Dynamic rendering ensures a fresh DB query every request
+// and means a cached-404 can never persist after RLS or data changes.
+// Revisit once canonical post data is fully populated and stable.
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string; "post-slug": string }> };
