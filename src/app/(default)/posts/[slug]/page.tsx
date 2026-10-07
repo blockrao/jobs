@@ -280,7 +280,7 @@ export default async function PostPage({ params }: Props) {
             Recruitment bodies that have notified {role.name} vacancies
           </p>
           <div className="flex flex-wrap gap-2">
-            {recruitingOrgs.map((org) => (
+            {recruitingOrgs.slice(0, 20).map((org) => (
               <Link
                 key={org.id}
                 href={`/organizations/${org.slug}`}
@@ -289,6 +289,11 @@ export default async function PostPage({ params }: Props) {
                 {org.name}
               </Link>
             ))}
+            {recruitingOrgs.length > 20 && (
+              <span className="px-3 py-1.5 text-neutral-400 text-sm">
+                +{recruitingOrgs.length - 20} more
+              </span>
+            )}
           </div>
         </section>
       )}
