@@ -708,7 +708,7 @@ export async function getJobsControlCenter(): Promise<{
     `),
   ]);
 
-  const s = (statsRows.rows[0] ?? {}) as Record<string, unknown>;
+  const s = ((statsRows as unknown as Record<string, unknown>[])[0] ?? {}) as Record<string, unknown>;
   const stats: ControlCenterStats = {
     activeRecruitments: Number(s.active_recruitments ?? 0),
     totalPosts: Number(s.total_posts ?? 0),
@@ -727,14 +727,14 @@ export async function getJobsControlCenter(): Promise<{
     "Later": "none",
     "No Deadline": "none",
   };
-  const deadlineBuckets: DeadlineBucket[] = (bucketRows.rows as Record<string, unknown>[]).map((r) => ({
+  const deadlineBuckets: DeadlineBucket[] = (bucketRows as unknown as Record<string, unknown>[]).map((r) => ({
     label: String(r.label),
     recruitments: Number(r.recruitments),
     vacancies: Number(r.vacancies),
     urgency: urgencyMap[String(r.label)] ?? "none",
   }));
 
-  const topOrgs: TopOrg[] = (orgRows.rows as Record<string, unknown>[]).map((r) => ({
+  const topOrgs: TopOrg[] = (orgRows as unknown as Record<string, unknown>[]).map((r) => ({
     orgName: String(r.org_name),
     orgSlug: String(r.org_slug),
     postCount: Number(r.post_count),
@@ -742,7 +742,7 @@ export async function getJobsControlCenter(): Promise<{
     earliestDeadline: r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null,
   }));
 
-  const jobs: JobRow[] = (jobRows.rows as Record<string, unknown>[]).map((r) => ({
+  const jobs: JobRow[] = (jobRows as unknown as Record<string, unknown>[]).map((r) => ({
     recruitmentId: Number(r.recruitment_id),
     recruitmentSlug: String(r.recruitment_slug),
     recruitmentName: String(r.recruitment_name),

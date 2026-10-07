@@ -123,6 +123,7 @@ function buildFallbackDescription({
   recruitment: NonNullable<Awaited<ReturnType<typeof getData>>>["recruitment"];
   selectionProcesses: NonNullable<Awaited<ReturnType<typeof getData>>>["selectionProcesses"];
   fees: NonNullable<Awaited<ReturnType<typeof getData>>>["fees"];
+  officialNotificationUrl?: string | null;
 }): string {
   const parts: string[] = [];
 
@@ -316,6 +317,7 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
       recruitment,
       selectionProcesses: data.selectionProcesses,
       fees: data.fees,
+      officialNotificationUrl: data.officialNotificationUrl,
     }),
     identifier: {
       "@type": "PropertyValue",
