@@ -591,3 +591,21 @@ export function roleAliases(role: RoleDefinition): string[] {
   const all = new Set([role.name, ...role.aliases]);
   return Array.from(all);
 }
+
+/**
+ * Resolve a Post name to a single role hub slug.
+ *
+ * Returns the role slug only when exactly one role's alias list matches the
+ * post name (case-insensitive). Returns null when zero roles match (no hub)
+ * or when multiple roles match (ambiguous — do not link).
+ *
+ * This mirrors the ILIKE matching in getPostsForRole() without a DB round-trip.
+ */
+export function resolveRoleForPost(postName: string): string | null {
+  const name = postName.toLowerCase();
+  const matches = ROLE_REGISTRY.filter((role) => {
+    const allAliases = [role.name, ...role.aliases];
+    return allAliases.some((alias) => alias.toLowerCase() === name);
+  });
+  return matches.length === 1 ? matches[0].slug : null;
+}

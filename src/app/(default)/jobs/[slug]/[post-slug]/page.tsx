@@ -21,6 +21,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostBySlug, getPostsForRecruitment, getPostSlugsForSitemap } from "@/lib/queries";
+import { resolveRoleForPost, getRoleBySlug } from "@/lib/roles";
 import { safeQuery } from "@/lib/safe-query";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
@@ -416,6 +417,14 @@ export default async function PostLeafPage({ params }: Props) {
   const verifiedElig = post.eligibilities.find((e) => e.status === "VERIFIED") ?? post.eligibilities[0];
   const otherPosts = siblings.filter((s) => s.slug !== post.slug);
 
+  // WS1 — Role Hub reverse link.
+  // Resolve this post's name to a single role hub slug using the ROLE_REGISTRY
+  // alias matching (same logic as getPostsForRole). Only render when the
+  // resolver is deterministic (exactly one role matches). Returns null for
+  // category-other posts or ambiguous names.
+  const roleSlug = resolveRoleForPost(post.name);
+  const roleDefinition = roleSlug ? getRoleBySlug(roleSlug) : null;
+
   // Structured data
   // Only emit JobPosting when the recruitment is still active.
   // "ACTIVE" covers open applications; "UPCOMING" covers advance notifications
@@ -627,6 +636,15 @@ export default async function PostLeafPage({ params }: Props) {
               All posts in this notice
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
+            {roleDefinition && (
+              <Link
+                href={`/posts/${roleDefinition.slug}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                All {roleDefinition.name} openings
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
 
           {/* Provenance footer */}
@@ -866,6 +884,29 @@ export default async function PostLeafPage({ params }: Props) {
             <div className="border-t border-black/5 px-5 py-2">
               <Link href={`/jobs/${recruitment.slug}`} className="text-xs text-indigo-600 hover:underline">
                 ← Back to notice hub
+              </Link>
+            </div>
+          </SectionCard>
+        )}
+
+        {/* ── Role Hub discovery ────────────────────────────────────────── */}
+        {roleDefinition && (
+          <SectionCard className="mb-4">
+            <div className="px-5 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">
+                Browse by Role
+              </p>
+              <Link
+                href={`/posts/${roleDefinition.slug}`}
+                className="flex items-center justify-between rounded-lg border border-neutral-200 px-4 py-3 hover:bg-neutral-50 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">{roleDefinition.name} Jobs</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    See all active and historical {roleDefinition.name} recruitments
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-400" />
               </Link>
             </div>
           </SectionCard>
