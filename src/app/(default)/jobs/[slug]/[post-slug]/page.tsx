@@ -612,9 +612,11 @@ export default async function PostLeafPage({ params }: Props) {
 // ── Static params ─────────────────────────────────────────────────────────────
 
 export async function generateStaticParams() {
-  const rows = await safeQuery(() => getPostSlugsForSitemap(), []);
-  return rows.map((r) => ({
-    slug: r.recruitmentSlug,
-    "post-slug": r.postSlug,
-  }));
+  // Return empty array — all paths are rendered on-demand and cached via ISR
+  // (revalidate = 300). This is required in this Next.js version: a non-empty
+  // generateStaticParams only pre-builds the listed slugs; any path not in the
+  // list 404s even with dynamicParams = true. An empty array + dynamicParams =
+  // true renders every valid slug on first request and serves it from cache
+  // thereafter. The sitemap generates its own list directly from the DB.
+  return [];
 }
