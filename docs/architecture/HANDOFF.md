@@ -1,15 +1,13 @@
 # JobOye architecture programme — handoff
 
-Status as of 2026-10-03, 23:00 IST. Read this first in a new session, then
+Status as of 2026-10-07, IST. Read this first in a new session, then
 `ARCHITECTURE_LEDGER.md` (source of truth) and `../ARCHITECTURE_CHANGELOG.md`.
 
 ## Where the programme stands
 
-Increments closed: MIG-001, SEC-001, ARC-001 (frozen). SEO-001 is open on one
-deployment.
+Increments closed: MIG-001, SEC-001, ARC-001 (frozen), **SEO-001 (closed 2026-10-07)**.
 
-**Open items, the real work, in order:** (1) close SEO-001, (2) A-039,
-(3) A-041, (4) tested backup and restore. See "Immediate pending items".
+**Open items, the real work, in order:** (1) A-039, (2) A-041, (3) tested backup and restore. See "Immediate pending items".
 
 **Data track: UNDER REVIEW, do not start DATA-000.** The owner challenged the
 scope on 2026-10-03 night as an endless-cycle risk. The sequence recorded in
@@ -20,7 +18,7 @@ authoritative), A-064, A-065 and A-066 stand.
 | Item | Status |
 | --- | --- |
 | MIG-001, SEC-001, ARC-001 | CLOSED |
-| SEO-001 public representation (`SEO001_PUBLIC_REPRESENTATION.md`) | Steps 1–3 live; OPEN on one deployment and a live re-check |
+| SEO-001 public representation (`SEO001_PUBLIC_REPRESENTATION.md`) | **CLOSED 2026-10-07** — Steps 1–3 live and verified; A-052 (no hreflang HTTP header) and A-053 (no language redirect) confirmed in production |
 | A-039, A-041 (bounded maintenance) | Not started; independent of the data track |
 | Pre-data safety gate | Not started; backups not yet checked |
 | ORG-001A registry contract and primitives | On hold with the data track; may be replaced by the write-path fix proposed below |
@@ -56,24 +54,16 @@ locally (`evaluateJobPostingEligibility`, tests SD-09a..j). Unit rule: one
 JobPosting per resolved Post, none for unresolved multi-post notices. Freeze
 once verified with the data deployment. Do not push before the backup gate.
 
-## Immediate pending items (items 1–3 are the real work; do these first)
+## Immediate pending items (items 1–2 are the real work; do these first)
 
-1. **Close SEO-001.** The hosting plan's daily deployment limit was hit on
-   2026-10-03 (~20:10 IST). After it resets the owner deploys `main` once on
-   the serving project. Then re-check on https://www.joboye.com: (a) no
-   `hreflang` in the HTTP `Link` header of an entity page (A-052); (b) an
-   English entity URL is not redirected for a Hindi `Accept-Language` or a
-   Hindi preference cookie (A-053). Both are fixed in `main` and verified on
-   a preview. If both pass, record SEO-001 CLOSED. Do not expand SEO-001.
-   The owner has not yet confirmed the deployment. Documentation commits
-   made after 2026-10-03 20:50 IST are local and unpushed; they ride with the
-   next code push (A-039).
-2. **Bounded maintenance** (isolated changes, own verification, not roadmap
+~~1. **Close SEO-001.**~~ **DONE 2026-10-07** — A-052 (no hreflang HTTP header) and A-053 (no language redirect on English entity URLs) both verified in production. SEO-001 CLOSED.
+
+1. **Bounded maintenance** (isolated changes, own verification, not roadmap
    increments, SEC-001 not reopened): A-039 secure the unauthenticated
    paid-API endpoint `/api/query/normalize`; A-041 assess the database
    function that reads a missing table and fix if bounded. They do not wait
    for the data track.
-3. **Pre-data safety gate.** Before any production data is modified, backup
+2. **Pre-data safety gate.** Before any production data is modified, backup
    and restore must be *tested*: snapshot exists, a restore is actually
    performed, the procedure is documented, the recovery point suits the first
    mutation. What backups the database plan provides has not been checked
