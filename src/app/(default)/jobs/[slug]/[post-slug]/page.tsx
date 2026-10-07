@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 
 export const revalidate = 300;
+export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string; "post-slug": string }> };
 
