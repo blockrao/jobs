@@ -219,7 +219,7 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     // notificationDate is the actual advertisement/notification date; createdAt is just the DB insert time
     datePosted: (recruitment.notificationDate ?? recruitment.createdAt)?.toISOString(),
     validThrough: recruitment.applicationEndDate?.toISOString() ?? undefined,
-    employmentType: employmentTypeToSchema(recruitment.employmentType),
+    employmentType: employmentTypeToSchema(data.postingEmploymentType),
     hiringOrganization: hiringOrg,
     jobLocation: {
       "@type": "Place",
