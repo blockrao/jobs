@@ -6,12 +6,18 @@ import React from "react";
  * This is the canonical JobPosting page for a single Post inside a
  * multi-post recruitment notice (PQ-006 / A-080).
  *
- * Structure: 5-question model (JobOye Universal Job Page Structure)
- *   Q1 · What is this?     — identity, 8-fact grid, CTAs, provenance
- *   Q2 · Can I apply?      — eligibility summary (age, qualification, experience)
- *   Q3 · What do I need?   — age table by category, qualification rules, fee
- *   Q4 · How does it work? — selection process (from recruitment), apply steps
- *   Q5 · What's next?      — other posts in this notice, recruitment lifecycle
+ * Structure: candidate-question order
+ *   Hero   — identity, status, last date hero, CTAs, trust badge
+ *   Anchor nav — Dates · Vacancies · Fees · Age · Eligibility · Selection · Apply
+ *   §dates       — important dates table (most-scanned, always above fold)
+ *   §vacancies   — category-wise vacancy breakdown
+ *   §fees        — application fee by category
+ *   §eligibility — qualification + experience
+ *   §age         — age limits by category table
+ *   §selection   — selection process stages
+ *   §apply       — how to apply steps
+ *   §other       — other posts in this notice
+ *   Sticky mobile CTA bar — Apply + Notification
  *
  * JobPosting structured data is emitted ONLY here — never on the hub page.
  * Values come only from VERIFIED rows; missing values are omitted from markup.
@@ -20,7 +26,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostBySlug, getPostsForRecruitment, getPostSlugsForSitemap } from "@/lib/queries";
+import { getPostBySlug, getPostsForRecruitment } from "@/lib/queries";
 import { resolveRoleForPost, getRoleBySlug } from "@/lib/roles";
 import { safeQuery } from "@/lib/safe-query";
 import { absoluteUrl } from "@/lib/site";
@@ -38,14 +44,12 @@ import {
   ClipboardList,
   CheckCircle,
   ArrowUpRight,
+  Calendar,
+  Banknote,
+  Shield,
+  Share2,
 } from "lucide-react";
 
-// Force dynamic rendering — no ISR/edge caching on this page.
-// Post leaf pages are few in number, low in traffic, and were being cached
-// as 404 by Vercel's edge (s-maxage from revalidate=300 applied to notFound()
-// responses too). Dynamic rendering ensures a fresh DB query every request
-// and means a cached-404 can never persist after RLS or data changes.
-// Revisit once canonical post data is fully populated and stable.
 export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
@@ -54,10 +58,6 @@ type Props = { params: Promise<{ slug: string; "post-slug": string }> };
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
 async function getData(slug: string, postSlug: string) {
-  // Call directly — no safeQuery here — so any DB exception propagates to the
-  // outer safeQuery in PostLeafPage, which logs it with full detail rather than
-  // silently turning it into a 404. A null return (record not found) is not an
-  // exception and is handled by the null check below.
   const result = await getPostBySlug(slug, postSlug);
   if (!result) return null;
 
@@ -105,12 +105,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // ── Structured data ───────────────────────────────────────────────────────────
 
-/**
- * Builds a rich, 200+ word description from structured data when post.description
- * is absent. Google requires a substantive description — a thin one is penalised
- * and suppressed in Google Jobs. We draw from every available structured field:
- * vacancy counts, eligibility, age rules, salary, selection stages, fees, and dates.
- */
 function buildFallbackDescription({
   post,
   org,
@@ -128,10 +122,8 @@ function buildFallbackDescription({
 }): string {
   const parts: string[] = [];
 
-  // § Opening — role + org
   parts.push(`${org.name} invites applications from eligible Indian citizens for the post of ${post.name}.`);
 
-  // § Vacancy
   if (post.vacancyTotal) {
     parts.push(`A total of ${post.vacancyTotal} ${post.vacancyTotal === 1 ? "vacancy is" : "vacancies are"} available.`);
     if (post.vacancyDetails) {
@@ -148,7 +140,6 @@ function buildFallbackDescription({
     }
   }
 
-  // § Pay
   if (post.salaryMin || post.salaryMax) {
     const salaryStr = post.salaryMin && post.salaryMax && post.salaryMin !== post.salaryMax
       ? `₹${post.salaryMin.toLocaleString("en-IN")} to ₹${post.salaryMax.toLocaleString("en-IN")} per month`
@@ -162,7 +153,6 @@ function buildFallbackDescription({
     if (levelStr) parts.push(`Pay is at ${levelStr} of the Pay Matrix.`);
   }
 
-  // § Eligibility
   const verifiedElig = post.eligibilities.find((e: { status: string }) => e.status === "VERIFIED")
     ?? post.eligibilities[0];
   if (verifiedElig?.qualificationText) {
@@ -184,7 +174,6 @@ function buildFallbackDescription({
     parts.push(`A minimum of ${verifiedElig.experienceYearsMin} year${verifiedElig.experienceYearsMin === 1 ? "" : "s"} of relevant experience is required.`);
   }
 
-  // § Age
   const urRule = post.ageRules?.find((r: { category: string }) => r.category === "UR");
   if (urRule?.maxAge != null) {
     parts.push(`The upper age limit for general (UR) candidates is ${urRule.maxAge} years. Relaxation in the upper age limit is provided to SC/ST, OBC, PwBD, Ex-Servicemen and other reserved categories as per government norms.`);
@@ -192,7 +181,6 @@ function buildFallbackDescription({
     parts.push(`The upper age limit is ${verifiedElig.ageMax} years${verifiedElig.ageMin ? ` (minimum ${verifiedElig.ageMin} years)` : ""}. Age relaxation as per government rules applies to reserved categories.`);
   }
 
-  // § Selection process
   if (selectionProcesses.length > 0) {
     const sp = selectionProcesses[0];
     if (sp.stages && sp.stages.length > 0) {
@@ -216,7 +204,6 @@ function buildFallbackDescription({
     parts.push("Selection will be made through a process as described in the official notification, which may include written examination, interview, or document verification.");
   }
 
-  // § Application fee
   if (fees.length > 0) {
     const general = fees.find((f: { category: string }) =>
       ["General", "UR", "All", "GEN", "OBC"].includes(f.category)
@@ -233,7 +220,6 @@ function buildFallbackDescription({
     }
   }
 
-  // § Dates
   const dateLines: string[] = [];
   if (recruitment.applicationStartDate) {
     dateLines.push(`Online applications open from ${formatDate(recruitment.applicationStartDate, "en-IN")}`);
@@ -248,7 +234,6 @@ function buildFallbackDescription({
     parts.push(`Important dates: ${dateLines.join("; ")}.`);
   }
 
-  // § Closing — how to apply + always-present disclaimer
   if (officialNotificationUrl) {
     parts.push(
       `Eligible candidates should read the official notification carefully before applying. ` +
@@ -268,10 +253,8 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
   const org = recruitment.organization;
   const url = absoluteUrl(`/jobs/${recruitment.slug}/${post.slug}`);
 
-  // Only emit verified eligibility values in markup (ARC-001 rule 5 + PQ-006 §Schema.org)
   const verifiedElig = post.eligibilities.find((e) => e.status === "VERIFIED");
 
-  // baseSalary from post (more precise than recruitment-level)
   const baseSalary =
     post.salaryMin || post.salaryMax
       ? {
@@ -300,10 +283,7 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     "@type": "GovernmentOrganization",
     "@id": absoluteUrl(`/organizations/${org.slug}#org`),
     name: org.name,
-    // Only emit url when we have a verified official website; do not fall back
-    // to an internal /organizations/ page — that is not the org's own URL (P0-9).
     ...(org.websiteUrl && { url: org.websiteUrl }),
-    // sameAs lets Google disambiguate the hiring entity via its official website
     ...(org.websiteUrl && { sameAs: org.websiteUrl }),
   };
 
@@ -325,7 +305,6 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
       name: org.name,
       value: post.sourcePostCode ?? String(post.id),
     },
-    // notificationDate is the actual advertisement/notification date; createdAt is just the DB insert time
     datePosted: (recruitment.notificationDate ?? recruitment.createdAt)?.toISOString(),
     dateModified: (post.updatedAt ?? recruitment.updatedAt)?.toISOString(),
     validThrough: recruitment.applicationEndDate?.toISOString() ?? undefined,
@@ -336,13 +315,11 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
       address: {
         "@type": "PostalAddress",
         addressCountry: "IN",
-        // ISO 3166-2:IN state code (e.g. IN-RJ) — null for national recruitments.
         ...(data.locationStateCode && { addressRegion: data.locationStateCode }),
       },
     },
     baseSalary,
     totalJobOpenings: post.vacancyTotal ?? undefined,
-    // applyUrl from the posting row (null for offline/deputation posts)
     ...(data.applyUrl && { apply: data.applyUrl }),
     directApply: isOnSiteUrl(data.applyUrl),
     ...(educationReq && { educationRequirements: educationReq }),
@@ -352,42 +329,42 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
 
 // ── Layout helpers ────────────────────────────────────────────────────────────
 
-function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Card({ children, id, className = "" }: { children: React.ReactNode; id?: string; className?: string }) {
   return (
-    <div className={`rounded-xl border border-black/8 bg-white shadow-sm ${className}`}>
+    <div id={id} className={`rounded-xl border border-black/8 bg-white shadow-sm ${className}`}>
       {children}
     </div>
   );
 }
 
-function SectionHeader({ icon: Icon, title, label }: {
+function CardHeader({ icon: Icon, title }: {
   icon?: React.ComponentType<{ className?: string }>;
   title: string;
-  label?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 border-b border-black/8 px-5 py-4">
+    <div className="flex items-center gap-2 border-b border-black/8 px-5 py-3.5">
       {Icon && <Icon className="h-4 w-4 flex-shrink-0 text-neutral-400" />}
-      <h2 className="flex-1 text-base font-semibold text-neutral-900">{title}</h2>
-      {label && (
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-          {label}
-        </span>
-      )}
+      <h2 className="flex-1 text-sm font-semibold text-neutral-900">{title}</h2>
     </div>
   );
 }
 
-function SubDivider() {
+function Divider() {
   return <div className="mx-5 border-t border-black/5" />;
 }
 
-function FactCell({ label, value, accent }: { label: string; value: React.ReactNode; accent?: boolean }) {
+function InfoTable({ rows }: { rows: { label: string; value: React.ReactNode; highlight?: boolean }[] }) {
   return (
-    <div className={`bg-white px-4 py-3 ${accent ? "bg-indigo-50/60" : ""}`}>
-      <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">{label}</div>
-      <div className={`mt-0.5 text-sm font-semibold ${accent ? "text-indigo-700" : "text-neutral-900"}`}>{value}</div>
-    </div>
+    <table className="w-full text-sm">
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i} className={`border-b border-black/5 last:border-0 ${row.highlight ? "bg-indigo-50/40" : ""}`}>
+            <td className="px-5 py-2.5 text-xs font-medium text-neutral-500 w-40">{row.label}</td>
+            <td className={`px-5 py-2.5 font-medium ${row.highlight ? "text-indigo-800" : "text-neutral-900"}`}>{row.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -397,8 +374,6 @@ export default async function PostLeafPage({ params }: Props) {
   const { slug, "post-slug": postSlug } = await params;
   const data = await safeQuery(() => getData(slug, postSlug), null);
   if (!data) {
-    // If safeQuery caught an exception, it already logged it above.
-    // If getData returned null, the record simply doesn't exist.
     console.info("[PostLeafPage] notFound: getData returned null", { slug, postSlug });
     notFound();
   }
@@ -407,9 +382,6 @@ export default async function PostLeafPage({ params }: Props) {
   const org = recruitment.organization;
   const exam = recruitment.exam;
 
-  // Option B (owner decision 2026-10-07): always render the leaf page if the
-  // post exists. When no structured data has been extracted yet, show a
-  // prominent banner directing the user to the official notification.
   const hasOwnFacts =
     post.eligibilities.length > 0 ||
     post.ageRules.length > 0 ||
@@ -422,20 +394,50 @@ export default async function PostLeafPage({ params }: Props) {
   const verifiedElig = post.eligibilities.find((e) => e.status === "VERIFIED") ?? post.eligibilities[0];
   const otherPosts = siblings.filter((s) => s.slug !== post.slug);
 
-  // WS1 — Role Hub reverse link.
-  // Resolve this post's name to a single role hub slug using the ROLE_REGISTRY
-  // alias matching (same logic as getPostsForRole). Only render when the
-  // resolver is deterministic (exactly one role matches). Returns null for
-  // category-other posts or ambiguous names.
   const roleSlug = resolveRoleForPost(post.name);
   const roleDefinition = roleSlug ? getRoleBySlug(roleSlug) : null;
 
+  // Dates
+  const applicationEnd = recruitment.applicationEndDate ? new Date(recruitment.applicationEndDate) : null;
+  const applicationStart = recruitment.applicationStartDate ? new Date(recruitment.applicationStartDate) : null;
+  const examDate = recruitment.examDate ? new Date(recruitment.examDate) : null;
+  const daysLeft = applicationEnd
+    ? Math.ceil((applicationEnd.getTime() - Date.now()) / 86400000)
+    : null;
+  const isOpen = applicationEnd ? applicationEnd.getTime() >= Date.now() : true;
+
+  // Pay display
+  const payDisplay = (() => {
+    if (post.payLevel) {
+      const pl = post.payLevel as any;
+      if (pl.levelLabel) return pl.levelLabel;
+      const level = pl.level ? `Level ${pl.level}` : null;
+      const scheme = pl.scheme ?? null;
+      if (level && scheme) return `${level} (${scheme})`;
+      return level ?? scheme ?? null;
+    }
+    if (post.salaryMin != null) {
+      const min = `₹${post.salaryMin.toLocaleString("en-IN")}`;
+      const max = post.salaryMax && post.salaryMax !== post.salaryMin
+        ? `–₹${post.salaryMax.toLocaleString("en-IN")}`
+        : "";
+      return `${min}${max}/mo`;
+    }
+    return null;
+  })();
+
+  // Age display (UR)
+  const urRule = post.ageRules.find((r: { category: string }) => r.category === "GENERAL" || r.category === "UR");
+  const ageDisplay = urRule?.maxAge != null
+    ? `Up to ${urRule.maxAge} yrs`
+    : verifiedElig?.ageMax != null
+    ? `Up to ${verifiedElig.ageMax} yrs`
+    : null;
+
+  // Selection stages
+  const allStages: string[] = selectionProcesses.flatMap((sp) => sp.stages ?? []);
+
   // Structured data
-  // Only emit JobPosting when the recruitment is still active.
-  // "ACTIVE" covers open applications; "UPCOMING" covers advance notifications
-  // (no apply date yet but the notice is live and hiring is intended).
-  // "RESULTS" and "ARCHIVED" mean the cycle is over — stop emitting JobPosting.
-  // Also suppress when applicationEndDate has already passed.
   const recruitmentIsOpen =
     (recruitment.status === "ACTIVE" || recruitment.status === "UPCOMING") &&
     (!recruitment.applicationEndDate ||
@@ -443,13 +445,30 @@ export default async function PostLeafPage({ params }: Props) {
   const rawJobPosting = buildLeafJobPosting(data);
   const jobPosting = recruitmentIsOpen ? rawJobPosting : null;
 
-  // Drop the /organizations/{slug} breadcrumb step — that route doesn't exist yet
-  // and a 404 in structured-data breadcrumbs degrades schema quality in Search Console.
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Jobs", path: "/jobs" },
     { name: recruitment.name ?? "Recruitment", path: `/jobs/${recruitment.slug}` },
     { name: post.name, path: `/jobs/${recruitment.slug}/${post.slug}` },
   ]);
+
+  // Anchor nav items — only show sections that have content
+  const anchorItems: { id: string; label: string }[] = [];
+  if (applicationEnd || applicationStart || examDate) anchorItems.push({ id: "dates", label: "Dates" });
+  if (post.vacancies.length > 0) anchorItems.push({ id: "vacancies", label: "Vacancies" });
+  if (fees.length > 0) anchorItems.push({ id: "fees", label: "Fees" });
+  if (verifiedElig) anchorItems.push({ id: "eligibility", label: "Eligibility" });
+  if (post.ageRules.length > 0) anchorItems.push({ id: "age", label: "Age" });
+  if (allStages.length > 0) anchorItems.push({ id: "selection", label: "Selection" });
+  anchorItems.push({ id: "apply", label: "Apply" });
+
+  // WhatsApp share text
+  const pageUrl = absoluteUrl(`/jobs/${recruitment.slug}/${post.slug}`);
+  const whatsappText = encodeURIComponent(
+    `${post.name} – ${org.name}\n` +
+    (applicationEnd ? `Last Date: ${formatDate(applicationEnd, "en-IN")}\n` : "") +
+    (post.vacancyTotal ? `Vacancies: ${post.vacancyTotal}\n` : "") +
+    pageUrl
+  );
 
   return (
     <>
@@ -458,7 +477,7 @@ export default async function PostLeafPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph(jobPosting, breadcrumb)) }}
       />
 
-      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
+      <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8 pb-24 sm:pb-8">
 
         {/* Breadcrumb */}
         <nav className="mb-4 flex flex-wrap items-center gap-1 text-xs text-neutral-500" aria-label="Breadcrumb">
@@ -473,45 +492,10 @@ export default async function PostLeafPage({ params }: Props) {
           <span className="text-neutral-800 font-medium">{post.name}</span>
         </nav>
 
-        {/* ── Data-sparse banner ───────────────────────────────────────── */}
-        {!hasOwnFacts && officialNotificationUrl && (
-          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-            <p className="text-sm font-medium text-amber-900">
-              Detailed information for this post is available in the official notification.
-            </p>
-            <p className="mt-1 text-xs text-amber-700">
-              JobOye has not yet extracted structured eligibility, vacancies, or salary data for this post.
-              Visit the official document for complete details.
-            </p>
-            <a
-              href={officialNotificationUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              View Official Notification
-            </a>
-          </div>
-        )}
-        {!hasOwnFacts && !officialNotificationUrl && (
-          <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-4">
-            <p className="text-sm text-neutral-600">
-              Detailed eligibility, vacancy, and salary information for this post has not yet been extracted.
-            </p>
-            <Link
-              href={`/jobs/${recruitment.slug}`}
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:underline"
-            >
-              View full recruitment details →
-            </Link>
-          </div>
-        )}
-
-        {/* ── Q1: What is this? ─────────────────────────────────────────── */}
-        <SectionCard className="mb-4">
-          {/* Status bar */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-black/5 px-5 py-3">
+        {/* ── Hero card ──────────────────────────────────────────────── */}
+        <Card className="mb-3">
+          {/* Org + exam badge strip */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-black/5 px-5 py-2.5">
             <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
               {org.name}
             </span>
@@ -520,9 +504,24 @@ export default async function PostLeafPage({ params }: Props) {
                 {exam.label}
               </span>
             )}
+            {!isOpen && (
+              <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                Closed
+              </span>
+            )}
+            {isOpen && daysLeft !== null && daysLeft <= 7 && (
+              <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                {daysLeft === 0 ? "Closes today!" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
+              </span>
+            )}
+            {isOpen && daysLeft !== null && daysLeft > 7 && daysLeft <= 30 && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                {daysLeft} days left
+              </span>
+            )}
           </div>
 
-          {/* Title + post name */}
+          {/* Title */}
           <div className="px-5 pt-4 pb-3">
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
               {post.name}
@@ -537,87 +536,93 @@ export default async function PostLeafPage({ params }: Props) {
             )}
           </div>
 
-          {/* 8-fact grid */}
+          {/* Key facts strip — Last Date prominent */}
           <div className="grid grid-cols-2 gap-px border-t border-black/5 bg-black/5 sm:grid-cols-4">
-            <FactCell
-              label="Vacancies"
-              value={post.vacancyTotal != null ? post.vacancyTotal.toLocaleString("en-IN") : "—"}
-              accent={post.vacancyTotal != null}
-            />
-            <FactCell
-              label="Pay"
-              value={
-                post.payLevel
-                  ? (() => {
-                      const pl = post.payLevel as any;
-                      if (pl.levelLabel) return pl.levelLabel;
-                      const level = pl.level ? `Level ${pl.level}` : null;
-                      const scheme = pl.scheme ?? null;
-                      if (level && scheme) return `${level} (${scheme})`;
-                      return level ?? scheme ?? JSON.stringify(post.payLevel);
-                    })()
-                  : post.salaryMin != null
-                  ? `₹${post.salaryMin.toLocaleString("en-IN")}${post.salaryMax && post.salaryMax !== post.salaryMin ? "–" + post.salaryMax.toLocaleString("en-IN") : ""}/mo`
-                  : "—"
-              }
-              accent={post.salaryMin != null || post.payLevel != null}
-            />
-            <FactCell
-              label="Last Date"
-              value={
-                recruitment.applicationEndDate
-                  ? formatDate(recruitment.applicationEndDate, "en-IN")
-                  : "—"
-              }
-              accent={recruitment.applicationEndDate != null}
-            />
-            <FactCell
-              label="Organization"
-              value={post.employingOrganization?.name ?? org.name}
-            />
-            <FactCell
-              label="Post Code"
-              value={post.sourcePostCode ?? "—"}
-            />
-            <FactCell
-              label="Age (UR)"
-              value={(() => {
-                // Prefer age_rules table (most precise); fall back to eligibility ageMax;
-                // then fall back to posting-level age limits surfaced via recruitment.
-                const urRule = post.ageRules.find((r: { category: string }) => r.category === "GENERAL" || r.category === "UR");
-                if (urRule?.maxAge != null) return `Up to ${urRule.maxAge} years`;
-                if (verifiedElig?.ageMax != null) return `Up to ${verifiedElig.ageMax} years`;
-                return "—";
-              })()}
-            />
-            <FactCell
-              label="Qualification"
-              value={
-                verifiedElig?.qualificationText
-                  ? verifiedElig.qualificationText.length > 40
-                    ? verifiedElig.qualificationText.slice(0, 40) + "…"
-                    : verifiedElig.qualificationText
-                  : "—"
-              }
-            />
-            <FactCell
-              label="Position"
-              value={
-                post.position?.name && post.position.name !== "Other"
-                  ? post.position.name
-                  : post.name
-              }
-            />
+            {/* Last Date — hero position */}
+            <div className={`px-4 py-3 ${
+              daysLeft !== null && isOpen && daysLeft <= 7 ? "bg-red-50"
+                : daysLeft !== null && isOpen && daysLeft <= 30 ? "bg-amber-50"
+                : "bg-white"
+            }`}>
+              <div className={`flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide ${
+                daysLeft !== null && isOpen && daysLeft <= 7 ? "text-red-500"
+                  : daysLeft !== null && isOpen && daysLeft <= 30 ? "text-amber-600"
+                  : "text-neutral-400"
+              }`}>
+                <Calendar className="h-3 w-3" />
+                Last Date
+              </div>
+              <div className={`mt-0.5 text-sm font-bold ${
+                daysLeft !== null && isOpen && daysLeft <= 7 ? "text-red-900"
+                  : daysLeft !== null && isOpen && daysLeft <= 30 ? "text-amber-900"
+                  : applicationEnd ? "text-neutral-900" : "text-neutral-400"
+              }`}>
+                {applicationEnd ? formatDate(applicationEnd, "en-IN") : "—"}
+              </div>
+            </div>
+
+            {/* Vacancies */}
+            <div className="bg-white px-4 py-3">
+              <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                <Users className="h-3 w-3" />
+                Vacancies
+              </div>
+              <div className={`mt-0.5 text-sm font-bold ${post.vacancyTotal != null ? "text-indigo-700" : "text-neutral-400"}`}>
+                {post.vacancyTotal != null ? post.vacancyTotal.toLocaleString("en-IN") : "—"}
+              </div>
+            </div>
+
+            {/* Pay */}
+            <div className="bg-white px-4 py-3">
+              <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                <Banknote className="h-3 w-3" />
+                Pay Scale
+              </div>
+              <div className={`mt-0.5 text-sm font-bold ${payDisplay ? "text-neutral-900" : "text-neutral-400"}`}>
+                {payDisplay ?? "—"}
+              </div>
+            </div>
+
+            {/* Age UR */}
+            <div className="bg-white px-4 py-3">
+              <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                <GraduationCap className="h-3 w-3" />
+                Age (UR)
+              </div>
+              <div className={`mt-0.5 text-sm font-bold ${ageDisplay ? "text-neutral-900" : "text-neutral-400"}`}>
+                {ageDisplay ?? "—"}
+              </div>
+            </div>
+
+            {/* Post Code */}
+            {post.sourcePostCode && (
+              <div className="bg-white px-4 py-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Post Code</div>
+                <div className="mt-0.5 font-mono text-sm font-bold text-neutral-900">{post.sourcePostCode}</div>
+              </div>
+            )}
+
+            {/* Qualification snippet */}
+            {verifiedElig?.qualificationText && (
+              <div className="col-span-2 bg-white px-4 py-3 sm:col-span-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Qualification</div>
+                <div className="mt-0.5 text-sm text-neutral-900 leading-snug">
+                  {verifiedElig.qualificationText.length > 80
+                    ? verifiedElig.qualificationText.slice(0, 80) + "…"
+                    : verifiedElig.qualificationText}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-2 border-t border-black/5 px-5 py-3">
-            {applyUrl && (
+            {applyUrl && isOpen && (
               <a
                 href={applyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
               >
                 Apply Now
                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -628,50 +633,196 @@ export default async function PostLeafPage({ params }: Props) {
                 href={officialNotificationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
               >
                 <FileText className="h-3.5 w-3.5" />
                 Official Notification
               </a>
             )}
+            <a
+              href={`https://wa.me/?text=${whatsappText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+              aria-label="Share on WhatsApp"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Share
+            </a>
             <Link
               href={`/jobs/${recruitment.slug}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
             >
-              All posts in this notice
+              All posts
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
-            {roleDefinition && (
-              <Link
-                href={`/posts/${roleDefinition.slug}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-              >
-                All {roleDefinition.name} openings
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            )}
           </div>
 
-          {/* Provenance footer */}
-          <div className="flex items-center gap-2 rounded-b-xl border-t border-black/5 bg-neutral-50 px-5 py-2">
-            <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
+          {/* Trust badge / provenance */}
+          <div className="flex items-center gap-2 rounded-b-xl border-t border-black/5 bg-neutral-50 px-5 py-2.5">
+            <Shield className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
             <p className="text-xs text-neutral-500">
               {post.eligibilities.some((e) => e.status === "VERIFIED")
-                ? "Verified from official notification."
-                : "Sourced from official notification. Some details may be added as they are verified."}
+                ? "Verified from official notification"
+                : "Sourced from official notification. Some details may be pending verification."}
             </p>
           </div>
-        </SectionCard>
+        </Card>
 
-        {/* ── Q2: Can I apply? ──────────────────────────────────────────── */}
+        {/* ── Data-sparse banner ─────────────────────────────────────── */}
+        {!hasOwnFacts && officialNotificationUrl && (
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <p className="text-sm font-medium text-amber-900">
+              Detailed information for this post is in the official notification.
+            </p>
+            <p className="mt-1 text-xs text-amber-700">
+              Structured eligibility, vacancies, and salary data have not yet been extracted for this post.
+            </p>
+            <a
+              href={officialNotificationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              View Official Notification
+            </a>
+          </div>
+        )}
+        {!hasOwnFacts && !officialNotificationUrl && (
+          <div className="mb-3 rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-4">
+            <p className="text-sm text-neutral-600">
+              Detailed eligibility, vacancy, and salary information for this post has not yet been extracted.
+            </p>
+            <Link
+              href={`/jobs/${recruitment.slug}`}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:underline"
+            >
+              View full recruitment details →
+            </Link>
+          </div>
+        )}
+
+        {/* ── Anchor navigation ──────────────────────────────────────── */}
+        {anchorItems.length > 0 && (
+          <div className="mb-4 -mx-4 px-4 overflow-x-auto">
+            <div className="flex gap-2 whitespace-nowrap pb-1">
+              {anchorItems.map((item) => (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  className="rounded-full border border-black/10 bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Important Dates ────────────────────────────────────────── */}
+        {(applicationStart || applicationEnd || examDate) && (
+          <Card id="dates" className="mb-3">
+            <CardHeader icon={Calendar} title="Important Dates" />
+            <InfoTable rows={[
+              ...(applicationStart ? [{ label: "Apply from", value: formatDate(applicationStart, "en-IN") }] : []),
+              ...(applicationEnd ? [{
+                label: "Last date to apply",
+                value: formatDate(applicationEnd, "en-IN"),
+                highlight: isOpen && daysLeft !== null && daysLeft <= 30,
+              }] : []),
+              ...(examDate ? [{ label: "Written exam", value: formatDate(examDate, "en-IN") }] : []),
+            ]} />
+          </Card>
+        )}
+
+        {/* ── Vacancy breakdown ──────────────────────────────────────── */}
+        {post.vacancies.length > 0 && (
+          <Card id="vacancies" className="mb-3">
+            <CardHeader icon={Users} title="Vacancy Breakdown" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-black/5 bg-neutral-50">
+                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-500">Category</th>
+                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-500">Count</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {post.vacancies.map((v) => (
+                    <tr key={v.id}>
+                      <td className="px-5 py-2.5 text-neutral-800">{v.categoryType}</td>
+                      <td className="px-5 py-2.5 text-right font-semibold text-neutral-900">{v.count}</td>
+                    </tr>
+                  ))}
+                  {post.vacancyTotal != null && post.vacancies.length > 0 && (
+                    <tr className="bg-neutral-50 font-semibold">
+                      <td className="px-5 py-2.5 text-neutral-700">Total</td>
+                      <td className="px-5 py-2.5 text-right text-neutral-900">{post.vacancyTotal.toLocaleString("en-IN")}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {/* ── Application Fee ────────────────────────────────────────── */}
+        {fees.length > 0 && (
+          <Card id="fees" className="mb-3">
+            <CardHeader icon={Banknote} title="Application Fee" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-black/5 bg-neutral-50">
+                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-500">Category</th>
+                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-500">Fee</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {fees.map((fee) => (
+                    <tr key={fee.id}>
+                      <td className="px-5 py-2.5 text-neutral-800">{fee.category ?? "General"}</td>
+                      <td className="px-5 py-2.5 text-right font-semibold text-neutral-900">
+                        {fee.amount != null ? (Number(fee.amount) === 0 ? "Nil" : `₹${Number(fee.amount).toLocaleString("en-IN")}`) : "Nil"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {fees.some((f) => f.note) && (
+                <div className="px-5 py-2.5 text-xs text-neutral-500 border-t border-black/5">
+                  {fees.find((f) => f.note)?.note}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* ── Eligibility ────────────────────────────────────────────── */}
         {verifiedElig && (
-          <SectionCard className="mb-4">
-            <SectionHeader icon={GraduationCap} title="Can I Apply?" />
-            <div className="px-5 py-4 space-y-3">
+          <Card id="eligibility" className="mb-3">
+            <CardHeader icon={GraduationCap} title="Eligibility" />
+            <div className="px-5 py-4 space-y-4">
+              {verifiedElig.qualificationText && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-1">Qualification</p>
+                  <p className="text-sm text-neutral-800 leading-relaxed">{verifiedElig.qualificationText}</p>
+                  {verifiedElig.status === "PENDING" && (
+                    <p className="mt-1.5 text-xs text-amber-600">Pending verification — confirm from official notification.</p>
+                  )}
+                </div>
+              )}
+              {verifiedElig.experienceText && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-1">Experience</p>
+                  <p className="text-sm text-neutral-800">{verifiedElig.experienceText}</p>
+                </div>
+              )}
               {verifiedElig.ageMax != null && (
                 <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">Age Limit</span>
-                  <p className="mt-0.5 text-sm text-neutral-800">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-1">Age Limit</p>
+                  <p className="text-sm text-neutral-800">
                     {formatAgeRange(verifiedElig.ageMin, verifiedElig.ageMax)}
                     {verifiedElig.ageAsOnDate
                       ? ` as on ${formatDate(verifiedElig.ageAsOnDate, "en-IN")}`
@@ -679,22 +830,7 @@ export default async function PostLeafPage({ params }: Props) {
                   </p>
                 </div>
               )}
-              {verifiedElig.qualificationText && (
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">Qualification</span>
-                  <p className="mt-0.5 text-sm text-neutral-800">{verifiedElig.qualificationText}</p>
-                  {verifiedElig.status === "PENDING" && (
-                    <p className="mt-1 text-xs text-amber-600">Pending verification — confirm from official notification.</p>
-                  )}
-                </div>
-              )}
-              {verifiedElig.experienceText && (
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">Experience</span>
-                  <p className="mt-0.5 text-sm text-neutral-800">{verifiedElig.experienceText}</p>
-                </div>
-              )}
-              {!verifiedElig.ageMax && !verifiedElig.qualificationText && (
+              {!verifiedElig.qualificationText && !verifiedElig.experienceText && !verifiedElig.ageMax && (
                 <p className="text-sm text-neutral-500">
                   Eligibility details not yet extracted. Check the{" "}
                   {officialNotificationUrl ? (
@@ -705,28 +841,28 @@ export default async function PostLeafPage({ params }: Props) {
                 </p>
               )}
             </div>
-          </SectionCard>
+          </Card>
         )}
 
-        {/* ── Q3: What do I need? ───────────────────────────────────────── */}
+        {/* ── Age limits by category ─────────────────────────────────── */}
         {post.ageRules.length > 0 && (
-          <SectionCard className="mb-4">
-            <SectionHeader icon={Users} title="Age Limits by Category" />
+          <Card id="age" className="mb-3">
+            <CardHeader icon={Users} title="Age Limits by Category" />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-black/5 bg-neutral-50">
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-600">Category</th>
-                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-600">Max Age</th>
-                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-600">Relaxation</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-600">Note</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-500">Category</th>
+                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-500">Max Age</th>
+                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-500">Relaxation</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-500">Note</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5">
                   {post.ageRules.map((rule) => (
                     <tr key={rule.id}>
-                      <td className="px-5 py-2.5 font-medium">{rule.category}</td>
-                      <td className="px-5 py-2.5 text-right">{rule.maxAge != null ? `${rule.maxAge} years` : "—"}</td>
+                      <td className="px-5 py-2.5 font-medium text-neutral-800">{rule.category}</td>
+                      <td className="px-5 py-2.5 text-right text-neutral-900">{rule.maxAge != null ? `${rule.maxAge} years` : "—"}</td>
                       <td className="px-5 py-2.5 text-right text-neutral-500">
                         {rule.relaxationYears != null ? `+${rule.relaxationYears} years` : "—"}
                       </td>
@@ -736,121 +872,63 @@ export default async function PostLeafPage({ params }: Props) {
                 </tbody>
               </table>
             </div>
-            <div className="px-5 py-2 text-xs text-neutral-400 border-t border-black/5">
-              Source: official notification. Age as on closing date unless stated otherwise.
+            <div className="px-5 py-2.5 text-xs text-neutral-400 border-t border-black/5">
+              Age as on closing date unless stated otherwise. Source: official notification.
             </div>
-          </SectionCard>
+          </Card>
         )}
 
-        {/* Vacancy breakdown */}
-        {post.vacancies.length > 0 && (
-          <SectionCard className="mb-4">
-            <SectionHeader icon={Users} title="Vacancy Breakdown" />
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-black/5 bg-neutral-50">
-                    <th className="px-5 py-2.5 text-left text-xs font-semibold text-neutral-600">Category</th>
-                    <th className="px-5 py-2.5 text-right text-xs font-semibold text-neutral-600">Count</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5">
-                  {post.vacancies.map((v) => (
-                    <tr key={v.id}>
-                      <td className="px-5 py-2.5">{v.categoryType}</td>
-                      <td className="px-5 py-2.5 text-right font-medium">{v.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </SectionCard>
+        {/* ── Selection Process ──────────────────────────────────────── */}
+        {allStages.length > 0 && (
+          <Card id="selection" className="mb-3">
+            <CardHeader icon={ClipboardList} title="Selection Process" />
+            <ol className="px-5 py-4 space-y-3">
+              {allStages.map((stage, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 border-indigo-200 bg-indigo-50 text-xs font-bold text-indigo-700">
+                    {i + 1}
+                  </span>
+                  <p className="text-sm text-neutral-800 pt-0.5">{stage}</p>
+                </li>
+              ))}
+            </ol>
+          </Card>
         )}
 
-        {/* ── Q4: How does it work? ─────────────────────────────────────── */}
-        <SectionCard className="mb-4">
-          <SectionHeader icon={ClipboardList} title="How to Apply" />
-
-          {/* Selection process stages */}
-          {selectionProcesses.length > 0 && (() => {
-            // selectionProcesses rows: { id, processType, stages: string[] | null, details }
-            // Flatten all stages arrays into a single ordered list for display.
-            const allStages: string[] = selectionProcesses.flatMap((sp) => sp.stages ?? []);
-            if (allStages.length === 0) return null;
-            return (
-              <>
-                <div className="px-5 pt-4 pb-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-3">
-                    Selection Process
-                  </p>
-                  <ol className="relative border-l border-neutral-200">
-                    {allStages.map((stage, i) => (
-                      <li key={i} className="mb-3 ml-4 last:mb-0">
-                        <div className="absolute -left-1.5 mt-0.5 h-3 w-3 rounded-full border-2 border-white bg-indigo-400" />
-                        <p className="text-sm font-medium text-neutral-900">{stage}</p>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-                <SubDivider />
-              </>
-            );
-          })()}
-
-          {/* Apply instructions */}
-          <div className="px-5 py-4 space-y-2 text-sm text-neutral-700">
+        {/* ── How to Apply ───────────────────────────────────────────── */}
+        <Card id="apply" className="mb-3">
+          <CardHeader icon={CheckCircle} title="How to Apply" />
+          <div className="px-5 py-4 space-y-4">
             {(postingEmploymentType as string | null) === "DEPUTATION" ? (
-              <p>
+              <p className="text-sm text-neutral-700">
                 This is a <strong>deputation post</strong>. Applications must be forwarded through proper channel
                 by the applicant&apos;s parent department/organisation. Direct applications are not accepted.
                 Refer to the official notification for the prescribed format and submission address.
               </p>
             ) : applyUrl ? (
-              <p>
-                Apply online at the{" "}
-                <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">
-                  official application link
+              <div className="space-y-2">
+                <p className="text-sm text-neutral-700">
+                  Apply online at the official application portal. Verify the link matches the official notification before submitting.
+                </p>
+                <a
+                  href={applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  Apply on Official Portal
+                  <ArrowUpRight className="h-3.5 w-3.5" />
                 </a>
-                . Verify that it matches the official notification before submitting.
-              </p>
+              </div>
             ) : (
-              <p>
+              <p className="text-sm text-neutral-700">
                 Refer to the official notification for application instructions and submission details.
               </p>
             )}
-          </div>
 
-          {/* Fee table */}
-          {fees.length > 0 && (
-            <>
-              <SubDivider />
-              <div className="px-5 py-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">
-                  Application Fee
-                </p>
-                <table className="w-full text-sm">
-                  <tbody className="divide-y divide-black/5">
-                    {fees.map((fee) => (
-                      <tr key={fee.id}>
-                        <td className="py-1.5 text-neutral-700">{fee.category ?? "General"}</td>
-                        <td className="py-1.5 text-right font-semibold text-neutral-900">
-                          {fee.amount != null ? `₹${Number(fee.amount).toLocaleString("en-IN")}` : "Nil"}
-                        </td>
-                        {fee.note && (
-                          <td className="py-1.5 pl-3 text-xs text-neutral-500">{fee.note}</td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {officialNotificationUrl && (
-            <>
-              <SubDivider />
-              <div className="px-5 py-3">
+            {officialNotificationUrl && (
+              <>
+                <Divider />
                 <a
                   href={officialNotificationUrl}
                   target="_blank"
@@ -861,15 +939,15 @@ export default async function PostLeafPage({ params }: Props) {
                   Read the official notification for full instructions
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
-              </div>
-            </>
-          )}
-        </SectionCard>
+              </>
+            )}
+          </div>
+        </Card>
 
-        {/* ── Q5: What's next? ──────────────────────────────────────────── */}
+        {/* ── Other Posts in This Notice ─────────────────────────────── */}
         {otherPosts.length > 0 && (
-          <SectionCard className="mb-4">
-            <SectionHeader icon={Hash} title={`Other Posts in This Notice (${otherPosts.length})`} />
+          <Card className="mb-3">
+            <CardHeader icon={Hash} title={`Other Posts in This Notice (${otherPosts.length})`} />
             <div className="space-y-3 p-5">
               {otherPosts.map((p, i) => (
                 <CanonicalPostCard
@@ -886,17 +964,17 @@ export default async function PostLeafPage({ params }: Props) {
                 />
               ))}
             </div>
-            <div className="border-t border-black/5 px-5 py-2">
+            <div className="border-t border-black/5 px-5 py-2.5">
               <Link href={`/jobs/${recruitment.slug}`} className="text-xs text-indigo-600 hover:underline">
                 ← Back to notice hub
               </Link>
             </div>
-          </SectionCard>
+          </Card>
         )}
 
-        {/* ── Role Hub discovery ────────────────────────────────────────── */}
+        {/* ── Role Hub discovery ─────────────────────────────────────── */}
         {roleDefinition && (
-          <SectionCard className="mb-4">
+          <Card className="mb-3">
             <div className="px-5 py-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">
                 Browse by Role
@@ -914,10 +992,45 @@ export default async function PostLeafPage({ params }: Props) {
                 <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-400" />
               </Link>
             </div>
-          </SectionCard>
+          </Card>
         )}
 
       </main>
+
+      {/* ── Sticky mobile CTA bar ──────────────────────────────────────────
+          Shown only on mobile (hidden on sm+). Stays pinned to the bottom
+          while the user scrolls through the page content.
+      ─────────────────────────────────────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-black/10 bg-white px-4 py-3 shadow-lg sm:hidden">
+        <div className="flex gap-2">
+          {applyUrl && isOpen ? (
+            <a
+              href={applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white"
+            >
+              Apply Now
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          ) : (
+            <span className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-neutral-200 py-2.5 text-sm font-semibold text-neutral-500 cursor-not-allowed">
+              Applications Closed
+            </span>
+          )}
+          {officialNotificationUrl && (
+            <a
+              href={officialNotificationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700"
+            >
+              <FileText className="h-4 w-4" />
+              PDF
+            </a>
+          )}
+        </div>
+      </div>
     </>
   );
 }
@@ -925,11 +1038,5 @@ export default async function PostLeafPage({ params }: Props) {
 // ── Static params ─────────────────────────────────────────────────────────────
 
 export async function generateStaticParams() {
-  // Return empty array — all paths are rendered on-demand and cached via ISR
-  // (revalidate = 300). This is required in this Next.js version: a non-empty
-  // generateStaticParams only pre-builds the listed slugs; any path not in the
-  // list 404s even with dynamicParams = true. An empty array + dynamicParams =
-  // true renders every valid slug on first request and serves it from cache
-  // thereafter. The sitemap generates its own list directly from the DB.
   return [];
 }
