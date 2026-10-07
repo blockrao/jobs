@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { listPostings } from "@/lib/queries";
+import { SeoFooterLinks } from "@/components/seo-footer-links";
 import { JOBS_PAGE_SIZE, pageHref, parsePage } from "@/lib/pagination";
 import {
   STAGE_LABELS,
@@ -337,6 +338,9 @@ export default async function JobsListPage({ searchParams }: Props) {
           </nav>
         )}
       </div>
+
+      {/* ── SEO / AEO / GEO internal link grid ─────────────────────────── */}
+      <SeoFooterLinks />
     </div>
   );
 }

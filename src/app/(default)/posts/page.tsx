@@ -3,6 +3,7 @@ import Link from "next/link";
 import { pageSeo } from "@/lib/seo";
 import { getJobsControlCenter, type JobRow, type DeadlineBucket, type TopOrg, type RoleRow } from "@/lib/queries";
 import { Building2, Calendar, Clock, TrendingUp, Briefcase, MapPin, ChevronRight, AlertTriangle, Users } from "lucide-react";
+import { SeoFooterLinks } from "@/components/seo-footer-links";
 
 export const revalidate = 300; // 5-minute ISR — data is live, not static
 
@@ -406,6 +407,9 @@ export default async function PostsControlCenterPage() {
           Data refreshes every 5 minutes. Verify details from official notifications before applying.
         </span>
       </div>
+
+      {/* ── SEO / AEO / GEO internal link grid ─────────────────────────── */}
+      <SeoFooterLinks />
     </div>
   );
 }
