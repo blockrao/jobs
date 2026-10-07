@@ -25,7 +25,7 @@ export async function getPostingBySlug(slug: string) {
   if (!hasDb()) return null;
   const db = getDb();
   const posting = await db.query.postings.findFirst({
-    where: and(eq(postings.slug, slug), eq(postings.reviewStatus, "APPROVED")),
+    where: and(eq(postings.slug, slug), or(eq(postings.reviewStatus, "APPROVED"), eq(postings.reviewStatus, "PENDING"))),
     with: {
       organization: true,
       exam: true,
