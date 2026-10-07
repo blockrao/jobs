@@ -22,7 +22,12 @@ export type RoleSector =
   | "Administration"
   | "Finance"
   | "Technical"
-  | "Agriculture & Environment";
+  | "Agriculture & Environment"
+  | "Railway & Transport"
+  | "Police & Security"
+  | "Engineering"
+  | "Banking & Finance"
+  | "Defence";
 
 export interface RoleDefinition {
   slug: string;
@@ -141,6 +146,320 @@ export const ROLE_REGISTRY: RoleDefinition[] = [
     sector: "Agriculture & Environment",
     description:
       "Technical Assistant positions support scientific work in ICAR institutes, state agriculture universities, and research stations. Candidates require a B.Sc in the relevant discipline. Duties include lab analysis, field measurements, data recording, and maintaining scientific instruments.",
+  },
+
+  // ── Teaching & Education ─────────────────────────────────────────────────
+
+  {
+    slug: "primary-teacher",
+    name: "Primary Teacher",
+    aliases: [
+      "Primary Teacher",
+      "Primary Teacher General",
+      "Primary Teacher (General)",
+      "Primary Teacher General — TRE 4.0",
+      "Primary Teacher General- TRE 4.0",
+      "Primary Teacher (General) TRE 4.0",
+      "Intermediate Trained Assistant Teacher (Para Category)",
+      "Intermediate Trained Assistant Teacher",
+      "ITAT (Para Category)",
+    ],
+    sector: "Teaching & Education",
+    description:
+      "Primary Teacher posts are recruited by state education departments and central government schools (Kendriya Vidyalaya, Navodaya Vidyalaya) for classes I–V. Eligibility requires 10+2 with at least 50% marks and a 2-year Diploma in Elementary Education (D.El.Ed), plus qualifying the Central Teacher Eligibility Test (CTET) or state TET. Bihar's Teacher Recruitment Examination (TRE) is a major state-level drive.",
+  },
+  {
+    slug: "trained-graduate-teacher",
+    name: "Trained Graduate Teacher",
+    aliases: [
+      "Trained Graduate Teacher",
+      "TGT",
+      "Graduate Trained Assistant Teacher",
+      "Graduate Trained Assistant Teacher - Language",
+      "Graduate Trained Assistant Teacher - Science",
+      "Graduate Trained Assistant Teacher - Social Science",
+      "Graduate Trained Assistant Teacher - Mathematics",
+      "Graduate Trained Assistant Teacher (General)",
+      "Graduate Trained Assistant Teacher General",
+      "Graduate Trained Assistant Teacher General — TRE 4.0",
+      "Graduate Trained Assistant Teacher- TRE 4.0",
+      "Secondary Teacher",
+      "Secondary Teacher (General)",
+    ],
+    sector: "Teaching & Education",
+    description:
+      "Trained Graduate Teacher (TGT) positions cover classes VI–X in government and central government schools. Candidates require a Bachelor's degree in the relevant subject with at least 50% marks plus a B.Ed from a recognized university, and must qualify CTET Paper-II or the state TET. TGT vacancies are among the highest-volume teacher recruitment drives in India.",
+  },
+  {
+    slug: "post-graduate-teacher",
+    name: "Post Graduate Teacher",
+    aliases: [
+      "Post Graduate Teacher",
+      "PGT",
+      "Senior Secondary Teacher",
+      "Sr Sec Teacher",
+      "Sr Secondary Teacher",
+      "Sr Sec Teacher Chemistry",
+      "Sr Sec Teacher Physics",
+      "Sr Sec Teacher Mathematics",
+      "Sr Sec Teacher Biology",
+      "Sr Sec Teacher English",
+      "Sr Sec Teacher Hindi",
+      "Sr Sec Teacher History",
+      "Sr Sec Teacher Geography",
+      "Sr Sec Teacher Economics",
+      "Sr Sec Teacher Political Science",
+      "Sr Sec Teacher Commerce",
+      "Sr Sec Teacher Computer Science",
+      "Sr Sec Teacher — TRE 4.0",
+      "Sr Sec Teacher Chemistry — TRE 4.0",
+      "Sr Sec Teacher Physics — TRE 4.0",
+      "Sr Sec Teacher Mathematics — TRE 4.0",
+      "Sr Sec Teacher Biology — TRE 4.0",
+      "Senior Secondary Teacher (General)",
+    ],
+    sector: "Teaching & Education",
+    description:
+      "Post Graduate Teacher (PGT) posts cover classes XI–XII in government higher secondary schools and central government schools. Candidates require a Master's degree in the relevant subject with at least 50% marks plus a B.Ed. Bihar's TRE 4.0 and DSSSB/KVS drives recruit PGT teachers across core science, humanities, and commerce streams.",
+  },
+
+  // ── Healthcare (expansion) ───────────────────────────────────────────────
+
+  {
+    slug: "nursing-superintendent",
+    name: "Nursing Superintendent",
+    aliases: [
+      "Nursing Superintendent",
+      "Nursing Superintendent Grade I",
+      "Nursing Superintendent Grade II",
+      "Chief Nursing Officer",
+    ],
+    sector: "Healthcare",
+    description:
+      "Nursing Superintendent posts are senior nursing leadership roles in central government hospitals, AIIMS, and defence medical establishments. Candidates require a B.Sc Nursing degree with several years of nursing experience in a supervisory role and registration with the State Nursing Council.",
+  },
+  {
+    slug: "pharmacist",
+    name: "Pharmacist",
+    aliases: [
+      "Pharmacist",
+      "Pharmacist (Entry Grade)",
+      "Pharmacist Grade II",
+      "Pharmacist Grade I",
+      "Pharmacist (Allopathy)",
+      "Pharmacist (Ayurveda)",
+    ],
+    sector: "Healthcare",
+    description:
+      "Pharmacist posts are available in central and state government hospitals, CGHS, ESI dispensaries, and defence establishments. Candidates require a Diploma in Pharmacy (D.Pharm) or B.Pharm from a recognized institution and must be registered with the State Pharmacy Council.",
+  },
+  {
+    slug: "laboratory-technician",
+    name: "Laboratory Technician",
+    aliases: [
+      "Laboratory Technician",
+      "Lab Technician",
+      "Laboratory Technician (Medical)",
+      "Laboratory Technician Grade I",
+      "Laboratory Technician Grade II",
+      "Laboratory Assistant",
+      "Lab Assistant",
+      "Junior Laboratory Assistant",
+    ],
+    sector: "Healthcare",
+    description:
+      "Laboratory Technician posts are recruited by government hospitals, medical colleges, AIIMS, and public health departments. Candidates require a Diploma or B.Sc in Medical Laboratory Technology (MLT) from a recognized institution. Duties include sample collection, analysis, and maintaining diagnostic equipment.",
+  },
+
+  // ── Science & Research (expansion) ──────────────────────────────────────
+
+  {
+    slug: "senior-research-fellow",
+    name: "Senior Research Fellow",
+    aliases: [
+      "Senior Research Fellow",
+      "Senior Research Fellow (SRF)",
+      "Senior Research Fellow (SRF) (Economics)",
+      "Senior Research Fellow (SRF)(Agronomy)",
+      "SRF",
+    ],
+    sector: "Science & Research",
+    description:
+      "Senior Research Fellow (SRF) positions are offered by ICAR institutes, CSIR laboratories, DST-funded projects, and central universities. Candidates typically require a postgraduate degree with at least two years of research experience, or a NET/GATE qualification in the relevant discipline.",
+  },
+
+  // ── Railway & Transport ──────────────────────────────────────────────────
+
+  {
+    slug: "assistant-loco-pilot",
+    name: "Assistant Loco Pilot",
+    aliases: [
+      "Assistant Loco Pilot",
+      "ALP",
+      "Assistant Loco Pilot (ALP)",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Assistant Loco Pilot (ALP) is a Group C post under Indian Railways recruited through the Railway Recruitment Board (RRB). Candidates require a 10th pass plus an ITI trade certificate or diploma in a relevant engineering discipline. ALP is one of the highest-volume railway recruitment drives, with lakhs of vacancies in each cycle.",
+  },
+  {
+    slug: "railway-clerk",
+    name: "Railway Clerk",
+    aliases: [
+      "Junior Clerk cum Typist",
+      "Junior Clerk-cum-Typist",
+      "Accounts Clerk cum Typist",
+      "Accounts Clerk-cum-Typist",
+      "Trains Clerk",
+      "Commercial cum Ticket Clerk",
+      "Commercial-cum-Ticket Clerk",
+      "Senior Clerk",
+      "Senior Clerk cum Typist",
+      "Senior Time Keeper",
+      "Office Clerk",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Railway Clerk posts (including Junior Clerk cum Typist, Accounts Clerk cum Typist, and Commercial cum Ticket Clerk) are Group D and Group C clerical posts under Indian Railways recruited through RRB and RRC. Candidates require 10+2 with basic typing skills. These posts cover station ticketing, accounts, and general administration.",
+  },
+  {
+    slug: "goods-train-manager",
+    name: "Goods Train Manager",
+    aliases: [
+      "Goods Train Manager",
+      "GTM",
+      "Goods Guard",
+      "Senior Guard",
+      "Assistant Guard",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Goods Train Manager (formerly Goods Guard) is a Group C operational post under Indian Railways responsible for the safe operation of goods trains. Candidates require a graduation degree. Recruitment is through RRB. The role involves brake van operation, train movement records, and coordination with loco pilots.",
+  },
+  {
+    slug: "station-master",
+    name: "Station Master",
+    aliases: [
+      "Station Master",
+      "Assistant Station Master",
+      "ASM",
+      "Station Master (SM)",
+      "Junior Station Master",
+    ],
+    sector: "Railway & Transport",
+    description:
+      "Station Master and Assistant Station Master posts are Group C posts under Indian Railways responsible for managing train operations at a station. Candidates require a graduation degree. Selection is through RRB Non-Technical Popular Categories (NTPC) examination.",
+  },
+
+  // ── Engineering ──────────────────────────────────────────────────────────
+
+  {
+    slug: "junior-engineer",
+    name: "Junior Engineer",
+    aliases: [
+      "Junior Engineer",
+      "Junior Engineer (JE)",
+      "JE",
+      "Junior Engineer (Civil)",
+      "Junior Engineer (Electrical)",
+      "Junior Engineer (Mechanical)",
+      "Junior Engineer (Electronics)",
+      "Junior Engineer (IT)",
+      "Junior Engineer (Quality Control)",
+      "Junior Engineer (Electrical / Mechanical)",
+    ],
+    sector: "Engineering",
+    description:
+      "Junior Engineer (JE) posts are recruited by SSC, Indian Railways (RRB), CPWD, state PWDs, and central PSUs. Candidates require a diploma or B.E/B.Tech in Civil, Electrical, Mechanical, or Electronics engineering. JE is one of the most-searched government engineering roles in India.",
+  },
+
+  // ── Police & Security ────────────────────────────────────────────────────
+
+  {
+    slug: "constable",
+    name: "Constable",
+    aliases: [
+      "Constable",
+      "Constable (GD)",
+      "Constable GD",
+      "Constable (General Duty)",
+      "Constable (Technical)",
+      "Constable (Tradesman)",
+      "Head Constable",
+      "Head Constable (Ministerial)",
+      "Head Constable (Technical)",
+      "Sub-Inspector",
+      "Sub Inspector",
+      "SI",
+    ],
+    sector: "Police & Security",
+    description:
+      "Constable (GD) posts are among the highest-volume central government recruitments, conducted by SSC for CISF, CRPF, BSF, SSB, ITBP, and AR. Candidates require 10th pass for Constable GD and 10+2 for Head Constable or Sub-Inspector. Physical fitness standards apply.",
+  },
+
+  // ── Administration (expansion) ───────────────────────────────────────────
+
+  {
+    slug: "stenographer",
+    name: "Stenographer",
+    aliases: [
+      "Stenographer",
+      "Stenographer Grade C",
+      "Stenographer Grade D",
+      "Stenographer (Grade C & D)",
+      "Senior Stenographer",
+      "Personal Assistant",
+    ],
+    sector: "Administration",
+    description:
+      "Stenographer posts are recruited by SSC and various state service commissions for central ministries, high courts, and PSUs. Candidates require 10+2 with a shorthand speed of 100 wpm (Grade C) or 80 wpm (Grade D) and a typing speed of 40 wpm in English or 55 wpm in Hindi. SSC Stenographer is a national-level annual examination.",
+  },
+  {
+    slug: "multi-tasking-staff",
+    name: "Multi Tasking Staff",
+    aliases: [
+      "Multi Tasking Staff",
+      "MTS",
+      "Multi-Tasking Staff",
+      "Multi Tasking Staff (MTS)",
+      "Group D",
+    ],
+    sector: "Administration",
+    description:
+      "Multi Tasking Staff (MTS) is a Group C non-gazetted, non-ministerial post in various central government departments, ministries, and PSUs, recruited through SSC. Candidates require a 10th pass certificate. Duties include general maintenance, delivery of files, and operational support.",
+  },
+
+  // ── Banking & Finance ────────────────────────────────────────────────────
+
+  {
+    slug: "bank-probationary-officer",
+    name: "Bank Probationary Officer",
+    aliases: [
+      "Probationary Officer",
+      "PO",
+      "Bank PO",
+      "Junior Management Grade Scale I",
+      "JMGS I",
+      "Probationary Officer (PO)",
+    ],
+    sector: "Banking & Finance",
+    description:
+      "Bank Probationary Officer (PO) is a flagship entry-level officer post in public sector banks recruited through IBPS PO and SBI PO examinations. Candidates require a graduation degree in any discipline. PO is one of the most competitive and sought-after government-sector roles among graduates.",
+  },
+  {
+    slug: "bank-clerk",
+    name: "Bank Clerk",
+    aliases: [
+      "Clerk",
+      "Bank Clerk",
+      "Clerk (Junior Associate)",
+      "Junior Associate",
+      "Clerical Cadre",
+      "Office Assistant (Multipurpose)",
+    ],
+    sector: "Banking & Finance",
+    description:
+      "Bank Clerk (Junior Associate) posts are recruited by IBPS CRP Clerk and SBI Clerk examinations for public sector banks. Candidates require a graduation degree with proficiency in the official language of the state. Bank Clerk is one of the most-applied government examinations in India.",
   },
 ];
 
