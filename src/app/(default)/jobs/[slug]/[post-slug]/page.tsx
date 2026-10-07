@@ -362,8 +362,13 @@ export default async function PostLeafPage({ params }: Props) {
           <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-4">
             <p className="text-sm text-neutral-600">
               Detailed eligibility, vacancy, and salary information for this post has not yet been extracted.
-              Check the recruitment page for updates.
             </p>
+            <Link
+              href={`/jobs/${recruitment.slug}`}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:underline"
+            >
+              View full recruitment details →
+            </Link>
           </div>
         )}
 
