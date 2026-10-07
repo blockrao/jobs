@@ -89,7 +89,7 @@ export const ROLE_REGISTRY: RoleDefinition[] = [
     ],
     sector: "Administration",
     description:
-      "Lower Division Clerk (LDC) and Junior Secretariat Assistant (JSA) posts are recruited through SSC CHSL for central government ministries, departments, and Parliament Secretariats. Candidates require 10+2 with a typing speed of 35 wpm in English or 30 wpm in Hindi. LDC is one of the largest central clerical recruitment channels.",
+      "Lower Division Clerk (LDC) and Junior Secretariat Assistant (JSA) are clerical posts filled by central government ministries, state administrations, courts, legislative bodies, and other organisations through multiple recruiting bodies including SSC CHSL, state PSCs, High Courts, and departmental recruitment. SSC CHSL is the largest single channel for central LDC vacancies. Candidates require 10+2 with a typing speed of 35 wpm in English or 30 wpm in Hindi.",
   },
   {
     slug: "postal-assistant-jobs",
@@ -103,7 +103,7 @@ export const ROLE_REGISTRY: RoleDefinition[] = [
     ],
     sector: "Administration",
     description:
-      "Postal Assistant (PA) and Sorting Assistant (SA) are Group C posts under India Post, recruited through SSC CHSL. Candidates require 10+2 with a typing speed of 35 wpm in English or 30 wpm in Hindi. Postal Assistant handles post office counter work; Sorting Assistant handles mail sorting at postal sorting offices.",
+      "Postal Assistant (PA) and Sorting Assistant (SA) are Group C posts under India Post (Department of Posts). PA/SA vacancies are notified through SSC CHSL and through India Post's own departmental recruitment. Candidates require 10+2 with a typing speed of 35 wpm in English or 30 wpm in Hindi. Postal Assistants handle post office counter operations; Sorting Assistants handle mail sorting at postal sorting offices.",
   },
   {
     slug: "data-entry-operator-jobs",
