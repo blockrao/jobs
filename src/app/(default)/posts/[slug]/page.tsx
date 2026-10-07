@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = `${role.name} Government Jobs 2026 — Vacancies & Official Notifications`;
   const description = `Find all active ${role.name} government job recruitments on JobOye. View vacancy counts, eligibility criteria, application dates and official notification links from verified sources.`;
-  const seo = pageSeo(`/roles/${role.slug}`);
+  const seo = pageSeo(`/posts/${role.slug}`);
 
   return {
     title,
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: absoluteUrl(`/roles/${role.slug}`),
+      url: absoluteUrl(`/posts/${role.slug}`),
       type: "website",
     },
   };
@@ -54,7 +54,7 @@ function isActive(status: string, applicationEndDate: Date | null | undefined): 
   return false;
 }
 
-export default async function RolePage({ params }: Props) {
+export default async function PostPage({ params }: Props) {
   const { slug } = await params;
   const role = getRoleBySlug(slug);
   if (!role) notFound();
@@ -68,11 +68,10 @@ export default async function RolePage({ params }: Props) {
   const activePosts = rolePosts.filter((p) => isActive(p.recruitmentStatus, p.applicationEndDate));
   const closedPosts = rolePosts.filter((p) => !isActive(p.recruitmentStatus, p.applicationEndDate));
 
-  // Build structured data
   // Occupation schema for the role entity itself
   const occupationSchema = {
     "@type": "Occupation",
-    "@id": absoluteUrl(`/roles/${role.slug}#occupation`),
+    "@id": absoluteUrl(`/posts/${role.slug}#occupation`),
     name: role.name,
     description: role.description,
     occupationLocation: {
@@ -98,8 +97,8 @@ export default async function RolePage({ params }: Props) {
 
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Home", path: "/" },
-    { name: "Job Roles", path: "/roles" },
-    { name: role.name, path: `/roles/${role.slug}` },
+    { name: "Government Posts", path: "/posts" },
+    { name: role.name, path: `/posts/${role.slug}` },
   ]);
 
   const schema = jsonLdGraph(breadcrumbSchema, occupationSchema, itemListSchema);
@@ -114,7 +113,7 @@ export default async function RolePage({ params }: Props) {
       {/* Header */}
       <div className="mb-2">
         <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-500 mb-3">
-          <Link href="/roles" className="hover:underline">Job Roles</Link>
+          <Link href="/posts" className="hover:underline">Government Posts</Link>
           <span>›</span>
           <span>{role.sector}</span>
         </div>
@@ -260,7 +259,7 @@ export default async function RolePage({ params }: Props) {
       <div className="mt-12 pt-6 border-t text-sm text-neutral-500">
         <Link href="/" className="hover:underline">Home</Link>
         {" / "}
-        <Link href="/roles" className="hover:underline">Job Roles</Link>
+        <Link href="/posts" className="hover:underline">Government Posts</Link>
         {" / "}
         <span>{role.name}</span>
       </div>

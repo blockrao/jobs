@@ -41,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/jobs`, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${SITE_URL}/roles`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/posts`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/categories`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/articles`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/organizations`, changeFrequency: "daily", priority: 0.6 },
@@ -50,10 +50,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/news`, changeFrequency: "daily", priority: 0.5 },
   ];
 
-  // Role entity pages — pilot set. Priority 0.85: these are the new SEO-differentiated
+  // Post entity pages — pilot set. Priority 0.85: these are the new SEO-differentiated
   // pages; slightly below the home and /jobs hub, above category/org pages.
   const roleEntries: MetadataRoute.Sitemap = ROLE_REGISTRY.map((role) => ({
-    url: `${SITE_URL}/roles/${role.slug}`,
+    url: `${SITE_URL}/posts/${role.slug}`,
     changeFrequency: "daily" as const,
     priority: 0.85,
   }));

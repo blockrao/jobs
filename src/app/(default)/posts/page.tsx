@@ -13,26 +13,31 @@ const SECTOR_ORDER = [
   "Finance",
   "Technical",
   "Agriculture & Environment",
+  "Railway & Transport",
+  "Police & Security",
+  "Engineering",
+  "Banking & Finance",
+  "Defence",
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
-  const seo = pageSeo("/roles");
+  const seo = pageSeo("/posts");
   return {
-    title: "Government Job Roles — Browse by Post Name",
+    title: "Government Posts 2026 — Browse Jobs by Post Name",
     description:
-      "Browse all government job roles on JobOye. Find active recruitments, vacancy counts and official notifications for Junior Research Fellow, Medical Officer, Staff Nurse, Accountant and more.",
+      "Browse all government posts on JobOye. Find active recruitments, vacancy counts and official notifications for Staff Nurse, Junior Engineer, Railway Clerk, Bank PO and more.",
     alternates: seo.alternates,
     openGraph: {
-      title: "Government Job Roles — Browse by Post Name",
+      title: "Government Posts 2026 — Browse Jobs by Post Name",
       description:
-        "Browse all government job roles on JobOye. Find active recruitments, vacancy counts and official notifications.",
-      url: "/roles",
+        "Browse all government posts on JobOye. Find active recruitments, vacancy counts and official notifications.",
+      url: "/posts",
       type: "website",
     },
   };
 }
 
-export default function RolesIndexPage() {
+export default function PostsIndexPage() {
   const bySector = SECTOR_ORDER.map((sector) => ({
     sector,
     roles: ROLE_REGISTRY.filter((r) => r.sector === sector),
@@ -42,12 +47,12 @@ export default function RolesIndexPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-neutral-900 mb-3">
-          Government Job Roles
+          Government Posts
         </h1>
         <p className="text-lg text-neutral-600">
           Browse active government recruitments by post name. Each page aggregates
           all current notifications, vacancy counts and official notification links
-          for that role.
+          for that post.
         </p>
       </div>
 
@@ -61,7 +66,7 @@ export default function RolesIndexPage() {
               {roles.map((role) => (
                 <Link
                   key={role.slug}
-                  href={`/roles/${role.slug}`}
+                  href={`/posts/${role.slug}`}
                   className="group flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors"
                 >
                   <span className="font-medium text-neutral-900 group-hover:text-blue-700">
@@ -78,7 +83,7 @@ export default function RolesIndexPage() {
       <div className="mt-12 pt-6 border-t text-sm text-neutral-500">
         <Link href="/" className="hover:underline">Home</Link>
         {" / "}
-        <span>Job Roles</span>
+        <span>Government Posts</span>
       </div>
     </div>
   );
