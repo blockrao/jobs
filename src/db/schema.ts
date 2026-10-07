@@ -310,6 +310,13 @@ export const employmentTypeEnum = pgEnum("employment_type", [
   "INTERN",
   "TEMPORARY",
   "OTHER",
+  // Extended values — added in migration add_employment_type_values (2026-10-06).
+  // These already exist in the DB enum; declared here so Drizzle types are accurate.
+  "APPRENTICESHIP",
+  "DEPUTATION",
+  "FELLOWSHIP",
+  "INTERNSHIP",
+  "PERMANENT",
 ]);
 
 export const workplaceTypeEnum = pgEnum("workplace_type", [
@@ -1147,6 +1154,10 @@ export const recruitments = pgTable(
     // reliable than matching on year+title. Nullable because not every
     // source captures it, but it's preferred whenever present.
     officialNotificationNumber: varchar("official_notification_number", { length: 200 }),
+    // ISO 3166-2:IN state code for JobPosting addressRegion (e.g. IN-RJ).
+    // NULL for national-level recruitments (UPSC, SSC, Railway Board etc.)
+    // that have no single state. Populated during enrichment. (A-082)
+    locationStateCode: varchar("location_state_code", { length: 10 }),
     // Provenance of the official notification/apply link on this recruitment:
     // MANUAL_VERIFIED | AGGREGATOR_DISCOVERED. Null = no link. (A-070)
     officialLinkSource: varchar("official_link_source", { length: 40 }),

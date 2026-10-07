@@ -207,6 +207,9 @@ export function buildJobPostingSchema(
         String(posting.id),
     },
     datePosted: posting.datePosted?.toISOString(),
+    // contentChangedAt = last meaningful reader-visible change (PQ-004).
+    // Falls back to updatedAt so Google always sees a fresh signal.
+    dateModified: (posting.contentChangedAt ?? posting.updatedAt)?.toISOString(),
     validThrough: posting.validThrough?.toISOString(),
     // Indian government jobs are permanent positions; FULL_TIME is the correct
     // default. "OTHER" triggers a Google non-critical warning and adds no value.

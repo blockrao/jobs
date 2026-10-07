@@ -327,7 +327,12 @@ function buildLeafJobPosting(data: NonNullable<Awaited<ReturnType<typeof getData
     hiringOrganization: hiringOrg,
     jobLocation: {
       "@type": "Place",
-      address: { "@type": "PostalAddress", addressCountry: "IN" },
+      address: {
+        "@type": "PostalAddress",
+        addressCountry: "IN",
+        // ISO 3166-2:IN state code (e.g. IN-RJ) — null for national recruitments.
+        ...(data.locationStateCode && { addressRegion: data.locationStateCode }),
+      },
     },
     baseSalary,
     totalJobOpenings: post.vacancyTotal ?? undefined,

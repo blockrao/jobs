@@ -452,6 +452,8 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     // to dig into recruitment for these high-value fields.
     selectionProcesses: recruitment.selectionProcesses ?? [],
     fees: recruitment.fees ?? [],
+    // ISO 3166-2:IN state code for JobPosting addressRegion (Step B / A-082).
+    locationStateCode: recruitment.locationStateCode ?? null,
   };
 }
 
