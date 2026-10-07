@@ -7,7 +7,7 @@ import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostingBySlug } from "@/lib/queries";
+import { getPostingBySlug, getPostsForRecruitment } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
 import {
   buildBreadcrumbSchema,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
+import { CanonicalPostCard, LegacyPostCard } from "@/components/ui/post-card";
 
 export const revalidate = 300;
 
@@ -133,6 +134,11 @@ export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) notFound();
+
+  const canonicalRecruitmentId = (posting as any).canonicalRecruitment?.id ?? null;
+  const siblingPosts = canonicalRecruitmentId
+    ? await safeQuery(() => getPostsForRecruitment(canonicalRecruitmentId), [])
+    : [];
 
   const isHi = locale === "hi";
   const dateLocale = isHi ? "hi-IN" : "en-IN";
@@ -435,6 +441,50 @@ export default async function LocaleJobPage({ params }: Props) {
           </div>
         )}
       </dl>
+
+      {(() => {
+        if (siblingPosts.length > 0 && (posting as any).canonicalRecruitment) {
+          return (
+            <div className="mt-6">
+              <h2 className="mb-3 text-sm font-semibold text-neutral-500">
+                {isHi ? `इस नोटिस के पद (${siblingPosts.length})` : `Posts in This Notice (${siblingPosts.length})`}
+              </h2>
+              <div className="space-y-3">
+                {siblingPosts.map((p: any, i: number) => (
+                  <CanonicalPostCard
+                    key={p.id}
+                    name={p.name}
+                    slug={p.slug}
+                    recruitmentSlug={(posting as any).canonicalRecruitment!.slug}
+                    vacancyTotal={p.vacancyTotal}
+                    vacancyDetails={p.vacancyDetails}
+                    salaryMin={p.salaryMin}
+                    salaryMax={p.salaryMax}
+                    positionName={p.position?.name}
+                    index={i}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        }
+        const legacyNames = ((posting as any).postNames as string[] | null) ?? [];
+        if (legacyNames.length > 0) {
+          return (
+            <div className="mt-6">
+              <h2 className="mb-3 text-sm font-semibold text-neutral-500">
+                {isHi ? `इस नोटिस के पद (${legacyNames.length})` : `Posts in This Notice (${legacyNames.length})`}
+              </h2>
+              <div className="space-y-3">
+                {legacyNames.map((name: string, i: number) => (
+                  <LegacyPostCard key={name} name={name} index={i} />
+                ))}
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
 
       <div className="mt-6 flex flex-wrap gap-3">
         {publicLink(posting.applyUrl) && hiringOpen && (

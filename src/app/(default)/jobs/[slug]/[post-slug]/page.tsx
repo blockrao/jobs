@@ -26,6 +26,7 @@ import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
 import { jsonLdGraph, buildBreadcrumbSchema, employmentTypeToSchema } from "@/lib/structured-data";
 import { formatDate, formatAgeRange } from "@/lib/labels";
+import { CanonicalPostCard } from "@/components/ui/post-card";
 import {
   Calendar,
   Users,
@@ -633,24 +634,22 @@ export default async function PostLeafPage({ params }: Props) {
         {otherPosts.length > 0 && (
           <SectionCard className="mb-4">
             <SectionHeader icon={Hash} title={`Other Posts in This Notice (${otherPosts.length})`} label="Q5" />
-            <ul className="divide-y divide-black/5">
-              {otherPosts.map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/jobs/${recruitment.slug}/${p.slug}`}
-                    className="flex items-center justify-between gap-2 px-5 py-3 hover:bg-neutral-50"
-                  >
-                    <div>
-                      <span className="text-sm font-medium text-neutral-900">{p.name}</span>
-                      {p.position?.name && (
-                        <span className="ml-2 text-xs text-neutral-400">{p.position.name}</span>
-                      )}
-                    </div>
-                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-300" />
-                  </Link>
-                </li>
+            <div className="space-y-3 p-5">
+              {otherPosts.map((p, i) => (
+                <CanonicalPostCard
+                  key={p.id}
+                  name={p.name}
+                  slug={p.slug}
+                  recruitmentSlug={recruitment.slug}
+                  vacancyTotal={p.vacancyTotal}
+                  vacancyDetails={p.vacancyDetails}
+                  salaryMin={p.salaryMin}
+                  salaryMax={p.salaryMax}
+                  positionName={p.position?.name}
+                  index={i}
+                />
               ))}
-            </ul>
+            </div>
             <div className="border-t border-black/5 px-5 py-2">
               <Link href={`/jobs/${recruitment.slug}`} className="text-xs text-indigo-600 hover:underline">
                 ← Back to notice hub
