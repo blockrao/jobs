@@ -344,9 +344,11 @@ function postLineSlug(recruitmentSlug: string, name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+    .slice(0, 50);  // Reduced to make room for "-jobs" suffix
+  // Append "-jobs" to make post title explicit in URLs (e.g., "/junior-engineer-jobs")
+  const stemWithJobs = `${stem}-jobs`;
   // "-pl1-" marks Posts written by the post-line classifier, so they can be found and reversed.
-  return `${recruitmentSlug.slice(0, 100)}-${POST_LINE_CLASSIFIER_VERSION}-${stem}`.slice(0, 200);
+  return `${recruitmentSlug.slice(0, 100)}-${POST_LINE_CLASSIFIER_VERSION}-${stemWithJobs}`.slice(0, 200);
 }
 
 export async function resolvePostLines(
