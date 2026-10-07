@@ -182,12 +182,8 @@ export default async function PostPage({ params }: Props) {
         {/* Open Opportunities */}
         {activePosts.length > 0 ? (
           <section className="mb-10">
-            <div className="flex items-center gap-3 mb-5">
+            <div className="mb-5">
               <h2 className="text-xl font-semibold text-neutral-900">Open Opportunities</h2>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                {activePosts.length} active
-              </span>
             </div>
             <div className="space-y-3">
               {activePosts.map((p) => {
