@@ -248,7 +248,7 @@ function buildFallbackDescription({
   }
 
   // § Closing — how to apply + always-present disclaimer
-  if (data.officialNotificationUrl) {
+  if (officialNotificationUrl) {
     parts.push(
       `Eligible candidates should read the official notification carefully before applying. ` +
       `All details including the application procedure, required documents, and eligibility criteria are specified in the official advertisement.`
