@@ -34,7 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
 import { CanonicalPostCard, LegacyPostCard } from "@/components/ui/post-card";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 

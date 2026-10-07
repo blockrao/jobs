@@ -67,7 +67,10 @@ import {
 } from "lucide-react";
 import { CanonicalPostCard, LegacyPostCard } from "@/components/ui/post-card";
 
-export const revalidate = 300;
+// force-dynamic: hub pages need fresh sibling-post data on every request.
+// ISR (revalidate=300) caused stale cache to persist after PostCard deployment,
+// hiding clickable post links. Hub page count is small; DB read cost is low.
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
