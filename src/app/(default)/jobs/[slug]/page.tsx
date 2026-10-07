@@ -244,7 +244,13 @@ export default async function JobPage({ params }: Props) {
         [] as Awaited<ReturnType<typeof getPostsForRecruitment>>,
       )
     : [];
-  const isHubPage = siblingPosts.length > 1;
+  // A posting is a hub page when it has multiple sibling posts in the canonical
+  // recruitment, OR when postNames itself contains multiple posts (a multi-post
+  // notice that hasn't been linked to a canonical recruitment yet). Both cases
+  // mean each post deserves its own leaf JobPosting — don't emit one at the hub.
+  const isHubPage =
+    siblingPosts.length > 1 ||
+    ((posting.postNames as string[] | null)?.length ?? 0) > 1;
 
   const org = posting.organization;
   const orgHref = `/organizations/${org.slug}`;
@@ -357,9 +363,10 @@ export default async function JobPage({ params }: Props) {
     // has its own leaf at /jobs/{notice-slug}/{post-slug} which carries the JobPosting).
     isHubPage ? null : buildJobPostingSchema(posting as any, org as any, relatedArticles.map((a: any) => a.slug)),
     buildExamEventSchema(posting as any),
+    // Drop the /organizations/{slug} step until that route exists —
+    // a 404 in BreadcrumbList schema degrades Search Console quality.
     buildBreadcrumbSchema([
       { name: "Home", path: "/" },
-      { name: org.name, path: orgHref },
       { name: posting.title, path: `/jobs/${posting.slug}` },
     ]),
     buildFAQSchema(faqs),

@@ -417,10 +417,22 @@ export default async function PostLeafPage({ params }: Props) {
   const otherPosts = siblings.filter((s) => s.slug !== post.slug);
 
   // Structured data
-  const jobPosting = buildLeafJobPosting(data);
+  // Only emit JobPosting when the recruitment is still active.
+  // "ACTIVE" covers open applications; "UPCOMING" covers advance notifications
+  // (no apply date yet but the notice is live and hiring is intended).
+  // "RESULTS" and "ARCHIVED" mean the cycle is over — stop emitting JobPosting.
+  // Also suppress when applicationEndDate has already passed.
+  const recruitmentIsOpen =
+    (recruitment.status === "ACTIVE" || recruitment.status === "UPCOMING") &&
+    (!recruitment.applicationEndDate ||
+      new Date(recruitment.applicationEndDate).getTime() >= Date.now());
+  const rawJobPosting = buildLeafJobPosting(data);
+  const jobPosting = recruitmentIsOpen ? rawJobPosting : null;
+
+  // Drop the /organizations/{slug} breadcrumb step — that route doesn't exist yet
+  // and a 404 in structured-data breadcrumbs degrades schema quality in Search Console.
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Jobs", path: "/jobs" },
-    { name: org.name, path: `/organizations/${org.slug}` },
     { name: recruitment.name ?? "Recruitment", path: `/jobs/${recruitment.slug}` },
     { name: post.name, path: `/jobs/${recruitment.slug}/${post.slug}` },
   ]);
@@ -429,7 +441,7 @@ export default async function PostLeafPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdGraph(jobPosting, breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph(jobPosting, breadcrumb)) }}
       />
 
       <main className="mx-auto max-w-2xl px-4 py-6 sm:py-8">

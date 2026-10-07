@@ -50,9 +50,12 @@ export function employmentTypeToSchema(value: string | null | undefined): string
   return EMPLOYMENT_TYPE_MAP[value] ?? "FULL_TIME";
 }
 
-export function buildOrganizationSchema(org: Organization) {
+export function buildOrganizationSchema(org: Organization, kind?: string | null) {
+  // Government jobs use the more specific GovernmentOrganization type so that
+  // Google's JobPosting enrichment can surface correct sitelinks and entity cards.
+  const type = kind === "GOVERNMENT" ? "GovernmentOrganization" : "Organization";
   return {
-    "@type": "Organization",
+    "@type": type,
     "@id": absoluteUrl(`/organizations/${org.slug}#org`),
     name: org.name,
     url: org.websiteUrl ?? absoluteUrl(`/organizations/${org.slug}`),
@@ -167,6 +170,13 @@ export function buildJobPostingSchema(
         }
       : undefined;
 
+  // Prefer ISO 3166-2:IN state code from the canonical recruitment when available
+  // (e.g. "IN-CH") — plain text region names like "Chandigarh" fail schema.org
+  // validation. addressCountry is always the ISO-3166-1 alpha-2 code "IN".
+  const isoRegion =
+    (posting as any).canonicalRecruitment?.locationStateCode ??
+    (posting as any).locationStateCode ??
+    undefined;
   const jobLocation =
     posting.workplaceType === "REMOTE"
       ? undefined
@@ -175,14 +185,14 @@ export function buildJobPostingSchema(
           address: {
             "@type": "PostalAddress",
             addressLocality: posting.locationCity ?? undefined,
-            addressRegion: posting.locationRegion ?? undefined,
-            addressCountry: posting.locationCountry ?? "IN",
+            addressRegion: isoRegion,
+            addressCountry: "IN",
           },
         };
 
   const applicantLocationRequirements =
     posting.workplaceType === "REMOTE"
-      ? { "@type": "Country", name: posting.locationCountry ?? "IN" }
+      ? { "@type": "Country", name: "IN" }
       : undefined;
 
   return {
@@ -214,7 +224,7 @@ export function buildJobPostingSchema(
     // Indian government jobs are permanent positions; FULL_TIME is the correct
     // default. "OTHER" triggers a Google non-critical warning and adds no value.
     employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "FULL_TIME",
-    hiringOrganization: buildOrganizationSchema(org),
+    hiringOrganization: buildOrganizationSchema(org, (posting as any).kind),
     jobLocation,
     jobLocationType:
       posting.workplaceType === "REMOTE" ? "TELECOMMUTE" : undefined,
