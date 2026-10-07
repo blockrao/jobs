@@ -27,9 +27,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const seo = pageSeo(`/posts/${role.slug}`);
 
   // Noindex role pages with no recruitment data (PQ-007).
-  // A page with zero total recruitments has nothing for search engines to index
-  // and may be penalised as thin content. Pages with closed/historical
-  // recruitments are still valuable and remain indexed.
   const stats = await safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 });
   const hasContent = stats.totalRecruitments > 0;
 
@@ -62,6 +59,20 @@ function isActive(status: string, applicationEndDate: Date | null | undefined): 
   return false;
 }
 
+/** Deadline urgency: returns days remaining, or null if no date */
+function daysRemaining(applicationEndDate: Date | null | undefined): number | null {
+  if (!applicationEndDate) return null;
+  const diff = new Date(applicationEndDate).getTime() - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+/** Post leaf URL when postSlug exists, else fall back to recruitment hub */
+function postUrl(recruitmentSlug: string, postSlug: string | null | undefined): string {
+  return postSlug
+    ? `/jobs/${recruitmentSlug}/${postSlug}`
+    : `/jobs/${recruitmentSlug}`;
+}
+
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
   const role = getRoleBySlug(slug);
@@ -73,7 +84,6 @@ export default async function PostPage({ params }: Props) {
   ]);
 
   // Derive distinct organizations from the role's posts (already joined).
-  // Deduplicate by organizationId, sort by name for display.
   const orgMap = new Map<number, { id: number; name: string; slug: string }>();
   for (const p of rolePosts) {
     if (!orgMap.has(p.organizationId)) {
@@ -104,7 +114,7 @@ export default async function PostPage({ params }: Props) {
     },
   };
 
-  // ItemList of active job postings linking to the recruitment hub pages
+  // ItemList of active job postings — point to post leaf when postSlug exists
   const itemListSchema = activePosts.length > 0
     ? {
         "@type": "ItemList",
@@ -113,7 +123,7 @@ export default async function PostPage({ params }: Props) {
         itemListElement: activePosts.slice(0, 20).map((p, i) => ({
           "@type": "ListItem",
           position: i + 1,
-          url: absoluteUrl(`/jobs/${p.recruitmentSlug}`),
+          url: absoluteUrl(postUrl(p.recruitmentSlug, p.postSlug)),
           name: `${p.postName} — ${p.recruitmentName}`,
         })),
       }
@@ -128,192 +138,254 @@ export default async function PostPage({ params }: Props) {
   const schema = jsonLdGraph(breadcrumbSchema, occupationSchema, itemListSchema);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-slate-50">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
 
-      {/* Header */}
-      <div className="mb-2">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-500 mb-3">
-          <Link href="/posts" className="hover:underline">Government Posts</Link>
-          <span>›</span>
-          <span>{role.sector}</span>
-        </div>
-        <h1 className="text-4xl font-bold text-neutral-900 mb-3">
-          {role.name} Government Jobs
-        </h1>
-        <p className="text-lg text-neutral-600 leading-relaxed">
-          {role.description}
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
-        {stats.activeRecruitments > 0 && (
-          <StatTile tone="success" value={stats.activeRecruitments} label="Active Recruitments" />
-        )}
-        {stats.totalVacancies > 0 && (
-          <StatTile tone="brand" value={stats.totalVacancies} label="Total Vacancies" />
-        )}
-        {stats.totalRecruitments > 0 && (
-          <StatTile tone="neutral" value={stats.totalRecruitments} label="Total Recruitments" />
-        )}
-      </div>
-
-      {/* Active Recruitments */}
-      {activePosts.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-4">
-            Active Recruitments
-          </h2>
-          <div className="space-y-3">
-            {activePosts.map((p) => (
-              <div
-                key={p.postId}
-                className="border border-neutral-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/jobs/${p.recruitmentSlug}`}
-                      className="font-semibold text-neutral-900 hover:text-blue-700 hover:underline text-lg leading-snug block"
-                    >
-                      {p.postName} — {p.recruitmentName}
-                    </Link>
-                    <div className="text-sm text-neutral-500 mt-1">
-                      <span>{p.organizationName}</span>
-                      {p.vacancyTotal && (
-                        <>
-                          <span className="mx-2">·</span>
-                          <span className="font-medium text-neutral-700">{p.vacancyTotal.toLocaleString("en-IN")} vacancies</span>
-                        </>
-                      )}
-                      {p.applicationEndDate && (
-                        <>
-                          <span className="mx-2">·</span>
-                          <span>Last date: {formatDate(p.applicationEndDate)}</span>
-                        </>
-                      )}
-                    </div>
-                    {(p.salaryMin || p.salaryMax) && (
-                      <div className="text-sm text-neutral-600 mt-1">
-                        Pay:{" "}
-                        {p.salaryMin && `₹${p.salaryMin.toLocaleString("en-IN")}`}
-                        {p.salaryMin && p.salaryMax && "–"}
-                        {p.salaryMax && `₹${p.salaryMax.toLocaleString("en-IN")}`}
-                        /month
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 sm:items-end shrink-0">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                      Active
-                    </span>
-                    {p.notificationUrl && (
-                      <a
-                        href={p.notificationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                        aria-label={`Official notification for ${p.recruitmentName}`}
-                      >
-                        Official Notification ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* Page header band */}
+      <div className="bg-white border-b border-neutral-200">
+        <div className="max-w-4xl mx-auto px-4 pt-6 pb-8">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400 mb-4">
+            <Link href="/posts" className="hover:text-neutral-700 transition-colors">Government Posts</Link>
+            <span>›</span>
+            <span className="text-neutral-500">{role.sector}</span>
           </div>
-        </section>
-      )}
 
-      {/* Past Recruitments */}
-      {closedPosts.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-4">
-            Past Recruitments
-          </h2>
-          <div className="space-y-2">
-            {closedPosts.map((p) => (
-              <div
-                key={p.postId}
-                className="border border-neutral-100 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-              >
+          <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 leading-tight mb-3">
+            {role.name} Government Jobs
+          </h1>
+          <p className="text-base sm:text-lg text-neutral-500 leading-relaxed max-w-2xl">
+            {role.description}
+          </p>
+
+          {/* Stats row */}
+          {(stats.activeRecruitments > 0 || stats.totalVacancies > 0 || stats.totalRecruitments > 0) && (
+            <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t border-neutral-100">
+              {stats.activeRecruitments > 0 && (
                 <div>
-                  <Link
-                    href={`/jobs/${p.recruitmentSlug}`}
-                    className="font-medium text-neutral-700 hover:text-blue-700 hover:underline"
-                  >
-                    {p.postName} — {p.recruitmentName}
-                  </Link>
-                  <div className="text-sm text-neutral-400 mt-0.5">
-                    {p.organizationName}
-                    {p.vacancyTotal && (
-                      <>
-                        <span className="mx-2">·</span>
-                        <span>{p.vacancyTotal.toLocaleString("en-IN")} vacancies</span>
-                      </>
-                    )}
-                    <span className="mx-2">·</span>
-                    <span>{p.recruitmentYear}</span>
-                  </div>
+                  <div className="text-2xl font-bold text-emerald-600">{stats.activeRecruitments}</div>
+                  <div className="text-xs text-neutral-500 mt-0.5">Open now</div>
                 </div>
-                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-500 shrink-0">
-                  Closed
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Organizations recruiting for this role */}
-      {recruitingOrgs.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-2xl font-bold text-neutral-900 mb-1">
-            Organizations Recruiting {role.name}s
-          </h2>
-          <p className="text-sm text-neutral-500 mb-4">
-            Recruitment bodies that have notified {role.name} vacancies
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {recruitingOrgs.slice(0, 20).map((org) => (
-              <Link
-                key={org.id}
-                href={`/organizations/${org.slug}`}
-                className="px-3 py-1.5 bg-neutral-100 hover:bg-blue-100 hover:text-blue-800 text-neutral-700 rounded-full text-sm font-medium transition-colors"
-              >
-                {org.name}
-              </Link>
-            ))}
-            {recruitingOrgs.length > 20 && (
-              <span className="px-3 py-1.5 text-neutral-400 text-sm">
-                +{recruitingOrgs.length - 20} more
-              </span>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Empty state */}
-      {rolePosts.length === 0 && (
-        <div className="py-12 text-center bg-neutral-50 rounded-lg">
-          <p className="text-neutral-500">
-            No recruitments found for {role.name} at this time. Check back soon.
-          </p>
+              )}
+              {stats.totalVacancies > 0 && (
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.totalVacancies.toLocaleString("en-IN")}</div>
+                  <div className="text-xs text-neutral-500 mt-0.5">Total vacancies</div>
+                </div>
+              )}
+              {stats.totalRecruitments > 0 && (
+                <div>
+                  <div className="text-2xl font-bold text-neutral-700">{stats.totalRecruitments}</div>
+                  <div className="text-xs text-neutral-500 mt-0.5">Recruitments tracked</div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Breadcrumb */}
-      <div className="mt-12 pt-6 border-t text-sm text-neutral-500">
-        <Link href="/" className="hover:underline">Home</Link>
-        {" / "}
-        <Link href="/posts" className="hover:underline">Government Posts</Link>
-        {" / "}
-        <span>{role.name}</span>
+      {/* Main content */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+
+        {/* Open Now */}
+        {activePosts.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-5">
+              <h2 className="text-xl font-semibold text-neutral-900">Open Now</h2>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                {activePosts.length} active
+              </span>
+            </div>
+            <div className="space-y-3">
+              {activePosts.map((p) => {
+                const days = daysRemaining(p.applicationEndDate);
+                const isUrgent = days !== null && days <= 7;
+                const href = postUrl(p.recruitmentSlug, p.postSlug);
+                return (
+                  <div
+                    key={p.postId}
+                    className="bg-white rounded-xl border-l-4 border-l-blue-500 border border-neutral-200 border-l-[4px] shadow-sm hover:shadow-md hover:border-blue-400 transition-all"
+                  >
+                    <div className="p-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          {/* Post identity */}
+                          <Link
+                            href={href}
+                            className="font-semibold text-neutral-900 hover:text-blue-700 text-lg leading-snug block mb-1"
+                          >
+                            {p.postName}
+                          </Link>
+                          <div className="text-sm text-neutral-500 mb-3">
+                            {p.recruitmentName}
+                          </div>
+
+                          {/* Key facts row */}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                            <span className="text-neutral-600 font-medium">{p.organizationName}</span>
+
+                            {p.vacancyTotal && (
+                              <span className="text-neutral-500">
+                                <span className="font-medium text-neutral-700">{p.vacancyTotal.toLocaleString("en-IN")}</span> vacancies
+                              </span>
+                            )}
+
+                            {p.applicationEndDate && (
+                              <span className={isUrgent ? "text-red-600 font-medium" : "text-neutral-500"}>
+                                Last date: {formatDate(p.applicationEndDate)}
+                                {isUrgent && days !== null && days > 0 && (
+                                  <span className="ml-1">({days}d left)</span>
+                                )}
+                                {isUrgent && days !== null && days <= 0 && (
+                                  <span className="ml-1">(today)</span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Pay range */}
+                          {(p.salaryMin || p.salaryMax) && (
+                            <div className="text-sm text-neutral-500 mt-1.5">
+                              Pay:{" "}
+                              <span className="text-neutral-700">
+                                {p.salaryMin && `₹${p.salaryMin.toLocaleString("en-IN")}`}
+                                {p.salaryMin && p.salaryMax && "–"}
+                                {p.salaryMax && `₹${p.salaryMax.toLocaleString("en-IN")}`}
+                                /month
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex sm:flex-col items-center sm:items-end gap-3 shrink-0">
+                          <Link
+                            href={href}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors whitespace-nowrap"
+                          >
+                            View Post
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </Link>
+                          {p.notificationUrl && (
+                            <a
+                              href={p.notificationUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                              aria-label={`Official notification for ${p.recruitmentName}`}
+                            >
+                              Official notice ↗
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Past Opportunities — compact table */}
+        {closedPosts.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-neutral-900 mb-4">Past Opportunities</h2>
+            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 bg-neutral-50">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide">Year</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide">Post · Recruitment</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide hidden sm:table-cell">Organisation</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide hidden sm:table-cell">Vacancies</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {closedPosts.map((p) => (
+                    <tr key={p.postId} className="hover:bg-neutral-50 transition-colors">
+                      <td className="px-4 py-3 text-neutral-400 whitespace-nowrap align-top">
+                        {p.recruitmentYear}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <Link
+                          href={postUrl(p.recruitmentSlug, p.postSlug)}
+                          className="font-medium text-neutral-700 hover:text-blue-700 hover:underline block leading-snug"
+                        >
+                          {p.postName}
+                        </Link>
+                        <span className="text-neutral-400 text-xs block mt-0.5 sm:hidden">
+                          {p.organizationName}
+                        </span>
+                        <span className="text-neutral-400 text-xs block mt-0.5">
+                          {p.recruitmentName}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-neutral-500 hidden sm:table-cell align-top">
+                        {p.organizationName}
+                      </td>
+                      <td className="px-4 py-3 text-right text-neutral-500 hidden sm:table-cell align-top whitespace-nowrap">
+                        {p.vacancyTotal ? p.vacancyTotal.toLocaleString("en-IN") : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* Organizations recruiting for this role */}
+        {recruitingOrgs.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold text-neutral-900 mb-1">
+              Bodies Recruiting {role.name}s
+            </h2>
+            <p className="text-sm text-neutral-500 mb-4">
+              Recruitment bodies that have notified {role.name} vacancies
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {recruitingOrgs.slice(0, 20).map((org) => (
+                <Link
+                  key={org.id}
+                  href={`/organizations/${org.slug}`}
+                  className="px-3 py-1.5 bg-white border border-neutral-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-800 text-neutral-600 rounded-full text-sm font-medium transition-colors"
+                >
+                  {org.name}
+                </Link>
+              ))}
+              {recruitingOrgs.length > 20 && (
+                <span className="px-3 py-1.5 text-neutral-400 text-sm">
+                  +{recruitingOrgs.length - 20} more
+                </span>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Empty state */}
+        {rolePosts.length === 0 && (
+          <div className="py-16 text-center bg-white rounded-xl border border-neutral-200">
+            <p className="text-neutral-500 text-lg mb-1">No recruitments on record yet</p>
+            <p className="text-neutral-400 text-sm">
+              {role.name} vacancies will appear here when notified.
+            </p>
+          </div>
+        )}
+
+        {/* Breadcrumb footer */}
+        <div className="mt-12 pt-6 border-t border-neutral-200 text-sm text-neutral-400">
+          <Link href="/" className="hover:text-neutral-600 transition-colors">Home</Link>
+          {" / "}
+          <Link href="/posts" className="hover:text-neutral-600 transition-colors">Government Posts</Link>
+          {" / "}
+          <span className="text-neutral-600">{role.name}</span>
+        </div>
       </div>
     </div>
   );
