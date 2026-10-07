@@ -291,9 +291,9 @@ export default async function PostLeafPage({ params }: Props) {
   const org = recruitment.organization;
   const exam = recruitment.exam;
 
-  // Own-facts check (PQ-006 §Page model rule 2):
-  // A leaf page is rendered only when the Post has at least one of: its own
-  // eligibility row, age rules, vacancy rows, pay level, or description.
+  // Option B (owner decision 2026-10-07): always render the leaf page if the
+  // post exists. When no structured data has been extracted yet, show a
+  // prominent banner directing the user to the official notification.
   const hasOwnFacts =
     post.eligibilities.length > 0 ||
     post.ageRules.length > 0 ||
@@ -302,22 +302,6 @@ export default async function PostLeafPage({ params }: Props) {
     post.salaryMax != null ||
     post.payLevel != null ||
     post.description != null;
-
-  if (!hasOwnFacts) {
-    console.info("[PostLeafPage] notFound: hasOwnFacts=false", {
-      slug,
-      postSlug,
-      postId: post.id,
-      salaryMin: post.salaryMin,
-      salaryMax: post.salaryMax,
-      payLevel: post.payLevel,
-      hasDescription: post.description != null,
-      eligCount: post.eligibilities.length,
-      ageRulesCount: post.ageRules.length,
-      vacancyCount: post.vacancies.length,
-    });
-    notFound();
-  }
 
   const verifiedElig = post.eligibilities.find((e) => e.status === "VERIFIED") ?? post.eligibilities[0];
   const otherPosts = siblings.filter((s) => s.slug !== post.slug);
@@ -352,6 +336,36 @@ export default async function PostLeafPage({ params }: Props) {
           <ChevronRight className="h-3 w-3" />
           <span className="text-neutral-800 font-medium">{post.name}</span>
         </nav>
+
+        {/* ── Data-sparse banner ───────────────────────────────────────── */}
+        {!hasOwnFacts && recruitment.notificationUrl && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <p className="text-sm font-medium text-amber-900">
+              Detailed information for this post is available in the official notification.
+            </p>
+            <p className="mt-1 text-xs text-amber-700">
+              JobOye has not yet extracted structured eligibility, vacancies, or salary data for this post.
+              Visit the official document for complete details.
+            </p>
+            <a
+              href={recruitment.notificationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              View Official Notification
+            </a>
+          </div>
+        )}
+        {!hasOwnFacts && !recruitment.notificationUrl && (
+          <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 px-5 py-4">
+            <p className="text-sm text-neutral-600">
+              Detailed eligibility, vacancy, and salary information for this post has not yet been extracted.
+              Check the recruitment page for updates.
+            </p>
+          </div>
+        )}
 
         {/* ── Q1: What is this? ─────────────────────────────────────────── */}
         <SectionCard className="mb-4">
