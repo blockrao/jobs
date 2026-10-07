@@ -363,10 +363,9 @@ export default async function JobPage({ params }: Props) {
     // has its own leaf at /jobs/{notice-slug}/{post-slug} which carries the JobPosting).
     isHubPage ? null : buildJobPostingSchema(posting as any, org as any, relatedArticles.map((a: any) => a.slug)),
     buildExamEventSchema(posting as any),
-    // Drop the /organizations/{slug} step until that route exists —
-    // a 404 in BreadcrumbList schema degrades Search Console quality.
     buildBreadcrumbSchema([
       { name: "Home", path: "/" },
+      { name: "Jobs", path: "/jobs" },
       { name: posting.title, path: `/jobs/${posting.slug}` },
     ]),
     buildFAQSchema(faqs),
@@ -447,15 +446,7 @@ export default async function JobPage({ params }: Props) {
       <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1 text-xs text-neutral-400">
         <Link href="/" className="hover:text-neutral-700 hover:underline">Home</Link>
         <ChevronRight className="h-3 w-3" />
-        {posting.canonicalRecruitment && (
-          <>
-            <Link href={`/jobs/${posting.canonicalRecruitment.slug}`} className="hover:text-neutral-700 hover:underline">
-              {posting.canonicalRecruitment.name}
-            </Link>
-            <ChevronRight className="h-3 w-3" />
-          </>
-        )}
-        <Link href={orgHref} className="hover:text-neutral-700 hover:underline">{org.name}</Link>
+        <Link href="/jobs" className="hover:text-neutral-700 hover:underline">Jobs</Link>
         <ChevronRight className="h-3 w-3" />
         <span className="text-neutral-600">{posting.title}</span>
       </nav>
@@ -489,7 +480,7 @@ export default async function JobPage({ params }: Props) {
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-500">
             <span className="inline-flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5" />
-              <Link href={orgHref} className="font-medium text-neutral-700 hover:underline">{org.name}</Link>
+              <Link href={`/jobs?org=${encodeURIComponent(org.slug)}`} className="font-medium text-neutral-700 hover:underline">{org.name}</Link>
             </span>
             {(posting.locationCity || stateHub) && (
               <span className="inline-flex items-center gap-1.5">
