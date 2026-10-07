@@ -117,6 +117,7 @@ function buildFallbackDescription({
   recruitment,
   selectionProcesses,
   fees,
+  officialNotificationUrl,
 }: {
   post: NonNullable<Awaited<ReturnType<typeof getData>>>["post"];
   org: { name: string; websiteUrl?: string | null };
