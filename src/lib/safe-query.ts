@@ -13,6 +13,10 @@
  * (fallback: null, matching what "not found" already looks like in every
  * one of these queries) lets a transient DB hiccup degrade to that same
  * path instead of a hard crash.
+ *
+ * DIAGNOSTIC: errors are logged with full detail so they surface in Vercel
+ * function logs rather than silently becoming 404s. When the error is
+ * persistent (not transient), the log shows the actual exception.
  */
 export async function safeQuery<T>(
   fn: () => Promise<T>,
@@ -21,7 +25,17 @@ export async function safeQuery<T>(
   try {
     return await fn();
   } catch (error) {
-    console.error("safeQuery: query failed, using fallback", error);
+    // Log with enough structure to diagnose in Vercel logs.
+    // A missing record is not an error (queries return null); only thrown
+    // exceptions reach here, which means a real DB/query failure.
+    console.error(
+      "[safeQuery] DB query threw — returning fallback instead of crashing.",
+      {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : typeof error,
+        errorStack: error instanceof Error ? error.stack?.split("\n").slice(0, 5).join(" | ") : undefined,
+      }
+    );
     return fallback;
   }
 }

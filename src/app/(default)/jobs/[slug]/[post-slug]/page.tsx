@@ -48,7 +48,11 @@ type Props = { params: Promise<{ slug: string; "post-slug": string }> };
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
 async function getData(slug: string, postSlug: string) {
-  const result = await safeQuery(() => getPostBySlug(slug, postSlug), null);
+  // Call directly — no safeQuery here — so any DB exception propagates to the
+  // outer safeQuery in PostLeafPage, which logs it with full detail rather than
+  // silently turning it into a 404. A null return (record not found) is not an
+  // exception and is handled by the null check below.
+  const result = await getPostBySlug(slug, postSlug);
   if (!result) return null;
 
   const siblings = await safeQuery(
@@ -63,7 +67,7 @@ async function getData(slug: string, postSlug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, "post-slug": postSlug } = await params;
-  const data = await getData(slug, postSlug);
+  const data = await safeQuery(() => getData(slug, postSlug), null);
   if (!data) return {};
 
   const { post, recruitment } = data;
@@ -270,7 +274,12 @@ function FactCell({ label, value, accent }: { label: string; value: React.ReactN
 export default async function PostLeafPage({ params }: Props) {
   const { slug, "post-slug": postSlug } = await params;
   const data = await safeQuery(() => getData(slug, postSlug), null);
-  if (!data) notFound();
+  if (!data) {
+    // If safeQuery caught an exception, it already logged it above.
+    // If getData returned null, the record simply doesn't exist.
+    console.info("[PostLeafPage] notFound: getData returned null", { slug, postSlug });
+    notFound();
+  }
 
   const { post, recruitment, siblings } = data;
   const org = recruitment.organization;
@@ -288,7 +297,21 @@ export default async function PostLeafPage({ params }: Props) {
     post.payLevel != null ||
     post.description != null;
 
-  if (!hasOwnFacts) notFound();
+  if (!hasOwnFacts) {
+    console.info("[PostLeafPage] notFound: hasOwnFacts=false", {
+      slug,
+      postSlug,
+      postId: post.id,
+      salaryMin: post.salaryMin,
+      salaryMax: post.salaryMax,
+      payLevel: post.payLevel,
+      hasDescription: post.description != null,
+      eligCount: post.eligibilities.length,
+      ageRulesCount: post.ageRules.length,
+      vacancyCount: post.vacancies.length,
+    });
+    notFound();
+  }
 
   const verifiedElig = post.eligibilities.find((e) => e.status === "VERIFIED") ?? post.eligibilities[0];
   const otherPosts = siblings.filter((s) => s.slug !== post.slug);
