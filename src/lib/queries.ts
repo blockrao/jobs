@@ -567,3 +567,195 @@ export async function countCurrentPostingsByCommission(): Promise<Record<number,
   for (const r of rows) if (r.commissionId != null) out[r.commissionId] = Math.min(r.n, 200);
   return out;
 }
+
+// ── Jobs Control Center data ──────────────────────────────────────────────────
+// Powers the /posts page: headline stats, deadline heatmap, top-org table,
+// and the full paginated job list. All queries hit recruitments + posts only.
+
+export interface ControlCenterStats {
+  activeRecruitments: number;
+  totalPosts: number;
+  totalVacancies: number;
+  orgsHiring: number;
+  closingThisWeek: number;   // within 7 days
+  closingThisMonth: number;  // within 30 days
+  upcomingCount: number;
+}
+
+export interface DeadlineBucket {
+  label: string;
+  recruitments: number;
+  vacancies: number;
+  urgency: "critical" | "high" | "medium" | "low" | "none";
+}
+
+export interface TopOrg {
+  orgName: string;
+  orgSlug: string;
+  postCount: number;
+  vacancies: number | null;
+  earliestDeadline: Date | null;
+}
+
+export interface JobRow {
+  recruitmentId: number;
+  recruitmentSlug: string;
+  recruitmentName: string;
+  orgName: string;
+  status: string;
+  applicationEndDate: Date | null;
+  applicationStartDate: Date | null;
+  totalVacancies: number | null;
+  postCount: number;
+  postNames: string;
+  daysRemaining: number | null;
+  locationStateCode: string | null;
+}
+
+export async function getJobsControlCenter(): Promise<{
+  stats: ControlCenterStats;
+  deadlineBuckets: DeadlineBucket[];
+  topOrgs: TopOrg[];
+  jobs: JobRow[];
+}> {
+  if (!hasDb()) {
+    return {
+      stats: { activeRecruitments: 0, totalPosts: 0, totalVacancies: 0, orgsHiring: 0, closingThisWeek: 0, closingThisMonth: 0, upcomingCount: 0 },
+      deadlineBuckets: [],
+      topOrgs: [],
+      jobs: [],
+    };
+  }
+  const db = getDb();
+
+  const [statsRows, bucketRows, orgRows, jobRows] = await Promise.all([
+    // Headline stats
+    db.execute(sql`
+      SELECT
+        COUNT(DISTINCT r.id)::int AS active_recruitments,
+        COUNT(po.id)::int AS total_posts,
+        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        COUNT(DISTINCT r.organization_id)::int AS orgs_hiring,
+        COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_this_week,
+        COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '30 days')::int AS closing_this_month,
+        COUNT(DISTINCT r.id) FILTER (WHERE r.status = 'UPCOMING')::int AS upcoming_count
+      FROM public.recruitments r
+      JOIN public.posts po ON po.recruitment_id = r.id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+    `),
+
+    // Deadline buckets (exclude expired)
+    db.execute(sql`
+      SELECT
+        CASE
+          WHEN r.application_end_date IS NULL THEN 'No Deadline'
+          WHEN r.application_end_date <= NOW() + INTERVAL '3 days' THEN 'Closing in 3 Days'
+          WHEN r.application_end_date <= NOW() + INTERVAL '7 days' THEN 'This Week'
+          WHEN r.application_end_date <= NOW() + INTERVAL '15 days' THEN 'Next 2 Weeks'
+          WHEN r.application_end_date <= NOW() + INTERVAL '30 days' THEN 'This Month'
+          ELSE 'Later'
+        END AS label,
+        COUNT(DISTINCT r.id)::int AS recruitments,
+        COALESCE(SUM(po.vacancy_total), 0)::int AS vacancies
+      FROM public.recruitments r
+      JOIN public.posts po ON po.recruitment_id = r.id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
+      GROUP BY 1
+      ORDER BY MIN(r.application_end_date) NULLS LAST
+    `),
+
+    // Top orgs by vacancy count
+    db.execute(sql`
+      SELECT
+        o.name AS org_name,
+        o.slug AS org_slug,
+        COUNT(po.id)::int AS post_count,
+        COALESCE(SUM(po.vacancy_total), 0)::int AS vacancies,
+        MIN(r.application_end_date) AS earliest_deadline
+      FROM public.organizations o
+      JOIN public.recruitments r ON r.organization_id = o.id
+      JOIN public.posts po ON po.recruitment_id = r.id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+      GROUP BY o.id, o.name, o.slug
+      ORDER BY vacancies DESC NULLS LAST
+      LIMIT 12
+    `),
+
+    // Job list — active + upcoming, non-expired, ordered by deadline
+    db.execute(sql`
+      SELECT
+        r.id AS recruitment_id,
+        r.slug AS recruitment_slug,
+        r.name AS recruitment_name,
+        o.name AS org_name,
+        r.status,
+        r.application_end_date,
+        r.application_start_date,
+        r.total_vacancies,
+        COUNT(po.id)::int AS post_count,
+        STRING_AGG(po.name, ' · ' ORDER BY po.vacancy_total DESC NULLS LAST) AS post_names,
+        EXTRACT(DAY FROM (r.application_end_date - NOW()))::int AS days_remaining,
+        r.location_state_code
+      FROM public.recruitments r
+      JOIN public.organizations o ON o.id = r.organization_id
+      JOIN public.posts po ON po.recruitment_id = r.id
+      WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
+      GROUP BY r.id, o.name
+      ORDER BY r.application_end_date ASC NULLS LAST
+      LIMIT 300
+    `),
+  ]);
+
+  const s = (statsRows.rows[0] ?? {}) as Record<string, unknown>;
+  const stats: ControlCenterStats = {
+    activeRecruitments: Number(s.active_recruitments ?? 0),
+    totalPosts: Number(s.total_posts ?? 0),
+    totalVacancies: Number(s.total_vacancies ?? 0),
+    orgsHiring: Number(s.orgs_hiring ?? 0),
+    closingThisWeek: Number(s.closing_this_week ?? 0),
+    closingThisMonth: Number(s.closing_this_month ?? 0),
+    upcomingCount: Number(s.upcoming_count ?? 0),
+  };
+
+  const urgencyMap: Record<string, DeadlineBucket["urgency"]> = {
+    "Closing in 3 Days": "critical",
+    "This Week": "high",
+    "Next 2 Weeks": "medium",
+    "This Month": "low",
+    "Later": "none",
+    "No Deadline": "none",
+  };
+  const deadlineBuckets: DeadlineBucket[] = (bucketRows.rows as Record<string, unknown>[]).map((r) => ({
+    label: String(r.label),
+    recruitments: Number(r.recruitments),
+    vacancies: Number(r.vacancies),
+    urgency: urgencyMap[String(r.label)] ?? "none",
+  }));
+
+  const topOrgs: TopOrg[] = (orgRows.rows as Record<string, unknown>[]).map((r) => ({
+    orgName: String(r.org_name),
+    orgSlug: String(r.org_slug),
+    postCount: Number(r.post_count),
+    vacancies: r.vacancies != null ? Number(r.vacancies) : null,
+    earliestDeadline: r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null,
+  }));
+
+  const jobs: JobRow[] = (jobRows.rows as Record<string, unknown>[]).map((r) => ({
+    recruitmentId: Number(r.recruitment_id),
+    recruitmentSlug: String(r.recruitment_slug),
+    recruitmentName: String(r.recruitment_name),
+    orgName: String(r.org_name),
+    status: String(r.status),
+    applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
+    applicationStartDate: r.application_start_date ? new Date(String(r.application_start_date)) : null,
+    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    postCount: Number(r.post_count),
+    postNames: String(r.post_names ?? ""),
+    daysRemaining: r.days_remaining != null ? Number(r.days_remaining) : null,
+    locationStateCode: r.location_state_code ? String(r.location_state_code) : null,
+  }));
+
+  return { stats, deadlineBuckets, topOrgs, jobs };
+}

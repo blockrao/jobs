@@ -76,6 +76,10 @@ export function HomeContent({
     allEmployers: isHi ? "सभी नियोक्ता" : "All employers",
     browseByCategory: isHi ? "श्रेणी अनुसार ब्राउज़ करें" : "Browse by Category",
     guidesArticles: isHi ? "गाइड और लेख" : "Guides & Articles",
+    controlCenterLabel: isHi ? "सभी सरकारी नौकरियां देखें →" : "View all Govt Job Postings →",
+    controlCenterSub: isHi
+      ? "रिक्तियां, अंतिम तिथियां और शीर्ष संगठन एक जगह"
+      : "Vacancies, deadlines & top organisations in one place",
   };
 
   return (
@@ -101,6 +105,15 @@ export function HomeContent({
             {L.search}
           </button>
         </form>
+        <div className="mt-6 flex justify-center">
+          <Link
+            href="/posts"
+            className="inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-5 py-3 text-sm font-semibold text-brand-700 shadow-sm hover:bg-brand-100 transition-colors"
+          >
+            <span>{L.controlCenterLabel}</span>
+            <span className="text-xs font-normal text-brand-500">{L.controlCenterSub}</span>
+          </Link>
+        </div>
       </section>
 
       <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
