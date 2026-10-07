@@ -28,17 +28,15 @@ import { jsonLdGraph, buildBreadcrumbSchema, employmentTypeToSchema } from "@/li
 import { formatDate, formatAgeRange } from "@/lib/labels";
 import { CanonicalPostCard } from "@/components/ui/post-card";
 import {
-  Calendar,
   Users,
-  Banknote,
   ChevronRight,
   ExternalLink,
   FileText,
   Hash,
   GraduationCap,
-  Building2,
   ClipboardList,
   CheckCircle,
+  ArrowUpRight,
 } from "lucide-react";
 
 // Force dynamic rendering — no ISR/edge caching on this page.
@@ -288,7 +286,7 @@ export default async function PostLeafPage({ params }: Props) {
     notFound();
   }
 
-  const { post, recruitment, siblings } = data;
+  const { post, recruitment, siblings, applyUrl } = data;
   const org = recruitment.organization;
   const exam = recruitment.exam;
 
@@ -385,9 +383,6 @@ export default async function PostLeafPage({ params }: Props) {
                 {exam.label}
               </span>
             )}
-            <span className="ml-auto rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-              Q1
-            </span>
           </div>
 
           {/* Title + post name */}
@@ -409,11 +404,11 @@ export default async function PostLeafPage({ params }: Props) {
           <div className="grid grid-cols-2 gap-px border-t border-black/5 bg-black/5 sm:grid-cols-4">
             <FactCell
               label="Vacancies"
-              value={post.vacancyTotal != null ? post.vacancyTotal.toLocaleString("en-IN") : "Not mentioned in notification"}
+              value={post.vacancyTotal != null ? post.vacancyTotal.toLocaleString("en-IN") : "—"}
               accent={post.vacancyTotal != null}
             />
             <FactCell
-              label="Pay Level"
+              label="Pay"
               value={
                 post.payLevel
                   ? (() => {
@@ -425,37 +420,38 @@ export default async function PostLeafPage({ params }: Props) {
                       return level ?? scheme ?? JSON.stringify(post.payLevel);
                     })()
                   : post.salaryMin != null
-                  ? `₹${post.salaryMin.toLocaleString("en-IN")}${post.salaryMax ? "–" + post.salaryMax.toLocaleString("en-IN") : ""}/mo`
-                  : "Not mentioned in notification"
+                  ? `₹${post.salaryMin.toLocaleString("en-IN")}${post.salaryMax && post.salaryMax !== post.salaryMin ? "–" + post.salaryMax.toLocaleString("en-IN") : ""}/mo`
+                  : "—"
               }
+              accent={post.salaryMin != null || post.payLevel != null}
             />
             <FactCell
               label="Last Date"
               value={
                 recruitment.applicationEndDate
                   ? formatDate(recruitment.applicationEndDate, "en-IN")
-                  : "Not mentioned in notification"
+                  : "—"
               }
+              accent={recruitment.applicationEndDate != null}
             />
             <FactCell
               label="Organization"
-              value={
-                post.employingOrganization?.name ?? org.name
-              }
+              value={post.employingOrganization?.name ?? org.name}
             />
             <FactCell
               label="Post Code"
-              value={post.sourcePostCode ?? "Not mentioned in notification"}
+              value={post.sourcePostCode ?? "—"}
             />
             <FactCell
               label="Age (UR)"
-              value={
-                post.ageRules.find((r) => r.category === "UR")
-                  ? `Max ${post.ageRules.find((r) => r.category === "UR")!.maxAge} years`
-                  : verifiedElig?.ageMax
-                  ? `Max ${verifiedElig.ageMax} years`
-                  : "Not mentioned in notification"
-              }
+              value={(() => {
+                // Prefer age_rules table (most precise); fall back to eligibility ageMax;
+                // then fall back to posting-level age limits surfaced via recruitment.
+                const urRule = post.ageRules.find((r: { category: string }) => r.category === "UR");
+                if (urRule?.maxAge != null) return `Up to ${urRule.maxAge} years`;
+                if (verifiedElig?.ageMax != null) return `Up to ${verifiedElig.ageMax} years`;
+                return "—";
+              })()}
             />
             <FactCell
               label="Qualification"
@@ -464,17 +460,28 @@ export default async function PostLeafPage({ params }: Props) {
                   ? verifiedElig.qualificationText.length > 40
                     ? verifiedElig.qualificationText.slice(0, 40) + "…"
                     : verifiedElig.qualificationText
-                  : "Not mentioned in notification"
+                  : "—"
               }
             />
             <FactCell
               label="Position"
-              value={post.position?.name ?? "Not mentioned in notification"}
+              value={post.position?.name ?? post.name}
             />
           </div>
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-2 border-t border-black/5 px-5 py-3">
+            {applyUrl && (
+              <a
+                href={applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              >
+                Apply Now
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            )}
             {recruitment.notificationUrl && (
               <a
                 href={recruitment.notificationUrl}
@@ -492,10 +499,9 @@ export default async function PostLeafPage({ params }: Props) {
           <div className="flex items-center gap-2 rounded-b-xl border-t border-black/5 bg-neutral-50 px-5 py-2">
             <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
             <p className="text-xs text-neutral-500">
-              Facts from official notification.{" "}
               {post.eligibilities.some((e) => e.status === "VERIFIED")
-                ? "Verified by JobOye editors."
-                : "Pending editorial review."}
+                ? "Verified from official notification."
+                : "Sourced from official notification. Some details may be added as they are verified."}
             </p>
           </div>
         </SectionCard>
@@ -503,7 +509,7 @@ export default async function PostLeafPage({ params }: Props) {
         {/* ── Q2: Can I apply? ──────────────────────────────────────────── */}
         {verifiedElig && (
           <SectionCard className="mb-4">
-            <SectionHeader icon={GraduationCap} title="Can I Apply?" label="Q2" />
+            <SectionHeader icon={GraduationCap} title="Can I Apply?" />
             <div className="px-5 py-4 space-y-3">
               {verifiedElig.ageMax != null && (
                 <div>
@@ -548,7 +554,7 @@ export default async function PostLeafPage({ params }: Props) {
         {/* ── Q3: What do I need? ───────────────────────────────────────── */}
         {post.ageRules.length > 0 && (
           <SectionCard className="mb-4">
-            <SectionHeader icon={Users} title="Age Limits by Category" label="Q3" />
+            <SectionHeader icon={Users} title="Age Limits by Category" />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -606,10 +612,19 @@ export default async function PostLeafPage({ params }: Props) {
 
         {/* ── Q4: How does it work? ─────────────────────────────────────── */}
         <SectionCard className="mb-4">
-          <SectionHeader icon={ClipboardList} title="How to Apply" label="Q4" />
+          <SectionHeader icon={ClipboardList} title="How to Apply" />
           <div className="px-5 py-4 space-y-2 text-sm text-neutral-700">
-            <p>Applications are submitted through the official online portal. Only the{" "}
-              <strong>{org.name}</strong> official website should be used — do not use third-party services.</p>
+            <p>
+              Applications must be submitted through the{" "}
+              {applyUrl ? (
+                <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">
+                  official {org.name} portal
+                </a>
+              ) : (
+                <strong>{org.name}</strong>
+              )}{" "}
+              official website. Do not use third-party services.
+            </p>
           </div>
           {recruitment.notificationUrl && (
             <>
@@ -633,7 +648,7 @@ export default async function PostLeafPage({ params }: Props) {
         {/* ── Q5: What's next? ──────────────────────────────────────────── */}
         {otherPosts.length > 0 && (
           <SectionCard className="mb-4">
-            <SectionHeader icon={Hash} title={`Other Posts in This Notice (${otherPosts.length})`} label="Q5" />
+            <SectionHeader icon={Hash} title={`Other Posts in This Notice (${otherPosts.length})`} />
             <div className="space-y-3 p-5">
               {otherPosts.map((p, i) => (
                 <CanonicalPostCard

@@ -432,7 +432,17 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     return null;
   }
 
-  return { post, recruitment };
+  // Fetch apply_url from the associated posting (postings.inferred_recruitment_id → recruitment.id).
+  // The leaf page needs this to render an Apply Now CTA; it lives on postings not recruitments.
+  const applyUrl = await db
+    .select({ applyUrl: postings.applyUrl })
+    .from(postings)
+    .where(eq(postings.inferredRecruitmentId, recruitment.id))
+    .limit(1)
+    .catch(() => [])
+    .then((rows) => rows[0]?.applyUrl ?? null);
+
+  return { post, recruitment, applyUrl };
 }
 
 /**
