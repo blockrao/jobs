@@ -114,7 +114,7 @@ export default async function PostPage({ params }: Props) {
           "@type": "ListItem",
           position: i + 1,
           url: absoluteUrl(`/jobs/${p.recruitmentSlug}`),
-          name: p.recruitmentName,
+          name: p.postName,
         })),
       }
     : null;
@@ -180,9 +180,11 @@ export default async function PostPage({ params }: Props) {
                       href={`/jobs/${p.recruitmentSlug}`}
                       className="font-semibold text-neutral-900 hover:text-blue-700 hover:underline text-lg leading-snug block"
                     >
-                      {p.recruitmentName}
+                      {p.postName}
                     </Link>
                     <div className="text-sm text-neutral-500 mt-1">
+                      <span className="text-neutral-400">{p.recruitmentName}</span>
+                      <span className="mx-2">·</span>
                       <span>{p.organizationName}</span>
                       {p.vacancyTotal && (
                         <>
@@ -247,9 +249,11 @@ export default async function PostPage({ params }: Props) {
                     href={`/jobs/${p.recruitmentSlug}`}
                     className="font-medium text-neutral-700 hover:text-blue-700 hover:underline"
                   >
-                    {p.recruitmentName}
+                    {p.postName}
                   </Link>
                   <div className="text-sm text-neutral-400 mt-0.5">
+                    {p.recruitmentName}
+                    <span className="mx-2">·</span>
                     {p.organizationName}
                     {p.vacancyTotal && (
                       <>
