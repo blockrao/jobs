@@ -26,10 +26,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = `Find all active ${role.name} government job recruitments on JobOye. View vacancy counts, eligibility criteria, application dates and official notification links from verified sources.`;
   const seo = pageSeo(`/posts/${role.slug}`);
 
+  // Noindex role pages with no recruitment data (PQ-007).
+  // A page with zero total recruitments has nothing for search engines to index
+  // and may be penalised as thin content. Pages with closed/historical
+  // recruitments are still valuable and remain indexed.
+  const stats = await safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 });
+  const hasContent = stats.totalRecruitments > 0;
+
   return {
     title,
     description,
-    alternates: seo.alternates,
+    alternates: hasContent ? seo.alternates : undefined,
+    robots: hasContent ? undefined : { index: false, follow: true },
     openGraph: {
       title,
       description,
