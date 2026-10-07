@@ -100,14 +100,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
-  // PQ-006: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
-  // Priority 0.75 (slightly below the notice hub at 0.8; the leaf has the
-  // structured-data JobPosting and the per-post eligibility / vacancy facts).
+  // PQ-006 / PQ-007: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
+  //
+  // Sitemap policy (Phase 1B):
+  //   - All Posts included regardless of LIVE status (expired Posts retain historical SEO value).
+  //   - JobPosting structured data is suppressed at render time for expired recruitments (separate concern).
+  //   - changeFrequency and priority differentiate LIVE vs. historical Posts.
+  //   - lastmod = GREATEST(posts.updatedAt, recruitments.updatedAt): most recent meaningful change.
   const postLeafEntries: MetadataRoute.Sitemap = postLeafRows.map((row) => ({
     url: `${SITE_URL}/jobs/${row.recruitmentSlug}/${row.postSlug}`,
-    lastModified: row.updatedAt ?? undefined,
-    changeFrequency: "weekly" as const,
-    priority: 0.75,
+    lastModified: row.lastModified ?? undefined,
+    changeFrequency: row.isLive ? ("weekly" as const) : ("yearly" as const),
+    priority: row.isLive ? 0.75 : 0.5,
   }));
 
   // State hubs enter the sitemap only while they list at least one current job (thin hubs are noindex).

@@ -485,13 +485,28 @@ export async function getPostsForRecruitment(recruitmentId: number) {
 export async function getPostSlugsForSitemap() {
   if (!hasDb()) return [];
   const db = getDb();
-  // We only emit leaf-page URLs for posts that have at least one of: own eligibility, age rule, or vacancy.
-  // For now we emit all posts with a slug (the own-facts check happens at render).
+  // Phase 1B sitemap policy (PQ-007):
+  //   Indexability  — all Post pages are indexable (HTTP 200, self-canonical), including expired.
+  //   Sitemap       — all 1,368 Posts with valid slugs are submitted; no LIVE-only filter.
+  //   JobPosting SD — suppressed at render time for expired/RESULTS/ARCHIVED (existing logic).
+  //
+  // is_live drives changeFrequency and priority in sitemap.ts:
+  //   LIVE  (ACTIVE/UPCOMING, application window open) → "weekly" / 0.75
+  //   historical (application window closed)           → "yearly"  / 0.5
+  //
+  // lastmod = GREATEST(posts.updatedAt, recruitments.updatedAt): captures Post-level edits
+  // (vacancies, source_post_code) and Recruitment-level changes (status, date corrections).
+  // contentChangedAt does not exist on posts or recruitments (only on the postings ingest table).
   const rows = await db
     .select({
       recruitmentSlug: recruitments.slug,
       postSlug: posts.slug,
-      updatedAt: posts.updatedAt,
+      lastModified: sql<Date>`GREATEST(${posts.updatedAt}, ${recruitments.updatedAt})`,
+      isLive: sql<boolean>`
+        (${recruitments.status} IN ('ACTIVE', 'UPCOMING')
+         AND (${recruitments.applicationEndDate} IS NULL
+              OR ${recruitments.applicationEndDate} > NOW()))
+      `,
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
