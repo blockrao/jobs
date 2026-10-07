@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
-import { absoluteUrl, SITE_NAME } from "@/lib/site";
+import { absoluteUrl } from "@/lib/site";
 import { getRoleBySlug, ROLE_REGISTRY } from "@/lib/roles";
 import { getPostsForRole, getRoleStats } from "@/db/operations/get-roles";
 import { safeQuery } from "@/lib/safe-query";
-import { StatTile } from "@/components/ui/stat-tile";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const revalidate = 3600;
@@ -59,18 +58,27 @@ function isActive(status: string, applicationEndDate: Date | null | undefined): 
   return false;
 }
 
-/** Deadline urgency: returns days remaining, or null if no date */
 function daysRemaining(applicationEndDate: Date | null | undefined): number | null {
   if (!applicationEndDate) return null;
-  const diff = new Date(applicationEndDate).getTime() - Date.now();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  return Math.ceil((new Date(applicationEndDate).getTime() - Date.now()) / 86400000);
 }
 
 /** Post leaf URL when postSlug exists, else fall back to recruitment hub */
 function postUrl(recruitmentSlug: string, postSlug: string | null | undefined): string {
-  return postSlug
-    ? `/jobs/${recruitmentSlug}/${postSlug}`
-    : `/jobs/${recruitmentSlug}`;
+  return postSlug ? `/jobs/${recruitmentSlug}/${postSlug}` : `/jobs/${recruitmentSlug}`;
+}
+
+/** Human-readable application status label for active posts */
+function applicationStatusLabel(applicationEndDate: Date | null | undefined, recruitmentStatus: string): string {
+  const days = daysRemaining(applicationEndDate);
+  if (days !== null) {
+    if (days <= 0) return "Closing today";
+    if (days === 1) return "Closing tomorrow";
+    if (days <= 7) return `Closing in ${days} days`;
+    return `Applications open · Last date ${formatDate(applicationEndDate)}`;
+  }
+  if (recruitmentStatus === "ACTIVE") return "Applications open";
+  return "";
 }
 
 export default async function PostPage({ params }: Props) {
@@ -83,38 +91,26 @@ export default async function PostPage({ params }: Props) {
     safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 }),
   ]);
 
-  // Derive distinct organizations from the role's posts (already joined).
+  // Derive distinct organizations
   const orgMap = new Map<number, { id: number; name: string; slug: string }>();
   for (const p of rolePosts) {
     if (!orgMap.has(p.organizationId)) {
-      orgMap.set(p.organizationId, {
-        id: p.organizationId,
-        name: p.organizationName,
-        slug: p.organizationSlug,
-      });
+      orgMap.set(p.organizationId, { id: p.organizationId, name: p.organizationName, slug: p.organizationSlug });
     }
   }
-  const recruitingOrgs = Array.from(orgMap.values()).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  const recruitingOrgs = Array.from(orgMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
-  // Separate active vs closed
   const activePosts = rolePosts.filter((p) => isActive(p.recruitmentStatus, p.applicationEndDate));
   const closedPosts = rolePosts.filter((p) => !isActive(p.recruitmentStatus, p.applicationEndDate));
 
-  // Occupation schema for the role entity itself
   const occupationSchema = {
     "@type": "Occupation",
     "@id": absoluteUrl(`/posts/${role.slug}#occupation`),
     name: role.name,
     description: role.description,
-    occupationLocation: {
-      "@type": "Country",
-      name: "India",
-    },
+    occupationLocation: { "@type": "Country", name: "India" },
   };
 
-  // ItemList of active job postings — point to post leaf when postSlug exists
   const itemListSchema = activePosts.length > 0
     ? {
         "@type": "ItemList",
@@ -144,7 +140,7 @@ export default async function PostPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
 
-      {/* Page header band */}
+      {/* Page header */}
       <div className="bg-white border-b border-neutral-200">
         <div className="max-w-4xl mx-auto px-4 pt-6 pb-8">
           <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400 mb-4">
@@ -160,8 +156,8 @@ export default async function PostPage({ params }: Props) {
             {role.description}
           </p>
 
-          {/* Stats row */}
-          {(stats.activeRecruitments > 0 || stats.totalVacancies > 0 || stats.totalRecruitments > 0) && (
+          {/* Stats — only meaningful candidate-facing numbers */}
+          {(stats.activeRecruitments > 0 || stats.totalVacancies > 0) && (
             <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t border-neutral-100">
               {stats.activeRecruitments > 0 && (
                 <div>
@@ -175,12 +171,6 @@ export default async function PostPage({ params }: Props) {
                   <div className="text-xs text-neutral-500 mt-0.5">Total vacancies</div>
                 </div>
               )}
-              {stats.totalRecruitments > 0 && (
-                <div>
-                  <div className="text-2xl font-bold text-neutral-700">{stats.totalRecruitments}</div>
-                  <div className="text-xs text-neutral-500 mt-0.5">Recruitments tracked</div>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -189,11 +179,11 @@ export default async function PostPage({ params }: Props) {
       {/* Main content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
 
-        {/* Open Now */}
-        {activePosts.length > 0 && (
+        {/* Open Opportunities */}
+        {activePosts.length > 0 ? (
           <section className="mb-10">
             <div className="flex items-center gap-3 mb-5">
-              <h2 className="text-xl font-semibold text-neutral-900">Open Now</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">Open Opportunities</h2>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                 {activePosts.length} active
@@ -204,49 +194,50 @@ export default async function PostPage({ params }: Props) {
                 const days = daysRemaining(p.applicationEndDate);
                 const isUrgent = days !== null && days <= 7;
                 const href = postUrl(p.recruitmentSlug, p.postSlug);
+                const statusLabel = applicationStatusLabel(p.applicationEndDate, p.recruitmentStatus);
                 return (
                   <div
                     key={p.postId}
-                    className="bg-white rounded-xl border-l-4 border-l-blue-500 border border-neutral-200 border-l-[4px] shadow-sm hover:shadow-md hover:border-blue-400 transition-all"
+                    className="bg-white rounded-xl border border-neutral-200 border-l-4 border-l-blue-500 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
                   >
                     <div className="p-5">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          {/* Post identity */}
+                          {/* Post name — primary identity */}
                           <Link
                             href={href}
                             className="font-semibold text-neutral-900 hover:text-blue-700 text-lg leading-snug block mb-1"
                           >
                             {p.postName}
                           </Link>
-                          <div className="text-sm text-neutral-500 mb-3">
+                          {/* Recruitment name — secondary context */}
+                          <div className="text-sm text-neutral-400 mb-3">
                             {p.recruitmentName}
                           </div>
 
-                          {/* Key facts row */}
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                            <span className="text-neutral-600 font-medium">{p.organizationName}</span>
+                          {/* Key facts */}
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                            <span className="font-medium text-neutral-700">{p.organizationName}</span>
 
-                            {p.vacancyTotal && (
-                              <span className="text-neutral-500">
-                                <span className="font-medium text-neutral-700">{p.vacancyTotal.toLocaleString("en-IN")}</span> vacancies
-                              </span>
+                            {/* State — only when explicitly set on org */}
+                            {p.organizationState && (
+                              <>
+                                <span className="text-neutral-300">·</span>
+                                <span className="text-neutral-500">{p.organizationState}</span>
+                              </>
                             )}
 
-                            {p.applicationEndDate && (
-                              <span className={isUrgent ? "text-red-600 font-medium" : "text-neutral-500"}>
-                                Last date: {formatDate(p.applicationEndDate)}
-                                {isUrgent && days !== null && days > 0 && (
-                                  <span className="ml-1">({days}d left)</span>
-                                )}
-                                {isUrgent && days !== null && days <= 0 && (
-                                  <span className="ml-1">(today)</span>
-                                )}
-                              </span>
+                            {p.vacancyTotal && (
+                              <>
+                                <span className="text-neutral-300">·</span>
+                                <span className="text-neutral-600">
+                                  <span className="font-medium text-neutral-800">{p.vacancyTotal.toLocaleString("en-IN")}</span> vacancies
+                                </span>
+                              </>
                             )}
                           </div>
 
-                          {/* Pay range */}
+                          {/* Pay */}
                           {(p.salaryMin || p.salaryMax) && (
                             <div className="text-sm text-neutral-500 mt-1.5">
                               Pay:{" "}
@@ -258,9 +249,16 @@ export default async function PostPage({ params }: Props) {
                               </span>
                             </div>
                           )}
+
+                          {/* Application status — text, not just colour */}
+                          {statusLabel && (
+                            <div className={`text-xs mt-2 font-medium ${isUrgent ? "text-red-600" : "text-emerald-600"}`}>
+                              {statusLabel}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Actions */}
+                        {/* CTA */}
                         <div className="flex sm:flex-col items-center sm:items-end gap-3 shrink-0">
                           <Link
                             href={href}
@@ -290,6 +288,24 @@ export default async function PostPage({ params }: Props) {
               })}
             </div>
           </section>
+        ) : (
+          /* Zero-active state — clear notice before past opportunities */
+          closedPosts.length > 0 && (
+            <div className="mb-8 rounded-xl border border-neutral-200 bg-white px-5 py-4 flex items-start gap-3">
+              <span className="mt-0.5 text-neutral-400 shrink-0">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M10 6v4M10 13h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <div>
+                <p className="font-medium text-neutral-700 text-sm">No current openings</p>
+                <p className="text-neutral-500 text-sm mt-0.5">
+                  There are no active {role.name} recruitments right now. Past opportunities are listed below.
+                </p>
+              </div>
+            </div>
+          )
         )}
 
         {/* Past Opportunities — compact table */}
@@ -300,16 +316,16 @@ export default async function PostPage({ params }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide">Year</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide w-16">Year</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide">Post · Recruitment</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide hidden sm:table-cell">Organisation</th>
-                    <th className="text-right px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide hidden sm:table-cell">Vacancies</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wide hidden sm:table-cell w-24">Vacancies</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {closedPosts.map((p) => (
                     <tr key={p.postId} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-4 py-3 text-neutral-400 whitespace-nowrap align-top">
+                      <td className="px-4 py-3 text-neutral-400 whitespace-nowrap align-top text-xs">
                         {p.recruitmentYear}
                       </td>
                       <td className="px-4 py-3 align-top">
@@ -320,14 +336,15 @@ export default async function PostPage({ params }: Props) {
                           {p.postName}
                         </Link>
                         <span className="text-neutral-400 text-xs block mt-0.5 sm:hidden">
-                          {p.organizationName}
+                          {p.organizationName}{p.organizationState && `, ${p.organizationState}`}
                         </span>
                         <span className="text-neutral-400 text-xs block mt-0.5">
                           {p.recruitmentName}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-neutral-500 hidden sm:table-cell align-top">
+                      <td className="px-4 py-3 text-neutral-500 text-sm hidden sm:table-cell align-top">
                         {p.organizationName}
+                        {p.organizationState && <span className="text-neutral-400">, {p.organizationState}</span>}
                       </td>
                       <td className="px-4 py-3 text-right text-neutral-500 hidden sm:table-cell align-top whitespace-nowrap">
                         {p.vacancyTotal ? p.vacancyTotal.toLocaleString("en-IN") : "—"}
@@ -368,7 +385,20 @@ export default async function PostPage({ params }: Props) {
           </section>
         )}
 
-        {/* Empty state */}
+        {/* About the role — evergreen, below transactional content */}
+        <section className="mb-10 pt-8 border-t border-neutral-200">
+          <h2 className="text-xl font-semibold text-neutral-900 mb-3">About {role.name} Roles</h2>
+          <p className="text-neutral-600 leading-relaxed max-w-2xl">
+            {role.description}
+          </p>
+          <p className="text-sm text-neutral-500 mt-3 leading-relaxed max-w-2xl">
+            Vacancies are notified by central and state government bodies throughout the year.
+            Eligibility, application window and selection process vary by recruiting organisation
+            and recruitment cycle. Check official notifications before applying.
+          </p>
+        </section>
+
+        {/* Empty state — no posts at all */}
         {rolePosts.length === 0 && (
           <div className="py-16 text-center bg-white rounded-xl border border-neutral-200">
             <p className="text-neutral-500 text-lg mb-1">No recruitments on record yet</p>
@@ -379,7 +409,7 @@ export default async function PostPage({ params }: Props) {
         )}
 
         {/* Breadcrumb footer */}
-        <div className="mt-12 pt-6 border-t border-neutral-200 text-sm text-neutral-400">
+        <div className="mt-4 pt-6 border-t border-neutral-200 text-sm text-neutral-400">
           <Link href="/" className="hover:text-neutral-600 transition-colors">Home</Link>
           {" / "}
           <Link href="/posts" className="hover:text-neutral-600 transition-colors">Government Posts</Link>

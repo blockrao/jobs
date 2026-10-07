@@ -23,6 +23,8 @@ export interface RolePost {
   organizationId: number;
   organizationName: string;
   organizationSlug: string;
+  /** State name from organizations.state — only present for GOVERNMENT_STATE orgs */
+  organizationState: string | null;
 }
 
 export interface RoleStats {
@@ -65,6 +67,7 @@ export async function getPostsForRole(role: RoleDefinition): Promise<RolePost[]>
       organizationId: organizations.id,
       organizationName: organizations.name,
       organizationSlug: organizations.slug,
+      organizationState: organizations.state,
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
