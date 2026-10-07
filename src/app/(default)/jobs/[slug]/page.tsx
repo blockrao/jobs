@@ -754,7 +754,8 @@ export default async function JobPage({ params }: Props) {
                   const ageMax = ageRules.length > 0
                     ? Math.max(...ageRules.map((r: any) => r.maxAge ?? -Infinity).filter(isFinite))
                     : null;
-                  const eligibility = (p as any).eligibilities?.[0] ?? null;
+                  const eligibilities = (p as any).eligibilities ?? [];
+                  const eligibility = eligibilities.find((e: any) => e.status === "VERIFIED") ?? eligibilities[0] ?? null;
                   return (
                     <CanonicalPostCard
                       key={p.id}
@@ -770,6 +771,7 @@ export default async function JobPage({ params }: Props) {
                       ageMax={ageMax !== -Infinity && ageMax !== null ? ageMax : null}
                       qualificationText={eligibility?.qualificationText ?? null}
                       educationCategory={eligibility?.educationCategory ?? null}
+                      eligibilityStatus={eligibility?.status ?? null}
                       applyUrl={publicLink(posting.applyUrl) ?? null}
                       employmentType={posting.employmentType ?? null}
                       index={i}

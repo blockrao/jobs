@@ -57,6 +57,7 @@ interface CanonicalPostCardProps {
   ageMax?: number | null;
   qualificationText?: string | null;
   educationCategory?: string | null;
+  eligibilityStatus?: "PENDING" | "VERIFIED" | null;
   applyUrl?: string | null;
   employmentType?: string | null;
   index: number;
@@ -75,6 +76,7 @@ export function CanonicalPostCard({
   ageMax,
   qualificationText,
   educationCategory,
+  eligibilityStatus,
   applyUrl,
   employmentType,
   index,
@@ -112,6 +114,23 @@ export function CanonicalPostCard({
               {qualificationText.length > 120 ? qualificationText.slice(0, 117) + "…" : qualificationText}
             </p>
           )}
+          {eligibilityStatus === "VERIFIED" ? (
+            <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+              <svg className="h-3 w-3 flex-shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="6" fill="currentColor" opacity="0.15"/>
+                <path d="M3.5 6l1.8 1.8L8.5 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Eligibility verified from official notification
+            </p>
+          ) : eligibilityStatus === "PENDING" ? (
+            <p className="mt-1.5 flex items-center gap-1 text-[11px] text-neutral-400">
+              <svg className="h-3 w-3 flex-shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M6 4v2.5l1.5 1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              Details from aggregator · pending verification
+            </p>
+          ) : null}
         </div>
         <Link
           href={href}
