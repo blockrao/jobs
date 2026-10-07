@@ -8,6 +8,18 @@ const nextConfig: NextConfig = {
   },
   headers: async () => [
     {
+      // Prevent Vercel edge from caching post leaf pages — they are
+      // dynamic (force-dynamic) and edge-caching stale 404s was the
+      // root cause of posts appearing broken after the RLS/GRANT fix.
+      source: "/jobs/:slug/:postSlug",
+      headers: [
+        {
+          key: "Cache-Control",
+          value: "no-store",
+        },
+      ],
+    },
+    {
       source: "/(.*)",
       headers: [
         {
