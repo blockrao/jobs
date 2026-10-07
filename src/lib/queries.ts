@@ -465,7 +465,16 @@ export async function getPostsForRecruitment(recruitmentId: number) {
   const db = getDb();
   return db.query.posts.findMany({
     where: eq(posts.recruitmentId, recruitmentId),
-    with: { position: true, ageRules: true },
+    with: {
+      position: true,
+      ageRules: true,
+      // Eligibility for each post — qualification text, age range, education category.
+      // Used by the hub page to render the posts comparison table.
+      eligibilities: {
+        with: { qualification: true },
+        limit: 1,
+      },
+    },
     orderBy: (p, { asc }) => [asc(p.name)],
   });
 }

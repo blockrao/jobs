@@ -55,6 +55,8 @@ interface CanonicalPostCardProps {
   positionName?: string | null;
   ageMin?: number | null;
   ageMax?: number | null;
+  qualificationText?: string | null;
+  educationCategory?: string | null;
   applyUrl?: string | null;
   employmentType?: string | null;
   index: number;
@@ -71,6 +73,8 @@ export function CanonicalPostCard({
   positionName,
   ageMin,
   ageMax,
+  qualificationText,
+  educationCategory,
   applyUrl,
   employmentType,
   index,
@@ -101,6 +105,12 @@ export function CanonicalPostCard({
           <p className="text-sm font-semibold leading-snug text-neutral-900">{name}</p>
           {positionName && positionName !== name && (
             <p className="mt-0.5 text-xs text-neutral-400">{positionName}</p>
+          )}
+          {qualificationText && (
+            <p className="mt-1 text-xs text-neutral-500 leading-snug" title={qualificationText}>
+              <span className="font-medium text-neutral-600">Qualification: </span>
+              {qualificationText.length > 120 ? qualificationText.slice(0, 117) + "…" : qualificationText}
+            </p>
           )}
         </div>
         <Link

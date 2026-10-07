@@ -733,6 +733,71 @@ export default async function JobPage({ params }: Props) {
         </div>
       )}
 
+      {/* ── Posts in This Notice (PQ-006, A-080) ────────────────────────────
+          Rendered immediately after Q1, before the detail sections, so a
+          visitor landing on a multi-post hub sees the full post list first.
+          Two paths:
+            • Canonical: post rows in DB with slugs → clickable leaf pages
+            • Legacy: postNames string[] on the posting → informational only
+      ──────────────────────────────────────────────────────────────────── */}
+      {(() => {
+        if (siblingPosts.length > 0 && posting.canonicalRecruitment) {
+          return (
+            <SectionCard className="mb-4">
+              <SectionHeader icon={Hash} title={`Posts in This Notice (${siblingPosts.length})`} />
+              <div className="space-y-3 p-5">
+                {siblingPosts.map((p: any, i: number) => {
+                  const ageRules: any[] = p.ageRules ?? [];
+                  const ageMin = ageRules.length > 0
+                    ? Math.min(...ageRules.map((r: any) => r.minAge ?? Infinity).filter(isFinite))
+                    : null;
+                  const ageMax = ageRules.length > 0
+                    ? Math.max(...ageRules.map((r: any) => r.maxAge ?? -Infinity).filter(isFinite))
+                    : null;
+                  const eligibility = (p as any).eligibilities?.[0] ?? null;
+                  return (
+                    <CanonicalPostCard
+                      key={p.id}
+                      name={p.name}
+                      slug={p.slug}
+                      recruitmentSlug={posting.canonicalRecruitment!.slug}
+                      vacancyTotal={p.vacancyTotal}
+                      vacancyDetails={p.vacancyDetails}
+                      salaryMin={p.salaryMin}
+                      salaryMax={p.salaryMax}
+                      positionName={p.position?.name}
+                      ageMin={ageMin !== Infinity && ageMin !== null ? ageMin : null}
+                      ageMax={ageMax !== -Infinity && ageMax !== null ? ageMax : null}
+                      qualificationText={eligibility?.qualificationText ?? null}
+                      educationCategory={eligibility?.educationCategory ?? null}
+                      applyUrl={publicLink(posting.applyUrl) ?? null}
+                      employmentType={posting.employmentType ?? null}
+                      index={i}
+                    />
+                  );
+                })}
+              </div>
+            </SectionCard>
+          );
+        }
+
+        const legacyNames = (posting.postNames as string[] | null) ?? [];
+        if (legacyNames.length > 0) {
+          return (
+            <SectionCard className="mb-4">
+              <SectionHeader icon={Hash} title={`Posts in This Notice (${legacyNames.length})`} />
+              <div className="space-y-3 p-5">
+                {legacyNames.map((name: string, i: number) => (
+                  <LegacyPostCard key={name} name={name} index={i} />
+                ))}
+              </div>
+            </SectionCard>
+          );
+        }
+
+        return null;
+      })()}
+
       <div className="space-y-4">
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -1247,69 +1312,6 @@ export default async function JobPage({ params }: Props) {
           </SectionCard>
         )}
 
-        {/* ── Posts in This Notice (PQ-006, A-080) ────────────────────────────
-            Renders a distinct card per post regardless of whether canonical
-            post rows exist:
-              • Canonical: /jobs/[recruitment-slug]/[post-slug] — clickable
-              • Legacy (postNames only): informational card, no sub-page yet
-        ──────────────────────────────────────────────────────────────────── */}
-        {(() => {
-          // Canonical path: posts table rows exist for this recruitment
-          if (siblingPosts.length > 0 && posting.canonicalRecruitment) {
-            return (
-              <SectionCard>
-                <SectionHeader icon={Hash} title={`Posts in This Notice (${siblingPosts.length})`} />
-                <div className="space-y-3 p-5">
-                  {siblingPosts.map((p: any, i: number) => {
-                    // Derive age range from post's ageRules rows (same logic as leaf page)
-                    const ageRules: any[] = p.ageRules ?? [];
-                    const ageMin = ageRules.length > 0
-                      ? Math.min(...ageRules.map((r: any) => r.minAge ?? Infinity).filter(isFinite))
-                      : null;
-                    const ageMax = ageRules.length > 0
-                      ? Math.max(...ageRules.map((r: any) => r.maxAge ?? -Infinity).filter(isFinite))
-                      : null;
-                    return (
-                      <CanonicalPostCard
-                        key={p.id}
-                        name={p.name}
-                        slug={p.slug}
-                        recruitmentSlug={posting.canonicalRecruitment!.slug}
-                        vacancyTotal={p.vacancyTotal}
-                        vacancyDetails={p.vacancyDetails}
-                        salaryMin={p.salaryMin}
-                        salaryMax={p.salaryMax}
-                        positionName={p.position?.name}
-                        ageMin={ageMin !== Infinity && ageMin !== null ? ageMin : null}
-                        ageMax={ageMax !== -Infinity && ageMax !== null ? ageMax : null}
-                        applyUrl={publicLink(posting.applyUrl) ?? null}
-                        employmentType={posting.employmentType ?? null}
-                        index={i}
-                      />
-                    );
-                  })}
-                </div>
-              </SectionCard>
-            );
-          }
-
-          // Legacy path: postNames string[] on the posting itself
-          const legacyNames = (posting.postNames as string[] | null) ?? [];
-          if (legacyNames.length > 0) {
-            return (
-              <SectionCard>
-                <SectionHeader icon={Hash} title={`Posts in This Notice (${legacyNames.length})`} />
-                <div className="space-y-3 p-5">
-                  {legacyNames.map((name: string, i: number) => (
-                    <LegacyPostCard key={name} name={name} index={i} />
-                  ))}
-                </div>
-              </SectionCard>
-            );
-          }
-
-          return null;
-        })()}
 
         {/* ── FAQ ── */}
         {faqs.length > 0 && (
