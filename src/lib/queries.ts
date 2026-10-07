@@ -374,41 +374,36 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
   }
   const db = getDb();
 
-  // Resolve the recruitment first
-  let recruitment: Awaited<ReturnType<typeof db.query.recruitments.findFirst>> | undefined;
-  try {
-    recruitment = await db.query.recruitments.findFirst({
-      where: eq(recruitments.slug, recruitmentSlug),
-      with: { organization: true, exam: true },
-    });
-  } catch (err) {
+  // Resolve the recruitment first — inferred type includes { organization, exam }
+  const recruitment = await db.query.recruitments.findFirst({
+    where: eq(recruitments.slug, recruitmentSlug),
+    with: { organization: true, exam: true },
+  }).catch((err: unknown) => {
     console.error("[getPostBySlug] recruitments query threw", {
       recruitmentSlug,
       err: err instanceof Error ? err.message : String(err),
     });
-    throw err; // re-throw so safeQuery logs it properly
-  }
+    throw err;
+  });
   if (!recruitment) {
     console.info("[getPostBySlug] recruitment not found", { recruitmentSlug });
     return null;
   }
 
-  let post: Awaited<ReturnType<typeof db.query.posts.findFirst>> | undefined;
-  try {
-    post = await db.query.posts.findFirst({
-      where: and(
-        eq(posts.recruitmentId, recruitment.id),
-        eq(posts.slug, postSlug),
-      ),
-      with: {
-        position: true,
-        eligibilities: true,
-        vacancies: true,
-        ageRules: true,
-        employingOrganization: true,
-      },
-    });
-  } catch (err) {
+  // Resolve the post — inferred type includes { position, eligibilities, vacancies, ageRules, employingOrganization }
+  const post = await db.query.posts.findFirst({
+    where: and(
+      eq(posts.recruitmentId, recruitment.id),
+      eq(posts.slug, postSlug),
+    ),
+    with: {
+      position: true,
+      eligibilities: true,
+      vacancies: true,
+      ageRules: true,
+      employingOrganization: true,
+    },
+  }).catch((err: unknown) => {
     console.error("[getPostBySlug] posts query threw", {
       recruitmentSlug,
       postSlug,
@@ -416,7 +411,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
       err: err instanceof Error ? err.message : String(err),
     });
     throw err;
-  }
+  });
   if (!post) {
     console.info("[getPostBySlug] post not found", { recruitmentSlug, postSlug, recruitmentId: recruitment.id });
     return null;
