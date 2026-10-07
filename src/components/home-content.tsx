@@ -457,8 +457,8 @@ function JobColumn({
                 {(posting as Record<string, unknown>).totalVacancies != null && (
                   <> · {((posting as Record<string, unknown>).totalVacancies as number).toLocaleString(dateLocale)} {isHi ? "पद" : "posts"}</>
                 )}
-                {(posting as Record<string, unknown>).validThrough && (
-                  <> · {isHi ? "अंतिम तिथि" : "Last date"}: {formatDate((posting as Record<string, unknown>).validThrough as string, dateLocale)}</>
+                {(posting as Record<string, unknown>).validThrough != null && (
+                  <> · {isHi ? "अंतिम तिथि" : "Last date"}: {formatDate(String((posting as Record<string, unknown>).validThrough), dateLocale)}</>
                 )}
               </p>
             </li>
