@@ -72,6 +72,22 @@ export default async function PostPage({ params }: Props) {
     safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 }),
   ]);
 
+  // Derive distinct organizations from the role's posts (already joined).
+  // Deduplicate by organizationId, sort by name for display.
+  const orgMap = new Map<number, { id: number; name: string; slug: string }>();
+  for (const p of rolePosts) {
+    if (!orgMap.has(p.organizationId)) {
+      orgMap.set(p.organizationId, {
+        id: p.organizationId,
+        name: p.organizationName,
+        slug: p.organizationSlug,
+      });
+    }
+  }
+  const recruitingOrgs = Array.from(orgMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
   // Separate active vs closed
   const activePosts = rolePosts.filter((p) => isActive(p.recruitmentStatus, p.applicationEndDate));
   const closedPosts = rolePosts.filter((p) => !isActive(p.recruitmentStatus, p.applicationEndDate));
@@ -249,6 +265,29 @@ export default async function PostPage({ params }: Props) {
                   Closed
                 </span>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Organizations recruiting for this role */}
+      {recruitingOrgs.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-2xl font-bold text-neutral-900 mb-1">
+            Organizations Recruiting {role.name}s
+          </h2>
+          <p className="text-sm text-neutral-500 mb-4">
+            Recruitment bodies that have notified {role.name} vacancies
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {recruitingOrgs.map((org) => (
+              <Link
+                key={org.id}
+                href={`/organizations/${org.slug}`}
+                className="px-3 py-1.5 bg-neutral-100 hover:bg-blue-100 hover:text-blue-800 text-neutral-700 rounded-full text-sm font-medium transition-colors"
+              >
+                {org.name}
+              </Link>
             ))}
           </div>
         </section>

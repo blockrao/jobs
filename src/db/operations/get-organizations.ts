@@ -1,6 +1,6 @@
 import { getDb } from "../index";
 import { organizations, recruitments, exams, posts, positions } from "../schema";
-import { eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 /**
  * Get organization by slug
@@ -73,6 +73,49 @@ export async function getOrganizationPositions(organizationId: number) {
     .where(eq(recruitments.organizationId, organizationId));
 
   return result.map((r) => r.position);
+}
+
+/**
+ * Get all distinct post names this organization has recruited for.
+ * Used to match against ROLE_REGISTRY aliases to find canonical roles.
+ */
+export async function getOrganizationPostNames(organizationId: number): Promise<string[]> {
+  const db = getDb();
+
+  const result = await db
+    .selectDistinct({ name: posts.name })
+    .from(posts)
+    .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+    .where(eq(recruitments.organizationId, organizationId));
+
+  return result.map((r) => r.name).filter(Boolean) as string[];
+}
+
+/**
+ * Get organizations ranked by total recruitment activity, with zero-activity
+ * orgs excluded. Used for the public organization listing.
+ */
+export async function getRankedOrganizations() {
+  const db = getDb();
+
+  const result = await db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      slug: organizations.slug,
+      sector: organizations.sector,
+      description: organizations.description,
+      logoUrl: organizations.logoUrl,
+      websiteUrl: organizations.websiteUrl,
+      recruitmentCount: sql<number>`COUNT(DISTINCT ${recruitments.id})::int`,
+    })
+    .from(organizations)
+    .leftJoin(recruitments, eq(recruitments.organizationId, organizations.id))
+    .groupBy(organizations.id)
+    .having(sql`COUNT(DISTINCT ${recruitments.id}) > 0`)
+    .orderBy(desc(sql`COUNT(DISTINCT ${recruitments.id})`));
+
+  return result;
 }
 
 /**
