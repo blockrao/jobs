@@ -3,7 +3,8 @@
 
 DELETE FROM public.eligibilities WHERE post_id IN (1247, 1248, 1249, 1250, 1251);
 
-DELETE FROM public.post_age_rules WHERE post_id IN (1247, 1248, 1249, 1250, 1251);
+DELETE FROM public.post_age_rules WHERE post_id IN (1247, 1248, 1249, 1250, 1251)
+  AND category IN ('GENERAL', 'SC_ST', 'OBC', 'ABSORPTION');
 
 DELETE FROM public.selection_processes WHERE recruitment_id = 1453;
 
