@@ -17,10 +17,7 @@ import { Users, Banknote, ChevronRight, FileText, CalendarDays, Briefcase, Arrow
 
 function formatSalary(min?: number | null, max?: number | null): string | null {
   if (!min && !max) return null;
-  const fmt = (n: number) =>
-    n >= 100000
-      ? `₹${(n / 100).toFixed(0).replace(/(\d)(?=(\d\d)+\d$)/g, "$1,")} p.m.`
-      : `₹${n.toLocaleString("en-IN")} p.m.`;
+  const fmt = (n: number) => `₹${n.toLocaleString("en-IN")} p.m.`;
   if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}`;
   return fmt((min ?? max)!);
 }

@@ -286,7 +286,7 @@ export default async function PostLeafPage({ params }: Props) {
     notFound();
   }
 
-  const { post, recruitment, siblings, applyUrl } = data;
+  const { post, recruitment, siblings, applyUrl, postingEmploymentType } = data;
   const org = recruitment.organization;
   const exam = recruitment.exam;
 
@@ -621,17 +621,25 @@ export default async function PostLeafPage({ params }: Props) {
         <SectionCard className="mb-4">
           <SectionHeader icon={ClipboardList} title="How to Apply" />
           <div className="px-5 py-4 space-y-2 text-sm text-neutral-700">
-            <p>
-              Applications must be submitted through the{" "}
-              {applyUrl ? (
+            {(postingEmploymentType as string | null) === "DEPUTATION" ? (
+              <p>
+                This is a <strong>deputation post</strong>. Applications must be forwarded through proper channel
+                by the applicant&apos;s parent department/organisation. Direct applications are not accepted.
+                Refer to the official notification for the prescribed format and submission address.
+              </p>
+            ) : applyUrl ? (
+              <p>
+                Apply online through the{" "}
                 <a href={applyUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">
                   official {org.name} portal
                 </a>
-              ) : (
-                <strong>{org.name}</strong>
-              )}{" "}
-              official website. Do not use third-party services.
-            </p>
+                . Do not use third-party services.
+              </p>
+            ) : (
+              <p>
+                Refer to the official notification for application instructions and submission details.
+              </p>
+            )}
           </div>
           {recruitment.notificationUrl && (
             <>
