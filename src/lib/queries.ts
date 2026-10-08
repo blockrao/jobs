@@ -873,3 +873,109 @@ export async function getHomepageStats(): Promise<{
 
   return { stats, closingSoon };
 }
+
+/**
+ * Fetch all posts with enrichment data for comprehensive reporting
+ * Returns paginated results with all enrichment details
+ */
+export async function getAllPostsWithEnrichment(limit: number = 100, offset: number = 0) {
+  if (!hasDb()) return [];
+
+  const db = getDb();
+
+  const results = await db.execute<any>(sql`
+    SELECT
+      p.id,
+      p.title,
+      p.slug,
+      p."organizationId",
+      p."organizationName",
+      p."recruitmentId",
+      p."recruitmentName",
+      p."recruitmentSlug",
+      p."examType",
+      p.description,
+      p."isLive",
+      p."postedAt",
+      p."updatedAt",
+      p."officialSourceUrl",
+      p."applyPortalUrl",
+      e."vacanciesByCategory",
+      e."vacanciesTotal",
+      e."feesByCategory",
+      e."feeNote",
+      e."ageRulesByCategory",
+      e."ageNote",
+      e."payScale",
+      e."salaryMin",
+      e."salaryMax",
+      e."salaryNote",
+      e."payLevel",
+      e."selectionProcess",
+      e."applicationClosingDate",
+      e."examDate",
+      e."resultDate",
+      e."appointmentDate",
+      e."eligibilityPathways",
+      e."documentsRequired",
+      e."education",
+      e."experience",
+      e."sourceVerificationStatus",
+      e."extractionConfidence",
+      e."dataGaps"
+    FROM posts p
+    LEFT JOIN post_enrichments e ON p.id = e.post_id
+    WHERE p."isLive" = true
+    ORDER BY p."postedAt" DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `);
+
+  return (results || []).map((data: any) => ({
+    id: data.id,
+    title: data.title,
+    slug: data.slug,
+    organizationName: data.organizationName,
+    recruitmentName: data.recruitmentName,
+    recruitmentSlug: data.recruitmentSlug,
+    description: data.description,
+    isLive: data.isLive,
+    postedAt: new Date(data.postedAt),
+    updatedAt: new Date(data.updatedAt),
+    officialSourceUrl: data.officialSourceUrl,
+    applyPortalUrl: data.applyPortalUrl,
+    vacanciesTotal: data.vacanciesTotal,
+    vacanciesByCategory: data.vacanciesByCategory,
+    salaryMin: data.salaryMin,
+    salaryMax: data.salaryMax,
+    salaryNote: data.salaryNote,
+    payScale: data.payScale,
+    payLevel: data.payLevel,
+    applicationClosingDate: data.applicationClosingDate ? new Date(data.applicationClosingDate) : null,
+    examDate: data.examDate ? new Date(data.examDate) : null,
+    resultDate: data.resultDate ? new Date(data.resultDate) : null,
+    appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
+    selectionProcess: data.selectionProcess,
+    ageRulesByCategory: data.ageRulesByCategory,
+    ageNote: data.ageNote,
+    education: data.education,
+    experience: data.experience,
+    sourceVerificationStatus: data.sourceVerificationStatus,
+    extractionConfidence: data.extractionConfidence,
+    dataGaps: data.dataGaps,
+  }));
+}
+
+/**
+ * Get total count of posts for pagination
+ */
+export async function getPostsCount() {
+  if (!hasDb()) return 0;
+
+  const db = getDb();
+  const result = await db.execute<any>(sql`
+    SELECT COUNT(*)::int as count FROM posts WHERE "isLive" = true
+  `);
+
+  return (result?.[0]?.count) || 0;
+}
