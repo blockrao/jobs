@@ -17,6 +17,7 @@ import { eq, and } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
+import { generateSequentialSlug } from "./slug-generator";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -175,22 +176,26 @@ export async function resolveRecruitment(
   // No confident match — create a new recruitment rather than attaching to
   // the nearest existing one.
   //
-  // `slug` is deterministic, derived from the driving posting's
-  // (source, externalId) — so a slug collision here specifically means this
-  // exact posting already created this exact recruitment on an earlier,
-  // partially-failed run (the pipeline isn't wrapped in one transaction per
-  // posting, so a crash downstream of this insert still leaves it
-  // committed). That makes it safe to treat a collision as "already
-  // resolved" rather than a real naming clash: onConflictDoNothing, then
-  // look the row up by slug if nothing was inserted.
+  // Generate a sequential slug in the format {org-slug}-{year}-{2-digit-number}
+  // This replaces the old deterministic slug approach for new recruitments,
+  // providing human-readable, professional URLs.
+  const finalYear = identity.year ?? new Date().getFullYear();
+  const finalSlug = await generateSequentialSlug(db, identity.organizationId, finalYear);
+
+  if (!finalSlug) {
+    throw new Error(
+      `resolveRecruitment: unable to generate slug for organization ${identity.organizationId}`,
+    );
+  }
+
   const [created] = await db
     .insert(recruitments)
     .values({
       organizationId: identity.organizationId,
       examId: identity.examId,
-      year: identity.year ?? new Date().getFullYear(),
+      year: finalYear,
       name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
-      slug,
+      slug: finalSlug,
       officialNotificationNumber: identity.officialNotificationNumber,
       applicationStartDate: identity.applicationStartDate ?? null,
       applicationEndDate: identity.applicationEndDate ?? null,
@@ -201,14 +206,14 @@ export async function resolveRecruitment(
   if (created) return { id: created.id, created: true };
 
   const existingBySlug = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, slug),
+    where: eq(recruitments.slug, finalSlug),
   });
   if (existingBySlug) return { id: existingBySlug.id, created: false };
 
   // Insert raced and lost, but the winning row isn't visible yet (unlikely
   // outside real concurrency) — surface clearly rather than silently
   // returning a bogus id.
-  throw new Error(`resolveRecruitment: slug "${slug}" conflicted but no row found`);
+  throw new Error(`resolveRecruitment: slug "${finalSlug}" conflicted but no row found`);
 }
 
 export interface PostIdentity {

@@ -1,17 +1,24 @@
--- Migration: Shorten recruitment slugs to enterprise-grade format {org-slug}-{year}-{6char-hash}
--- This migration updates all 1,080 recruitment slugs and creates redirect mapping
+-- Migration: Shorten recruitment slugs to enterprise-grade format {org-slug}-{year}-{sequential-number}
+-- This migration updates all recruitment slugs to semantic, human-readable format
 
 -- Step 1: Add temporary column for new slugs
 ALTER TABLE recruitments ADD COLUMN IF NOT EXISTS slug_new TEXT;
 
--- Step 2: Generate new slugs using enterprise format
+-- Step 2: Generate new slugs using sequential numbering per org-year
 UPDATE recruitments r
 SET slug_new = CONCAT(
   o.slug,
   '-',
   r.year::TEXT,
   '-',
-  SUBSTRING(MD5(CONCAT(r.slug, '-', r.id::TEXT)), 1, 6)
+  LPAD(
+    ROW_NUMBER() OVER (
+      PARTITION BY r.organization_id, r.year
+      ORDER BY r.id
+    )::TEXT,
+    2,
+    '0'
+  )
 )
 FROM organizations o
 WHERE r.organization_id = o.id;
@@ -36,7 +43,7 @@ CREATE TABLE IF NOT EXISTS recruitment_slug_redirects (
   INDEX idx_recruitment_id (recruitment_id)
 );
 
--- Step 5: Populate redirect mapping table
+-- Step 5: Populate redirect mapping table with old→new mappings
 INSERT INTO recruitment_slug_redirects (old_slug, new_slug, recruitment_id)
 SELECT r.slug, r.slug_new, r.id
 FROM recruitments r
@@ -51,10 +58,20 @@ WHERE slug_new IS NOT NULL;
 -- Step 7: Drop temporary column
 ALTER TABLE recruitments DROP COLUMN slug_new;
 
--- Step 8: Verification query - show sample of new slugs
-SELECT id, slug, year, organization_id FROM recruitments ORDER BY id LIMIT 10;
+-- Step 8: Verification - sample of new slugs grouped by org
+SELECT
+  o.name as organization,
+  r.year,
+  COUNT(*) as recruitment_count,
+  STRING_AGG(r.slug, ', ' ORDER BY r.slug) as sample_slugs
+FROM recruitments r
+JOIN organizations o ON r.organization_id = o.id
+GROUP BY o.id, o.name, r.year
+ORDER BY o.name, r.year DESC
+LIMIT 20;
 
--- Step 9: Verify all recruitments have new format
-SELECT COUNT(*) as with_new_format
-FROM recruitments
-WHERE slug ~ '^[a-z0-9]+-[0-9]{4}-[a-z0-9]{6}$';
+-- Step 9: Verify all recruitments match new format {org-slug}-{year}-{2-digit-number}
+SELECT
+  COUNT(*) as total_with_new_format,
+  COUNT(CASE WHEN slug ~ '^[a-z0-9]+-[0-9]{4}-[0-9]{2}$' THEN 1 END) as matching_format
+FROM recruitments;
