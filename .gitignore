@@ -14,3 +14,5 @@ scraper_output.json
 *.tsbuildinfo
 supabase/.temp/
 .claude/
+skills-lock.json
+.agents/
