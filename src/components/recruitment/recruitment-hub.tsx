@@ -199,12 +199,120 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </div>
           </section>
 
+          {/* Detailed Positions from Metadata (if available) */}
+          {recruitment.metadata && recruitment.metadata.positions && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Award size={24} className="text-blue-600" />
+                Position Details & Qualifications
+              </h2>
+              <div className="space-y-4">
+                {(recruitment.metadata.positions as any[]).map((position: any, index: number) => (
+                  <div key={index} className="bg-white border border-gray-200 rounded-lg p-5">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{position.position_name}</h3>
+                        <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                          <span className="flex items-center gap-1">
+                            <Users size={16} className="text-blue-600" />
+                            <strong>{position.vacancies}</strong> Vacancy{position.vacancies !== 1 ? 'ies' : ''}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <DollarSign size={16} className="text-green-600" />
+                            {position.pay_level}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Essential Qualifications */}
+                    <div className="mb-4">
+                      <p className="font-semibold text-gray-900 mb-2">Essential Qualifications:</p>
+                      <ul className="space-y-1">
+                        {(position.essential_qualifications || []).map((qual: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                            <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                            {qual}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Desirable Qualifications */}
+                    {position.desirable_qualifications && position.desirable_qualifications.length > 0 && (
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-2">Desirable Qualifications:</p>
+                        <ul className="space-y-1">
+                          {(position.desirable_qualifications || []).map((qual: string, idx: number) => (
+                            <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                              <span className="text-blue-600 mt-0.5 flex-shrink-0">◆</span>
+                              {qual}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Eligibility Section */}
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <Award size={24} className="text-blue-600" />
-              Eligibility Criteria
+              {recruitment.metadata?.eligibility ? 'General Eligibility Criteria' : 'Eligibility Criteria'}
             </h2>
+
+            {/* Metadata-based Eligibility */}
+            {recruitment.metadata?.eligibility && (
+              <div className="space-y-4 mb-8">
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="space-y-4">
+                    {recruitment.metadata.eligibility.age_limit && (
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-1">Age Limit:</p>
+                        <p className="text-gray-700">{recruitment.metadata.eligibility.age_limit}</p>
+                        {recruitment.metadata.eligibility.age_relaxation && (
+                          <p className="text-sm text-gray-600 mt-1">{recruitment.metadata.eligibility.age_relaxation}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {recruitment.metadata.eligibility.language_requirements && (
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-2">Language Requirements:</p>
+                        <ul className="space-y-1">
+                          {(recruitment.metadata.eligibility.language_requirements || []).map((lang: string, idx: number) => (
+                            <li key={idx} className="text-gray-700 flex items-center gap-2">
+                              <CheckCircle size={16} className="text-blue-600" />
+                              {lang}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {recruitment.metadata.eligibility.domicile && (
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-1">Domicile/Residence:</p>
+                        <p className="text-gray-700">{recruitment.metadata.eligibility.domicile}</p>
+                      </div>
+                    )}
+
+                    {recruitment.metadata.eligibility.category_provisions && (
+                      <div>
+                        <p className="font-semibold text-gray-900 mb-1">Category Provisions:</p>
+                        <p className="text-gray-700">{recruitment.metadata.eligibility.category_provisions}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Simple Position Table */}
             <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -294,43 +402,144 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </div>
           </section>
 
-          {/* How to Apply Section */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <FileText size={24} className="text-blue-600" />
-              How to Apply
-            </h2>
-            <div className="space-y-3">
-              {[
-                { step: '1', title: 'Check Eligibility', desc: 'Verify you meet all requirements for your desired position' },
-                { step: '2', title: 'Prepare Documents', desc: 'Gather educational certificates, ID proof, resume, and passport photos' },
-                { step: '3', title: 'Visit Official Website', desc: 'Go to the official recruitment portal and create an account' },
-                { step: '4', title: 'Fill Application', desc: 'Complete all required fields with accurate information and upload documents' },
-                { step: '5', title: 'Submit & Confirm', desc: 'Review your application carefully and submit. Save your confirmation email' },
-              ].map((item) => (
-                <div key={item.step} className="flex gap-4 bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-bold">
-                      {item.step}
+          {/* Application Process from Metadata */}
+          {recruitment.metadata?.application_process && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <FileText size={24} className="text-blue-600" />
+                How to Apply
+              </h2>
+              <div className="space-y-4">
+                {recruitment.metadata.application_process.application_method && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-5">
+                    <p className="font-semibold text-gray-900 mb-2">Application Method:</p>
+                    <p className="text-gray-700">{recruitment.metadata.application_process.application_method}</p>
+                  </div>
+                )}
+
+                {recruitment.metadata.application_process.submission_address && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-5">
+                    <p className="font-semibold text-gray-900 mb-3">Submit Application To:</p>
+                    <div className="text-gray-700 space-y-1">
+                      <p><strong>{recruitment.metadata.application_process.submission_address.organization}</strong></p>
+                      <p>{recruitment.metadata.application_process.submission_address.building}</p>
+                      <p>{recruitment.metadata.application_process.submission_address.location}</p>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-900">{item.title}</div>
-                    <div className="text-sm text-gray-600 mt-1">{item.desc}</div>
+                )}
+
+                {(recruitment.metadata.application_process.application_deadline || recruitment.metadata.application_process.deadline_time) && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-5">
+                    <p className="font-semibold text-red-900 mb-2">📅 Application Deadline:</p>
+                    <p className="text-red-900">
+                      <strong>{recruitment.metadata.application_process.application_deadline}</strong>
+                    </p>
+                    {recruitment.metadata.application_process.deadline_time && (
+                      <p className="text-red-800 text-sm mt-1">{recruitment.metadata.application_process.deadline_time}</p>
+                    )}
+                    {recruitment.metadata.application_process.lunch_break && (
+                      <p className="text-red-800 text-sm mt-1">Lunch Break: {recruitment.metadata.application_process.lunch_break}</p>
+                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-600 rounded-r-lg p-4">
-              <p className="font-bold text-yellow-900 mb-1">⚠️ Important Reminders:</p>
-              <ul className="text-sm text-yellow-800 space-y-1">
-                <li>• Apply before the deadline; late applications are rejected</li>
-                <li>• Provide correct and complete information</li>
-                <li>• Keep your confirmation email for reference</li>
-                <li>• Check the official website regularly for updates</li>
-              </ul>
-            </div>
-          </section>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Selection Process from Metadata */}
+          {recruitment.metadata?.selection_process_details && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Clock size={24} className="text-blue-600" />
+                Selection Process
+              </h2>
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                {recruitment.metadata.selection_process_details.method && (
+                  <div className="mb-4">
+                    <p className="font-semibold text-gray-900 mb-2">Method:</p>
+                    <p className="text-gray-700">{recruitment.metadata.selection_process_details.method}</p>
+                  </div>
+                )}
+
+                {recruitment.metadata.selection_process_details.stages && (
+                  <div className="mb-4">
+                    <p className="font-semibold text-gray-900 mb-3">Selection Stages:</p>
+                    <ol className="space-y-2">
+                      {(recruitment.metadata.selection_process_details.stages || []).map((stage: string, idx: number) => (
+                        <li key={idx} className="text-gray-700 flex items-start gap-2">
+                          <span className="font-bold text-blue-600 flex-shrink-0">{idx + 1}.</span>
+                          {stage}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {recruitment.metadata.selection_process_details.no_TA_DA && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-4">
+                    <p className="text-sm text-yellow-800">⚠️ {recruitment.metadata.selection_process_details.no_TA_DA}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* General Guidelines from Metadata */}
+          {recruitment.metadata?.general_guidelines && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">General Guidelines</h2>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                <ul className="space-y-2">
+                  {(recruitment.metadata.general_guidelines || []).map((guideline: string, idx: number) => (
+                    <li key={idx} className="text-gray-700 flex items-start gap-2">
+                      <CheckCircle size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                      <span>{guideline}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          {/* Standard How to Apply Section (fallback) */}
+          {!recruitment.metadata?.application_process && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <FileText size={24} className="text-blue-600" />
+                How to Apply
+              </h2>
+              <div className="space-y-3">
+                {[
+                  { step: '1', title: 'Check Eligibility', desc: 'Verify you meet all requirements for your desired position' },
+                  { step: '2', title: 'Prepare Documents', desc: 'Gather educational certificates, ID proof, resume, and passport photos' },
+                  { step: '3', title: 'Visit Official Website', desc: 'Go to the official recruitment portal and create an account' },
+                  { step: '4', title: 'Fill Application', desc: 'Complete all required fields with accurate information and upload documents' },
+                  { step: '5', title: 'Submit & Confirm', desc: 'Review your application carefully and submit. Save your confirmation email' },
+                ].map((item) => (
+                  <div key={item.step} className="flex gap-4 bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-bold">
+                        {item.step}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-gray-900">{item.title}</div>
+                      <div className="text-sm text-gray-600 mt-1">{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-600 rounded-r-lg p-4">
+                <p className="font-bold text-yellow-900 mb-1">⚠️ Important Reminders:</p>
+                <ul className="text-sm text-yellow-800 space-y-1">
+                  <li>• Apply before the deadline; late applications are rejected</li>
+                  <li>• Provide correct and complete information</li>
+                  <li>• Keep your confirmation email for reference</li>
+                  <li>• Check the official website regularly for updates</li>
+                </ul>
+              </div>
+            </section>
+          )}
 
           {/* Action Buttons - Sticky or Fixed */}
           <section className="flex gap-3 flex-col md:flex-row">
