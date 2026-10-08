@@ -9,6 +9,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
+import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 
 export const dynamic = "force-dynamic";
@@ -62,9 +63,17 @@ export default async function RecruitmentHubPage({
     notFound();
   }
 
-  const { recruitment, posts, isSingleJobRecruitment } = recruitmentData;
+  const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData;
 
   // Display the modern recruitment hub for all recruitments
   // This provides a comprehensive interface for both single and multi-post recruitments
-  return <RecruitmentHub recruitment={recruitment} posts={posts} />;
+  return (
+    <>
+      <RecruitmentHubStructuredData
+        recruitment={recruitment}
+        totalPosts={totalPosts}
+      />
+      <RecruitmentHub recruitment={recruitment} posts={posts} />
+    </>
+  );
 }
