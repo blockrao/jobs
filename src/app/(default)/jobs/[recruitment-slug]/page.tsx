@@ -199,7 +199,7 @@ export default async function RecruitmentHubPage({
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-blue-600 hover:text-blue-700 mb-2">
-                      {post.title}
+                      {post.name}
                     </h3>
                     {post.position && (
                       <p className="text-gray-600 mb-4">
