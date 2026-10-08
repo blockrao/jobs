@@ -59,12 +59,7 @@ export default async function RecruitmentHubPage({
 
   const { recruitment, posts, isSingleJobRecruitment } = recruitmentData;
 
-  // For single-job recruitments, redirect to the individual post page
-  if (isSingleJobRecruitment && posts.length === 1) {
-    const post = posts[0];
-    redirect(`/jobs/${recruitmentSlug}/${post.slug}`);
-  }
-
-  // For multi-post recruitments, display the modern recruitment hub
+  // Display the modern recruitment hub for all recruitments
+  // This provides a comprehensive interface for both single and multi-post recruitments
   return <RecruitmentHub recruitment={recruitment} posts={posts} />;
 }
