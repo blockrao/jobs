@@ -1,12 +1,15 @@
 import { getDb } from "../index";
-import { positions, posts, recruitments, exams, qualifications, postings } from "../schema";
-import { eq } from "drizzle-orm";
+import { positions, posts, recruitments, exams, qualifications, postings, organizations } from "../schema";
+import { eq, desc, sql } from "drizzle-orm";
+import { hasDb } from "@/lib/queries";
+import type { RolePost } from "./get-roles";
 
 /**
  * Get position by slug
  * Returns the full position object with career path details
  */
 export async function getPositionBySlug(slug: string) {
+  if (!hasDb()) return null;
   const db = getDb();
   const result = await db
     .select()
@@ -15,6 +18,78 @@ export async function getPositionBySlug(slug: string) {
     .limit(1);
 
   return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * Get enriched posts for a position (for role hub pages)
+ * Returns posts in the same RolePost format as getPostsForRole
+ */
+export async function getPostsForPosition(positionId: number): Promise<RolePost[]> {
+  if (!hasDb()) return [];
+  const db = getDb();
+
+  const rows = await db
+    .select({
+      postId: posts.id,
+      postName: posts.name,
+      postSlug: posts.slug,
+      vacancyTotal: posts.vacancyTotal,
+      salaryMin: posts.salaryMin,
+      salaryMax: posts.salaryMax,
+      payLevel: posts.payLevel,
+      recruitmentId: recruitments.id,
+      recruitmentName: recruitments.name,
+      recruitmentSlug: recruitments.slug,
+      recruitmentYear: recruitments.year,
+      recruitmentStatus: recruitments.status,
+      applicationEndDate: recruitments.applicationEndDate,
+      notificationUrl: recruitments.notificationUrl,
+      organizationId: organizations.id,
+      organizationName: organizations.name,
+      organizationSlug: organizations.slug,
+      organizationState: organizations.state,
+      enrichmentFeeNote: recruitments.feeNote,
+      enrichmentSelectionProcess: recruitments.selectionProcess,
+      enrichmentAgeNote: recruitments.ageNote,
+      enrichmentApplyUrl: recruitments.applyUrl,
+    })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+    .where(eq(posts.positionId, positionId))
+    .orderBy(desc(recruitments.year), desc(recruitments.applicationEndDate));
+
+  return rows as RolePost[];
+}
+
+/**
+ * Get stats for a position (active/total vacancies and recruitments)
+ */
+export async function getPositionStats(positionId: number) {
+  if (!hasDb()) return { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
+  const db = getDb();
+
+  const result = await db
+    .select({
+      totalVacancies: sql<number>`COALESCE(SUM(${posts.vacancyTotal}), 0)::int`,
+      totalRecruitments: sql<number>`COUNT(DISTINCT ${recruitments.id})::int`,
+      activeRecruitments: sql<number>`COUNT(DISTINCT CASE WHEN ${recruitments.status} = 'ACTIVE' THEN ${recruitments.id} END)::int`,
+    })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .where(eq(posts.positionId, positionId));
+
+  // Fallback if query fails
+  if (!result || result.length === 0) {
+    return { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
+  }
+
+  const row = result[0];
+  return {
+    totalVacancies: Number(row?.totalVacancies ?? 0),
+    activeRecruitments: Number(row?.activeRecruitments ?? 0),
+    totalRecruitments: Number(row?.totalRecruitments ?? 0),
+  };
 }
 
 /**

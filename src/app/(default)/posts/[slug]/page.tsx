@@ -5,11 +5,13 @@ import { pageSeo } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
 import { getRoleBySlug, ROLE_REGISTRY } from "@/lib/roles";
 import { getPostsForRole, getRoleStats } from "@/db/operations/get-roles";
+import { getPositionBySlug, getPostsForPosition, getPositionStats } from "@/db/operations/get-positions";
 import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 import { EnrichedPostRow } from "@/components/enriched-post-row";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -19,6 +21,33 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+
+  // Try position first (database-driven), then fall back to hardcoded role
+  const position = await safeQuery(() => getPositionBySlug(slug), null);
+
+  if (position) {
+    const title = `${position.name} Government Jobs 2026 — Vacancies & Official Notifications`;
+    const description = `Find all active ${position.name} government job recruitments on JobOye. View vacancy counts, eligibility criteria, application dates and official notification links from verified sources.`;
+    const seo = pageSeo(`/posts/${position.slug}`);
+
+    const stats = await safeQuery(() => getPositionStats(position.id), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 });
+    const hasContent = stats.totalRecruitments > 0;
+
+    return {
+      title,
+      description,
+      alternates: hasContent ? seo.alternates : undefined,
+      robots: hasContent ? undefined : { index: false, follow: true },
+      openGraph: {
+        title,
+        description,
+        url: absoluteUrl(`/posts/${position.slug}`),
+        type: "website",
+      },
+    };
+  }
+
+  // Fall back to hardcoded role
   const role = getRoleBySlug(slug);
   if (!role) return {};
 
@@ -26,7 +55,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = `Find all active ${role.name} government job recruitments on JobOye. View vacancy counts, eligibility criteria, application dates and official notification links from verified sources.`;
   const seo = pageSeo(`/posts/${role.slug}`);
 
-  // Noindex role pages with no recruitment data (PQ-007).
   const stats = await safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 });
   const hasContent = stats.totalRecruitments > 0;
 
@@ -84,13 +112,41 @@ function applicationStatusLabel(applicationEndDate: Date | null | undefined, rec
 
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
-  const role = getRoleBySlug(slug);
-  if (!role) notFound();
 
-  const [rolePosts, stats] = await Promise.all([
-    safeQuery(() => getPostsForRole(role), []),
-    safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 }),
-  ]);
+  // Try position first (database-driven), then fall back to hardcoded role
+  const position = await safeQuery(() => getPositionBySlug(slug), null);
+
+  let rolePosts: any[] = [];
+  let stats: any = { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
+  let displayName = "";
+  let displayDescription = "";
+
+  if (position) {
+    displayName = position.name;
+    displayDescription = position.description || "";
+
+    const [positionPosts, positionStats] = await Promise.all([
+      safeQuery(() => getPostsForPosition(position.id), []),
+      safeQuery(() => getPositionStats(position.id), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 }),
+    ]);
+
+    rolePosts = positionPosts;
+    stats = positionStats;
+  } else {
+    const role = getRoleBySlug(slug);
+    if (!role) notFound();
+
+    displayName = role.name;
+    displayDescription = role.description;
+
+    const [rolePostsResult, statsResult] = await Promise.all([
+      safeQuery(() => getPostsForRole(role), []),
+      safeQuery(() => getRoleStats(role), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 }),
+    ]);
+
+    rolePosts = rolePostsResult;
+    stats = statsResult;
+  }
 
   // Derive distinct organizations
   const orgMap = new Map<number, { id: number; name: string; slug: string }>();
@@ -106,16 +162,16 @@ export default async function PostPage({ params }: Props) {
 
   const occupationSchema = {
     "@type": "Occupation",
-    "@id": absoluteUrl(`/posts/${role.slug}#occupation`),
-    name: role.name,
-    description: role.description,
+    "@id": absoluteUrl(`/posts/${slug}#occupation`),
+    name: displayName,
+    description: displayDescription,
     occupationLocation: { "@type": "Country", name: "India" },
   };
 
   const itemListSchema = activePosts.length > 0
     ? {
         "@type": "ItemList",
-        name: `Active ${role.name} Government Job Recruitments`,
+        name: `Active ${displayName} Government Job Recruitments`,
         numberOfItems: activePosts.length,
         itemListElement: activePosts.slice(0, 20).map((p, i) => ({
           "@type": "ListItem",
@@ -129,7 +185,7 @@ export default async function PostPage({ params }: Props) {
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Home", path: "/" },
     { name: "Government Posts", path: "/posts" },
-    { name: role.name, path: `/posts/${role.slug}` },
+    { name: displayName, path: `/posts/${slug}` },
   ]);
 
   const schema = jsonLdGraph(breadcrumbSchema, occupationSchema, itemListSchema);
@@ -147,14 +203,14 @@ export default async function PostPage({ params }: Props) {
           <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400 mb-4">
             <Link href="/posts" className="hover:text-neutral-700 transition-colors">Government Posts</Link>
             <span>›</span>
-            <span className="text-neutral-500">{role.sector}</span>
+            <span className="text-neutral-500">{position?.category || "Government"}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 leading-tight mb-3">
-            {role.name} Government Jobs
+            {displayName} Government Jobs
           </h1>
           <p className="text-base sm:text-lg text-neutral-500 leading-relaxed max-w-2xl">
-            {role.description}
+            {displayDescription}
           </p>
 
           {/* Stats — only meaningful candidate-facing numbers */}
@@ -220,7 +276,7 @@ export default async function PostPage({ params }: Props) {
               <div>
                 <p className="font-medium text-neutral-700 text-sm">No current openings</p>
                 <p className="text-neutral-500 text-sm mt-0.5">
-                  There are no active {role.name} recruitments right now. Past opportunities are listed below.
+                  There are no active {displayName} recruitments right now. Past opportunities are listed below.
                 </p>
               </div>
             </div>
@@ -280,10 +336,10 @@ export default async function PostPage({ params }: Props) {
         {recruitingOrgs.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-neutral-900 mb-1">
-              Bodies Recruiting {role.name}s
+              Bodies Recruiting {displayName}s
             </h2>
             <p className="text-sm text-neutral-500 mb-4">
-              Recruitment bodies that have notified {role.name} vacancies
+              Recruitment bodies that have notified {displayName} vacancies
             </p>
             <div className="flex flex-wrap gap-2">
               {recruitingOrgs.slice(0, 20).map((org) => (
@@ -306,9 +362,9 @@ export default async function PostPage({ params }: Props) {
 
         {/* About the role — evergreen, below transactional content */}
         <section className="mb-10 pt-8 border-t border-neutral-200">
-          <h2 className="text-xl font-semibold text-neutral-900 mb-3">About {role.name} Roles</h2>
+          <h2 className="text-xl font-semibold text-neutral-900 mb-3">About {displayName} Roles</h2>
           <p className="text-neutral-600 leading-relaxed max-w-2xl">
-            {role.description}
+            {displayDescription}
           </p>
           <p className="text-sm text-neutral-500 mt-3 leading-relaxed max-w-2xl">
             Vacancies are notified by central and state government bodies throughout the year.
@@ -322,7 +378,7 @@ export default async function PostPage({ params }: Props) {
           <div className="py-16 text-center bg-white rounded-xl border border-neutral-200">
             <p className="text-neutral-500 text-lg mb-1">No recruitments on record yet</p>
             <p className="text-neutral-400 text-sm">
-              {role.name} vacancies will appear here when notified.
+              {displayName} vacancies will appear here when notified.
             </p>
           </div>
         )}
@@ -333,7 +389,7 @@ export default async function PostPage({ params }: Props) {
           {" / "}
           <Link href="/posts" className="hover:text-neutral-600 transition-colors">Government Posts</Link>
           {" / "}
-          <span className="text-neutral-600">{role.name}</span>
+          <span className="text-neutral-600">{displayName}</span>
         </div>
       </div>
     </div>
