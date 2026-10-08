@@ -4,26 +4,37 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedLeafFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface QuickFactsProps {
   post: JobPostingData;
+  resolvedFacts?: ResolvedLeafFacts;
 }
 
-export default function QuickFacts({ post }: QuickFactsProps) {
+export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
+  const deadline = resolvedFacts?.deadline;
+  const deadlineDisplay =
+    deadline?.state === "OPEN" && deadline.date
+      ? new Date(deadline.date).toLocaleDateString("en-IN", {
+          month: "short", day: "numeric", year: "numeric",
+        })
+      : deadline?.state === "CLOSED" && deadline.date
+      ? new Date(deadline.date).toLocaleDateString("en-IN", {
+          month: "short", day: "numeric", year: "numeric",
+        })
+      : "See Notification";
+
   const facts = [
     {
       label: "Vacancies",
-      value: post.enrichment?.vacanciesTotal || "N/A",
+      value: resolvedFacts?.vacancyCount != null
+        ? resolvedFacts.vacancyCount.toLocaleString("en-IN")
+        : "See Notification",
     },
     {
       label: "Application Closes",
-      value: post.enrichment?.applicationClosingDate
-        ? new Date(post.enrichment.applicationClosingDate).toLocaleDateString(
-            "en-IN",
-            { month: "short", day: "numeric", year: "numeric" }
-          )
-        : "N/A",
+      value: deadlineDisplay,
     },
     {
       label: "Exam Date",

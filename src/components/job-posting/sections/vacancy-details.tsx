@@ -4,22 +4,31 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedLeafFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface VacancyDetailsProps {
   post: JobPostingData;
+  resolvedFacts?: ResolvedLeafFacts;
 }
 
-export default function VacancyDetails({ post }: VacancyDetailsProps) {
+export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsProps) {
   const vacanciesByCategory = post.enrichment?.vacanciesByCategory || {};
   const hasDetails = Object.keys(vacanciesByCategory).length > 0;
+  // Use resolver output — never display raw enrichment vacanciesTotal
+  const resolvedTotal = resolvedFacts?.vacancyCount;
 
   if (!hasDetails) {
     return (
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>📊 Vacancy Details</h2>
         <p style={{ color: "#4b5563" }}>
-          Total Vacancies: <strong>{post.enrichment?.vacanciesTotal || "N/A"}</strong>
+          Total Vacancies:{" "}
+          <strong>
+            {resolvedTotal != null
+              ? resolvedTotal.toLocaleString("en-IN")
+              : "See Notification"}
+          </strong>
         </p>
       </div>
     );
@@ -55,7 +64,9 @@ export default function VacancyDetails({ post }: VacancyDetailsProps) {
               className={styles.tableCell}
               style={{ textAlign: "right", fontWeight: 700 }}
             >
-              {post.enrichment?.vacanciesTotal || 0}
+              {resolvedTotal != null
+                ? resolvedTotal.toLocaleString("en-IN")
+                : "See Notification"}
             </td>
           </tr>
         </tbody>

@@ -4,29 +4,31 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedLeafFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface JobPostingHeaderProps {
   post: JobPostingData;
+  resolvedFacts?: ResolvedLeafFacts;
 }
 
-export default function JobPostingHeader({ post }: JobPostingHeaderProps) {
-  const daysUntilClose = post.enrichment?.applicationClosingDate
-    ? Math.ceil(
-        (new Date(post.enrichment.applicationClosingDate).getTime() -
-          new Date().getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHeaderProps) {
+  // Use resolver output — never compute deadline from raw enrichment
+  const deadline = resolvedFacts?.deadline;
+  const daysUntilClose = deadline?.state === "OPEN" && deadline.date
+    ? Math.ceil((deadline.date.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const statusColor =
-    daysUntilClose !== null && daysUntilClose <= 7 ? "danger" : "success";
+  const statusColor = daysUntilClose !== null && daysUntilClose <= 7 ? "danger" : "success";
+  // UNKNOWN deadline must never be shown as "OPEN"
   const statusText =
-    daysUntilClose !== null
+    deadline?.state === "OPEN" && daysUntilClose !== null
       ? daysUntilClose > 0
         ? `${daysUntilClose} DAYS LEFT`
         : "CLOSED"
-      : "OPEN";
+      : deadline?.state === "CLOSED"
+      ? "CLOSED"
+      : "CHECK NOTIFICATION";
 
   return (
     <div style={headerStyles.container}>
@@ -55,11 +57,11 @@ export default function JobPostingHeader({ post }: JobPostingHeaderProps) {
           <span style={headerStyles.metaLabel}>Type:</span>
           <span style={headerStyles.metaValue}>Permanent</span>
         </div>
-        {post.enrichment?.vacanciesTotal && (
+        {resolvedFacts?.vacancyCount != null && (
           <div style={headerStyles.metaItem}>
             <span style={headerStyles.metaLabel}>Vacancies:</span>
             <span style={headerStyles.metaValue}>
-              {post.enrichment.vacanciesTotal}
+              {resolvedFacts.vacancyCount.toLocaleString("en-IN")}
             </span>
           </div>
         )}

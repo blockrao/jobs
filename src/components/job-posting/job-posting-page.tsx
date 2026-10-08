@@ -29,11 +29,18 @@ interface RecruitmentData {
   isSingleJobRecruitment: boolean;
 }
 
+export interface ResolvedLeafFacts {
+  vacancyCount: number | null;
+  salary: { min: number; max: number; currency: string; period: string } | null;
+  deadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN" };
+}
+
 interface JobPostingPageProps {
   post: JobPostingData;
   recruitment?: RecruitmentData | null;
   isSingleJobRecruitment?: boolean;
   locale?: string;
+  resolvedFacts?: ResolvedLeafFacts;
 }
 
 export default function JobPostingPage({
@@ -41,6 +48,7 @@ export default function JobPostingPage({
   recruitment,
   isSingleJobRecruitment = false,
   locale = "en",
+  resolvedFacts,
 }: JobPostingPageProps) {
   // For single-job recruitments, enrich post data from recruitment context
   const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
@@ -79,10 +87,10 @@ export default function JobPostingPage({
         </div>
 
         {/* Header */}
-        <JobPostingHeader post={post} />
+        <JobPostingHeader post={post} resolvedFacts={resolvedFacts} />
 
         {/* Quick Facts */}
-        <QuickFacts post={post} />
+        <QuickFacts post={post} resolvedFacts={resolvedFacts} />
 
         {/* Action Buttons */}
         <div className={styles.actions}>
@@ -110,9 +118,9 @@ export default function JobPostingPage({
         </div>
 
         {/* Sections */}
-        <VacancyDetails post={post} />
+        <VacancyDetails post={post} resolvedFacts={resolvedFacts} />
         <EligibilityCriteria post={post} />
-        <SalaryCompensation post={post} />
+        <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
         <ImportantDates post={post} />
         <SelectionProcess post={post} />
         <ApplicationFee post={post} />

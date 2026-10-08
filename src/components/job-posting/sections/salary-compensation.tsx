@@ -4,19 +4,22 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedLeafFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface SalaryCompensationProps {
   post: JobPostingData;
+  resolvedFacts?: ResolvedLeafFacts;
 }
 
-export default function SalaryCompensation({ post }: SalaryCompensationProps) {
+export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompensationProps) {
   const enrichment = post.enrichment;
+  // Use resolver output for salary range — never raw enrichment salaryMin/Max
+  const resolvedSalary = resolvedFacts?.salary ?? null;
 
   if (
     !enrichment?.payScale &&
-    !enrichment?.salaryMin &&
-    !enrichment?.salaryMax &&
+    !resolvedSalary &&
     !enrichment?.benefits
   ) {
     return (
@@ -41,20 +44,20 @@ export default function SalaryCompensation({ post }: SalaryCompensationProps) {
         </div>
       )}
 
-      {/* Salary Range */}
-      {(enrichment?.salaryMin || enrichment?.salaryMax) && (
+      {/* Salary Range — only from resolver, never raw enrichment */}
+      {resolvedSalary && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Salary Range</div>
           <div className={styles.infoValue}>
-            {enrichment.salaryMin && enrichment.salaryMax ? (
+            {resolvedSalary.min && resolvedSalary.max ? (
               <>
-                ₹{enrichment.salaryMin.toLocaleString("en-IN")} - ₹
-                {enrichment.salaryMax.toLocaleString("en-IN")} per month
+                ₹{resolvedSalary.min.toLocaleString("en-IN")} - ₹
+                {resolvedSalary.max.toLocaleString("en-IN")} per month
               </>
-            ) : enrichment?.salaryMin ? (
-              <>₹{enrichment.salaryMin.toLocaleString("en-IN")} per month</>
+            ) : resolvedSalary.min ? (
+              <>₹{resolvedSalary.min.toLocaleString("en-IN")} per month</>
             ) : (
-              <>₹{enrichment?.salaryMax?.toLocaleString("en-IN")} per month</>
+              <>₹{resolvedSalary.max?.toLocaleString("en-IN")} per month</>
             )}
           </div>
         </div>

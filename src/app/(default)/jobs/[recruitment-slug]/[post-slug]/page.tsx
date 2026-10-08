@@ -9,6 +9,11 @@ import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
+import {
+  resolvePostVacancy,
+  resolveSalary,
+  resolveDeadline,
+} from "@/lib/resolvers/fact-resolvers";
 
 interface JobPostingPageRouteProps {
   params: Promise<{
@@ -67,11 +72,21 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
   // Fetch recruitment data with all posts for context
   const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
 
+  // Resolve canonical facts via the single resolver layer (Gate 4D).
+  // Components must not read enrichment/legacy columns independently.
+  const now = new Date();
+  const resolvedFacts = {
+    vacancyCount: resolvePostVacancy(post as any),
+    salary: resolveSalary(post as any),
+    deadline: resolveDeadline(post as any, now),
+  };
+
   return (
     <JobPostingPage
       post={post}
       recruitment={recruitmentData}
       isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
+      resolvedFacts={resolvedFacts}
     />
   );
 }
