@@ -883,26 +883,63 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
 
   const db = getDb();
 
-  const results = await db.query.posts.findMany({
-    where: eq(posts.isLive, true),
-    orderBy: desc(posts.postedAt),
-    limit,
-    offset,
-  });
+  const results = await db
+    .select({
+      id: posts.id,
+      title: posts.title,
+      slug: posts.slug,
+      organizationName: posts.organizationName,
+      recruitmentName: posts.recruitmentName,
+      recruitmentSlug: posts.recruitmentSlug,
+      description: posts.description,
+      isLive: posts.isLive,
+      postedAt: posts.postedAt,
+      updatedAt: posts.updatedAt,
+      officialSourceUrl: posts.officialSourceUrl,
+      applyPortalUrl: posts.applyPortalUrl,
+      salaryMin: sql`COALESCE(e.salary_min, NULL)`,
+      salaryMax: sql`COALESCE(e.salary_max, NULL)`,
+      salaryNote: sql`e.salary_note`,
+      ageNote: sql`e.age_note`,
+      education: sql`e.education`,
+      experience: sql`e.experience`,
+      selectionProcess: sql`e.selection_process`,
+      vacanciesTotal: sql`e.vacancies_total`,
+      feeNote: sql`e.fee_note`,
+      applicationClosingDate: sql`e.application_closing_date`,
+      examDate: sql`e.exam_date`,
+    })
+    .from(posts)
+    .leftJoin(sql`public.post_enrichments e ON ${posts.id} = e.post_id`)
+    .where(eq(posts.isLive, true))
+    .orderBy(desc(posts.postedAt))
+    .limit(limit)
+    .offset(offset);
 
-  return (results || []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    organizationName: p.organizationName,
-    recruitmentName: p.recruitmentName,
-    recruitmentSlug: p.recruitmentSlug,
-    description: p.description,
-    isLive: p.isLive,
-    postedAt: p.postedAt,
-    updatedAt: p.updatedAt,
-    officialSourceUrl: p.officialSourceUrl,
-    applyPortalUrl: p.applyPortalUrl,
+  return (results || []).map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    organizationName: row.organizationName,
+    recruitmentName: row.recruitmentName,
+    recruitmentSlug: row.recruitmentSlug,
+    description: row.description,
+    isLive: row.isLive,
+    postedAt: row.postedAt,
+    updatedAt: row.updatedAt,
+    officialSourceUrl: row.officialSourceUrl,
+    applyPortalUrl: row.applyPortalUrl,
+    salaryMin: row.salaryMin,
+    salaryMax: row.salaryMax,
+    salaryNote: row.salaryNote,
+    ageNote: row.ageNote,
+    education: row.education,
+    experience: row.experience,
+    selectionProcess: row.selectionProcess,
+    vacanciesTotal: row.vacanciesTotal,
+    feeNote: row.feeNote,
+    applicationClosingDate: row.applicationClosingDate ? new Date(row.applicationClosingDate) : null,
+    examDate: row.examDate ? new Date(row.examDate) : null,
   }));
 }
 
