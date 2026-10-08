@@ -883,38 +883,38 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
 
   const db = getDb();
 
-  const results = await db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      slug: posts.slug,
-      organizationName: posts.organizationName,
-      recruitmentName: posts.recruitmentName,
-      recruitmentSlug: posts.recruitmentSlug,
-      description: posts.description,
-      isLive: posts.isLive,
-      postedAt: posts.postedAt,
-      updatedAt: posts.updatedAt,
-      officialSourceUrl: posts.officialSourceUrl,
-      applyPortalUrl: posts.applyPortalUrl,
-      salaryMin: sql`COALESCE(e."salaryMin", NULL)`,
-      salaryMax: sql`COALESCE(e."salaryMax", NULL)`,
-      salaryNote: sql`e."salaryNote"`,
-      ageNote: sql`e."ageNote"`,
-      education: sql`e.education`,
-      experience: sql`e.experience`,
-      selectionProcess: sql`e."selectionProcess"`,
-      vacanciesTotal: sql`e."vacanciesTotal"`,
-      feeNote: sql`e."feeNote"`,
-      applicationClosingDate: sql`e."applicationClosingDate"`,
-      examDate: sql`e."examDate"`,
-    })
-    .from(posts)
-    .leftJoin(sql`public.post_enrichments e ON ${posts.id} = e.post_id`)
-    .where(eq(posts.isLive, true))
-    .orderBy(desc(posts.postedAt))
-    .limit(limit)
-    .offset(offset);
+  const results = await db.execute<any>(sql`
+    SELECT
+      p.id,
+      p.title,
+      p.slug,
+      p."organizationName",
+      p."recruitmentName",
+      p."recruitmentSlug",
+      p.description,
+      p."isLive",
+      p."postedAt",
+      p."updatedAt",
+      p."officialSourceUrl",
+      p."applyPortalUrl",
+      COALESCE(e."salaryMin", NULL) as "salaryMin",
+      COALESCE(e."salaryMax", NULL) as "salaryMax",
+      e."salaryNote",
+      e."ageNote",
+      e.education,
+      e.experience,
+      e."selectionProcess",
+      e."vacanciesTotal",
+      e."feeNote",
+      e."applicationClosingDate",
+      e."examDate"
+    FROM public.posts p
+    LEFT JOIN public.post_enrichments e ON p.id = e.post_id
+    WHERE p."isLive" = true
+    ORDER BY p."postedAt" DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `);
 
   return (results || []).map((row: any) => ({
     id: row.id,

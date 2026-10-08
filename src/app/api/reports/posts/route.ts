@@ -20,14 +20,10 @@ export async function GET(request: Request) {
       ...post,
       postedAt: post.postedAt instanceof Date ? post.postedAt.toISOString() : post.postedAt,
       updatedAt: post.updatedAt instanceof Date ? post.updatedAt.toISOString() : post.updatedAt,
-      applicationClosingDate: post.applicationClosingDate instanceof Date 
-        ? post.applicationClosingDate.toISOString() 
+      applicationClosingDate: post.applicationClosingDate instanceof Date
+        ? post.applicationClosingDate.toISOString()
         : post.applicationClosingDate,
       examDate: post.examDate instanceof Date ? post.examDate.toISOString() : post.examDate,
-      resultDate: post.resultDate instanceof Date ? post.resultDate.toISOString() : post.resultDate,
-      appointmentDate: post.appointmentDate instanceof Date 
-        ? post.appointmentDate.toISOString() 
-        : post.appointmentDate,
     }));
 
     return NextResponse.json({
