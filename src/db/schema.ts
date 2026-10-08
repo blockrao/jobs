@@ -1177,6 +1177,15 @@ export const recruitments = pgTable(
     // e.g. "12/2026" for UPSC Advt. No. 12/2026. Used to build the hub-page
     // URL slug and breadcrumb. Nullable — not all sources capture it.
     advertisementNumber: varchar("advertisement_number", { length: 80 }),
+    // Enrichment fields from FreeJobAlert source (A-082) - Phase 1 display-text only
+    // Format: "SC/ST/PwBD: NIL; All Others: Rs. 500"
+    feeNote: text("fee_note"),
+    // Application URL from official source (e.g. https://upsc.gov.in/)
+    applyUrl: text("apply_url"),
+    // Selection process stages (e.g. "CBT → Mains → Interview")
+    selectionProcess: text("selection_process"),
+    // Age limits and relaxation rules (e.g. "Age limit: 20-28 years; Relaxation for SC/ST...")
+    ageNote: text("age_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1186,6 +1195,24 @@ export const recruitments = pgTable(
     uniqueIndex("recruitments_org_notification_idx")
       .on(table.organizationId, table.officialNotificationNumber)
       .where(sql`${table.officialNotificationNumber} is not null`),
+  ],
+).enableRLS();
+
+// Mapping of old recruitment slugs to new ones for SEO-preserving 301 redirects.
+// Used during slug format migrations (e.g. from long descriptive to enterprise-grade sequential).
+// The middleware.ts checks this table to redirect old URLs to new ones.
+export const recruitment_slug_redirects = pgTable(
+  "recruitment_slug_redirects",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    old_slug: varchar("old_slug", { length: 220 }).notNull().unique(),
+    new_slug: varchar("new_slug", { length: 220 }).notNull(),
+    recruitment_id: integer("recruitment_id").notNull().references(() => recruitments.id, { onDelete: "cascade" }),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_old_slug").on(table.old_slug),
+    index("idx_recruitment_id").on(table.recruitment_id),
   ],
 ).enableRLS();
 
@@ -1407,10 +1434,15 @@ export const recruitmentsRelations = relations(recruitments, ({ one, many }) => 
   posts: many(posts),
   selectionProcesses: many(selectionProcesses),
   fees: many(recruitmentFees),
+  slugRedirects: many(recruitment_slug_redirects),
 }));
 
 export const selectionProcessesRelations = relations(selectionProcesses, ({ one }) => ({
   recruitment: one(recruitments, { fields: [selectionProcesses.recruitmentId], references: [recruitments.id] }),
+}));
+
+export const recruitment_slug_redirectsRelations = relations(recruitment_slug_redirects, ({ one }) => ({
+  recruitment: one(recruitments, { fields: [recruitment_slug_redirects.recruitment_id], references: [recruitments.id] }),
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
