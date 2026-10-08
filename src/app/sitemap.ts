@@ -10,6 +10,7 @@ import {
   getAllOrganizationSlugsForSitemap,
   getPostingSlugsPageForSitemap,
   getPostSlugsForSitemap,
+  getRecruitmentSlugsForSitemap,
   listCommissionsWithExams,
 } from "@/lib/queries";
 import { pickSitemapLastmod } from "@/lib/freshness/lastmod";
@@ -28,7 +29,7 @@ const MAX_POSTING_URLS = 45000;
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows, postLeafRows] = await Promise.all([
+  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows, postLeafRows, recruitmentRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
     getAllCategorySlugsForSitemap().catch(() => []),
@@ -36,6 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getAllExamSlugsForSitemap().catch(() => []),
     listCommissionsWithExams().catch(() => []),
     getPostSlugsForSitemap().catch(() => []),
+    getRecruitmentSlugsForSitemap().catch(() => []),
   ]);
 
   const staticEntries: MetadataRoute.Sitemap = [
@@ -100,6 +102,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
+  // Recruitment Hub pages — /jobs/{recruitment-slug}
+  const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.map((row) => ({
+    url: `${SITE_URL}/jobs/${row.slug}`,
+    lastModified: row.updatedAt ?? undefined,
+    changeFrequency: row.isLive ? ("daily" as const) : ("weekly" as const),
+    priority: row.isLive ? 0.8 : 0.5,
+  }));
+
   // PQ-006 / PQ-007: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
   //
   // Sitemap policy (Phase 1B):
@@ -126,7 +136,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...roleEntries,
     ...stateEntries,
-    // REMOVED: postingEntries (recruitment aggregation pages are noindex and should not be in sitemap)
+    ...recruitmentEntries,
     ...postLeafEntries,
     ...articleEntries,
     ...categoryEntries,

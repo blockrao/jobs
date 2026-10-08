@@ -533,6 +533,27 @@ export async function getPostSlugsForSitemap() {
   return rows;
 }
 
+export async function getRecruitmentSlugsForSitemap() {
+  if (!hasDb()) return [];
+  const db = getDb();
+  // All recruitments with a slug are included in the sitemap.
+  // is_live drives changeFrequency and priority.
+  const rows = await db
+    .select({
+      slug: recruitments.slug,
+      updatedAt: recruitments.updatedAt,
+      isLive: sql<boolean>`
+        (${recruitments.status} IN ('ACTIVE', 'UPCOMING')
+         AND (${recruitments.applicationEndDate} IS NULL
+              OR ${recruitments.applicationEndDate} > NOW()))
+      `,
+    })
+    .from(recruitments)
+    .where(sql`${recruitments.slug} IS NOT NULL`)
+    .orderBy(recruitments.id);
+  return rows;
+}
+
 // Get postings for a specific commission (all exams under it)
 export async function getPostingsByCommission(commissionSlug: string) {
   if (!hasDb()) return [];
