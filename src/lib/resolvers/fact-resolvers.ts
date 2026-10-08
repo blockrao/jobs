@@ -590,8 +590,7 @@ export interface RecruitmentInput {
   officialApplicationUrl?: string | null;  // recruitments.official_application_url
   applyUrl?: string | null;                // recruitments.apply_url (enrichment field)
   officialLinkSource?: string | null;      // recruitments.official_link_source (MANUAL_VERIFIED | AGGREGATOR_DISCOVERED)
-  organizationName?: string | null;        // from organizations join
-  organizationVerified?: boolean | null;   // from organizations.verified (when available)
+  organizationName?: string | null;        // from organizations join (organizations.name)
   selectionProcess?: string | null;        // recruitments.selection_process (text)
 }
 
@@ -682,10 +681,10 @@ export function resolveRecruitmentApplicationUrl(
  * ORG-001B establishes the full verified registry.
  */
 export function resolveRecruitmentEmployer(
-  recruitment: Pick<RecruitmentInput, "organizationName" | "organizationVerified">
+  recruitment: Pick<RecruitmentInput, "organizationName">
 ): string | null {
   if (!recruitment.organizationName) return null;
-  // Phase 2: tighten to organizationVerified === true once ORG-001B is live.
+  // Phase 2: tighten to a verified flag once ORG-001B is live.
   return recruitment.organizationName;
 }
 

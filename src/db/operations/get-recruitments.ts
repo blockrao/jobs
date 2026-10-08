@@ -1,5 +1,5 @@
 import { getDb } from "../index";
-import { recruitments, posts, vacancies, locations, positions, eligibilities } from "../schema";
+import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations } from "../schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -100,10 +100,14 @@ export async function getRecruitmentWithPosts(slug: string) {
   try {
     const db = getDb();
 
-    // Step 1: Get the recruitment by slug
+    // Step 1: Get the recruitment by slug, joined with its organization for the name.
     const recruitmentResult = await db
-      .select()
+      .select({
+        recruitment: recruitments,
+        organizationName: organizations.name,
+      })
       .from(recruitments)
+      .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
       .where(eq(recruitments.slug, slug))
       .limit(1);
 
@@ -112,7 +116,10 @@ export async function getRecruitmentWithPosts(slug: string) {
       return null;
     }
 
-    const recruitment = recruitmentResult[0];
+    const recruitment = {
+      ...recruitmentResult[0].recruitment,
+      organizationName: recruitmentResult[0].organizationName,
+    };
     const recruitmentId = recruitment.id;
 
     // Step 2: Get all posts for this recruitment with positions
