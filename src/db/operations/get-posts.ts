@@ -152,7 +152,7 @@ export async function getPostBySlug(
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", err);
-    throw err;
+    return null;
   }
 }
 
