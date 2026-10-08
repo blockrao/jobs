@@ -390,7 +390,8 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
   const db = getDb();
 
   // Resolve the recruitment first — inferred type includes { organization, exam, selectionProcesses, fees }
-  const recruitment = await db.query.recruitments.findFirst({
+  // Note: feeNote, ageNote, selectionProcess are text fields on the recruitments table and are automatically selected
+  const recruitmentData = await db.query.recruitments.findFirst({
     where: eq(recruitments.slug, recruitmentSlug),
     with: { organization: true, exam: true, selectionProcesses: true, fees: true },
   }).catch((err: unknown) => {
@@ -400,7 +401,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     });
     throw err;
   });
-  if (!recruitment) {
+  if (!recruitmentData) {
     console.info("[getPostBySlug] recruitment not found", { recruitmentSlug });
     return null;
   }
@@ -408,7 +409,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
   // Resolve the post — inferred type includes { position, eligibilities, vacancies, ageRules, employingOrganization }
   const post = await db.query.posts.findFirst({
     where: and(
-      eq(posts.recruitmentId, recruitment.id),
+      eq(posts.recruitmentId, recruitmentData.id),
       eq(posts.slug, postSlug),
     ),
     with: {
@@ -422,13 +423,13 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     console.error("[getPostBySlug] posts query threw", {
       recruitmentSlug,
       postSlug,
-      recruitmentId: recruitment.id,
+      recruitmentId: recruitmentData.id,
       err: err instanceof Error ? err.message : String(err),
     });
     throw err;
   });
   if (!post) {
-    console.info("[getPostBySlug] post not found", { recruitmentSlug, postSlug, recruitmentId: recruitment.id });
+    console.info("[getPostBySlug] post not found", { recruitmentSlug, postSlug, recruitmentId: recruitmentData.id });
     return null;
   }
 
@@ -442,30 +443,36 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
       officialNotificationUrl: postings.officialNotificationUrl,
     })
     .from(postings)
-    .where(eq(postings.inferredRecruitmentId, recruitment.id))
+    .where(eq(postings.inferredRecruitmentId, recruitmentData.id))
     .limit(1)
     .catch(() => [])
     .then((rows) => rows[0] ?? { applyUrl: null, employmentType: null, officialNotificationUrl: null });
 
   return {
     post,
-    recruitment,
+    recruitment: {
+      ...recruitmentData,
+      // Map the raw field names to enrichment field names for backward compatibility
+      enrichmentFeeNote: recruitmentData.feeNote,
+      enrichmentAgeNote: recruitmentData.ageNote,
+      enrichmentSelectionProcess: recruitmentData.selectionProcess,
+    } as any,
     applyUrl: postingFields.applyUrl,
     postingEmploymentType: postingFields.employmentType,
     // Official notification URL: prefer the verified column on the recruitment
     // (populated from the official source), fall back to postings discovery value.
     // Leaf page uses this for the "Official Notification" button.
     officialNotificationUrl:
-      recruitment.officialNotificationUrl ??
+      recruitmentData.officialNotificationUrl ??
       postingFields.officialNotificationUrl ??
-      recruitment.notificationUrl ??
+      recruitmentData.notificationUrl ??
       null,
     // Convenience aliases surfaced explicitly so leaf-page code doesn't need
     // to dig into recruitment for these high-value fields.
-    selectionProcesses: recruitment.selectionProcesses ?? [],
-    fees: recruitment.fees ?? [],
+    selectionProcesses: recruitmentData.selectionProcesses ?? [],
+    fees: recruitmentData.fees ?? [],
     // ISO 3166-2:IN state code for JobPosting addressRegion (Step B / A-082).
-    locationStateCode: recruitment.locationStateCode ?? null,
+    locationStateCode: recruitmentData.locationStateCode ?? null,
   };
 }
 

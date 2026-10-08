@@ -437,6 +437,45 @@ export default async function PostLeafPage({ params }: Props) {
   // Selection stages
   const allStages: string[] = selectionProcesses.flatMap((sp) => sp.stages ?? []);
 
+  // ── Enrichment data extraction ────────────────────────────────────
+  /**
+   * Extract fee amount from fee note.
+   * Example: "SC/ST: NIL; Others: ₹500" → "₹500"
+   */
+  function extractFeeAmount(feeNote: string | null | undefined): string | null {
+    if (!feeNote) return null;
+    const match = feeNote.match(/₹\s*(\d+)/);
+    if (match) return `₹${match[1]}`;
+    if (feeNote.toLowerCase().includes("nil")) return "NIL";
+    return null;
+  }
+
+  /**
+   * Extract age range from age note.
+   * Example: "20-28 years; SC/ST/OBC: 5 years relaxation" → "20–28 yrs"
+   */
+  function extractAgeRange(ageNote: string | null | undefined): string | null {
+    if (!ageNote) return null;
+    const match = ageNote.match(/(\d+)\s*[-–]\s*(\d+)\s*years?/i);
+    if (match) return `${match[1]}–${match[2]} yrs`;
+    return null;
+  }
+
+  /**
+   * Extract first stage from selection process.
+   * Example: "Written Test → Interview → Document Verification" → "Written Test"
+   */
+  function extractFirstStage(selectionProcess: string | null | undefined): string | null {
+    if (!selectionProcess) return null;
+    const firstStage = selectionProcess.split("→")[0]?.trim();
+    return firstStage && firstStage.length > 0 ? firstStage : null;
+  }
+
+  const enrichmentFee = extractFeeAmount(recruitment.enrichmentFeeNote);
+  const enrichmentAge = extractAgeRange(recruitment.enrichmentAgeNote);
+  const enrichmentStage = extractFirstStage(recruitment.enrichmentSelectionProcess);
+  const hasEnrichment = enrichmentFee || enrichmentAge || enrichmentStage;
+
   // Structured data
   const recruitmentIsOpen =
     (recruitment.status === "ACTIVE" || recruitment.status === "UPCOMING") &&
@@ -537,7 +576,7 @@ export default async function PostLeafPage({ params }: Props) {
           </div>
 
           {/* Key facts strip — Last Date prominent */}
-          <div className="grid grid-cols-2 gap-px border-t border-black/5 bg-black/5 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px border-t border-black/5 bg-black/5 md:grid-cols-5">
             {/* Last Date — hero position */}
             <div className={`px-4 py-3 ${
               daysLeft !== null && isOpen && daysLeft <= 7 ? "bg-red-50"
@@ -573,7 +612,7 @@ export default async function PostLeafPage({ params }: Props) {
             </div>
 
             {/* Pay */}
-            <div className="bg-white px-4 py-3">
+            <div className="bg-white px-4 py-3 hidden md:block">
               <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 <Banknote className="h-3 w-3" />
                 Pay Scale
@@ -583,8 +622,19 @@ export default async function PostLeafPage({ params }: Props) {
               </div>
             </div>
 
+            {/* Fee */}
+            <div className="bg-white px-4 py-3 hidden md:block">
+              <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
+                <Banknote className="h-3 w-3" />
+                Fee
+              </div>
+              <div className={`mt-0.5 text-sm font-bold ${enrichmentFee ? "text-amber-700" : "text-neutral-400"}`}>
+                {enrichmentFee ?? "—"}
+              </div>
+            </div>
+
             {/* Age UR */}
-            <div className="bg-white px-4 py-3">
+            <div className="bg-white px-4 py-3 hidden md:block">
               <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 <GraduationCap className="h-3 w-3" />
                 Age (UR)
@@ -596,7 +646,7 @@ export default async function PostLeafPage({ params }: Props) {
 
             {/* Post Code */}
             {post.sourcePostCode && (
-              <div className="bg-white px-4 py-3">
+              <div className="col-span-2 bg-white px-4 py-3 md:col-span-1">
                 <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Post Code</div>
                 <div className="mt-0.5 font-mono text-sm font-bold text-neutral-900">{post.sourcePostCode}</div>
               </div>
@@ -604,7 +654,7 @@ export default async function PostLeafPage({ params }: Props) {
 
             {/* Qualification snippet */}
             {verifiedElig?.qualificationText && (
-              <div className="col-span-2 bg-white px-4 py-3 sm:col-span-3">
+              <div className="col-span-2 bg-white px-4 py-3 md:col-span-5">
                 <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Qualification</div>
                 <div className="mt-0.5 text-sm text-neutral-900 leading-snug">
                   {verifiedElig.qualificationText.length > 80
@@ -657,6 +707,36 @@ export default async function PostLeafPage({ params }: Props) {
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+
+          {/* Enrichment badge strip */}
+          {hasEnrichment && (
+            <div className="flex flex-wrap gap-2 border-t border-black/5 px-5 py-3 bg-white">
+              {enrichmentFee && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-medium border border-amber-200"
+                  title={recruitment.enrichmentFeeNote || undefined}
+                >
+                  Fee: {enrichmentFee}
+                </span>
+              )}
+              {enrichmentAge && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-900 text-xs font-medium border border-blue-200"
+                  title={recruitment.enrichmentAgeNote || undefined}
+                >
+                  Age: {enrichmentAge}
+                </span>
+              )}
+              {enrichmentStage && (
+                <span
+                  className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-900 text-xs font-medium border border-purple-200 truncate"
+                  title={recruitment.enrichmentSelectionProcess || undefined}
+                >
+                  {enrichmentStage}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Trust badge / provenance */}
           <div className="flex items-center gap-2 rounded-b-xl border-t border-black/5 bg-neutral-50 px-5 py-2.5">
@@ -771,6 +851,11 @@ export default async function PostLeafPage({ params }: Props) {
         {fees.length > 0 && (
           <Card id="fees" className="mb-3">
             <CardHeader icon={Banknote} title="Application Fee" />
+            {recruitment.enrichmentFeeNote && (
+              <div className="px-5 py-3 bg-amber-50 border-b border-black/5">
+                <p className="text-sm text-amber-900">{recruitment.enrichmentFeeNote}</p>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -848,6 +933,11 @@ export default async function PostLeafPage({ params }: Props) {
         {post.ageRules.length > 0 && (
           <Card id="age" className="mb-3">
             <CardHeader icon={Users} title="Age Limits by Category" />
+            {recruitment.enrichmentAgeNote && (
+              <div className="px-5 py-3 bg-blue-50 border-b border-black/5">
+                <p className="text-sm text-blue-900">{recruitment.enrichmentAgeNote}</p>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -882,6 +972,11 @@ export default async function PostLeafPage({ params }: Props) {
         {allStages.length > 0 && (
           <Card id="selection" className="mb-3">
             <CardHeader icon={ClipboardList} title="Selection Process" />
+            {recruitment.enrichmentSelectionProcess && (
+              <div className="px-5 py-3 bg-purple-50 border-b border-black/5">
+                <p className="text-sm text-purple-900">{recruitment.enrichmentSelectionProcess}</p>
+              </div>
+            )}
             <ol className="px-5 py-4 space-y-3">
               {allStages.map((stage, i) => (
                 <li key={i} className="flex items-start gap-3">
