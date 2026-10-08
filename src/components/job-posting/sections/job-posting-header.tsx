@@ -108,9 +108,9 @@ const headerStyles = {
   jobMeta: {
     fontSize: "16px",
     color: "#4b5563",
-    display: "flex",
+    display: "flex" as const,
     gap: "20px",
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
   },
   metaItem: {
     display: "flex",

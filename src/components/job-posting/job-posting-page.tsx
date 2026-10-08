@@ -94,12 +94,21 @@ export default function JobPostingPage({ post }: JobPostingPageProps) {
         <div className={styles.footerNote}>
           <strong>About This Posting:</strong> This job posting is sourced from
           the official{" "}
-          <strong>{post.organizationName}</strong> notification dated{" "}
-          {new Date(post.notificationDate || "").toLocaleDateString("en-IN", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+          <strong>{post.organizationName}</strong> notification
+          {post.enrichment?.notificationDate && (
+            <>
+              {" "}
+              dated{" "}
+              {new Date(post.enrichment.notificationDate).toLocaleDateString(
+                "en-IN",
+                {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }
+              )}
+            </>
+          )}
           . Information has been verified and structured by JobOye for accuracy
           and completeness. For the most authoritative information, always refer
           to the official notification PDF and website. JobOye is not affiliated
