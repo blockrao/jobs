@@ -900,17 +900,18 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       p."updatedAt",
       p."officialSourceUrl",
       p."applyPortalUrl",
+      -- Enrichment from postings table (old schema)
+      COALESCE(e."salary_min", pt."salary_min") as "salaryMin",
+      COALESCE(e."salary_max", pt."salary_max") as "salaryMax",
+      e."salaryNote",
+      e."payScale",
+      e."payLevel",
       e."vacanciesByCategory",
       e."vacanciesTotal",
       e."feesByCategory",
       e."feeNote",
       e."ageRulesByCategory",
       e."ageNote",
-      e."payScale",
-      e."salaryMin",
-      e."salaryMax",
-      e."salaryNote",
-      e."payLevel",
       e."selectionProcess",
       e."applicationClosingDate",
       e."examDate",
@@ -922,9 +923,16 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       e."experience",
       e."sourceVerificationStatus",
       e."extractionConfidence",
-      e."dataGaps"
+      e."dataGaps",
+      pt."employment_type",
+      pt."age_limit_min",
+      pt."age_limit_max",
+      pt."apply_url",
+      pt."enrichment_notes",
+      pt."enrichment_source"
     FROM posts p
     LEFT JOIN post_enrichments e ON p.id = e.post_id
+    LEFT JOIN postings pt ON p.id = pt."inferred_post_id" AND pt."enrichment_source" IS NOT NULL
     WHERE p."isLive" = true
     ORDER BY p."postedAt" DESC
     LIMIT ${limit}
@@ -943,7 +951,7 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     postedAt: new Date(data.postedAt),
     updatedAt: new Date(data.updatedAt),
     officialSourceUrl: data.officialSourceUrl,
-    applyPortalUrl: data.applyPortalUrl,
+    applyPortalUrl: data.applyPortalUrl || data.apply_url, // Fallback to postings.apply_url
     vacanciesTotal: data.vacanciesTotal,
     vacanciesByCategory: data.vacanciesByCategory,
     salaryMin: data.salaryMin,
@@ -963,6 +971,12 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     sourceVerificationStatus: data.sourceVerificationStatus,
     extractionConfidence: data.extractionConfidence,
     dataGaps: data.dataGaps,
+    // Enrichment from postings table
+    employmentType: data.employment_type,
+    ageLimitMin: data.age_limit_min,
+    ageLimitMax: data.age_limit_max,
+    enrichmentNotes: data.enrichment_notes,
+    enrichmentSource: data.enrichment_source,
   }));
 }
 
