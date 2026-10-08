@@ -14,138 +14,145 @@ export async function getPostBySlug(
   recruitmentSlug: string,
   postSlug: string
 ): Promise<JobPostingData | null> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("posts")
-    .select(
+    const { data, error } = await supabase
+      .from("posts")
+      .select(
+        `
+        id,
+        title,
+        slug,
+        organizationId,
+        organizationName,
+        recruitmentId,
+        recruitmentName,
+        recruitmentSlug,
+        examType,
+        examTypeSlug,
+        description,
+        isLive,
+        postedAt,
+        updated_at,
+        officialSourceUrl,
+        applyPortalUrl,
+        post_enrichments!inner(
+          vacanciesByCategory,
+          vacanciesTotal,
+          feesByCategory,
+          feeNote,
+          ageRulesByCategory,
+          ageNote,
+          ageRelaxationRules,
+          ageReferenceDate,
+          payScale,
+          salaryMin,
+          salaryMax,
+          salaryNote,
+          payLevel,
+          selectionProcess,
+          notificationDate,
+          applicationOpenDate,
+          applicationClosingDate,
+          examDate,
+          admitCardDate,
+          resultDate,
+          interviewScheduleDate,
+          appointmentDate,
+          eligibilityPathways,
+          documentsRequired,
+          duties,
+          responsibilities,
+          sourceVerificationStatus,
+          sourceVerificationDate,
+          extractionConfidence,
+          dataGaps,
+          education,
+          experience,
+          benefits
+        )
       `
-      id,
-      title,
-      slug,
-      organizationId,
-      organizationName,
-      recruitmentId,
-      recruitmentName,
-      recruitmentSlug,
-      examType,
-      examTypeSlug,
-      description,
-      isLive,
-      postedAt,
-      updated_at,
-      officialSourceUrl,
-      applyPortalUrl,
-      post_enrichments!inner(
-        vacanciesByCategory,
-        vacanciesTotal,
-        feesByCategory,
-        feeNote,
-        ageRulesByCategory,
-        ageNote,
-        ageRelaxationRules,
-        ageReferenceDate,
-        payScale,
-        salaryMin,
-        salaryMax,
-        salaryNote,
-        payLevel,
-        selectionProcess,
-        notificationDate,
-        applicationOpenDate,
-        applicationClosingDate,
-        examDate,
-        admitCardDate,
-        resultDate,
-        interviewScheduleDate,
-        appointmentDate,
-        eligibilityPathways,
-        documentsRequired,
-        duties,
-        responsibilities,
-        sourceVerificationStatus,
-        sourceVerificationDate,
-        extractionConfidence,
-        dataGaps,
-        education,
-        experience,
-        benefits
       )
-    `
-    )
-    .eq("slug", postSlug)
-    .eq("recruitmentSlug", recruitmentSlug)
-    .eq("isLive", true)
-    .single();
+      .eq("slug", postSlug)
+      .eq("recruitmentSlug", recruitmentSlug)
+      .eq("isLive", true)
+      .single();
 
-  if (error) {
-    console.error("Error fetching post:", error);
-    return null;
+    if (error) {
+      console.error("Supabase query error:", error);
+      console.error("Query parameters:", { recruitmentSlug, postSlug });
+      return null;
+    }
+
+    if (!data) {
+      console.warn("No post found for:", { recruitmentSlug, postSlug });
+      return null;
+    }
+
+    // Transform the database response to JobPostingData type
+    const enrichment =
+      data.post_enrichments && data.post_enrichments.length > 0
+        ? data.post_enrichments[0]
+        : undefined;
+
+    return {
+      id: data.id,
+      title: data.title,
+      slug: data.slug,
+      organizationId: data.organizationId,
+      organizationName: data.organizationName,
+      recruitmentId: data.recruitmentId,
+      recruitmentName: data.recruitmentName,
+      recruitmentSlug: data.recruitmentSlug,
+      examType: data.examType,
+      examTypeSlug: data.examTypeSlug,
+      description: data.description,
+      isLive: data.isLive,
+      postedAt: new Date(data.postedAt),
+      updatedAt: new Date(data.updated_at),
+      officialSourceUrl: data.officialSourceUrl,
+      applyPortalUrl: data.applyPortalUrl,
+      enrichment: enrichment ? {
+        vacanciesByCategory: enrichment.vacanciesByCategory,
+        vacanciesTotal: enrichment.vacanciesTotal,
+        feesByCategory: enrichment.feesByCategory,
+        feeNote: enrichment.feeNote,
+        ageRulesByCategory: enrichment.ageRulesByCategory,
+        ageNote: enrichment.ageNote,
+        ageRelaxationRules: enrichment.ageRelaxationRules,
+        ageReferenceDate: enrichment.ageReferenceDate ? new Date(enrichment.ageReferenceDate) : undefined,
+        payScale: enrichment.payScale,
+        salaryMin: enrichment.salaryMin,
+        salaryMax: enrichment.salaryMax,
+        salaryNote: enrichment.salaryNote,
+        payLevel: enrichment.payLevel,
+        selectionProcess: enrichment.selectionProcess,
+        notificationDate: enrichment.notificationDate ? new Date(enrichment.notificationDate) : undefined,
+        applicationOpenDate: enrichment.applicationOpenDate ? new Date(enrichment.applicationOpenDate) : undefined,
+        applicationClosingDate: new Date(enrichment.applicationClosingDate),
+        examDate: enrichment.examDate ? new Date(enrichment.examDate) : undefined,
+        admitCardDate: enrichment.admitCardDate ? new Date(enrichment.admitCardDate) : undefined,
+        resultDate: enrichment.resultDate ? new Date(enrichment.resultDate) : undefined,
+        interviewScheduleDate: enrichment.interviewScheduleDate ? new Date(enrichment.interviewScheduleDate) : undefined,
+        appointmentDate: enrichment.appointmentDate ? new Date(enrichment.appointmentDate) : undefined,
+        eligibilityPathways: enrichment.eligibilityPathways,
+        documentsRequired: enrichment.documentsRequired,
+        duties: enrichment.duties,
+        responsibilities: enrichment.responsibilities,
+        sourceVerificationStatus: enrichment.sourceVerificationStatus,
+        sourceVerificationDate: new Date(enrichment.sourceVerificationDate),
+        extractionConfidence: enrichment.extractionConfidence,
+        dataGaps: enrichment.dataGaps,
+        education: enrichment.education,
+        experience: enrichment.experience,
+        benefits: enrichment.benefits,
+      } : undefined,
+    };
+  } catch (err) {
+    console.error("Exception in getPostBySlug:", err);
+    throw err;
   }
-
-  if (!data) {
-    return null;
-  }
-
-  // Transform the database response to JobPostingData type
-  const enrichment =
-    data.post_enrichments && data.post_enrichments.length > 0
-      ? data.post_enrichments[0]
-      : undefined;
-
-  return {
-    id: data.id,
-    title: data.title,
-    slug: data.slug,
-    organizationId: data.organizationId,
-    organizationName: data.organizationName,
-    recruitmentId: data.recruitmentId,
-    recruitmentName: data.recruitmentName,
-    recruitmentSlug: data.recruitmentSlug,
-    examType: data.examType,
-    examTypeSlug: data.examTypeSlug,
-    description: data.description,
-    isLive: data.isLive,
-    postedAt: new Date(data.postedAt),
-    updatedAt: new Date(data.updated_at),
-    officialSourceUrl: data.officialSourceUrl,
-    applyPortalUrl: data.applyPortalUrl,
-    enrichment: enrichment ? {
-      vacanciesByCategory: enrichment.vacanciesByCategory,
-      vacanciesTotal: enrichment.vacanciesTotal,
-      feesByCategory: enrichment.feesByCategory,
-      feeNote: enrichment.feeNote,
-      ageRulesByCategory: enrichment.ageRulesByCategory,
-      ageNote: enrichment.ageNote,
-      ageRelaxationRules: enrichment.ageRelaxationRules,
-      ageReferenceDate: enrichment.ageReferenceDate ? new Date(enrichment.ageReferenceDate) : undefined,
-      payScale: enrichment.payScale,
-      salaryMin: enrichment.salaryMin,
-      salaryMax: enrichment.salaryMax,
-      salaryNote: enrichment.salaryNote,
-      payLevel: enrichment.payLevel,
-      selectionProcess: enrichment.selectionProcess,
-      notificationDate: enrichment.notificationDate ? new Date(enrichment.notificationDate) : undefined,
-      applicationOpenDate: enrichment.applicationOpenDate ? new Date(enrichment.applicationOpenDate) : undefined,
-      applicationClosingDate: new Date(enrichment.applicationClosingDate),
-      examDate: enrichment.examDate ? new Date(enrichment.examDate) : undefined,
-      admitCardDate: enrichment.admitCardDate ? new Date(enrichment.admitCardDate) : undefined,
-      resultDate: enrichment.resultDate ? new Date(enrichment.resultDate) : undefined,
-      interviewScheduleDate: enrichment.interviewScheduleDate ? new Date(enrichment.interviewScheduleDate) : undefined,
-      appointmentDate: enrichment.appointmentDate ? new Date(enrichment.appointmentDate) : undefined,
-      eligibilityPathways: enrichment.eligibilityPathways,
-      documentsRequired: enrichment.documentsRequired,
-      duties: enrichment.duties,
-      responsibilities: enrichment.responsibilities,
-      sourceVerificationStatus: enrichment.sourceVerificationStatus,
-      sourceVerificationDate: new Date(enrichment.sourceVerificationDate),
-      extractionConfidence: enrichment.extractionConfidence,
-      dataGaps: enrichment.dataGaps,
-      education: enrichment.education,
-      experience: enrichment.experience,
-      benefits: enrichment.benefits,
-    } : undefined,
-  };
 }
 
 /**
