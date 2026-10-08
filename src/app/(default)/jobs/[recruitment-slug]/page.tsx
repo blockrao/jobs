@@ -14,9 +14,10 @@ import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import {
   resolveRecruitmentVacancy,
   resolvePostVacancy,
-  resolveOfficialSource,
-  resolveApplicationUrl,
-  resolveEmployer,
+  resolveRecruitmentOfficialSource,
+  resolveRecruitmentApplicationUrl,
+  resolveRecruitmentEmployer,
+  resolveRecruitmentSelectionProcess,
 } from "@/lib/resolvers/fact-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -82,31 +83,12 @@ export default async function RecruitmentHubPage({
     totalVacancies: recruitment.totalVacancies ?? null,
   });
 
-  // Official source URL — map recruitment columns to the resolver's expected shape.
-  // resolveOfficialSource checks isAuthoritativeDomain; null means link is not authoritative.
-  const resolvedOfficialSource = resolveOfficialSource({
-    officialSourceUrl: null,                         // Post-level field; not applicable here
-    recruitmentOfficialNotificationUrl: recruitment.officialNotificationUrl ?? null,
-  } as any);
-
-  // Official application URL.
-  const resolvedApplicationUrl = resolveApplicationUrl({
-    applyPortalUrl: recruitment.applyUrl ?? null,    // recruitment.applyUrl (enrichment field)
-    recruitmentOfficialApplicationUrl: recruitment.officialApplicationUrl ?? null,
-  } as any);
-
-  // Employer name — resolveEmployer requires organizationVerified flag.
-  // recruitment.organizationName comes from the organization join in getRecruitmentWithPosts.
-  const resolvedEmployerObj = resolveEmployer({
-    organizationName: recruitment.organizationName ?? null,
-    organizationVerified: !!(recruitment.organizationVerified ?? false),
-  } as any);
-  const resolvedEmployer = resolvedEmployerObj?.name ?? null;
-
-  // Selection process — recruitment.selectionProcess is a plain text field.
-  // The Post-level resolveSelectionProcess requires multiple identical enrichments
-  // and cannot be used here. Use the recruitment's own text field directly.
-  const resolvedSelectionProcess: string | null = recruitment.selectionProcess ?? null;
+  // Recruitment-level facts — resolved through the canonical Recruitment resolver layer.
+  // Do NOT add interpretation logic here; authority rules live in the resolvers.
+  const resolvedOfficialSource = resolveRecruitmentOfficialSource(recruitment);
+  const resolvedApplicationUrl = resolveRecruitmentApplicationUrl(recruitment);
+  const resolvedEmployer = resolveRecruitmentEmployer(recruitment);
+  const resolvedSelectionProcess = resolveRecruitmentSelectionProcess(recruitment);
 
   // Annotate each post with its resolved vacancy count so the Hub
   // does not independently select database columns.

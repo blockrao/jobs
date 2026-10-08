@@ -567,3 +567,152 @@ export function resolveEligibility(
     ageText: post.ageInfo ?? null,
   };
 }
+
+// ===========================================================================
+// Recruitment-level resolvers (Gate 4D)
+//
+// These are the canonical authority functions for Recruitment-level facts.
+// The Hub page, structured data, sitemap, and any future API must call these —
+// never implement their own interpretation of the same fields.
+//
+// Entity distinction:
+//   Post resolvers  → Post-level facts  (Post Leaf, Post structured data)
+//   Recruitment resolvers → Recruitment-level facts (Hub, Hub structured data)
+//
+// Authority pipeline (same as Post resolvers):
+//   source verified → extraction validated → entity scope validated →
+//   internal consistency validated → authoritative
+// ===========================================================================
+
+// Input type shared by all Recruitment-level resolvers.
+export interface RecruitmentInput {
+  officialNotificationUrl?: string | null; // recruitments.official_notification_url
+  officialApplicationUrl?: string | null;  // recruitments.official_application_url
+  applyUrl?: string | null;                // recruitments.apply_url (enrichment field)
+  officialLinkSource?: string | null;      // recruitments.official_link_source (MANUAL_VERIFIED | AGGREGATOR_DISCOVERED)
+  organizationName?: string | null;        // from organizations join
+  organizationVerified?: boolean | null;   // from organizations.verified (when available)
+  selectionProcess?: string | null;        // recruitments.selection_process (text)
+}
+
+// ---------------------------------------------------------------------------
+// Recruitment Resolver R1: resolveRecruitmentOfficialSource
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the authoritative official notification URL for a Recruitment, or null.
+ *
+ * Authority rules (in order):
+ *   1. MANUAL_VERIFIED link on an authoritative domain — highest confidence.
+ *      officialLinkSource === 'MANUAL_VERIFIED' means a human confirmed the URL
+ *      points to the correct official notification for this recruitment.
+ *   2. Authoritative domain only (*.gov.in, *.nic.in) without MANUAL_VERIFIED —
+ *      domain is authoritative but provenance is aggregator-discovered; still
+ *      preferred over null.
+ *   3. Non-authoritative domain or null — return null. Do not expose aggregator
+ *      or third-party URLs as an official source.
+ *
+ * Null means: no authoritative source is confirmed. The Hub must show nothing
+ * rather than an unverified link.
+ */
+export function resolveRecruitmentOfficialSource(
+  recruitment: Pick<RecruitmentInput, "officialNotificationUrl" | "officialLinkSource">
+): string | null {
+  const url = recruitment.officialNotificationUrl;
+  if (!url) return null;
+
+  if (!isAuthoritativeDomain(url)) return null;
+
+  // Authoritative domain confirmed — return the URL regardless of linkSource.
+  // MANUAL_VERIFIED is the strongest signal but not a prerequisite for display.
+  return url;
+}
+
+// ---------------------------------------------------------------------------
+// Recruitment Resolver R2: resolveRecruitmentApplicationUrl
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the authoritative application submission URL for a Recruitment, or null.
+ *
+ * Separate from resolveRecruitmentOfficialSource: the notification document and
+ * the application portal are different facts.
+ *
+ * Authority rules (in order):
+ *   1. recruitments.official_application_url on an authoritative domain — primary.
+ *   2. recruitments.apply_url (enrichment-sourced) on an authoritative domain — fallback.
+ *   3. Non-authoritative domain or null — return null.
+ *
+ * Null means: no verified application portal. The Hub must hide the apply button
+ * rather than link to an unverified URL.
+ */
+export function resolveRecruitmentApplicationUrl(
+  recruitment: Pick<RecruitmentInput, "officialApplicationUrl" | "applyUrl">
+): string | null {
+  if (recruitment.officialApplicationUrl && isAuthoritativeDomain(recruitment.officialApplicationUrl)) {
+    return recruitment.officialApplicationUrl;
+  }
+  if (recruitment.applyUrl && isAuthoritativeDomain(recruitment.applyUrl)) {
+    return recruitment.applyUrl;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Recruitment Resolver R3: resolveRecruitmentEmployer
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the canonical employer/organization name for a Recruitment, or null.
+ *
+ * Authority rules:
+ *   1. organizationName + organizationVerified === true → authoritative.
+ *   2. organizationName alone (unverified) → return the name as-is.
+ *      The organization table is the canonical registry; a name present there
+ *      is preferred over null even without an explicit verification flag.
+ *   3. No organizationName → null. Do not infer from recruitment.name or slug.
+ *
+ * Null means: organization identity is unresolved. The Hub must not fall back
+ * to title-derived or slug-derived names as authoritative facts.
+ *
+ * Note: Unlike resolveEmployer (Post-level), this does not require
+ * organizationVerified === true to return a value, because at the Recruitment
+ * level the organization row is the identity anchor — the join already happened.
+ * A strict verified-only gate is preserved as a comment for Phase 2 when
+ * ORG-001B establishes the full verified registry.
+ */
+export function resolveRecruitmentEmployer(
+  recruitment: Pick<RecruitmentInput, "organizationName" | "organizationVerified">
+): string | null {
+  if (!recruitment.organizationName) return null;
+  // Phase 2: tighten to organizationVerified === true once ORG-001B is live.
+  return recruitment.organizationName;
+}
+
+// ---------------------------------------------------------------------------
+// Recruitment Resolver R4: resolveRecruitmentSelectionProcess
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the recruitment-wide selection process description, or null.
+ *
+ * Authority rules:
+ *   - recruitments.selection_process is a Recruitment-owned text field.
+ *     It describes the process for the whole recruitment (e.g. "CBT → Mains → Interview"),
+ *     not any individual Post's process.
+ *   - This resolver is Recruitment-scoped: it intentionally does NOT look at
+ *     Post enrichment or cross-Post consensus (that is resolveSelectionProcess's job).
+ *   - A non-empty, non-whitespace-only string is returned as-is.
+ *   - Null means: no recruitment-level selection process has been recorded.
+ *     The Hub must omit this fact rather than display a placeholder.
+ *
+ * Phase 2: if Post-level selection processes are reconciled and confirmed
+ * recruitment-wide, this resolver can be extended to incorporate that signal.
+ */
+export function resolveRecruitmentSelectionProcess(
+  recruitment: Pick<RecruitmentInput, "selectionProcess">
+): string | null {
+  const val = recruitment.selectionProcess;
+  if (!val || !val.trim()) return null;
+  return val.trim();
+}
