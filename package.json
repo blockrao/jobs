@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node -e \"const fs=require('fs'),p='.next/server/middleware.js.nft.json';fs.existsSync(p)||fs.writeFileSync(p,JSON.stringify({files:[],version:1}))\"",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "echo \"Disabled by MIG-001: schema changes go through supabase/migrations/ (see its README).\" && exit 1",
