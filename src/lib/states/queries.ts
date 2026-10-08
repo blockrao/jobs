@@ -11,7 +11,7 @@ import { postings } from "@/db/schema";
 const current = [
   eq(postings.reviewStatus, "APPROVED"),
   sql`${postings.isExpired} IS NOT TRUE`,
-  sql`(${postings.validThrough} IS NULL OR ${postings.validThrough} >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`,
+  sql`(${postings.validThrough} IS NULL OR ${postings.validThrough} >= now()::date)`,
   sql`${postings.indexTier} IS DISTINCT FROM 'C'`,
 ];
 

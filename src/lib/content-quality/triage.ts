@@ -353,7 +353,7 @@ WHERE p.id = s.id
   AND p.is_expired IS NOT TRUE
   -- publication floor (same as the triage; protects against drift since the snapshot)
   AND p.current_stage IN ('NOTIFICATION_OUT', 'APPLICATION_OPEN')
-  AND p.valid_through >= (date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+  AND p.valid_through >= now()::date
   AND p.total_vacancies > 0
   AND (nullif(p.apply_url, '') IS NOT NULL OR nullif(p.official_notification_url, '') IS NOT NULL)
   AND p.eligibility IS NOT NULL AND length(btrim(p.eligibility)) >= 30

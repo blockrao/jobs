@@ -18,7 +18,7 @@ import { analyzeQuery, latinizeKnownAbbreviations } from "@/lib/search-aliases";
 
 /** Same rule as the listing guard in queries.ts (A-067): the last date itself still counts (UTC day); an unknown date is not excluded. */
 const SEARCH_NOT_PAST_LAST_DATE =
-  "(p.valid_through IS NULL OR p.valid_through >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')";
+  "(p.valid_through IS NULL OR p.valid_through >= now()::date)";
 
 export interface SearchFilters {
   query?: string;

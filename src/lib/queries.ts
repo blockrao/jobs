@@ -102,7 +102,7 @@ export async function getPostingBySlug(slug: string) {
  * (UTC day, the same rule promotion uses); an unknown last date is not excluded.
  * This guard is independent of the lifecycle cron and of the stored flag.
  */
-const notPastLastDate = sql`(${postings.validThrough} IS NULL OR ${postings.validThrough} >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`;
+const notPastLastDate = sql`(${postings.validThrough} IS NULL OR ${postings.validThrough} >= now()::date)`;
 
 export async function listPostings(opts?: {
   kind?: "GOVERNMENT" | "PRIVATE";
