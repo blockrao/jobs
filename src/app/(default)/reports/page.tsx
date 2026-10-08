@@ -88,6 +88,11 @@ export default function ReportsPage() {
 
   const totalPages = Math.ceil(totalPosts / ITEMS_PER_PAGE);
 
+  const calculatePercentage = (value: number, total: number) => {
+    if (total === 0) return 0;
+    return Math.round((value / total) * 100);
+  };
+
   const formatSalary = (min: number | null, max: number | null, note: string | null) => {
     if (note) return note;
     if (min && max) return `₹${(min / 100000).toFixed(2)}L - ₹${(max / 100000).toFixed(2)}L`;
@@ -100,45 +105,95 @@ export default function ReportsPage() {
     return new Date(dateStr).toLocaleDateString('en-IN');
   };
 
+  const MetricCard = ({
+    label,
+    value,
+    percentage,
+    color,
+    icon,
+  }: {
+    label: string;
+    value: number;
+    percentage: number;
+    color: string;
+    icon: string;
+  }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-gray-600 text-sm font-medium">{label}</p>
+          <p className={`text-3xl font-bold mt-2 ${color}`}>{value.toLocaleString()}</p>
+        </div>
+        <div className={`text-3xl ${color} opacity-20`}>{icon}</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 bg-gray-100 rounded-full h-2">
+          <div
+            className={`h-2 rounded-full transition-all ${color.replace('text-', 'bg-')}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        <span className="text-xs font-medium text-gray-600">{percentage}%</span>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Job Postings Report</h1>
-          <p className="text-gray-600">
-            Comprehensive view of all {totalPosts.toLocaleString()} live job postings with enrichment data
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Hero Section */}
+        <div className="mb-12">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h1 className="text-5xl font-bold text-gray-900 mb-3">Job Postings Dashboard</h1>
+              <p className="text-lg text-gray-600 max-w-2xl leading-relaxed">
+                Real-time analytics of all live job postings across platforms with enrichment coverage tracking
+              </p>
+            </div>
+          </div>
+          <div className="h-1 w-20 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-full"></div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="text-sm text-gray-600 font-semibold uppercase">Total Posts</div>
-            <div className="text-3xl font-bold text-indigo-600">{stats.totalPosts.toLocaleString()}</div>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="text-sm text-gray-600 font-semibold uppercase">With Salary Data</div>
-            <div className="text-3xl font-bold text-green-600">
-              {stats.withSalary.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="text-sm text-gray-600 font-semibold uppercase">With Vacancies</div>
-            <div className="text-3xl font-bold text-blue-600">
-              {stats.withVacancies.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="text-sm text-gray-600 font-semibold uppercase">With Exam Date</div>
-            <div className="text-3xl font-bold text-purple-600">
-              {stats.withExamDate.toLocaleString()}
-            </div>
+        {/* Key Metrics Section */}
+        <div className="mb-12">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-6">Data Completeness Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              label="Total Live Postings"
+              value={stats.totalPosts}
+              percentage={100}
+              color="text-indigo-600"
+              icon="📊"
+            />
+            <MetricCard
+              label="With Salary Information"
+              value={stats.withSalary}
+              percentage={calculatePercentage(stats.withSalary, stats.totalPosts)}
+              color="text-emerald-600"
+              icon="💰"
+            />
+            <MetricCard
+              label="With Vacancy Details"
+              value={stats.withVacancies}
+              percentage={calculatePercentage(stats.withVacancies, stats.totalPosts)}
+              color="text-blue-600"
+              icon="👥"
+            />
+            <MetricCard
+              label="With Exam Date"
+              value={stats.withExamDate}
+              percentage={calculatePercentage(stats.withExamDate, stats.totalPosts)}
+              color="text-purple-600"
+              icon="📅"
+            />
           </div>
         </div>
 
-        {/* Table Section */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {/* Data Table Section */}
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-6">Live Job Postings</h2>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-gray-500">
               Loading posts...
@@ -155,74 +210,75 @@ export default function ReportsPage() {
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-100 border-b-2 border-gray-200">
+                  <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Position Title</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Organization</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Vacancies</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Salary Range</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Application Deadline</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Exam Date</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Posted Date</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Source</th>
-                      <th className="px-4 py-2 text-left border-b font-semibold text-sm">Status</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Position Title</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Organization</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Vacancies</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Salary Range</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Application Deadline</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Exam Date</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Posted Date</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Source</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-700">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {posts.map((post) => (
-                      <tr key={post.id} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">
+                      <tr key={post.id} className="hover:bg-blue-50 transition-colors duration-150">
+                        <td className="px-6 py-4 font-medium text-gray-900 max-w-xs truncate">
                           <a
                             href={`/jobs/${post.recruitmentSlug}/${post.slug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-indigo-600 hover:text-indigo-800 hover:underline"
+                            className="text-indigo-600 hover:text-indigo-700 hover:underline font-semibold"
                           >
                             {post.title}
                           </a>
                         </td>
-                        <td className="px-4 py-3 text-gray-700 max-w-xs truncate">
+                        <td className="px-6 py-4 text-gray-700 max-w-xs truncate">
                           {post.organizationName}
                         </td>
-                        <td className="px-4 py-3 text-center font-semibold">
+                        <td className="px-6 py-4">
                           {post.vacanciesTotal ? (
-                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">
+                            <span className="inline-flex items-center px-3 py-1 rounded-lg bg-blue-100 text-blue-700 text-xs font-semibold">
                               {post.vacanciesTotal}
                             </span>
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-700">
+                        <td className="px-6 py-4 text-gray-700 font-medium">
                           {formatSalary(post.salaryMin, post.salaryMax, post.salaryNote)}
                         </td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
                           {formatDate2(post.applicationClosingDate)}
                         </td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        <td className="px-6 py-4 text-gray-700 whitespace-nowrap">
                           {formatDate2(post.examDate)}
                         </td>
-                        <td className="px-4 py-3 text-gray-700 whitespace-nowrap text-xs">
+                        <td className="px-6 py-4 text-gray-600 whitespace-nowrap text-xs">
                           {formatDate2(post.postedAt)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           {post.officialSourceUrl ? (
-                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
-                              ✓ Verified
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                              <span>✓</span> Verified
                             </span>
                           ) : (
-                            <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">
+                            <span className="inline-flex items-center px-3 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-semibold">
                               Pending
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-6 py-4">
                           {post.isLive ? (
-                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
+                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                              <span className="w-2 h-2 bg-emerald-600 rounded-full"></span>
                               Live
                             </span>
                           ) : (
-                            <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold">
+                            <span className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold">
                               Inactive
                             </span>
                           )}
@@ -233,32 +289,33 @@ export default function ReportsPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              {/* Pagination Footer */}
+              <div className="px-6 py-6 border-t border-gray-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
                 <div className="text-sm text-gray-600">
-                  Showing <strong>{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</strong> to{' '}
-                  <strong>{Math.min(currentPage * ITEMS_PER_PAGE, totalPosts)}</strong> of{' '}
-                  <strong>{totalPosts.toLocaleString()}</strong> posts
+                  Showing <span className="font-semibold text-gray-900">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> to{' '}
+                  <span className="font-semibold text-gray-900">{Math.min(currentPage * ITEMS_PER_PAGE, totalPosts)}</span> of{' '}
+                  <span className="font-semibold text-gray-900">{totalPosts.toLocaleString()}</span> posts
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-colors"
                   >
-                    Previous
+                    ← Previous
                   </button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
-                    </span>
+                  <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg">
+                    <span className="text-sm text-gray-600">Page</span>
+                    <span className="font-semibold text-gray-900">{currentPage}</span>
+                    <span className="text-gray-400">of</span>
+                    <span className="font-semibold text-gray-900">{totalPages}</span>
                   </div>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-colors"
                   >
-                    Next
+                    Next →
                   </button>
                 </div>
               </div>

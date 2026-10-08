@@ -966,10 +966,10 @@ export async function getEnrichmentStats() {
   const db = getDb();
   const result = await db.execute<any>(sql`
     SELECT
-      COUNT(*)::int as totalPosts,
-      COUNT(CASE WHEN "salaryMin" IS NOT NULL OR "salaryMax" IS NOT NULL THEN 1 END)::int as withSalary,
-      COUNT(CASE WHEN "vacanciesTotal" IS NOT NULL THEN 1 END)::int as withVacancies,
-      COUNT(CASE WHEN "examDate" IS NOT NULL THEN 1 END)::int as withExamDate
+      COUNT(*)::int as "totalPosts",
+      COUNT(CASE WHEN "salaryMin" IS NOT NULL OR "salaryMax" IS NOT NULL THEN 1 END)::int as "withSalary",
+      COUNT(CASE WHEN "vacanciesTotal" IS NOT NULL THEN 1 END)::int as "withVacancies",
+      COUNT(CASE WHEN "examDate" IS NOT NULL THEN 1 END)::int as "withExamDate"
     FROM (
       SELECT
         e."salaryMin",
@@ -984,9 +984,9 @@ export async function getEnrichmentStats() {
 
   const stats = result?.[0];
   return {
-    totalPosts: stats?.totalPosts || 0,
-    withSalary: stats?.withSalary || 0,
-    withVacancies: stats?.withVacancies || 0,
-    withExamDate: stats?.withExamDate || 0,
+    totalPosts: stats?.totalPosts || stats?.[`"totalPosts"`] || 0,
+    withSalary: stats?.withSalary || stats?.[`"withSalary"`] || 0,
+    withVacancies: stats?.withVacancies || stats?.[`"withVacancies"`] || 0,
+    withExamDate: stats?.withExamDate || stats?.[`"withExamDate"`] || 0,
   };
 }
