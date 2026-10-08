@@ -18,17 +18,26 @@ function hasDb(): boolean {
 }
 
 /**
- * Get the canonical role slug that a recruitment should redirect to.
+ * Resolve the role hub for a recruitment URL.
+ *
+ * Recruitment is a supporting, non-indexable aggregation layer (see ARCHITECTURE_LEDGER.md).
+ * When a recruitment contains multiple posts, we consolidate its traffic to the relevant
+ * role hub for SEO and user navigation (one canonical path per role).
  *
  * Strategy:
  *   1. Find recruitment by slug
- *   2. Get all posts for that recruitment
- *   3. Select the post/role with highest vacancy count
- *   4. Return the role's slug (for /posts/[role-slug] hub)
+ *   2. Get all posts in that recruitment
+ *   3. Select the role with highest vacancy count (heuristic for most relevant role)
+ *   4. Return the role's slug for /posts/[role-slug] hub
  *
- * @returns role slug to redirect to, or null if not found/ambiguous
+ * NOTE: Selecting by vacancy count is a routing heuristic only. It does NOT establish
+ * an ontological relationship (e.g., "this position is primary to the recruitment").
+ * It is purely a UX decision: if a recruitment has 50 Clerk vacancies and 1 Steno vacancy,
+ * the user landing on the recruitment page likely wants the Clerk role hub.
+ *
+ * @returns role slug for the role hub, or null if recruitment not found or has no posts
  */
-export async function getRedirectTargetForRecruitmentSlug(
+export async function getRoleHubForRecruitmentSlug(
   recruitmentSlug: string
 ): Promise<string | null> {
   if (!hasDb()) return null;
@@ -59,22 +68,22 @@ export async function getRedirectTargetForRecruitmentSlug(
       return null; // No posts in this recruitment
     }
 
-    // Step 3: Select primary role (highest vacancy count)
+    // Step 3: Select the role with highest vacancy count (navigation heuristic)
     // If all posts have equal vacancies or null, use first one
-    const primaryPost = recruitmentPosts.reduce((a, b) => {
+    const selectedPost = recruitmentPosts.reduce((a, b) => {
       const aVacancies = a.vacancyTotal ?? 0;
       const bVacancies = b.vacancyTotal ?? 0;
       return bVacancies > aVacancies ? b : a;
     });
 
-    // Step 4: Return role slug
-    if (primaryPost.position?.slug) {
-      return primaryPost.position.slug;
+    // Step 4: Return role slug for the hub
+    if (selectedPost.position?.slug) {
+      return selectedPost.position.slug;
     }
 
     return null;
   } catch (error) {
-    console.error(`[redirects] Error resolving redirect for "${recruitmentSlug}":`, error);
+    console.error(`[redirects] Error resolving role hub for "${recruitmentSlug}":`, error);
     return null;
   }
 }

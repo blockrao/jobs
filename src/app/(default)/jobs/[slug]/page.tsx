@@ -26,7 +26,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostingBySlug, getPostsForRecruitment } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
-import { getRedirectTargetForRecruitmentSlug } from "@/lib/redirects";
+import { getRoleHubForRecruitmentSlug } from "@/lib/redirects";
 import {
   buildBreadcrumbSchema,
   buildExamEventSchema,
@@ -89,19 +89,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
 
   // URL Architecture Fix (2026-10-08):
-  // Check if this recruitment should redirect to a role hub
-  const redirectRoleSlug = await safeQuery(
-    () => getRedirectTargetForRecruitmentSlug(slug),
+  // Resolve the role hub for this recruitment (SEO consolidation).
+  // Recruitment is a supporting layer; traffic routes to canonical role hub.
+  const roleHubSlug = await safeQuery(
+    () => getRoleHubForRecruitmentSlug(slug),
     null
   );
 
-  if (redirectRoleSlug) {
-    // This is an intermediate recruitment page that should be indexed elsewhere
-    // Return noindex + canonical pointing to the role hub
+  if (roleHubSlug) {
+    // This is a recruitment page (supporting layer).
+    // Return noindex + canonical pointing to the canonical role hub.
     return {
       robots: { index: false, follow: false },
       alternates: {
-        canonical: `https://www.joboye.com/posts/${redirectRoleSlug}`,
+        canonical: `https://www.joboye.com/posts/${roleHubSlug}`,
       },
     };
   }
