@@ -9,6 +9,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostingBySlug, getPostsForRecruitment } from "@/lib/queries";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
+import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
 import {
@@ -160,7 +161,15 @@ export default async function LocaleJobPage({ params }: Props) {
   // Try to fetch as a recruitment first (hub page)
   const recruitmentData = await safeQuery(() => getRecruitmentWithPosts(slug), null);
   if (recruitmentData) {
-    return <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />;
+    return (
+      <>
+        <RecruitmentHubStructuredData
+          recruitment={recruitmentData.recruitment}
+          totalPosts={recruitmentData.totalPosts}
+        />
+        <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
+      </>
+    );
   }
 
   // Fall back to fetching as a posting (detail page)
