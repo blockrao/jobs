@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node -e \"const fs=require('fs'),f='node_modules/next/dist/build/adapter/build-complete.js',c=fs.readFileSync(f,'utf8'),from=\\\"await handleTraceFiles(middlewareFile, 'neutral');\\\",to=\\\"await handleTraceFiles(middlewareFile, 'neutral').catch(()=>({assets:{},assetsHashes:{}}));\\\";if(c.includes(from)){fs.writeFileSync(f,c.replace(from,to));console.log('patched build-complete.js')}else{console.log('already patched or pattern changed')}\"",
+    "prebuild": "node scripts/patch-next-build.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
