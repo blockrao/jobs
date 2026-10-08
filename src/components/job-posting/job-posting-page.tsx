@@ -23,9 +23,10 @@ import styles from "./job-posting-page.module.css";
 
 interface JobPostingPageProps {
   post: JobPostingData;
+  locale?: string;
 }
 
-export default function JobPostingPage({ post }: JobPostingPageProps) {
+export default function JobPostingPage({ post, locale = "en" }: JobPostingPageProps) {
   return (
     <>
       {/* Structured Data */}
