@@ -11,6 +11,7 @@ import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
+import { resolveRecruitmentVacancy, resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,25 @@ export default async function RecruitmentHubPage({
 
   const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData;
 
+  // Resolve canonical vacancy counts via the single resolver layer (Gate 4D).
+  // The Hub must not read old relational vacancies table (always empty for most posts).
+  const resolvedRecruitmentVacancies = resolveRecruitmentVacancy({
+    totalVacancies: recruitment.totalVacancies ?? null,
+  });
+
+  // Annotate each post with its resolved vacancy count so the Hub
+  // does not independently select database columns.
+  const postsWithResolvedVacancies = posts.map((post: any) => ({
+    ...post,
+    resolvedVacancyCount: resolvePostVacancy({
+      id: String(post.id),
+      vacancyTotal: post.vacancyTotal ?? null,
+      recruitmentVacancyTotal: recruitment.totalVacancies ?? null,
+      // Hub ORM posts don't carry enrichment; enrichment is undefined here.
+      // resolvePostVacancy will fall through to the reconciled legacy path.
+    } as any),
+  }));
+
   // Display the modern recruitment hub for all recruitments
   // This provides a comprehensive interface for both single and multi-post recruitments
   return (
@@ -73,7 +93,11 @@ export default async function RecruitmentHubPage({
         recruitment={recruitment}
         totalPosts={totalPosts}
       />
-      <RecruitmentHub recruitment={recruitment} posts={posts} />
+      <RecruitmentHub
+        recruitment={recruitment}
+        posts={postsWithResolvedVacancies}
+        resolvedTotalVacancies={resolvedRecruitmentVacancies}
+      />
     </>
   );
 }

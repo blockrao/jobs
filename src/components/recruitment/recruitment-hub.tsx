@@ -30,9 +30,11 @@ import {
 interface RecruitmentHubProps {
   recruitment: any;
   posts: any[];
+  /** Resolved total vacancies from resolveRecruitmentVacancy() — null when unverified */
+  resolvedTotalVacancies?: number | null;
 }
 
-const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) => {
+const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts, resolvedTotalVacancies }) => {
   const calculateDaysLeft = (endDate: any): number | null => {
     if (!endDate) return null;
     const end = new Date(endDate);
@@ -55,12 +57,11 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
     });
   };
 
-  const getTotalVacancies = () => {
-    return posts.reduce((sum: number, post: any) => {
-      const postVacancies = post.vacancies?.reduce((pSum: number, v: any) => pSum + (v.count || 0), 0) || 0;
-      return sum + postVacancies;
-    }, 0);
-  };
+  // Resolved total comes from resolveRecruitmentVacancy() server-side.
+  // Null means unverified — display a dash rather than a misleading zero.
+  const displayTotalVacancies = resolvedTotalVacancies != null
+    ? String(resolvedTotalVacancies)
+    : '—';
 
   return (
     <div className="min-h-screen bg-white">
@@ -116,7 +117,7 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
               <div className="text-sm text-gray-600">Total Positions</div>
             </div>
             <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="text-2xl font-bold text-gray-900">{getTotalVacancies()}</div>
+              <div className="text-2xl font-bold text-gray-900">{displayTotalVacancies}</div>
               <div className="text-sm text-gray-600">Total Vacancies</div>
             </div>
             <div className={`rounded-lg p-4 border ${isUrgent ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200'}`}>
@@ -284,7 +285,8 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
               </h2>
               <div className="space-y-3">
                 {posts.map((post: any, index: number) => {
-                  const postVacancies = post.vacancies?.reduce((sum: number, v: any) => sum + (v.count || 0), 0) || 0;
+                  // resolvedVacancyCount is set by the page via resolvePostVacancy()
+                  const postVacancies = post.resolvedVacancyCount ?? null;
                   return (
                     <Link
                       key={post.id}
@@ -304,7 +306,10 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
                           <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 ml-11">
                             <span className="flex items-center gap-1">
                               <Users size={16} className="text-blue-600" />
-                              <strong>{postVacancies}</strong> Post{postVacancies !== 1 ? 's' : ''}
+                              {postVacancies != null
+                                ? <><strong>{postVacancies}</strong>&nbsp;Post{postVacancies !== 1 ? 's' : ''}</>
+                                : <span className="text-gray-400">See position details</span>
+                              }
                             </span>
                             {post.position?.name && (
                               <span className="flex items-center gap-1">
@@ -394,12 +399,15 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
                   </thead>
                   <tbody>
                     {posts.map((post: any, idx: number) => {
-                      const postVacancies = post.vacancies?.reduce((sum: number, v: any) => sum + (v.count || 0), 0) || 0;
+                      // resolvedVacancyCount is set by the page via resolvePostVacancy()
+                      const postVacancies = post.resolvedVacancyCount ?? null;
                       return (
                         <tr key={post.id} className={`border-t ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                           <td className="px-4 py-3 font-semibold text-gray-900 text-sm">{post.name}</td>
                           <td className="px-4 py-3 text-gray-600 text-sm">{post.qualification_text || 'See position details'}</td>
-                          <td className="px-4 py-3 text-gray-900 font-bold text-sm">{postVacancies}</td>
+                          <td className="px-4 py-3 text-gray-900 font-bold text-sm">
+                            {postVacancies != null ? postVacancies : '—'}
+                          </td>
                         </tr>
                       );
                     })}

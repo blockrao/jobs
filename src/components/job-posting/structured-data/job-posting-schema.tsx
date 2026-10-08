@@ -1,21 +1,32 @@
 /**
  * JobPosting + BreadcrumbList Structured Data
  *
- * Emits schema.org/JobPosting (if hiring is open) and BreadcrumbList as a
- * single @graph JSON-LD block.
+ * Emits schema.org/JobPosting and BreadcrumbList as a single @graph JSON-LD block.
  *
- * Design principles (Gate 2):
- *   - Only fields sourced from real data; no fabricated/inferred values.
- *   - employmentType → schema.org FULL_TIME (not the DB value "PERMANENT").
- *   - baseSalary → MonetaryAmount/QuantitativeValue (not PriceSpecification).
- *   - totalJobOpenings is a top-level JobPosting field (not a dot-notation key).
- *   - validThrough omitted when applicationClosingDate is null/undefined.
- *   - JobPosting suppressed for expired postings (isHiringOpen gate).
- *   - BreadcrumbList always emitted regardless of hiring status.
+ * Gate 4C/4D rules:
+ *   - All facts sourced exclusively through the canonical resolver layer.
+ *   - JobPosting suppressed entirely when neither resolveOfficialSource() nor
+ *     resolveApplicationUrl() returns a value (no verifiable source).
+ *   - validThrough emitted ONLY when resolveDeadline() state === 'OPEN'.
+ *   - hiringOrganization emitted ONLY when resolveEmployer() returns non-null.
+ *   - totalJobOpenings emitted ONLY when resolvePostVacancy() returns non-null.
+ *   - baseSalary emitted ONLY when resolveSalary() returns non-null.
+ *   - datePosted uses the official notification publication date, NOT posts.created_at.
+ *   - employmentType emitted ONLY when the official source establishes it.
+ *   - BreadcrumbList always emitted regardless of JobPosting suppression.
  */
 
 import { JobPostingData } from "@/types/job-posting";
 import { SITE_URL } from "@/lib/site";
+import {
+  resolveDeadline,
+  resolveOfficialSource,
+  resolveApplicationUrl,
+  resolveEmployer,
+  resolveLocation,
+  resolvePostVacancy,
+  resolveSalary,
+} from "@/lib/resolvers/fact-resolvers";
 
 const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   FULL_TIME: "FULL_TIME",
@@ -28,23 +39,35 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   DEPUTATION: "OTHER",
   FELLOWSHIP: "INTERN",
   INTERNSHIP: "INTERN",
-  PERMANENT: "FULL_TIME",   // DB stores "PERMANENT"; schema.org requires "FULL_TIME"
+  PERMANENT: "FULL_TIME",
 };
 
-/** True only when the posting is still accepting applications. */
-function isHiringOpen(applicationClosingDate: Date | undefined): boolean {
-  if (!applicationClosingDate) return true; // no closing date = assume open
-  return applicationClosingDate.getTime() > Date.now();
-}
-
 interface JobPostingStructuredDataProps {
-  post: JobPostingData;
+  post: JobPostingData & {
+    vacancyTotal?: number | null;
+    recruitmentVacancyTotal?: number | null;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
+    recruitmentOfficialNotificationUrl?: string | null;
+    recruitmentOfficialApplicationUrl?: string | null;
+    organizationVerified?: boolean;
+    organizationWebsite?: string | null;
+    workCity?: string | null;
+    workState?: string | null;
+    locationFromEnrichment?: string | null;
+    recruitmentApplicationEndDate?: Date | null;
+    postDeadlineConfirmedForRecruitment?: boolean;
+    // Official notification publication date (not ingestion timestamp)
+    notificationPublicationDate?: Date | null;
+    // Employment type from official source (not assumed)
+    officialEmploymentType?: string | null;
+  };
 }
 
 export default function JobPostingStructuredData({
   post,
 }: JobPostingStructuredDataProps) {
-  const enrichment = post.enrichment;
+  const now = new Date();
   const postUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.slug}`;
   const recruitmentUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
 
@@ -74,79 +97,117 @@ export default function JobPostingStructuredData({
     ],
   };
 
-  // --- JobPosting (suppressed when applications are closed) ---
-  const hiringOpen = isHiringOpen(enrichment?.applicationClosingDate);
+  // --- Resolve all facts via canonical resolvers ---
+  const officialSourceUrl = resolveOfficialSource(post);
+  const applicationUrl = resolveApplicationUrl(post);
+
+  // Suppression rule: if neither verified official source nor verified
+  // application URL exists, do not emit JobPosting at all.
+  const hasVerifiableSource = officialSourceUrl !== null || applicationUrl !== null;
 
   let jobPosting: Record<string, unknown> | null = null;
-  if (hiringOpen) {
-    // baseSalary: MonetaryAmount > QuantitativeValue per schema.org spec
-    const baseSalary =
-      enrichment?.salaryMin || enrichment?.salaryMax
-        ? {
-            "@type": "MonetaryAmount",
-            currency: "INR",
-            value: {
-              "@type": "QuantitativeValue",
-              ...(enrichment.salaryMin && { minValue: enrichment.salaryMin }),
-              ...(enrichment.salaryMax && { maxValue: enrichment.salaryMax }),
-              unitText: "MONTH",
-            },
-          }
-        : undefined;
 
-    // jobLocation: only emit when we have a real location string
-    const jobLocation =
-      post.organizationName
-        ? {
-            "@type": "Place",
-            address: {
-              "@type": "PostalAddress",
-              addressCountry: "IN",
-            },
-          }
-        : undefined;
+  if (hasVerifiableSource) {
+    const deadline = resolveDeadline(post, now);
+    const salary = resolveSalary(post);
+    const employer = resolveEmployer(post);
+    const location = resolveLocation(post);
+    const vacancyCount = resolvePostVacancy(post);
+
+    // datePosted: official notification publication date only.
+    // Never use posts.created_at as a semantic substitute for datePosted.
+    // If the official publication date is unavailable, omit the field.
+    const datePosted = post.notificationPublicationDate ?? post.enrichment?.notificationDate ?? null;
+
+    // employmentType: only when the official source establishes it.
+    // Never universally assert FULL_TIME for government jobs.
+    const rawEmploymentType = post.officialEmploymentType ?? null;
+    const employmentType = rawEmploymentType
+      ? EMPLOYMENT_TYPE_MAP[rawEmploymentType] ?? null
+      : null;
+
+    // baseSalary: MonetaryAmount > QuantitativeValue per schema.org spec
+    const baseSalary = salary
+      ? {
+          "@type": "MonetaryAmount",
+          currency: salary.currency,
+          value: {
+            "@type": "QuantitativeValue",
+            minValue: salary.min,
+            maxValue: salary.max,
+            unitText: salary.period,
+          },
+        }
+      : undefined;
+
+    // jobLocation: Place > PostalAddress
+    const jobLocation = location
+      ? {
+          "@type": "Place",
+          address: {
+            "@type": "PostalAddress",
+            ...(location.city ? { addressLocality: location.city } : {}),
+            ...(location.state ? { addressRegion: location.state } : {}),
+            addressCountry: location.country,
+          },
+        }
+      : undefined;
+
+    // hiringOrganization: only when resolveEmployer() returns verified employer
+    const hiringOrganization = employer
+      ? {
+          "@type": "Organization",
+          name: employer.name,
+          ...(employer.sameAs ? { sameAs: employer.sameAs } : {}),
+        }
+      : undefined;
+
+    // applicationContact: only when verified application URL exists
+    const applicationContact = applicationUrl
+      ? {
+          "@type": "ContactPoint",
+          contactType: "application",
+          url: applicationUrl,
+        }
+      : undefined;
 
     jobPosting = {
       "@type": "JobPosting",
       "@id": `${postUrl}#jobposting`,
-      url: postUrl,
+      // url: the official notification URL when verified; falls back to post URL
+      url: officialSourceUrl ?? postUrl,
       title: post.title,
       description:
         post.description ||
-        `${post.title} vacancy at ${post.organizationName}. Apply now on JobOye.`,
-      datePosted: post.postedAt?.toISOString(),
+        `${post.title} vacancy. See official notification for full details.`,
+      // datePosted: official publication date only; omit when unavailable
+      ...(datePosted ? { datePosted: datePosted.toISOString() } : {}),
       dateModified: post.updatedAt?.toISOString(),
-      // validThrough only when we have a real closing date (not the fallback new Date())
-      ...(enrichment?.applicationClosingDate && {
-        validThrough: enrichment.applicationClosingDate.toISOString(),
-      }),
-      employmentType: EMPLOYMENT_TYPE_MAP["PERMANENT"], // default; all Indian govt jobs are FULL_TIME
-      hiringOrganization: {
-        "@type": "Organization",
-        name: post.organizationName,
-      },
-      jobLocation,
-      // totalJobOpenings is a top-level field on JobPosting (not nested under hiringOrganization)
-      ...(enrichment?.vacanciesTotal && {
-        totalJobOpenings: enrichment.vacanciesTotal,
-      }),
-      ...(baseSalary && { baseSalary }),
+      // validThrough: ONLY when deadline state is OPEN (verified future date)
+      ...(deadline.state === "OPEN" && deadline.date
+        ? { validThrough: deadline.date.toISOString() }
+        : {}),
+      // employmentType: only from official source; never assumed
+      ...(employmentType ? { employmentType } : {}),
+      // hiringOrganization: only when employer is verified; never inferred
+      ...(hiringOrganization ? { hiringOrganization } : {}),
+      ...(jobLocation ? { jobLocation } : {}),
+      // totalJobOpenings: only when resolvePostVacancy() returns a value
+      ...(vacancyCount != null ? { totalJobOpenings: vacancyCount } : {}),
+      ...(baseSalary ? { baseSalary } : {}),
+      ...(applicationContact ? { applicationContact } : {}),
       identifier: {
         "@type": "PropertyValue",
-        name: post.organizationName,
+        name: "JobOye",
         value: String(post.id),
       },
-      // directApply: false — our apply links go to the official site
       directApply: false,
     };
   }
 
   const graph = {
     "@context": "https://schema.org",
-    "@graph": [
-      breadcrumb,
-      ...(jobPosting ? [jobPosting] : []),
-    ],
+    "@graph": [breadcrumb, ...(jobPosting ? [jobPosting] : [])],
   };
 
   return (

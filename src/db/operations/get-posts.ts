@@ -39,6 +39,16 @@ export async function getPostBySlug(
         p."updatedAt",
         p."officialSourceUrl",
         p."applyPortalUrl",
+        -- Old-schema columns required by resolver legacy fallback paths
+        p.vacancy_total AS "vacancyTotal",
+        p.salary_min AS "legacySalaryMin",
+        p.salary_max AS "legacySalaryMax",
+        -- Recruitment-level fields required by resolvers
+        r.total_vacancies AS "recruitmentVacancyTotal",
+        r.official_notification_url AS "recruitmentOfficialNotificationUrl",
+        r.official_application_url AS "recruitmentOfficialApplicationUrl",
+        r.application_end_date AS "recruitmentApplicationEndDate",
+        r.notification_date AS "notificationPublicationDate",
         e."vacanciesByCategory",
         e."vacanciesTotal",
         e."feesByCategory",
@@ -74,6 +84,7 @@ export async function getPostBySlug(
         e."benefits"
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
+      LEFT JOIN recruitments r ON p."recruitmentId"::integer = r.id
       WHERE p.slug = ${postSlug}
         AND p."recruitmentSlug" = ${recruitmentSlug}
         AND p."isLive" = true
@@ -104,6 +115,20 @@ export async function getPostBySlug(
       updatedAt: new Date(data.updatedAt),
       officialSourceUrl: data.officialSourceUrl,
       applyPortalUrl: data.applyPortalUrl,
+      // Old-schema columns for resolver legacy fallback paths (Gate 4D bridge)
+      vacancyTotal: data.vacancyTotal ?? null,
+      legacySalaryMin: data.legacySalaryMin ?? null,
+      legacySalaryMax: data.legacySalaryMax ?? null,
+      // Recruitment-level fields for resolvers
+      recruitmentVacancyTotal: data.recruitmentVacancyTotal ?? null,
+      recruitmentOfficialNotificationUrl: data.recruitmentOfficialNotificationUrl ?? null,
+      recruitmentOfficialApplicationUrl: data.recruitmentOfficialApplicationUrl ?? null,
+      recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
+        ? new Date(data.recruitmentApplicationEndDate)
+        : null,
+      notificationPublicationDate: data.notificationPublicationDate
+        ? new Date(data.notificationPublicationDate)
+        : null,
       enrichment: data.vacanciesTotal !== null ? {
         vacanciesByCategory: data.vacanciesByCategory,
         vacanciesTotal: data.vacanciesTotal,
@@ -132,7 +157,7 @@ export async function getPostBySlug(
         duties: data.duties,
         responsibilities: data.responsibilities,
         sourceVerificationStatus: data.sourceVerificationStatus,
-        sourceVerificationDate: data.sourceVerificationDate ? new Date(data.sourceVerificationDate) : new Date(),
+        sourceVerificationDate: data.sourceVerificationDate ? new Date(data.sourceVerificationDate) : undefined,
         extractionConfidence: data.extractionConfidence,
         dataGaps: data.dataGaps,
         education: data.education,
@@ -177,6 +202,16 @@ export async function getPostsByRecruitment(
         p."updatedAt",
         p."officialSourceUrl",
         p."applyPortalUrl",
+        -- Old-schema columns required by resolver legacy fallback paths
+        p.vacancy_total AS "vacancyTotal",
+        p.salary_min AS "legacySalaryMin",
+        p.salary_max AS "legacySalaryMax",
+        -- Recruitment-level fields required by resolvers
+        r.total_vacancies AS "recruitmentVacancyTotal",
+        r.official_notification_url AS "recruitmentOfficialNotificationUrl",
+        r.official_application_url AS "recruitmentOfficialApplicationUrl",
+        r.application_end_date AS "recruitmentApplicationEndDate",
+        r.notification_date AS "notificationPublicationDate",
         e."vacanciesByCategory",
         e."vacanciesTotal",
         e."feesByCategory",
@@ -212,6 +247,7 @@ export async function getPostsByRecruitment(
         e."benefits"
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
+      LEFT JOIN recruitments r ON p."recruitmentId"::integer = r.id
       WHERE p."recruitmentSlug" = ${recruitmentSlug}
         AND p."isLive" = true
       ORDER BY p."postedAt" DESC
@@ -237,6 +273,20 @@ export async function getPostsByRecruitment(
         updatedAt: new Date(data.updatedAt),
         officialSourceUrl: data.officialSourceUrl,
         applyPortalUrl: data.applyPortalUrl,
+        // Old-schema columns for resolver legacy fallback paths (Gate 4D bridge)
+        vacancyTotal: data.vacancyTotal ?? null,
+        legacySalaryMin: data.legacySalaryMin ?? null,
+        legacySalaryMax: data.legacySalaryMax ?? null,
+        // Recruitment-level fields for resolvers
+        recruitmentVacancyTotal: data.recruitmentVacancyTotal ?? null,
+        recruitmentOfficialNotificationUrl: data.recruitmentOfficialNotificationUrl ?? null,
+        recruitmentOfficialApplicationUrl: data.recruitmentOfficialApplicationUrl ?? null,
+        recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
+          ? new Date(data.recruitmentApplicationEndDate)
+          : null,
+        notificationPublicationDate: data.notificationPublicationDate
+          ? new Date(data.notificationPublicationDate)
+          : null,
         enrichment: data.vacanciesTotal !== null ? {
           vacanciesByCategory: data.vacanciesByCategory,
           vacanciesTotal: data.vacanciesTotal,
