@@ -883,86 +883,26 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
 
   const db = getDb();
 
-  const results = await db.execute<any>(sql`
-    SELECT
-      p.id,
-      p.title,
-      p.slug,
-      p."organizationId",
-      p."organizationName",
-      p."recruitmentId",
-      p."recruitmentName",
-      p."recruitmentSlug",
-      p."examType",
-      p.description,
-      p."isLive",
-      p."postedAt",
-      p."updatedAt",
-      p."officialSourceUrl",
-      p."applyPortalUrl",
-      e."salary_min" as "salaryMin",
-      e."salary_max" as "salaryMax",
-      e."salaryNote",
-      e."payScale",
-      e."payLevel",
-      e."vacanciesByCategory",
-      e."vacanciesTotal",
-      e."feesByCategory",
-      e."feeNote",
-      e."ageRulesByCategory",
-      e."ageNote",
-      e."selectionProcess",
-      e."applicationClosingDate",
-      e."examDate",
-      e."resultDate",
-      e."appointmentDate",
-      e."eligibilityPathways",
-      e."documentsRequired",
-      e."education",
-      e."experience",
-      e."sourceVerificationStatus",
-      e."extractionConfidence",
-      e."dataGaps"
-    FROM posts p
-    LEFT JOIN post_enrichments e ON p.id = e.post_id
-    WHERE p."isLive" = true
-    ORDER BY p."postedAt" DESC
-    LIMIT ${limit}
-    OFFSET ${offset}
-  `);
+  const results = await db.query.posts.findMany({
+    where: eq(posts.isLive, true),
+    orderBy: desc(posts.postedAt),
+    limit,
+    offset,
+  });
 
-  return (results || []).map((data: any) => ({
-    id: data.id,
-    title: data.title,
-    slug: data.slug,
-    organizationName: data.organizationName,
-    recruitmentName: data.recruitmentName,
-    recruitmentSlug: data.recruitmentSlug,
-    description: data.description,
-    isLive: data.isLive,
-    postedAt: new Date(data.postedAt),
-    updatedAt: new Date(data.updatedAt),
-    officialSourceUrl: data.officialSourceUrl,
-    applyPortalUrl: data.applyPortalUrl,
-    vacanciesTotal: data.vacanciesTotal,
-    vacanciesByCategory: data.vacanciesByCategory,
-    salaryMin: data.salaryMin,
-    salaryMax: data.salaryMax,
-    salaryNote: data.salaryNote,
-    payScale: data.payScale,
-    payLevel: data.payLevel,
-    applicationClosingDate: data.applicationClosingDate ? new Date(data.applicationClosingDate) : null,
-    examDate: data.examDate ? new Date(data.examDate) : null,
-    resultDate: data.resultDate ? new Date(data.resultDate) : null,
-    appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : null,
-    selectionProcess: data.selectionProcess,
-    ageRulesByCategory: data.ageRulesByCategory,
-    ageNote: data.ageNote,
-    education: data.education,
-    experience: data.experience,
-    sourceVerificationStatus: data.sourceVerificationStatus,
-    extractionConfidence: data.extractionConfidence,
-    dataGaps: data.dataGaps,
+  return (results || []).map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    organizationName: p.organizationName,
+    recruitmentName: p.recruitmentName,
+    recruitmentSlug: p.recruitmentSlug,
+    description: p.description,
+    isLive: p.isLive,
+    postedAt: p.postedAt,
+    updatedAt: p.updatedAt,
+    officialSourceUrl: p.officialSourceUrl,
+    applyPortalUrl: p.applyPortalUrl,
   }));
 }
 
