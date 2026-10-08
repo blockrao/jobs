@@ -74,18 +74,37 @@ export async function GET(request: NextRequest) {
       const ormKeys = ormRow ? Object.keys(ormRow) : [];
       const ormKeysHasTotalVacancies = ormKeys.includes("totalVacancies");
 
+      // Boundary 5: test the NESTED alias pattern used by getRecruitmentWithPosts
+      // db.select({ recruitment: recruitments, organizationName: organizations.name })
+      const { organizations } = await import("@/db/schema");
+      const nestedResult = await db
+        .select({
+          recruitment: recruitments,
+          organizationName: organizations.name,
+        })
+        .from(recruitments)
+        .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
+        .where(eq(recruitments.slug, recruitmentSlug))
+        .limit(1);
+
+      const nestedRow = nestedResult[0] ?? null;
+      const nestedRecruitmentObj = nestedRow?.recruitment ?? null;
+      const nestedTotalVacancies = nestedRecruitmentObj?.totalVacancies ?? null;
+      const nestedKeys = nestedRecruitmentObj ? Object.keys(nestedRecruitmentObj) : [];
+
       vacancyTrace = {
         slug: recruitmentSlug,
         boundary1_orm_row_found: ormRow !== null,
         boundary1_orm_row_id: ormRow?.id ?? null,
         boundary1_orm_keys_include_totalVacancies: ormKeysHasTotalVacancies,
-        boundary1_orm_all_keys: ormKeys,
         boundary2_totalVacancies_from_orm: totalVacanciesFromOrm,
         boundary2_typeof: typeof totalVacanciesFromOrm,
         boundary3_resolver_output: resolverOutput,
-        boundary4_note: ormKeysHasTotalVacancies
-          ? "ORM key present — value is what ORM returned"
-          : "ORM key MISSING — Drizzle did not map this column",
+        boundary5_nested_alias_row_found: nestedRow !== null,
+        boundary5_nested_recruitment_keys_include_totalVacancies: nestedKeys.includes("totalVacancies"),
+        boundary5_nested_totalVacancies: nestedTotalVacancies,
+        boundary5_nested_typeof: typeof nestedTotalVacancies,
+        boundary5_spread_totalVacancies: nestedRecruitmentObj ? { ...nestedRecruitmentObj, organizationName: nestedRow?.organizationName }.totalVacancies : null,
       };
     } catch (err) {
       vacancyTrace = {
