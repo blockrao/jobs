@@ -3,11 +3,15 @@
  *
  * Emits schema.org/WebPage + BreadcrumbList for a Recruitment Hub page.
  *
- * Design principles (Gate 2):
+ * Design principles (Gate 2 / approved spec):
  *   - Recruitment Hub is NOT a JobPosting. It is a WebPage that describes
  *     a recruitment event (a set of openings). Do not use JobPosting here.
- *   - Facts are recruitment-level only (name, dates, organization, totalPosts).
- *   - BreadcrumbList: Home → Jobs → Recruitment Hub.
+ *   - Facts are recruitment-level only (name, organization, totalPosts).
+ *   - BreadcrumbList: Jobs → [Org Name] → Recruitment Name (3 nodes when org is known).
+ *   - dateModified: emitted ONLY when a genuine content-modification timestamp
+ *     exists. Never derived from notificationDate, applicationEndDate, current
+ *     date, or any unrelated timestamp.
+ *   - expires: applicationEndDate is a legitimate temporal bound for the WebPage.
  *   - No fabricated/inferred data.
  */
 
@@ -18,11 +22,10 @@ interface RecruitmentHubSchemaProps {
     slug: string;
     name: string;
     organizationName?: string | null;
-    notificationDate?: Date | string | null;
-    applicationStartDate?: Date | string | null;
     applicationEndDate?: Date | string | null;
   };
   totalPosts: number;
+  resolvedEmployer?: string | null;
 }
 
 function toIso(d: Date | string | null | undefined): string | undefined {
@@ -37,38 +40,58 @@ function toIso(d: Date | string | null | undefined): string | undefined {
 export default function RecruitmentHubStructuredData({
   recruitment,
   totalPosts,
+  resolvedEmployer,
 }: RecruitmentHubSchemaProps) {
   const hubUrl = `${SITE_URL}/jobs/${recruitment.slug}`;
 
-  // BreadcrumbList: Jobs → this hub
+  // Use resolvedEmployer (canonical, verified) when available; fall back to
+  // raw organizationName only as a last resort. Both may be null.
+  const orgName = resolvedEmployer ?? recruitment.organizationName ?? null;
+
+  // BreadcrumbList: Jobs → [Org] → Recruitment (3 nodes when org is known)
+  const breadcrumbItems: object[] = [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Jobs",
+      item: `${SITE_URL}/jobs`,
+    },
+  ];
+
+  if (orgName) {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 2,
+      name: orgName,
+    });
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 3,
+      name: recruitment.name,
+      item: hubUrl,
+    });
+  } else {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 2,
+      name: recruitment.name,
+      item: hubUrl,
+    });
+  }
+
   const breadcrumb = {
     "@type": "BreadcrumbList",
     "@id": `${hubUrl}#breadcrumb`,
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Jobs",
-        item: `${SITE_URL}/jobs`,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: recruitment.name,
-        item: hubUrl,
-      },
-    ],
+    itemListElement: breadcrumbItems,
   };
 
   // WebPage: the hub itself — describes this recruitment as a web document.
-  // Use SpecialAnnouncement or CollectionPage where applicable;
-  // WebPage is the safest base type for a recruitment overview.
   const webPage: Record<string, unknown> = {
     "@type": "WebPage",
     "@id": `${hubUrl}#webpage`,
     url: hubUrl,
     name: recruitment.name,
-    description: `${recruitment.name} — ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility, important dates, and application details.`,
+    description: `${recruitment.name} — ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View important dates and application details.`,
     inLanguage: "en-IN",
     isPartOf: {
       "@type": "WebSite",
@@ -76,23 +99,28 @@ export default function RecruitmentHubStructuredData({
       url: SITE_URL,
       name: "JobOye",
     },
+    breadcrumb: { "@id": `${hubUrl}#breadcrumb` },
   };
 
-  // Optional: link to the organization if we have its name
-  if (recruitment.organizationName) {
+  // Organization: link only when we have a canonical name.
+  if (orgName) {
     webPage["about"] = {
       "@type": "Organization",
-      name: recruitment.organizationName,
+      name: orgName,
     };
   }
 
-  // Optional: temporal scope (notification / application window)
-  if (recruitment.notificationDate) {
-    webPage["datePublished"] = toIso(recruitment.notificationDate);
+  // expires: applicationEndDate is a legitimate temporal bound for this page —
+  // it is semantically "this page describes an opportunity that expires on this date."
+  // Not dateModified — that would be semantically wrong per the approved spec.
+  const expiresIso = toIso(recruitment.applicationEndDate);
+  if (expiresIso) {
+    webPage["expires"] = expiresIso;
   }
-  if (recruitment.applicationEndDate) {
-    webPage["expires"] = toIso(recruitment.applicationEndDate);
-  }
+
+  // dateModified: intentionally omitted.
+  // Rule: emit ONLY when a genuine content-modification timestamp exists.
+  // notificationDate, applicationEndDate, and current date are all disqualified.
 
   const graph = {
     "@context": "https://schema.org",

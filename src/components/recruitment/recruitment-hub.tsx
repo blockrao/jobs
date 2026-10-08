@@ -1,694 +1,679 @@
 'use client';
 
 /**
- * Recruitment Hub Component - Single Page Design
- * Modern, competitive recruitment information display
- * Similar to: freejobalert.com, jobone.in, yuvaresult.in, sarkarinaukri.com
+ * Recruitment Hub Component
+ *
+ * Route: /jobs/[recruitment-slug]
+ *
+ * Spec: Recruitment-level discovery and navigation page.
+ * This is NOT a Post Leaf. It does not duplicate Post-specific facts.
+ *
+ * Architecture (approved spec, 2026-10-09):
+ *   - Recruitment Header: identity, status badge (from recruitment.status enum), primary CTA
+ *   - Recruitment Snapshot: key resolver-gated facts only
+ *   - Dated milestone timeline: Notification → Application Opens → Application Closes
+ *     (lifecycle status badge is separate from the dated timeline)
+ *   - Posts / Opportunities: single-column comparison list, resolvePostVacancy() per row
+ *   - FAQ: conditional — only questions whose answer is a non-null resolver output
+ *   - Trust / Source: official notification + apply links
+ *
+ * Excluded (by spec):
+ *   - Salary / pay level (Post-specific; Phase 1 exclusion)
+ *   - Eligibility, qualification, age, experience (Post Leaf only / Phase 2)
+ *   - "Am I eligible?" checker
+ *   - Generic fabricated FAQ answers
+ *   - Enrichment fields as authoritative facts
+ *   - Filter chips, pagination (Phase 1)
+ *   - Summing Post vacancies for Recruitment total
  */
 
 import React from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
-  MapPin,
   Briefcase,
   Users,
   Calendar,
-  Clock,
   CheckCircle,
   AlertCircle,
-  DollarSign,
-  Award,
   FileText,
   Globe,
-  Phone,
-  Eye,
-  Share2,
-  Bookmark
+  MapPin,
+  ExternalLink,
+  ArrowRight,
 } from 'lucide-react';
 
 interface RecruitmentHubProps {
   recruitment: any;
   posts: any[];
-  /** Resolved total vacancies from resolveRecruitmentVacancy() — null when unverified */
+  /** Resolved total vacancies from resolveRecruitmentVacancy() — null means unknown */
   resolvedTotalVacancies?: number | null;
+  /** Resolved application URL from resolveApplicationUrl() */
+  resolvedApplicationUrl?: string | null;
+  /** Resolved official source URL from resolveOfficialSource() */
+  resolvedOfficialSource?: string | null;
+  /** Resolved employer name from resolveEmployer() */
+  resolvedEmployer?: string | null;
+  /** Resolved selection process from resolveSelectionProcess() */
+  resolvedSelectionProcess?: string | null;
 }
 
-const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts, resolvedTotalVacancies }) => {
-  const calculateDaysLeft = (endDate: any): number | null => {
-    if (!endDate) return null;
-    const end = new Date(endDate);
-    const today = new Date();
-    const diff = end.getTime() - today.getTime();
-    const days = Math.ceil(diff / (1000 * 3600 * 24));
-    return days > 0 ? days : 0;
-  };
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  const daysLeft = calculateDaysLeft(recruitment.applicationEndDate);
-  const isUrgent = daysLeft && daysLeft <= 7;
-
-  const formatDate = (date: any) => {
-    if (!date) return '';
-    const d = new Date(date);
-    return d.toLocaleDateString('en-IN', {
+const formatDate = (date: any): string | null => {
+  if (!date) return null;
+  try {
+    return new Date(date).toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
-  };
+  } catch {
+    return null;
+  }
+};
 
-  // Resolved total comes from resolveRecruitmentVacancy() server-side.
-  // Null means unverified — display a dash rather than a misleading zero.
-  const displayTotalVacancies = resolvedTotalVacancies != null
-    ? String(resolvedTotalVacancies)
-    : '—';
+/** Returns true only when the status string explicitly means closed/expired */
+const isRecruitmentClosed = (status: string | null | undefined): boolean => {
+  if (!status) return false;
+  const s = status.toLowerCase();
+  return s === 'closed' || s === 'expired' || s === 'completed';
+};
+
+const isRecruitmentActive = (status: string | null | undefined): boolean => {
+  if (!status) return false;
+  const s = status.toLowerCase();
+  return s === 'active' || s === 'open';
+};
+
+const isRecruitmentUpcoming = (status: string | null | undefined): boolean => {
+  if (!status) return false;
+  const s = status.toLowerCase();
+  return s === 'upcoming' || s === 'announced';
+};
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function StatusBadge({ status }: { status: string | null | undefined }) {
+  if (!status) return null;
+
+  if (isRecruitmentClosed(status)) {
+    return (
+      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-1 rounded-full border border-gray-300">
+        Closed
+      </span>
+    );
+  }
+  if (isRecruitmentActive(status)) {
+    return (
+      <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full border border-green-300">
+        <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+        Active
+      </span>
+    );
+  }
+  if (isRecruitmentUpcoming(status)) {
+    return (
+      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full border border-blue-300">
+        Upcoming
+      </span>
+    );
+  }
+  // Unknown/other — show the raw value without fabricating meaning
+  return (
+    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1 rounded-full border border-gray-200">
+      {status}
+    </span>
+  );
+}
+
+function PostStatusBadge({ post }: { post: any }) {
+  const status = post.status ?? post.lifecycle_status ?? null;
+  if (!status) return null;
+
+  const s = String(status).toLowerCase();
+  if (s === 'closed' || s === 'expired') {
+    return (
+      <span className="inline-block bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded border border-gray-200">
+        Closed
+      </span>
+    );
+  }
+  if (s === 'active' || s === 'open') {
+    return (
+      <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded border border-green-200">
+        Active
+      </span>
+    );
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+export default function RecruitmentHub({
+  recruitment,
+  posts,
+  resolvedTotalVacancies,
+  resolvedApplicationUrl,
+  resolvedOfficialSource,
+  resolvedEmployer,
+  resolvedSelectionProcess,
+}: RecruitmentHubProps) {
+  const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
+  const notificationDate = formatDate(recruitment.notificationDate);
+  const appStart = formatDate(recruitment.applicationStartDate);
+  const appEnd = formatDate(recruitment.applicationEndDate);
+  const closed = isRecruitmentClosed(recruitment.status);
+
+  // Determine if the dated timeline has anything to show
+  const hasTimeline = !!(notificationDate || appStart || appEnd);
+
+  // Posts: single-column comparison list
+  const hasPosts = posts.length > 0;
+  const isSinglePost = posts.length === 1;
+
+  // FAQ: only questions with non-null answers
+  const faqItems: { q: string; a: string }[] = [];
+
+  if (recruitment.name && displayOrg) {
+    faqItems.push({
+      q: `What is ${recruitment.name}?`,
+      a: `${recruitment.name} is a recruitment conducted by ${displayOrg}${recruitment.year ? ` for the year ${recruitment.year}` : ''}.`,
+    });
+  }
+
+  if (resolvedTotalVacancies != null) {
+    faqItems.push({
+      q: 'How many vacancies are available?',
+      a: `A total of ${resolvedTotalVacancies.toLocaleString('en-IN')} vacancies are available across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`,
+    });
+  }
+
+  if (appEnd) {
+    faqItems.push({
+      q: 'When does the application close?',
+      a: `The last date to apply is ${appEnd}.`,
+    });
+  }
+
+  if (hasPosts && posts.length > 1) {
+    const postNames = posts.slice(0, 5).map((p: any) => p.name ?? p.position?.name).filter(Boolean);
+    if (postNames.length > 0) {
+      faqItems.push({
+        q: 'Which posts are included in this recruitment?',
+        a: `This recruitment includes ${posts.length} posts, including: ${postNames.join(', ')}${posts.length > 5 ? ', and more' : ''}.`,
+      });
+    }
+  }
+
+  if (resolvedSelectionProcess) {
+    faqItems.push({
+      q: 'What is the selection process?',
+      a: resolvedSelectionProcess,
+    });
+  }
+
+  if (resolvedOfficialSource) {
+    faqItems.push({
+      q: 'Where is the official notification?',
+      a: `The official notification is available at the link below in the Sources section.`,
+    });
+  }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Sticky Header */}
+
+      {/* ── Sticky breadcrumb bar ── */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3">
-          <nav className="flex items-center gap-2 text-sm text-gray-600">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-600">
             <Link href="/jobs" className="text-blue-600 hover:text-blue-700 font-medium">
               Jobs
             </Link>
-            <ChevronRight size={16} />
-            <span className="text-gray-900 font-medium truncate">{recruitment.name}</span>
+            {displayOrg && (
+              <>
+                <ChevronRight size={14} className="text-gray-400" />
+                <span className="text-gray-500 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
+                  {displayOrg}
+                </span>
+              </>
+            )}
+            <ChevronRight size={14} className="text-gray-400" />
+            <span className="text-gray-900 font-medium truncate max-w-[180px] md:max-w-md">
+              {recruitment.name}
+            </span>
           </nav>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* ── Main content ── */}
       <div className="max-w-5xl mx-auto">
-        {/* Hero Section with Key Info */}
-        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-gray-200 px-4 py-8 md:py-12">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2">
-                {recruitment.name}
-              </h1>
-              <p className="text-gray-600">View all open positions, eligibility criteria, and apply now</p>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <button className="p-2 hover:bg-gray-200 rounded-lg transition">
-                <Share2 size={20} className="text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-200 rounded-lg transition">
-                <Bookmark size={20} className="text-gray-600" />
-              </button>
-            </div>
+
+        {/* ═══════════════════════════════════════════
+            SECTION 1 — RECRUITMENT HEADER
+            ═══════════════════════════════════════════ */}
+        <div className="bg-white border-b border-gray-200 px-4 py-8 md:py-10">
+          {/* Status badge — from recruitment.status enum, not derived from dates */}
+          <div className="mb-3">
+            <StatusBadge status={recruitment.status} />
           </div>
 
-          {/* Urgent Alert */}
-          {isUrgent && (
-            <div className="bg-red-50 border-l-4 border-red-600 px-4 py-3 rounded-r-lg mb-6 flex gap-3">
-              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-              <div>
-                <p className="font-bold text-red-900">⚠️ Deadline Urgent!</p>
-                <p className="text-red-700 text-sm">Only <strong>{daysLeft}</strong> days left to apply</p>
-              </div>
-            </div>
+          {/* Recruitment name (h1) */}
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
+            {recruitment.name}
+          </h1>
+
+          {/* Organization */}
+          {displayOrg && (
+            <p className="text-gray-600 mb-1">
+              <span className="font-medium">{displayOrg}</span>
+            </p>
           )}
 
-          {/* Key Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="text-2xl font-bold text-gray-900">{posts.length}</div>
-              <div className="text-sm text-gray-600">Total Positions</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="text-2xl font-bold text-gray-900">{displayTotalVacancies}</div>
-              <div className="text-sm text-gray-600">Total Vacancies</div>
-            </div>
-            <div className={`rounded-lg p-4 border ${isUrgent ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200'}`}>
-              <div className={`text-2xl font-bold ${isUrgent ? 'text-red-700' : 'text-gray-900'}`}>
-                {formatDate(recruitment.applicationEndDate)}
-              </div>
-              <div className={`text-sm ${isUrgent ? 'text-red-600' : 'text-gray-600'}`}>Deadline</div>
-            </div>
-            <div className={`rounded-lg p-4 border ${isUrgent ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-300'}`}>
-              <div className={`text-2xl font-bold ${isUrgent ? 'text-red-700' : 'text-green-700'}`}>
-                {daysLeft !== null ? daysLeft : '—'}
-              </div>
-              <div className={`text-sm ${isUrgent ? 'text-red-600' : 'text-green-600'}`}>Days Left</div>
-            </div>
-          </div>
+          {/* Year context */}
+          {recruitment.year && (
+            <p className="text-sm text-gray-500 mb-4">{recruitment.year}</p>
+          )}
+
+          {/* One-sentence description — only from authoritative source */}
+          {recruitment.description && (
+            <p className="text-gray-700 mb-6 leading-relaxed">{recruitment.description}</p>
+          )}
+
+          {/* Primary CTA */}
+          {isSinglePost ? (
+            <Link
+              href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm"
+            >
+              View Post Details
+              <ArrowRight size={16} />
+            </Link>
+          ) : hasPosts ? (
+            <a
+              href="#posts"
+              className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm"
+            >
+              View All Posts ({posts.length})
+              <ArrowRight size={16} />
+            </a>
+          ) : null}
         </div>
 
-        {/* Content Sections - Single Page - 10-Section Architecture */}
-        <div className="px-4 py-8 md:py-12 space-y-12">
+        {/* ═══════════════════════════════════════════
+            SECTION 2 — RECRUITMENT SNAPSHOT
+            ═══════════════════════════════════════════ */}
+        <div className="px-4 py-8 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Recruitment Overview</h2>
+          <dl className="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden">
 
-          {/* ========== P0/CRITICAL SECTIONS ========== */}
+            {displayOrg && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Organization</dt>
+                <dd className="text-sm text-gray-900 font-medium">{displayOrg}</dd>
+              </div>
+            )}
 
-          {/* P0-2: Important Dates Timeline (RIGHT AFTER HERO) */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Calendar size={24} className="text-blue-600" />
+            {/* Total vacancies — only resolveRecruitmentVacancy() output */}
+            {resolvedTotalVacancies != null && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Total Vacancies</dt>
+                <dd className="text-sm text-gray-900 font-bold">
+                  {resolvedTotalVacancies.toLocaleString('en-IN')}
+                </dd>
+              </div>
+            )}
+
+            {posts.length > 0 && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Total Posts</dt>
+                <dd className="text-sm text-gray-900">{posts.length}</dd>
+              </div>
+            )}
+
+            {appStart && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Application Opens</dt>
+                <dd className="text-sm text-gray-900">{appStart}</dd>
+              </div>
+            )}
+
+            {appEnd && (
+              <div className={`flex items-baseline gap-4 px-4 py-3 ${closed ? 'bg-gray-50' : 'bg-white'}`}>
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Application Closes</dt>
+                <dd className={`text-sm font-semibold ${closed ? 'text-gray-500' : 'text-red-700'}`}>
+                  {appEnd}
+                  {closed && <span className="ml-2 text-xs font-normal text-gray-400">(Closed)</span>}
+                </dd>
+              </div>
+            )}
+
+            {resolvedSelectionProcess && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Selection Process</dt>
+                <dd className="text-sm text-gray-900">{resolvedSelectionProcess}</dd>
+              </div>
+            )}
+
+            {resolvedOfficialSource && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Official Notification</dt>
+                <dd className="text-sm">
+                  <a
+                    href={resolvedOfficialSource}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                  >
+                    View Notification
+                    <ExternalLink size={13} />
+                  </a>
+                </dd>
+              </div>
+            )}
+
+            {resolvedApplicationUrl && (
+              <div className="flex items-baseline gap-4 px-4 py-3 bg-white">
+                <dt className="text-sm font-medium text-gray-500 w-40 flex-shrink-0">Apply Online</dt>
+                <dd className="text-sm">
+                  <a
+                    href={resolvedApplicationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-700 hover:text-green-800 font-medium inline-flex items-center gap-1"
+                  >
+                    Official Apply Portal
+                    <ExternalLink size={13} />
+                  </a>
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+
+        {/* ═══════════════════════════════════════════
+            SECTION 3 — DATED MILESTONE TIMELINE
+            (separate from the lifecycle status badge)
+            ═══════════════════════════════════════════ */}
+        {hasTimeline && (
+          <div className="px-4 py-8 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Calendar size={20} className="text-blue-600" />
               Important Dates
             </h2>
-            <div className="space-y-4">
-              {recruitment.notificationDate && (
-                <div className="flex gap-4 items-start bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
-                      1
-                    </div>
+            <ol className="space-y-3">
+              {notificationDate && (
+                <li className="flex gap-4 items-start">
+                  <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                    1
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-900">{formatDate(recruitment.notificationDate)}</div>
-                    <div className="text-sm text-gray-600">Notification Published</div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{notificationDate}</div>
+                    <div className="text-xs text-gray-500">Notification Published</div>
                   </div>
-                </div>
+                </li>
               )}
-              {recruitment.applicationStartDate && (
-                <div className="flex gap-4 items-start bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
-                      2
-                    </div>
+              {appStart && (
+                <li className="flex gap-4 items-start">
+                  <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                    {notificationDate ? 2 : 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-900">{formatDate(recruitment.applicationStartDate)}</div>
-                    <div className="text-sm text-gray-600">Application Window Opens</div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{appStart}</div>
+                    <div className="text-xs text-gray-500">Application Opens</div>
                   </div>
-                </div>
+                </li>
               )}
-              {recruitment.applicationEndDate && (
-                <div className={`flex gap-4 items-start rounded-lg p-4 border-2 ${
-                  isUrgent
-                    ? 'bg-red-50 border-red-300'
-                    : 'bg-white border-gray-200'
-                }`}>
-                  <div className="flex-shrink-0">
-                    <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
-                      isUrgent
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      3
-                    </div>
+              {appEnd && (
+                <li className="flex gap-4 items-start">
+                  <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${
+                    closed ? 'bg-gray-100 text-gray-500' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {[notificationDate, appStart].filter(Boolean).length + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-bold ${isUrgent ? 'text-red-900' : 'text-gray-900'}`}>
-                      {formatDate(recruitment.applicationEndDate)}
-                      {daysLeft !== null && <span className="text-sm ml-2 font-normal">({daysLeft} days left)</span>}
+                  <div>
+                    <div className={`text-sm font-semibold ${closed ? 'text-gray-500' : 'text-red-800'}`}>
+                      {appEnd}
+                      {closed && <span className="ml-2 text-xs font-normal text-gray-400">Closed</span>}
                     </div>
-                    <div className={`text-sm ${isUrgent ? 'text-red-700' : 'text-gray-600'}`}>
-                      Application Deadline {isUrgent && '⚠️ CLOSING SOON'}
-                    </div>
+                    <div className="text-xs text-gray-500">Application Deadline</div>
                   </div>
-                </div>
+                </li>
               )}
-            </div>
-          </section>
+            </ol>
+          </div>
+        )}
 
-          {/* ========== P1/HIGH PRIORITY SECTIONS ========== */}
+        {/* ═══════════════════════════════════════════
+            SECTION 4 — POSTS / OPPORTUNITIES
+            Core navigation component
+            ═══════════════════════════════════════════ */}
+        {hasPosts && (
+          <div id="posts" className="px-4 py-8 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <Briefcase size={20} className="text-blue-600" />
+              {isSinglePost ? 'Available Post' : `Available Posts (${posts.length})`}
+            </h2>
+            {!isSinglePost && (
+              <p className="text-sm text-gray-500 mb-4">
+                Select the post you are interested in to view full details.
+              </p>
+            )}
 
-          {/* P1-1: About Section (Overview) */}
-          {recruitment.description && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Eye size={24} className="text-blue-600" />
-                About This Recruitment
-              </h2>
-              <div className="bg-blue-50 border-l-4 border-blue-600 rounded-r-lg p-6">
-                <p className="text-gray-700 leading-relaxed">{recruitment.description}</p>
-              </div>
-            </section>
-          )}
-
-          {/* P1-2: Position Details & Qualifications */}
-          {recruitment.metadata && recruitment.metadata.positions && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <Award size={24} className="text-blue-600" />
-                Position Details & Qualifications
-              </h2>
-              <div className="space-y-4">
-                {(recruitment.metadata.positions as any[]).map((position: any, index: number) => (
-                  <div key={index} className="bg-white border border-gray-200 rounded-lg p-5">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">{position.position_name}</h3>
-                        <div className="flex flex-wrap gap-4 mt-2 text-sm">
+            {isSinglePost ? (
+              /* Single Post: prominent entry point, not a one-row table */
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                <Link
+                  href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+                  className="group block"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2">
+                        {posts[0].name ?? posts[0].position?.name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                        {posts[0].resolvedVacancyCount != null && (
                           <span className="flex items-center gap-1">
-                            <Users size={16} className="text-blue-600" />
-                            <strong>{position.vacancies}</strong> Vacancy{position.vacancies !== 1 ? 'ies' : ''}
+                            <Users size={14} className="text-blue-500" />
+                            {posts[0].resolvedVacancyCount.toLocaleString('en-IN')} vacancies
                           </span>
+                        )}
+                        {posts[0].position?.locationText && (
                           <span className="flex items-center gap-1">
-                            <DollarSign size={16} className="text-green-600" />
-                            {position.pay_level}
+                            <MapPin size={14} className="text-gray-400" />
+                            {posts[0].position.locationText}
                           </span>
-                        </div>
+                        )}
+                        <PostStatusBadge post={posts[0]} />
                       </div>
                     </div>
-
-                    {/* Essential Qualifications */}
-                    <div className="mb-4">
-                      <p className="font-semibold text-gray-900 mb-2">Essential Qualifications:</p>
-                      <ul className="space-y-1">
-                        {(position.essential_qualifications || []).map((qual: string, idx: number) => (
-                          <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                            <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
-                            {qual}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Desirable Qualifications */}
-                    {position.desirable_qualifications && position.desirable_qualifications.length > 0 && (
-                      <div>
-                        <p className="font-semibold text-gray-900 mb-2">Desirable Qualifications:</p>
-                        <ul className="space-y-1">
-                          {(position.desirable_qualifications || []).map((qual: string, idx: number) => (
-                            <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                              <span className="text-blue-600 mt-0.5 flex-shrink-0">◆</span>
-                              {qual}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    <ArrowRight size={20} className="text-blue-600 flex-shrink-0 mt-1 group-hover:translate-x-1 transition-transform" />
                   </div>
-                ))}
+                </Link>
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <Link
+                    href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+                    className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                  >
+                    View Full Post Details
+                    <ArrowRight size={15} />
+                  </Link>
+                </div>
               </div>
-            </section>
-          )}
-
-          {/* Fallback: Available Positions - Card Layout */}
-          {!recruitment.metadata?.positions && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <Briefcase size={24} className="text-blue-600" />
-                Available Positions ({posts.length})
-              </h2>
-              <div className="space-y-3">
-                {posts.map((post: any, index: number) => {
-                  // resolvedVacancyCount is set by the page via resolvePostVacancy()
+            ) : (
+              /* Multi-Post: single-column comparison list */
+              <div className="space-y-2">
+                {posts.map((post: any) => {
                   const postVacancies = post.resolvedVacancyCount ?? null;
+                  const postName = post.name ?? post.position?.name ?? 'View Post';
+                  const locationText = post.position?.locationText ?? post.locationText ?? null;
+
                   return (
                     <Link
                       key={post.id}
                       href={`/jobs/${recruitment.slug}/${post.slug}`}
-                      className="block bg-white border border-gray-300 rounded-lg p-4 md:p-5 hover:border-blue-400 hover:shadow-lg transition-all group"
+                      className="flex items-center justify-between gap-4 px-4 py-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all group"
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-bold flex-shrink-0">
-                              {index + 1}
-                            </span>
-                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
-                              {post.name}
-                            </h3>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 ml-11">
-                            <span className="flex items-center gap-1">
-                              <Users size={16} className="text-blue-600" />
-                              {postVacancies != null
-                                ? <><strong>{postVacancies}</strong>&nbsp;Post{postVacancies !== 1 ? 's' : ''}</>
-                                : <span className="text-gray-400">See position details</span>
-                              }
-                            </span>
-                            {post.position?.name && (
-                              <span className="flex items-center gap-1">
-                                <Award size={16} className="text-blue-600" />
-                                {post.position.name}
-                              </span>
-                            )}
-                          </div>
+                      <div className="flex-1 min-w-0">
+                        {/* Title — line 1 */}
+                        <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition text-sm md:text-base truncate mb-1">
+                          {postName}
                         </div>
-                        <div className="flex-shrink-0">
-                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                            Open
-                          </span>
+                        {/* Vacancy + location — line 2 (only when available) */}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          {postVacancies != null && (
+                            <span className="flex items-center gap-1">
+                              <Users size={12} className="text-blue-400" />
+                              {postVacancies.toLocaleString('en-IN')} vacancies
+                            </span>
+                          )}
+                          {locationText && (
+                            <span className="flex items-center gap-1">
+                              <MapPin size={12} className="text-gray-400" />
+                              {locationText}
+                            </span>
+                          )}
+                          <PostStatusBadge post={post} />
                         </div>
                       </div>
+                      <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition" />
                     </Link>
                   );
                 })}
               </div>
-            </section>
-          )}
-
-          {/* P1-3: General Eligibility Criteria */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Award size={24} className="text-blue-600" />
-              {recruitment.metadata?.eligibility ? 'General Eligibility Criteria' : 'Eligibility Criteria'}
-            </h2>
-
-            {/* Metadata-based Eligibility */}
-            {recruitment.metadata?.eligibility && (
-              <div className="space-y-4 mb-8">
-                <div className="bg-white border border-gray-200 rounded-lg p-5">
-                  <div className="space-y-4">
-                    {recruitment.metadata.eligibility.age_limit && (
-                      <div>
-                        <p className="font-semibold text-gray-900 mb-1">Age Limit:</p>
-                        <p className="text-gray-700">{recruitment.metadata.eligibility.age_limit}</p>
-                        {recruitment.metadata.eligibility.age_relaxation && (
-                          <p className="text-sm text-gray-600 mt-1">{recruitment.metadata.eligibility.age_relaxation}</p>
-                        )}
-                      </div>
-                    )}
-
-                    {recruitment.metadata.eligibility.language_requirements && (
-                      <div>
-                        <p className="font-semibold text-gray-900 mb-2">Language Requirements:</p>
-                        <ul className="space-y-1">
-                          {(recruitment.metadata.eligibility.language_requirements || []).map((lang: string, idx: number) => (
-                            <li key={idx} className="text-gray-700 flex items-center gap-2">
-                              <CheckCircle size={16} className="text-blue-600" />
-                              {lang}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {recruitment.metadata.eligibility.domicile && (
-                      <div>
-                        <p className="font-semibold text-gray-900 mb-1">Domicile/Residence:</p>
-                        <p className="text-gray-700">{recruitment.metadata.eligibility.domicile}</p>
-                      </div>
-                    )}
-
-                    {recruitment.metadata.eligibility.category_provisions && (
-                      <div>
-                        <p className="font-semibold text-gray-900 mb-1">Category Provisions:</p>
-                        <p className="text-gray-700">{recruitment.metadata.eligibility.category_provisions}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             )}
+          </div>
+        )}
 
-            {/* Simple Position Table */}
-            <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="px-4 py-3 text-left font-bold text-gray-900 text-sm">Position</th>
-                      <th className="px-4 py-3 text-left font-bold text-gray-900 text-sm">Education</th>
-                      <th className="px-4 py-3 text-left font-bold text-gray-900 text-sm">Vacancies</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {posts.map((post: any, idx: number) => {
-                      // resolvedVacancyCount is set by the page via resolvePostVacancy()
-                      const postVacancies = post.resolvedVacancyCount ?? null;
-                      return (
-                        <tr key={post.id} className={`border-t ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="px-4 py-3 font-semibold text-gray-900 text-sm">{post.name}</td>
-                          <td className="px-4 py-3 text-gray-600 text-sm">{post.qualification_text || 'See position details'}</td>
-                          <td className="px-4 py-3 text-gray-900 font-bold text-sm">
-                            {postVacancies != null ? postVacancies : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          {/* P1-4: How to Apply */}
-          {recruitment.metadata?.application_process && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <FileText size={24} className="text-blue-600" />
-                How to Apply
-              </h2>
-              <div className="space-y-4">
-                {recruitment.metadata.application_process.application_method && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-5">
-                    <p className="font-semibold text-gray-900 mb-2">Application Method:</p>
-                    <p className="text-gray-700">{recruitment.metadata.application_process.application_method}</p>
-                  </div>
-                )}
-
-                {recruitment.metadata.application_process.submission_address && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-5">
-                    <p className="font-semibold text-gray-900 mb-3">Submit Application To:</p>
-                    <div className="text-gray-700 space-y-1">
-                      <p><strong>{recruitment.metadata.application_process.submission_address.organization}</strong></p>
-                      <p>{recruitment.metadata.application_process.submission_address.building}</p>
-                      <p>{recruitment.metadata.application_process.submission_address.location}</p>
-                    </div>
-                  </div>
-                )}
-
-                {(recruitment.metadata.application_process.application_deadline || recruitment.metadata.application_process.deadline_time) && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-5">
-                    <p className="font-semibold text-red-900 mb-2">📅 Application Deadline:</p>
-                    <p className="text-red-900">
-                      <strong>{recruitment.metadata.application_process.application_deadline}</strong>
-                    </p>
-                    {recruitment.metadata.application_process.deadline_time && (
-                      <p className="text-red-800 text-sm mt-1">{recruitment.metadata.application_process.deadline_time}</p>
-                    )}
-                    {recruitment.metadata.application_process.lunch_break && (
-                      <p className="text-red-800 text-sm mt-1">Lunch Break: {recruitment.metadata.application_process.lunch_break}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* ========== P2/MEDIUM PRIORITY SECTIONS ========== */}
-
-          {/* P2-1: Selection Process & Stages */}
-          {recruitment.metadata?.selection_process_details && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <Clock size={24} className="text-blue-600" />
-                Selection Process & Stages
-              </h2>
-              <div className="bg-white border border-gray-200 rounded-lg p-5">
-                {recruitment.metadata.selection_process_details.method && (
-                  <div className="mb-4">
-                    <p className="font-semibold text-gray-900 mb-2">Selection Method:</p>
-                    <p className="text-gray-700">{recruitment.metadata.selection_process_details.method}</p>
-                  </div>
-                )}
-
-                {recruitment.metadata.selection_process_details.stages && (
-                  <div className="mb-4">
-                    <p className="font-semibold text-gray-900 mb-3">Selection Stages:</p>
-                    <ol className="space-y-2">
-                      {(recruitment.metadata.selection_process_details.stages || []).map((stage: string, idx: number) => (
-                        <li key={idx} className="text-gray-700 flex items-start gap-2">
-                          <span className="font-bold text-blue-600 flex-shrink-0">{idx + 1}.</span>
-                          {stage}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {recruitment.metadata.selection_process_details.no_TA_DA && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-4">
-                    <p className="text-sm text-yellow-800">⚠️ {recruitment.metadata.selection_process_details.no_TA_DA}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* P2-2: Required Documents (NEW SECTION) */}
-          {recruitment.metadata?.required_documents && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <FileText size={24} className="text-blue-600" />
-                Required Documents
-              </h2>
-              <div className="bg-white border border-gray-200 rounded-lg p-5">
-                <ul className="space-y-2">
-                  {(recruitment.metadata.required_documents || []).map((doc: string, idx: number) => (
-                    <li key={idx} className="text-gray-700 flex items-start gap-2">
-                      <CheckCircle size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>{doc}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-          )}
-
-          {/* P2-3: General Guidelines & T&Cs */}
-          {recruitment.metadata?.general_guidelines && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <AlertCircle size={24} className="text-blue-600" />
-                General Guidelines & Terms & Conditions
-              </h2>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-                <ul className="space-y-2">
-                  {(recruitment.metadata.general_guidelines || []).map((guideline: string, idx: number) => (
-                    <li key={idx} className="text-gray-700 flex items-start gap-2">
-                      <CheckCircle size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                      <span>{guideline}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-          )}
-
-          {/* Fallback: How to Apply Section (when no metadata) */}
-          {!recruitment.metadata?.application_process && (
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <FileText size={24} className="text-blue-600" />
-                How to Apply
-              </h2>
-              <div className="space-y-3">
-                {[
-                  { step: '1', title: 'Check Eligibility', desc: 'Verify you meet all requirements for your desired position' },
-                  { step: '2', title: 'Prepare Documents', desc: 'Gather educational certificates, ID proof, resume, and passport photos' },
-                  { step: '3', title: 'Visit Official Website', desc: 'Go to the official recruitment portal and create an account' },
-                  { step: '4', title: 'Fill Application', desc: 'Complete all required fields with accurate information and upload documents' },
-                  { step: '5', title: 'Submit & Confirm', desc: 'Review your application carefully and submit. Save your confirmation email' },
-                ].map((item) => (
-                  <div key={item.step} className="flex gap-4 bg-white border border-gray-200 rounded-lg p-4">
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white font-bold">
-                        {item.step}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900">{item.title}</div>
-                      <div className="text-sm text-gray-600 mt-1">{item.desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-600 rounded-r-lg p-4">
-                <p className="font-bold text-yellow-900 mb-1">⚠️ Important Reminders:</p>
-                <ul className="text-sm text-yellow-800 space-y-1">
-                  <li>• Apply before the deadline; late applications are rejected</li>
-                  <li>• Provide correct and complete information</li>
-                  <li>• Keep your confirmation email for reference</li>
-                  <li>• Check the official website regularly for updates</li>
-                </ul>
-              </div>
-            </section>
-          )}
-
-          {/* ========== P3/LOW PRIORITY SECTIONS ========== */}
-
-          {/* P3-1: Contact & Support */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Phone size={24} className="text-blue-600" />
-              Contact & Support
+        {/* ═══════════════════════════════════════════
+            SECTION 5 — FAQ
+            Conditional — only questions with non-null authoritative answers
+            ═══════════════════════════════════════════ */}
+        {faqItems.length > 0 && (
+          <div className="px-4 py-8 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Globe size={20} className="text-blue-600" />
+              Frequently Asked Questions
             </h2>
-            <div className="space-y-4">
-              {recruitment.metadata?.contact_details && (
-                <>
-                  {recruitment.metadata.contact_details.email && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-5">
-                      <p className="font-semibold text-gray-900 mb-2">Email Address:</p>
-                      <p className="text-blue-600 font-mono">{recruitment.metadata.contact_details.email}</p>
-                    </div>
-                  )}
-                  {recruitment.metadata.contact_details.phone && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-5">
-                      <p className="font-semibold text-gray-900 mb-2">Phone:</p>
-                      <p className="text-gray-700">{recruitment.metadata.contact_details.phone}</p>
-                    </div>
-                  )}
-                  {recruitment.metadata.contact_details.website && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-5">
-                      <p className="font-semibold text-gray-900 mb-2">Official Website:</p>
-                      <a href={recruitment.metadata.contact_details.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 break-all">
-                        {recruitment.metadata.contact_details.website}
-                      </a>
-                    </div>
-                  )}
-                </>
-              )}
-              {recruitment.metadata?.contact_details?.office_address && (
-                <div className="bg-white border border-gray-200 rounded-lg p-5">
-                  <p className="font-semibold text-gray-900 mb-2">Office Address:</p>
-                  <p className="text-gray-700 whitespace-pre-line">{recruitment.metadata.contact_details.office_address}</p>
-                </div>
-              )}
-
-              {/* Fallback contact section */}
-              {!recruitment.metadata?.contact_details && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
-                  <p className="text-gray-700 mb-3">
-                    For further information and clarifications, visit the official recruitment website or contact the recruiting organization directly.
-                  </p>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>💡 <strong>Tip:</strong> Most organizations provide support through their official website portal.</p>
-                    <p>📧 <strong>Email:</strong> Check the official notification for contact email</p>
+            <div className="space-y-3">
+              {faqItems.map((faq, idx) => (
+                <details key={idx} className="group bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <summary className="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-gray-50 transition text-sm font-semibold text-gray-900 list-none">
+                    <span>{faq.q}</span>
+                    <ChevronRight size={16} className="text-gray-400 group-open:rotate-90 transition-transform flex-shrink-0" />
+                  </summary>
+                  <div className="px-4 pb-4 pt-1 text-sm text-gray-700 leading-relaxed">
+                    {faq.a}
                   </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Action Buttons - Call to Action */}
-          <section className="flex gap-3 flex-col md:flex-row">
-            <button className="flex-1 bg-blue-600 text-white font-bold py-3 md:py-4 rounded-lg hover:bg-blue-700 transition text-center">
-              📝 Read Full Notification
-            </button>
-            <button className="flex-1 bg-green-600 text-white font-bold py-3 md:py-4 rounded-lg hover:bg-green-700 transition text-center">
-              🌐 Apply on Official Website
-            </button>
-          </section>
-
-          {/* P3-2: FAQs & Resources */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Globe size={24} className="text-blue-600" />
-              Frequently Asked Questions & Resources
-            </h2>
-            <div className="space-y-4">
-              {[
-                { q: 'Can I apply for multiple positions?', a: 'Yes, if you meet the eligibility for each position, submit separate applications.' },
-                { q: 'What is the selection process?', a: 'Typically: merit-based shortlisting → written exam/interview → final selection' },
-                { q: 'How will I be notified?', a: 'Updates sent via email and SMS to your registered contact details.' },
-                { q: 'Is the application fee refundable?', a: 'Fee refund varies by category. Check the official notification for details.' },
-                { q: 'Age relaxation available?', a: 'Yes, as per government norms. Details in the official notification.' },
-              ].map((faq, idx) => (
-                <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4">
-                  <p className="font-bold text-blue-600 mb-2">Q{idx + 1}: {faq.q}</p>
-                  <p className="text-gray-700">{faq.a}</p>
-                </div>
+                </details>
               ))}
             </div>
-          </section>
+          </div>
+        )}
 
-          {/* ========== VERIFICATION & CLOSURE ========== */}
-
-          {/* Footer Verification Banner */}
-          <section className="bg-green-50 border-l-4 border-green-600 rounded-r-lg p-6">
-            <div className="flex gap-3">
-              <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
-              <div>
-                <p className="font-bold text-green-900 mb-1">✓ Officially Verified Information</p>
-                <p className="text-sm text-green-800">
-                  This recruitment hub displays information from official notifications. Always verify details with the official website before applying.
-                </p>
-              </div>
+        {/* ═══════════════════════════════════════════
+            SECTION 6 — TRUST / SOURCE
+            Official links only — no fabricated content
+            ═══════════════════════════════════════════ */}
+        {(resolvedOfficialSource || resolvedApplicationUrl) && (
+          <div className="px-4 py-8 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <CheckCircle size={20} className="text-green-600" />
+              Official Sources
+            </h2>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-5 space-y-3">
+              <p className="text-sm text-green-800">
+                Verify all details directly from the official sources below before applying.
+              </p>
+              {resolvedOfficialSource && (
+                <div className="flex items-start gap-3">
+                  <FileText size={16} className="text-green-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-xs text-green-700 font-medium mb-0.5">Official Notification</div>
+                    <a
+                      href={resolvedOfficialSource}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-700 hover:text-blue-800 break-all inline-flex items-center gap-1"
+                    >
+                      {resolvedOfficialSource}
+                      <ExternalLink size={12} className="flex-shrink-0" />
+                    </a>
+                  </div>
+                </div>
+              )}
+              {resolvedApplicationUrl && (
+                <div className="flex items-start gap-3">
+                  <Globe size={16} className="text-green-700 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-xs text-green-700 font-medium mb-0.5">Official Apply Portal</div>
+                    <a
+                      href={resolvedApplicationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-green-800 hover:text-green-900 font-semibold break-all inline-flex items-center gap-1"
+                    >
+                      Apply on Official Website
+                      <ExternalLink size={12} className="flex-shrink-0" />
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
-          </section>
-        </div>
+          </div>
+        )}
 
-        {/* Bottom Spacing */}
-        <div className="h-8"></div>
+        {/* ═══════════════════════════════════════════
+            ACTION BAR — linked, not dead buttons
+            ═══════════════════════════════════════════ */}
+        {(resolvedOfficialSource || resolvedApplicationUrl) && (
+          <div className="px-4 py-6 flex gap-3 flex-col md:flex-row">
+            {resolvedOfficialSource && (
+              <a
+                href={resolvedOfficialSource}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-blue-600 text-blue-700 font-semibold py-3 rounded-lg hover:bg-blue-50 transition text-sm"
+              >
+                <FileText size={16} />
+                Read Official Notification
+              </a>
+            )}
+            {resolvedApplicationUrl && !closed && (
+              <a
+                href={resolvedApplicationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition text-sm"
+              >
+                <Globe size={16} />
+                Apply on Official Website
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Warning banner for closed recruitments */}
+        {closed && (
+          <div className="mx-4 mb-6 bg-gray-50 border border-gray-300 rounded-lg p-4 flex gap-3">
+            <AlertCircle size={18} className="text-gray-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-600">
+              This recruitment is closed. Application submission is no longer available.
+              Verify the status on the official notification.
+            </p>
+          </div>
+        )}
+
+        <div className="h-8" />
       </div>
     </div>
   );
-};
-
-export default RecruitmentHub;
+}

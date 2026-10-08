@@ -11,7 +11,13 @@ import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
-import { resolveRecruitmentVacancy, resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
+import {
+  resolveRecruitmentVacancy,
+  resolvePostVacancy,
+  resolveOfficialSource,
+  resolveApplicationUrl,
+  resolveEmployer,
+} from "@/lib/resolvers/fact-resolvers";
 
 export const dynamic = "force-dynamic";
 
@@ -64,13 +70,43 @@ export default async function RecruitmentHubPage({
     notFound();
   }
 
-  const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData;
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData!;
 
-  // Resolve canonical vacancy counts via the single resolver layer (Gate 4D).
-  // The Hub must not read old relational vacancies table (always empty for most posts).
+  // ── Gate 4D resolver contract ──────────────────────────────────────────────
+  // All canonical facts must be resolved through the approved resolvers.
+  // Do NOT read raw DB columns for Hub UI or structured data.
+
+  // Recruitment-level vacancy count.
   const resolvedRecruitmentVacancies = resolveRecruitmentVacancy({
     totalVacancies: recruitment.totalVacancies ?? null,
   });
+
+  // Official source URL — map recruitment columns to the resolver's expected shape.
+  // resolveOfficialSource checks isAuthoritativeDomain; null means link is not authoritative.
+  const resolvedOfficialSource = resolveOfficialSource({
+    officialSourceUrl: null,                         // Post-level field; not applicable here
+    recruitmentOfficialNotificationUrl: recruitment.officialNotificationUrl ?? null,
+  } as any);
+
+  // Official application URL.
+  const resolvedApplicationUrl = resolveApplicationUrl({
+    applyPortalUrl: recruitment.applyUrl ?? null,    // recruitment.applyUrl (enrichment field)
+    recruitmentOfficialApplicationUrl: recruitment.officialApplicationUrl ?? null,
+  } as any);
+
+  // Employer name — resolveEmployer requires organizationVerified flag.
+  // recruitment.organizationName comes from the organization join in getRecruitmentWithPosts.
+  const resolvedEmployerObj = resolveEmployer({
+    organizationName: recruitment.organizationName ?? null,
+    organizationVerified: !!(recruitment.organizationVerified ?? false),
+  } as any);
+  const resolvedEmployer = resolvedEmployerObj?.name ?? null;
+
+  // Selection process — recruitment.selectionProcess is a plain text field.
+  // The Post-level resolveSelectionProcess requires multiple identical enrichments
+  // and cannot be used here. Use the recruitment's own text field directly.
+  const resolvedSelectionProcess: string | null = recruitment.selectionProcess ?? null;
 
   // Annotate each post with its resolved vacancy count so the Hub
   // does not independently select database columns.
@@ -85,18 +121,21 @@ export default async function RecruitmentHubPage({
     } as any),
   }));
 
-  // Display the modern recruitment hub for all recruitments
-  // This provides a comprehensive interface for both single and multi-post recruitments
   return (
     <>
       <RecruitmentHubStructuredData
         recruitment={recruitment}
         totalPosts={totalPosts}
+        resolvedEmployer={resolvedEmployer}
       />
       <RecruitmentHub
         recruitment={recruitment}
         posts={postsWithResolvedVacancies}
         resolvedTotalVacancies={resolvedRecruitmentVacancies}
+        resolvedApplicationUrl={resolvedApplicationUrl}
+        resolvedOfficialSource={resolvedOfficialSource}
+        resolvedEmployer={resolvedEmployer}
+        resolvedSelectionProcess={resolvedSelectionProcess}
       />
     </>
   );
