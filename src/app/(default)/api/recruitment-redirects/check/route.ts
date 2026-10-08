@@ -23,6 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if DATABASE_URL is configured
+    if (!process.env.DATABASE_URL) {
+      console.warn("DATABASE_URL not configured, recruitment redirects unavailable");
+      return NextResponse.json({}, { status: 404 });
+    }
+
     const db = getDb();
     const redirect = await db.query.recruitment_slug_redirects.findFirst({
       where: eq(recruitment_slug_redirects.old_slug, oldSlug),
@@ -35,10 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ newSlug: redirect.new_slug });
   } catch (error) {
     console.error("Error checking recruitment redirect:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    // Return 404 instead of 500 so middleware can continue
+    return NextResponse.json({}, { status: 404 });
   }
 }
 

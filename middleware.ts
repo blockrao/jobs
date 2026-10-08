@@ -40,6 +40,8 @@ export async function middleware(request: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ oldSlug: recruitmentSlug }),
+        // Add timeout to prevent middleware from hanging
+        signal: AbortSignal.timeout(5000),
       },
     );
 
@@ -55,8 +57,9 @@ export async function middleware(request: NextRequest) {
       }
     }
   } catch (error) {
-    // Log error but don't break the request
-    console.error("Error checking recruitment redirect:", error);
+    // Log error but don't break the request — API not available is non-fatal
+    // The page will still load; just without the redirect
+    console.warn("Recruitment redirect check unavailable:", error instanceof Error ? error.message : String(error));
   }
 
   // If no redirect found, continue normally
