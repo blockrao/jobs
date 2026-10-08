@@ -1,6 +1,6 @@
 /**
  * Dynamic Job Posting Page Route
- * Renders individual job posting with enriched data
+ * Renders individual job posting with enriched data and recruitment context
  * Route: /jobs/[recruitment-slug]/[post-slug]
  */
 
@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import { getPostBySlug } from "@/db/operations/get-posts";
+import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 
 interface JobPostingPageRouteProps {
   params: Promise<{
@@ -50,14 +51,24 @@ export async function generateMetadata({
 
 export default async function Page({ params }: JobPostingPageRouteProps) {
   const resolvedParams = await params;
-  const post = await getPostBySlug(
-    resolvedParams["recruitment-slug"],
-    resolvedParams["post-slug"]
-  );
+  const recruitmentSlug = resolvedParams["recruitment-slug"];
+  const postSlug = resolvedParams["post-slug"];
+
+  // Fetch post with enrichment data
+  const post = await getPostBySlug(recruitmentSlug, postSlug);
 
   if (!post) {
     notFound();
   }
 
-  return <JobPostingPage post={post} />;
+  // Fetch recruitment data with all posts for context
+  const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
+
+  return (
+    <JobPostingPage
+      post={post}
+      recruitment={recruitmentData}
+      isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
+    />
+  );
 }

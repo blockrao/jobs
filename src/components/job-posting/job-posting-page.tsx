@@ -3,6 +3,7 @@
  *
  * Main component for rendering a complete enriched job posting.
  * Displays all sections with data from posts + post_enrichments.
+ * Includes recruitment context for single-job recruitments.
  */
 
 import { JobPostingData } from "@/types/job-posting";
@@ -21,29 +22,58 @@ import OfficialSourceVerification from "./sections/official-source-verification"
 import JobPostingStructuredData from "./structured-data/job-posting-schema";
 import styles from "./job-posting-page.module.css";
 
+interface RecruitmentData {
+  recruitment: any;
+  posts: any[];
+  totalPosts: number;
+  isSingleJobRecruitment: boolean;
+}
+
 interface JobPostingPageProps {
   post: JobPostingData;
+  recruitment?: RecruitmentData | null;
+  isSingleJobRecruitment?: boolean;
   locale?: string;
 }
 
-export default function JobPostingPage({ post, locale = "en" }: JobPostingPageProps) {
+export default function JobPostingPage({
+  post,
+  recruitment,
+  isSingleJobRecruitment = false,
+  locale = "en",
+}: JobPostingPageProps) {
+  // For single-job recruitments, enrich post data from recruitment context
+  const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
+    ? {
+        ...post,
+        // Recruitment-level context can enhance single-job posting
+        recruitmentContext: recruitment.recruitment,
+      }
+    : post;
+
+  // Get sibling posts for multi-post recruitments
+  const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
+
   return (
     <>
       {/* Structured Data */}
       <JobPostingStructuredData post={post} />
 
       <div className={styles.container}>
-        {/* Breadcrumb */}
+        {/* Breadcrumb - Updated to link to recruitment hub */}
         <div className={styles.breadcrumb}>
           <a href="/jobs">Jobs</a>
           <span>›</span>
-          <a href="/exams">Exams</a>
-          <span>›</span>
-          <a href={`/exams/${post.examTypeSlug}`}>{post.examType}</a>
-          <span>›</span>
-          <a href={`/exams/${post.examTypeSlug}/${post.recruitmentSlug}`}>
-            {post.recruitmentName}
-          </a>
+          {post.examTypeSlug && (
+            <>
+              <a href="/exams">Exams</a>
+              <span>›</span>
+              <a href={`/exams/${post.examTypeSlug}`}>{post.examType}</a>
+              <span>›</span>
+            </>
+          )}
+          {/* Direct link to recruitment hub instead of exams path */}
+          <a href={`/jobs/${post.recruitmentSlug}`}>{post.recruitmentName}</a>
           <span>›</span>
           <span>{post.title}</span>
         </div>
@@ -90,6 +120,43 @@ export default function JobPostingPage({ post, locale = "en" }: JobPostingPagePr
         <DocumentsRequired post={post} />
         <DutiesResponsibilities post={post} />
         <OfficialSourceVerification post={post} />
+
+        {/* Related Roles Section - For multi-post recruitments */}
+        {siblingPosts.length > 0 && (
+          <section className={styles.relatedRoles}>
+            <h2>Other Roles in This Recruitment</h2>
+            <p className={styles.relatedRolesIntro}>
+              This recruitment has {recruitment?.totalPosts} open positions:
+            </p>
+            <ul className={styles.relatedRolesList}>
+              {recruitment?.posts?.map((p) => (
+                <li key={p.id}>
+                  <a href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
+                    <span className={styles.roleTitle}>{p.title}</span>
+                    {p.vacancies?.[0]?.count && (
+                      <span className={styles.roleVacancies}>
+                        {p.vacancies[0].count} position{p.vacancies[0].count !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Recruitment Hub Link - For single-job recruitments */}
+        {isSingleJobRecruitment && (
+          <section className={styles.recruitmentContext}>
+            <h2>About This Recruitment</h2>
+            <p>
+              This is the sole position in{" "}
+              <strong>{post.recruitmentName}</strong>. For additional details about
+              the recruitment process, timeline, and FAQs, visit the{" "}
+              <a href={`/jobs/${post.recruitmentSlug}`}>recruitment hub</a>.
+            </p>
+          </section>
+        )}
 
         {/* Footer Note */}
         <div className={styles.footerNote}>

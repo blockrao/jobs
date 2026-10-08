@@ -90,3 +90,75 @@ export async function getRecruitmentVacancyCount(recruitmentId: number) {
   const total = result.reduce((sum, row) => sum + (row.total || 0), 0);
   return total;
 }
+
+/**
+ * Get recruitment with all posts and enrichment data
+ * Used for job posting leaf pages to display recruitment context
+ * Returns recruitment metadata + all posts for that recruitment
+ */
+export async function getRecruitmentWithPosts(slug: string) {
+  try {
+    const db = getDb();
+
+    // Step 1: Get the recruitment by slug
+    const recruitmentResult = await db
+      .select()
+      .from(recruitments)
+      .where(eq(recruitments.slug, slug))
+      .limit(1);
+
+    if (!recruitmentResult || recruitmentResult.length === 0) {
+      console.warn("No recruitment found with slug:", slug);
+      return null;
+    }
+
+    const recruitment = recruitmentResult[0];
+    const recruitmentId = recruitment.id;
+
+    // Step 2: Get all posts for this recruitment with positions
+    const postsResult = await db
+      .select({
+        post: posts,
+        position: positions,
+      })
+      .from(posts)
+      .innerJoin(positions, eq(posts.positionId, positions.id))
+      .where(eq(posts.recruitmentId, recruitmentId));
+
+    // Step 3: For each post, get vacancies and eligibilities
+    const enrichedPosts = await Promise.all(
+      postsResult.map(async (row) => {
+        const postId = row.post.id;
+
+        // Get vacancies for this post
+        const vacanciesResult = await db
+          .select()
+          .from(vacancies)
+          .where(eq(vacancies.postId, postId));
+
+        // Get eligibilities for this post
+        const eligibilitiesResult = await db
+          .select()
+          .from(eligibilities)
+          .where(eq(eligibilities.postId, postId));
+
+        return {
+          ...row.post,
+          position: row.position,
+          vacancies: vacanciesResult,
+          eligibilities: eligibilitiesResult,
+        };
+      })
+    );
+
+    return {
+      recruitment,
+      posts: enrichedPosts,
+      totalPosts: enrichedPosts.length,
+      isSingleJobRecruitment: enrichedPosts.length === 1,
+    };
+  } catch (err) {
+    console.error("Error fetching recruitment with posts:", err);
+    return null;
+  }
+}
