@@ -7,6 +7,7 @@ import { getRoleBySlug, ROLE_REGISTRY } from "@/lib/roles";
 import { getPostsForRole, getRoleStats } from "@/db/operations/get-roles";
 import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
+import { EnrichedPostRow } from "@/components/enriched-post-row";
 
 export const revalidate = 3600;
 
@@ -79,22 +80,6 @@ function applicationStatusLabel(applicationEndDate: Date | null | undefined, rec
   }
   if (recruitmentStatus === "ACTIVE") return "Applications open";
   return "";
-}
-
-/** Extract first fee amount from fee note (e.g. "Rs. 500" from "SC/ST/PwBD: NIL; All Others: Rs. 500") */
-function extractFeeAmount(feeNote: string | null | undefined): string | null {
-  if (!feeNote) return null;
-  const match = feeNote.match(/₹?\s*(\d+)/);
-  if (match) return `₹${match[1]}`;
-  return null;
-}
-
-/** Extract age range from age note (e.g. "20-28 years" from "Age limit: 20-28 years; Relaxation...") */
-function extractAgeRange(ageNote: string | null | undefined): string | null {
-  if (!ageNote) return null;
-  const match = ageNote.match(/(\d+)-(\d+)\s*years?/);
-  if (match) return `${match[1]}-${match[2]} yrs`;
-  return null;
 }
 
 export default async function PostPage({ params }: Props) {
@@ -208,115 +193,16 @@ export default async function PostPage({ params }: Props) {
                 const href = postUrl(p.recruitmentSlug, p.postSlug);
                 const statusLabel = applicationStatusLabel(p.applicationEndDate, p.recruitmentStatus);
                 return (
-                  <div
+                  <EnrichedPostRow
                     key={p.postId}
-                    className="bg-white rounded-xl border border-neutral-200 border-l-4 border-l-blue-500 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
-                  >
-                    <div className="p-5">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          {/* Post name — primary identity */}
-                          <Link
-                            href={href}
-                            className="font-semibold text-neutral-900 hover:text-blue-700 text-lg leading-snug block mb-1"
-                          >
-                            {p.postName}
-                          </Link>
-                          {/* Recruitment name — secondary context */}
-                          <div className="text-sm text-neutral-400 mb-3">
-                            {p.recruitmentName}
-                          </div>
-
-                          {/* Key facts */}
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                            <span className="font-medium text-neutral-700">{p.organizationName}</span>
-
-                            {/* State — only when explicitly set on org */}
-                            {p.organizationState && (
-                              <>
-                                <span className="text-neutral-300">·</span>
-                                <span className="text-neutral-500">{p.organizationState}</span>
-                              </>
-                            )}
-
-                            {p.vacancyTotal && (
-                              <>
-                                <span className="text-neutral-300">·</span>
-                                <span className="text-neutral-600">
-                                  <span className="font-medium text-neutral-800">{p.vacancyTotal.toLocaleString("en-IN")}</span> vacancies
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Enrichment badges — fee, age, selection */}
-                          {(extractFeeAmount(p.enrichmentFeeNote) || extractAgeRange(p.enrichmentAgeNote) || p.enrichmentSelectionProcess) && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {extractFeeAmount(p.enrichmentFeeNote) && (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 text-xs font-medium border border-amber-200">
-                                  Fee: {extractFeeAmount(p.enrichmentFeeNote)}
-                                </span>
-                              )}
-                              {extractAgeRange(p.enrichmentAgeNote) && (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-900 text-xs font-medium border border-blue-200">
-                                  Age: {extractAgeRange(p.enrichmentAgeNote)}
-                                </span>
-                              )}
-                              {p.enrichmentSelectionProcess && (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-purple-50 text-purple-900 text-xs font-medium border border-purple-200 truncate">
-                                  {p.enrichmentSelectionProcess.split("→")[0].trim()}
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Pay */}
-                          {(p.salaryMin || p.salaryMax) && (
-                            <div className="text-sm text-neutral-500 mt-1.5">
-                              Pay:{" "}
-                              <span className="text-neutral-700">
-                                {p.salaryMin && `₹${p.salaryMin.toLocaleString("en-IN")}`}
-                                {p.salaryMin && p.salaryMax && "–"}
-                                {p.salaryMax && `₹${p.salaryMax.toLocaleString("en-IN")}`}
-                                /month
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Application status — text, not just colour */}
-                          {statusLabel && (
-                            <div className={`text-xs mt-2 font-medium ${isUrgent ? "text-red-600" : "text-emerald-600"}`}>
-                              {statusLabel}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* CTA */}
-                        <div className="flex sm:flex-col items-center sm:items-end gap-3 shrink-0">
-                          <Link
-                            href={href}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors whitespace-nowrap"
-                          >
-                            View Post
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </Link>
-                          {(p.notificationUrl || p.enrichmentApplyUrl) && (
-                            <a
-                              href={p.notificationUrl || p.enrichmentApplyUrl || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-                              aria-label={`${p.notificationUrl ? "Official notification" : "Application"} for ${p.recruitmentName}`}
-                            >
-                              {p.notificationUrl ? "Official notice" : "Apply"} ↗
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    post={p}
+                    isActive={true}
+                    href={href}
+                    statusLabel={statusLabel}
+                    daysRemaining={days}
+                    isUrgent={isUrgent}
+                    notificationUrl={p.notificationUrl || undefined}
+                  />
                 );
               })}
             </div>
