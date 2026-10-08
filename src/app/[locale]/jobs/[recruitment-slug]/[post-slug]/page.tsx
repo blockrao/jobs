@@ -34,19 +34,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     `Apply for ${post.title} at ${post.organizationName}`;
 
   return {
-    title: `${title} - JobOye`,
+    title: `${title} - ${post.organizationName} | JobOye`,
     description,
-    openGraph: {
-      title: `${title} | ${post.organizationName}`,
-      description,
-      type: "website",
-      locale: locale === "hi" ? "hi_IN" : "en_US",
-    },
     alternates: {
+      canonical: `/jobs/${recruitmentSlug}/${postSlug}`,
       languages: {
         en: `/jobs/${recruitmentSlug}/${postSlug}`,
         hi: `/hi/jobs/${recruitmentSlug}/${postSlug}`,
       },
+    },
+    openGraph: {
+      title: `${title} | ${post.organizationName}`,
+      description,
+      type: "website",
+      url: `https://www.joboye.com/jobs/${recruitmentSlug}/${postSlug}`,
+      locale: locale === "hi" ? "hi_IN" : "en_US",
     },
   };
 }
