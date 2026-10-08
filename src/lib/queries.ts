@@ -956,3 +956,37 @@ export async function getPostsCount() {
 
   return (result?.[0]?.count) || 0;
 }
+
+/**
+ * Get enrichment statistics across all live posts
+ */
+export async function getEnrichmentStats() {
+  if (!hasDb()) return { totalPosts: 0, withSalary: 0, withVacancies: 0, withExamDate: 0 };
+
+  const db = getDb();
+  const result = await db.execute<any>(sql`
+    SELECT
+      COUNT(*)::int as totalPosts,
+      COUNT(CASE WHEN "salaryMin" IS NOT NULL OR "salaryMax" IS NOT NULL THEN 1 END)::int as withSalary,
+      COUNT(CASE WHEN "vacanciesTotal" IS NOT NULL THEN 1 END)::int as withVacancies,
+      COUNT(CASE WHEN "examDate" IS NOT NULL THEN 1 END)::int as withExamDate
+    FROM (
+      SELECT
+        e."salaryMin",
+        e."salaryMax",
+        e."vacanciesTotal",
+        e."examDate"
+      FROM public.posts p
+      LEFT JOIN public.post_enrichments e ON p.id = e.post_id
+      WHERE p."isLive" = true
+    ) results
+  `);
+
+  const stats = result?.[0];
+  return {
+    totalPosts: stats?.totalPosts || 0,
+    withSalary: stats?.withSalary || 0,
+    withVacancies: stats?.withVacancies || 0,
+    withExamDate: stats?.withExamDate || 0,
+  };
+}

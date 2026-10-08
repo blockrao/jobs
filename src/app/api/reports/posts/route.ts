@@ -4,16 +4,17 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAllPostsWithEnrichment, getPostsCount } from '@/lib/queries';
+import { getAllPostsWithEnrichment, getPostsCount, getEnrichmentStats } from '@/lib/queries';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0'), 0);
-    
+
     const posts = await getAllPostsWithEnrichment(limit, offset);
     const totalCount = await getPostsCount();
+    const stats = await getEnrichmentStats();
 
     // Convert Date objects to ISO strings for JSON serialization
     const serializedPosts = posts.map(post => ({
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
       totalCount,
       limit,
       offset,
+      stats,
     });
   } catch (error) {
     console.error('Error fetching posts report:', error);

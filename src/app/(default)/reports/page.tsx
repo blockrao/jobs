@@ -38,12 +38,25 @@ interface Post {
 
 const ITEMS_PER_PAGE = 50;
 
+interface EnrichmentStats {
+  totalPosts: number;
+  withSalary: number;
+  withVacancies: number;
+  withExamDate: number;
+}
+
 export default function ReportsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPosts, setTotalPosts] = useState(0);
+  const [stats, setStats] = useState<EnrichmentStats>({
+    totalPosts: 0,
+    withSalary: 0,
+    withVacancies: 0,
+    withExamDate: 0,
+  });
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -57,6 +70,12 @@ export default function ReportsPage() {
         const data = await response.json();
         setPosts(data.posts || []);
         setTotalPosts(data.totalCount || 0);
+        setStats(data.stats || {
+          totalPosts: 0,
+          withSalary: 0,
+          withVacancies: 0,
+          withExamDate: 0,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -96,24 +115,24 @@ export default function ReportsPage() {
         <div className="grid grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="text-sm text-gray-600 font-semibold uppercase">Total Posts</div>
-            <div className="text-3xl font-bold text-indigo-600">{totalPosts.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-indigo-600">{stats.totalPosts.toLocaleString()}</div>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="text-sm text-gray-600 font-semibold uppercase">With Salary Data</div>
             <div className="text-3xl font-bold text-green-600">
-              {posts.filter(p => p.salaryMin || p.salaryMax || p.salaryNote).length}
+              {stats.withSalary.toLocaleString()}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="text-sm text-gray-600 font-semibold uppercase">With Vacancies</div>
             <div className="text-3xl font-bold text-blue-600">
-              {posts.filter(p => p.vacanciesTotal).length}
+              {stats.withVacancies.toLocaleString()}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="text-sm text-gray-600 font-semibold uppercase">With Exam Date</div>
             <div className="text-3xl font-bold text-purple-600">
-              {posts.filter(p => p.examDate).length}
+              {stats.withExamDate.toLocaleString()}
             </div>
           </div>
         </div>
