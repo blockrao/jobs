@@ -45,10 +45,12 @@ CREATE TABLE IF NOT EXISTS recruitment_slug_redirects (
   old_slug TEXT NOT NULL UNIQUE,
   new_slug TEXT NOT NULL,
   recruitment_id BIGINT NOT NULL REFERENCES recruitments(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  INDEX idx_old_slug (old_slug),
-  INDEX idx_recruitment_id (recruitment_id)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_old_slug ON recruitment_slug_redirects(old_slug);
+CREATE INDEX IF NOT EXISTS idx_recruitment_id ON recruitment_slug_redirects(recruitment_id);
 
 -- Step 5: Populate redirect mapping table with old→new mappings
 INSERT INTO recruitment_slug_redirects (old_slug, new_slug, recruitment_id)
