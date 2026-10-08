@@ -126,7 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...roleEntries,
     ...stateEntries,
-    ...postingEntries,
+    // REMOVED: postingEntries (recruitment aggregation pages are noindex and should not be in sitemap)
     ...postLeafEntries,
     ...articleEntries,
     ...categoryEntries,
