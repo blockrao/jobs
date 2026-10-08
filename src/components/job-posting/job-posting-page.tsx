@@ -35,12 +35,24 @@ export interface ResolvedLeafFacts {
   deadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN" };
 }
 
+/** Recruitment-owned facts resolved from the canonical Recruitment entity.
+ *  Passed to the Leaf so it can display Recruitment-context CTAs without
+ *  reading Recruitment columns directly. Entity authority remains with Recruitment.
+ */
+export interface ResolvedRecruitmentFacts {
+  officialSource: string | null;
+  applicationUrl: string | null;
+  employer: string | null;
+  selectionProcess: string | null;
+}
+
 interface JobPostingPageProps {
   post: JobPostingData;
   recruitment?: RecruitmentData | null;
   isSingleJobRecruitment?: boolean;
   locale?: string;
   resolvedFacts?: ResolvedLeafFacts;
+  recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
 }
 
 export default function JobPostingPage({
@@ -49,6 +61,7 @@ export default function JobPostingPage({
   isSingleJobRecruitment = false,
   locale = "en",
   resolvedFacts,
+  recruitmentResolvedFacts,
 }: JobPostingPageProps) {
   // For single-job recruitments, enrich post data from recruitment context
   const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
@@ -92,30 +105,42 @@ export default function JobPostingPage({
         {/* Quick Facts */}
         <QuickFacts post={post} resolvedFacts={resolvedFacts} />
 
-        {/* Action Buttons */}
-        <div className={styles.actions}>
-          <a
-            href={post.applyPortalUrl || "#"}
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            ↗ Apply on Official Portal
-          </a>
-          {post.officialSourceUrl && (
-            <a
-              href={post.officialSourceUrl}
-              className={`${styles.btn} ${styles.btnSecondary}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              📄 View Official Notification
-            </a>
-          )}
-          <a href="#" className={`${styles.btn} ${styles.btnSecondary}`}>
-            📤 Share
-          </a>
-        </div>
+        {/* Action Buttons
+          CTA priority: use Recruitment-owned resolved URLs when available
+          (canonical entity authority), fall through to raw post columns only
+          as a last resort. Never show a "#" dead link for Apply.
+        */}
+        {(() => {
+          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
+          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
+          return (
+            <div className={styles.actions}>
+              {applyUrl && (
+                <a
+                  href={applyUrl}
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ↗ Apply on Official Portal
+                </a>
+              )}
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  📄 View Official Notification
+                </a>
+              )}
+              <a href="#" className={`${styles.btn} ${styles.btnSecondary}`}>
+                📤 Share
+              </a>
+            </div>
+          );
+        })()}
 
         {/* Sections */}
         <VacancyDetails post={post} resolvedFacts={resolvedFacts} />
