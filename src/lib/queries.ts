@@ -990,3 +990,122 @@ export async function getEnrichmentStats() {
     withExamDate: stats?.withExamDate || stats?.[`"withExamDate"`] || 0,
   };
 }
+
+/**
+ * Get filtered posts with dynamic filtering support
+ * Used by /jobs page with sidebar filters
+ */
+export async function listPostsEnhanced(opts?: {
+  limit?: number;
+  offset?: number;
+  location?: string;
+  employment?: string;
+  experience?: string;
+  salary?: string;
+  deadline?: string;
+  stage?: string;
+  search?: string;
+}) {
+  if (!hasDb()) return [];
+  const db = getDb();
+  const limit = Math.min(opts?.limit ?? 30, 100);
+  const offset = Math.max(0, opts?.offset ?? 0);
+
+  try {
+    // Map city names to state codes
+    const locationMap: Record<string, string> = {
+      bangalore: "IN-KA",
+      delhi: "IN-DL",
+      hyderabad: "IN-TG",
+      mumbai: "IN-MH",
+      pune: "IN-MH",
+    };
+
+    const stateCode = opts?.location
+      ? locationMap[opts.location.toLowerCase()]
+      : null;
+
+    // Parse salary range from format like "25-50" (meaning 25K-50K)
+    let salaryMinPaise: number | null = null;
+    let salaryMaxPaise: number | null = null;
+    if (opts?.salary) {
+      const [minStr, maxStr] = opts.salary.split("-");
+      if (minStr && maxStr) {
+        salaryMinPaise = parseInt(minStr) * 100 * 1000; // Convert K to paise
+        salaryMaxPaise = parseInt(maxStr) * 100 * 1000;
+      }
+    }
+
+    const results = await db.execute<any>(sql`
+      SELECT
+        p.id,
+        p.title,
+        p.slug,
+        p.description,
+        p."isLive",
+        p."postedAt",
+        p."updatedAt",
+        p."organizationName",
+        p."recruitmentName",
+        p."recruitmentSlug",
+        p."officialSourceUrl",
+        p."applyPortalUrl",
+        e."salaryMin",
+        e."salaryMax",
+        e."salaryNote",
+        e."ageNote",
+        e.education,
+        e.experience,
+        e."selectionProcess",
+        e."vacanciesTotal",
+        e."feeNote",
+        e."applicationClosingDate",
+        e."examDate",
+        r."locationStateCode",
+        r."employmentType",
+        r.status as recruitment_status
+      FROM public.posts p
+      LEFT JOIN public.post_enrichments e ON p.id = e.post_id
+      LEFT JOIN public.recruitments r ON p."recruitmentId" = r.id
+      WHERE p."isLive" = true
+        ${stateCode ? sql`AND r."locationStateCode" = ${stateCode}` : sql``}
+        ${opts?.employment ? sql`AND LOWER(r."employmentType") = LOWER(${opts.employment})` : sql``}
+        ${salaryMinPaise !== null ? sql`AND e."salaryMax" >= ${salaryMinPaise}` : sql``}
+        ${salaryMaxPaise !== null ? sql`AND e."salaryMin" <= ${salaryMaxPaise}` : sql``}
+        ${opts?.stage ? sql`AND r.status = ${opts.stage}` : sql``}
+        ${opts?.search ? sql`AND (LOWER(p.title) LIKE LOWER(${`%${opts.search}%`}) OR LOWER(p.description) LIKE LOWER(${`%${opts.search}%`}))` : sql``}
+      ORDER BY p."postedAt" DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `);
+
+    return (results || []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      organizationName: row.organizationName,
+      recruitmentName: row.recruitmentName,
+      recruitmentSlug: row.recruitmentSlug,
+      description: row.description,
+      isLive: row.isLive,
+      postedAt: row.postedAt,
+      updatedAt: row.updatedAt,
+      officialSourceUrl: row.officialSourceUrl,
+      applyPortalUrl: row.applyPortalUrl,
+      salaryMin: row.salaryMin ? Math.round(row.salaryMin / 100000) : null, // Convert paise to rupees
+      salaryMax: row.salaryMax ? Math.round(row.salaryMax / 100000) : null,
+      salaryNote: row.salaryNote,
+      ageNote: row.ageNote,
+      education: row.education,
+      experience: row.experience,
+      selectionProcess: row.selectionProcess,
+      vacanciesTotal: row.vacanciesTotal,
+      feeNote: row.feeNote,
+      applicationClosingDate: row.applicationClosingDate ? new Date(row.applicationClosingDate) : null,
+      examDate: row.examDate ? new Date(row.examDate) : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching enhanced posts:", error);
+    return [];
+  }
+}
