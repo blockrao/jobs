@@ -33,7 +33,7 @@ export async function getPostBySlug(
       description,
       isLive,
       postedAt,
-      updatedAt,
+      updated_at,
       officialSourceUrl,
       applyPortalUrl,
       post_enrichments!inner(
@@ -107,7 +107,7 @@ export async function getPostBySlug(
     description: data.description,
     isLive: data.isLive,
     postedAt: new Date(data.postedAt),
-    updatedAt: new Date(data.updatedAt),
+    updatedAt: new Date(data.updated_at),
     officialSourceUrl: data.officialSourceUrl,
     applyPortalUrl: data.applyPortalUrl,
     enrichment: enrichment ? {
@@ -175,7 +175,7 @@ export async function getPostsByRecruitment(
       description,
       isLive,
       postedAt,
-      updatedAt,
+      updated_at,
       officialSourceUrl,
       applyPortalUrl,
       post_enrichments(
@@ -240,7 +240,7 @@ export async function getPostsByRecruitment(
       description: post.description,
       isLive: post.isLive,
       postedAt: new Date(post.postedAt),
-      updatedAt: new Date(post.updatedAt),
+      updatedAt: new Date(post.updated_at),
       officialSourceUrl: post.officialSourceUrl,
       applyPortalUrl: post.applyPortalUrl,
       enrichment: enrichment ? {
