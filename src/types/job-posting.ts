@@ -67,7 +67,7 @@ export interface PostEnrichment {
   // Important Dates
   notificationDate?: Date;
   applicationOpenDate?: Date;
-  applicationClosingDate: Date;
+  applicationClosingDate?: Date;
   examDate?: Date;
   admitCardDate?: Date;
   resultDate?: Date;
