@@ -486,7 +486,7 @@ export default async function PostLeafPage({ params }: Props) {
 
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Jobs", path: "/jobs" },
-    { name: recruitment.name ?? "Recruitment", path: `/jobs/${recruitment.slug}` },
+    { name: roleSlug ? roleDefinition?.name : recruitment.name ?? "Recruitment", path: roleSlug ? `/posts/${roleSlug}` : `/jobs/${recruitment.slug}` },
     { name: post.name, path: `/jobs/${recruitment.slug}/${post.slug}` },
   ]);
 
@@ -524,7 +524,7 @@ export default async function PostLeafPage({ params }: Props) {
           <ChevronRight className="h-3 w-3" />
           <Link href={`/organizations/${org.slug}`} className="hover:text-neutral-800">{org.name}</Link>
           <ChevronRight className="h-3 w-3" />
-          <Link href={`/jobs/${recruitment.slug}`} className="hover:text-neutral-800 line-clamp-1">
+          <Link href={roleSlug ? `/posts/${roleSlug}` : `/jobs/${recruitment.slug}`} className="hover:text-neutral-800 line-clamp-1">
             {recruitment.name ?? "Recruitment"}
           </Link>
           <ChevronRight className="h-3 w-3" />
@@ -568,7 +568,7 @@ export default async function PostLeafPage({ params }: Props) {
             {recruitment.name && (
               <p className="mt-1 text-sm text-neutral-500">
                 Part of:{" "}
-                <Link href={`/jobs/${recruitment.slug}`} className="text-indigo-600 hover:underline">
+                <Link href={roleSlug ? `/posts/${roleSlug}` : `/jobs/${recruitment.slug}`} className="text-indigo-600 hover:underline">
                   {recruitment.name}
                 </Link>
               </p>
@@ -700,7 +700,7 @@ export default async function PostLeafPage({ params }: Props) {
               Share
             </a>
             <Link
-              href={`/jobs/${recruitment.slug}`}
+              href={roleSlug ? `/posts/${roleSlug}` : `/jobs/${recruitment.slug}`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
             >
               All posts
@@ -775,7 +775,7 @@ export default async function PostLeafPage({ params }: Props) {
               Detailed eligibility, vacancy, and salary information for this post has not yet been extracted.
             </p>
             <Link
-              href={`/jobs/${recruitment.slug}`}
+              href={roleSlug ? `/posts/${roleSlug}` : `/jobs/${recruitment.slug}`}
               className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:underline"
             >
               View full recruitment details →
@@ -1060,7 +1060,7 @@ export default async function PostLeafPage({ params }: Props) {
               ))}
             </div>
             <div className="border-t border-black/5 px-5 py-2.5">
-              <Link href={`/jobs/${recruitment.slug}`} className="text-xs text-indigo-600 hover:underline">
+              <Link href={roleSlug ? `/posts/${roleSlug}` : `/jobs/${recruitment.slug}`} className="text-xs text-indigo-600 hover:underline">
                 ← Back to notice hub
               </Link>
             </div>

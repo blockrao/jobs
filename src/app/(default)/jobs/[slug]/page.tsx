@@ -26,6 +26,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostingBySlug, getPostsForRecruitment } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
+import { getRedirectTargetForRecruitmentSlug } from "@/lib/redirects";
 import {
   buildBreadcrumbSchema,
   buildExamEventSchema,
@@ -86,6 +87,26 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+
+  // URL Architecture Fix (2026-10-08):
+  // Check if this recruitment should redirect to a role hub
+  const redirectRoleSlug = await safeQuery(
+    () => getRedirectTargetForRecruitmentSlug(slug),
+    null
+  );
+
+  if (redirectRoleSlug) {
+    // This is an intermediate recruitment page that should be indexed elsewhere
+    // Return noindex + canonical pointing to the role hub
+    return {
+      robots: { index: false, follow: false },
+      alternates: {
+        canonical: `https://www.joboye.com/posts/${redirectRoleSlug}`,
+      },
+    };
+  }
+
+  // Fall back to legacy posting lookup
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
   if (!posting) return {};
 
