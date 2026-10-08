@@ -20,6 +20,41 @@ import {
   resolveRecruitmentSelectionProcess,
 } from "@/lib/resolvers/fact-resolvers";
 
+// ---------------------------------------------------------------------------
+// Meta description helpers (SEO/GEO signal enrichment)
+// ---------------------------------------------------------------------------
+
+function buildMetaDescription(params: {
+  name: string;
+  totalPosts: number;
+  resolvedVacancies: number | null;
+  applicationEndDate: Date | string | null | undefined;
+}): string {
+  const { name, totalPosts, resolvedVacancies, applicationEndDate } = params;
+
+  const vacancyPart = resolvedVacancies
+    ? `${resolvedVacancies.toLocaleString("en-IN")} vacancies`
+    : `${totalPosts} open position${totalPosts !== 1 ? "s" : ""}`;
+
+  let deadlinePart = "";
+  if (applicationEndDate) {
+    try {
+      const d = new Date(applicationEndDate);
+      const ms = d.getTime() - Date.now();
+      const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+      if (days > 0 && days <= 30) {
+        deadlinePart = ` · Apply in ${days} day${days !== 1 ? "s" : ""}`;
+      } else if (days > 0) {
+        deadlinePart = ` · Apply by ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+      } else {
+        deadlinePart = " · Applications closed";
+      }
+    } catch { /* skip */ }
+  }
+
+  return `${name} — ${vacancyPart}${deadlinePart}. Check eligibility, important dates, and official notification.`;
+}
+
 export const dynamic = "force-dynamic";
 
 interface RecruitmentHubProps {
@@ -43,15 +78,31 @@ export async function generateMetadata({
 
   const { recruitment, totalPosts } = recruitmentData;
 
+  // Resolve vacancy count for meta signals — same resolver used by page body.
+  const metaVacancies = resolveRecruitmentVacancy({
+    totalVacancies: recruitment.totalVacancies ?? null,
+  });
+
+  const description = buildMetaDescription({
+    name: recruitment.name,
+    totalPosts,
+    resolvedVacancies: metaVacancies,
+    applicationEndDate: recruitment.applicationEndDate,
+  });
+
+  const ogDescription = metaVacancies
+    ? `${metaVacancies.toLocaleString("en-IN")} vacancies · ${recruitment.name} on JobOye`
+    : `${recruitment.name} on JobOye`;
+
   return {
     title: recruitment.name,
-    description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? 's' : ''}. View eligibility criteria and application details.`,
+    description,
     alternates: {
       canonical: `/jobs/${recruitment.slug}`,
     },
     openGraph: {
       title: recruitment.name,
-      description: `${recruitment.name} recruitment on JobOye`,
+      description: ogDescription,
       type: "website",
       url: `https://www.joboye.com/jobs/${recruitment.slug}`,
     },
@@ -109,6 +160,8 @@ export default async function RecruitmentHubPage({
         recruitment={recruitment}
         totalPosts={totalPosts}
         resolvedEmployer={resolvedEmployer}
+        resolvedOfficialSource={resolvedOfficialSource}
+        resolvedTotalVacancies={resolvedRecruitmentVacancies}
       />
       <RecruitmentHub
         recruitment={recruitment}

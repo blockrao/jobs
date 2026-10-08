@@ -11,11 +11,26 @@
  *   - dateModified: emitted ONLY when a genuine content-modification timestamp
  *     exists. Never derived from notificationDate, applicationEndDate, current
  *     date, or any unrelated timestamp.
- *   - expires: applicationEndDate is a legitimate temporal bound for the WebPage.
+ *   - expires / validThrough: applicationEndDate is a legitimate temporal bound.
+ *   - datePosted: notificationDate is the closest honest proxy for content publication.
+ *   - Organization.sameAs: wired to resolvedOfficialSource only when it is an
+ *     authoritative domain (.gov.in / .nic.in). Never from raw officialSourceUrl.
  *   - No fabricated/inferred data.
  */
 
 import { SITE_URL } from "@/lib/site";
+
+const AUTHORITATIVE_DOMAINS = [".gov.in", ".nic.in"];
+
+function isAuthoritativeDomain(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const { hostname } = new URL(url);
+    return AUTHORITATIVE_DOMAINS.some((d) => hostname.endsWith(d));
+  } catch {
+    return false;
+  }
+}
 
 interface RecruitmentHubSchemaProps {
   recruitment: {
@@ -23,9 +38,14 @@ interface RecruitmentHubSchemaProps {
     name: string;
     organizationName?: string | null;
     applicationEndDate?: Date | string | null;
+    notificationDate?: Date | string | null;
   };
   totalPosts: number;
   resolvedEmployer?: string | null;
+  /** Resolved official source URL — used for Organization.sameAs when authoritative. */
+  resolvedOfficialSource?: string | null;
+  /** Resolved vacancy count — enriches WebPage description for GEO signals. */
+  resolvedTotalVacancies?: number | null;
 }
 
 function toIso(d: Date | string | null | undefined): string | undefined {
@@ -41,6 +61,8 @@ export default function RecruitmentHubStructuredData({
   recruitment,
   totalPosts,
   resolvedEmployer,
+  resolvedOfficialSource,
+  resolvedTotalVacancies,
 }: RecruitmentHubSchemaProps) {
   const hubUrl = `${SITE_URL}/jobs/${recruitment.slug}`;
 
@@ -85,13 +107,19 @@ export default function RecruitmentHubStructuredData({
     itemListElement: breadcrumbItems,
   };
 
+  // Enrich WebPage description with vacancy count when resolved — GEO signal.
+  const vacancySnippet = resolvedTotalVacancies
+    ? `${resolvedTotalVacancies.toLocaleString("en-IN")} vacancies · `
+    : "";
+  const webPageDescription = `${vacancySnippet}${recruitment.name} — ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View important dates and application details.`;
+
   // WebPage: the hub itself — describes this recruitment as a web document.
   const webPage: Record<string, unknown> = {
     "@type": "WebPage",
     "@id": `${hubUrl}#webpage`,
     url: hubUrl,
     name: recruitment.name,
-    description: `${recruitment.name} — ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View important dates and application details.`,
+    description: webPageDescription,
     inLanguage: "en-IN",
     isPartOf: {
       "@type": "WebSite",
@@ -102,20 +130,34 @@ export default function RecruitmentHubStructuredData({
     breadcrumb: { "@id": `${hubUrl}#breadcrumb` },
   };
 
-  // Organization: link only when we have a canonical name.
+  // datePosted: notificationDate is the closest honest proxy for when this
+  // recruitment was announced. Schema.org accepts it on WebPage. Helps GEO
+  // engines understand content freshness.
+  const datePostedIso = toIso(recruitment.notificationDate);
+  if (datePostedIso) {
+    webPage["datePosted"] = datePostedIso;
+  }
+
+  // Organization: link when we have a canonical name; add sameAs only when
+  // the resolved official source is an authoritative domain (.gov.in/.nic.in).
   if (orgName) {
-    webPage["about"] = {
+    const orgNode: Record<string, unknown> = {
       "@type": "Organization",
       name: orgName,
     };
+    if (isAuthoritativeDomain(resolvedOfficialSource)) {
+      orgNode["sameAs"] = resolvedOfficialSource;
+    }
+    webPage["about"] = orgNode;
   }
 
-  // expires: applicationEndDate is a legitimate temporal bound for this page —
-  // it is semantically "this page describes an opportunity that expires on this date."
-  // Not dateModified — that would be semantically wrong per the approved spec.
+  // expires / validThrough: applicationEndDate is a legitimate temporal bound
+  // for this page — "this page describes an opportunity that expires on this date."
   const expiresIso = toIso(recruitment.applicationEndDate);
   if (expiresIso) {
     webPage["expires"] = expiresIso;
+    // validThrough is more widely understood by AI/GEO engines for job content.
+    webPage["validThrough"] = expiresIso;
   }
 
   // dateModified: intentionally omitted.
