@@ -28,6 +28,18 @@ export interface JobPostingData {
   officialSourceUrl?: string;
   applyPortalUrl?: string;
 
+  // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
+  vacancyTotal?: number | null;
+  legacySalaryMin?: number | null;
+  legacySalaryMax?: number | null;
+
+  // Gate 4D bridge: recruitment-level fields for resolvers
+  recruitmentVacancyTotal?: number | null;
+  recruitmentOfficialNotificationUrl?: string | null;
+  recruitmentOfficialApplicationUrl?: string | null;
+  recruitmentApplicationEndDate?: Date | null;
+  notificationPublicationDate?: Date | null;
+
   // Enrichment Data (from post_enrichments table)
   enrichment?: PostEnrichment;
 }
