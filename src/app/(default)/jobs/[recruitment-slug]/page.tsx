@@ -11,6 +11,8 @@ import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 
+export const dynamic = "force-dynamic";
+
 interface RecruitmentHubProps {
   params: Promise<{
     "recruitment-slug": string;
