@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     `Apply for ${post.title} at ${post.organizationName}`;
 
   return {
-    title: `${title} - ${post.organizationName} | JobOye`,
+    title: `${title} - ${post.organizationName}`,
     description,
     alternates: {
       canonical: `/jobs/${recruitmentSlug}/${postSlug}`,
