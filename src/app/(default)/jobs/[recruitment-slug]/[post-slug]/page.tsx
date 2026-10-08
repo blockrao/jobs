@@ -9,7 +9,6 @@ import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
-import { absoluteUrl } from "@/lib/site";
 
 interface JobPostingPageRouteProps {
   params: Promise<{
@@ -40,7 +39,7 @@ export async function generateMetadata({
       post.description ||
       `${post.title} vacancy at ${post.organizationName}. Total vacancies: ${post.enrichment?.vacanciesTotal || "N/A"}. Apply now on JobOye.`,
     alternates: {
-      canonical: absoluteUrl(`/jobs/${post.recruitmentSlug}/${post.slug}`),
+      canonical: `/jobs/${post.recruitmentSlug}/${post.slug}`,
     },
     openGraph: {
       title: post.title,
@@ -48,7 +47,7 @@ export async function generateMetadata({
         post.description ||
         `${post.title} at ${post.organizationName}`,
       type: "website",
-      url: absoluteUrl(`/jobs/${post.recruitmentSlug}/${post.slug}`),
+      url: `https://www.joboye.com/jobs/${post.recruitmentSlug}/${post.slug}`,
     },
   };
 }
