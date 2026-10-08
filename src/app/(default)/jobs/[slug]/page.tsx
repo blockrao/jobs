@@ -99,6 +99,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (roleHubSlug) {
     // This is a recruitment page (supporting layer).
     // Return noindex + canonical pointing to the canonical role hub.
+    console.log(`[generateMetadata.recruitment] Role hub found: "${slug}" → "${roleHubSlug}"`);
     return {
       robots: { index: false, follow: false },
       alternates: {
@@ -108,8 +109,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   // Fall back to legacy posting lookup
+  console.warn(`[generateMetadata.fallback] No role hub resolved for slug="${slug}", falling back to legacy posting lookup`);
   const posting = await safeQuery(() => getPostingBySlug(slug), null);
-  if (!posting) return {};
+  if (!posting) {
+    console.warn(`[generateMetadata.notfound] Neither recruitment role hub nor legacy posting found for slug="${slug}"`);
+    return {};
+  }
 
   const org = posting.organization;
   const extraContent = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;

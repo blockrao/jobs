@@ -40,10 +40,14 @@ function hasDb(): boolean {
 export async function getRoleHubForRecruitmentSlug(
   recruitmentSlug: string
 ): Promise<string | null> {
-  if (!hasDb()) return null;
+  if (!hasDb()) {
+    console.warn(`[redirects.getRoleHub] DATABASE_URL not configured`);
+    return null;
+  }
 
   try {
     const db = getDb();
+    console.log(`[redirects.getRoleHub.start] Resolving recruitment: "${recruitmentSlug}"`);
 
     // Step 1: Find recruitment by slug
     const recruitment = await db.query.recruitments.findFirst({
@@ -59,13 +63,17 @@ export async function getRoleHubForRecruitmentSlug(
     });
 
     if (!recruitment) {
-      return null; // Recruitment not found
+      console.warn(`[redirects.getRoleHub.fail] Recruitment not found: "${recruitmentSlug}"`);
+      return null;
     }
+
+    console.log(`[redirects.getRoleHub.found] Recruitment exists: id=${recruitment.id}, posts=${recruitment.posts?.length || 0}`);
 
     // Step 2: Get posts for this recruitment
     const recruitmentPosts = recruitment.posts;
     if (!recruitmentPosts || recruitmentPosts.length === 0) {
-      return null; // No posts in this recruitment
+      console.warn(`[redirects.getRoleHub.fail] No posts in recruitment: "${recruitmentSlug}"`);
+      return null;
     }
 
     // Step 3: Select the role with highest vacancy count (navigation heuristic)
@@ -76,14 +84,23 @@ export async function getRoleHubForRecruitmentSlug(
       return bVacancies > aVacancies ? b : a;
     });
 
+    console.log(`[redirects.getRoleHub.selected] Post selected: slug="${selectedPost.slug}", vacancy=${selectedPost.vacancyTotal}, positionId=${selectedPost.positionId}`);
+
     // Step 4: Return role slug for the hub
-    if (selectedPost.position?.slug) {
-      return selectedPost.position.slug;
+    if (!selectedPost.position) {
+      console.warn(`[redirects.getRoleHub.fail] Position not loaded for post: "${selectedPost.slug}"`);
+      return null;
     }
 
-    return null;
+    if (!selectedPost.position.slug) {
+      console.warn(`[redirects.getRoleHub.fail] Position has no slug: post="${selectedPost.slug}", positionId=${selectedPost.positionId}`);
+      return null;
+    }
+
+    console.log(`[redirects.getRoleHub.success] Role hub resolved: "${selectedPost.position.slug}"`);
+    return selectedPost.position.slug;
   } catch (error) {
-    console.error(`[redirects] Error resolving role hub for "${recruitmentSlug}":`, error);
+    console.error(`[redirects.getRoleHub.exception] Error resolving role hub for "${recruitmentSlug}":`, error instanceof Error ? error.message : String(error));
     return null;
   }
 }
