@@ -134,9 +134,76 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
           </div>
         </div>
 
-        {/* Content Sections - Single Page */}
+        {/* Content Sections - Single Page - 10-Section Architecture */}
         <div className="px-4 py-8 md:py-12 space-y-12">
-          {/* About Section */}
+
+          {/* ========== P0/CRITICAL SECTIONS ========== */}
+
+          {/* P0-2: Important Dates Timeline (RIGHT AFTER HERO) */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Calendar size={24} className="text-blue-600" />
+              Important Dates
+            </h2>
+            <div className="space-y-4">
+              {recruitment.notificationDate && (
+                <div className="flex gap-4 items-start bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
+                      1
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900">{formatDate(recruitment.notificationDate)}</div>
+                    <div className="text-sm text-gray-600">Notification Published</div>
+                  </div>
+                </div>
+              )}
+              {recruitment.applicationStartDate && (
+                <div className="flex gap-4 items-start bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
+                      2
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900">{formatDate(recruitment.applicationStartDate)}</div>
+                    <div className="text-sm text-gray-600">Application Window Opens</div>
+                  </div>
+                </div>
+              )}
+              {recruitment.applicationEndDate && (
+                <div className={`flex gap-4 items-start rounded-lg p-4 border-2 ${
+                  isUrgent
+                    ? 'bg-red-50 border-red-300'
+                    : 'bg-white border-gray-200'
+                }`}>
+                  <div className="flex-shrink-0">
+                    <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
+                      isUrgent
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      3
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-bold ${isUrgent ? 'text-red-900' : 'text-gray-900'}`}>
+                      {formatDate(recruitment.applicationEndDate)}
+                      {daysLeft !== null && <span className="text-sm ml-2 font-normal">({daysLeft} days left)</span>}
+                    </div>
+                    <div className={`text-sm ${isUrgent ? 'text-red-700' : 'text-gray-600'}`}>
+                      Application Deadline {isUrgent && '⚠️ CLOSING SOON'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ========== P1/HIGH PRIORITY SECTIONS ========== */}
+
+          {/* P1-1: About Section (Overview) */}
           {recruitment.description && (
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -149,57 +216,7 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </section>
           )}
 
-          {/* Available Positions - Card Layout */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Briefcase size={24} className="text-blue-600" />
-              Available Positions ({posts.length})
-            </h2>
-            <div className="space-y-3">
-              {posts.map((post: any, index: number) => {
-                const postVacancies = post.vacancies?.reduce((sum: number, v: any) => sum + (v.count || 0), 0) || 0;
-                return (
-                  <Link
-                    key={post.id}
-                    href={`/jobs/${recruitment.slug}/${post.slug}`}
-                    className="block bg-white border border-gray-300 rounded-lg p-4 md:p-5 hover:border-blue-400 hover:shadow-lg transition-all group"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-bold flex-shrink-0">
-                            {index + 1}
-                          </span>
-                          <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
-                            {post.name}
-                          </h3>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 ml-11">
-                          <span className="flex items-center gap-1">
-                            <Users size={16} className="text-blue-600" />
-                            <strong>{postVacancies}</strong> Post{postVacancies !== 1 ? 's' : ''}
-                          </span>
-                          {post.position?.name && (
-                            <span className="flex items-center gap-1">
-                              <Award size={16} className="text-blue-600" />
-                              {post.position.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                          Open
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Detailed Positions from Metadata (if available) */}
+          {/* P1-2: Position Details & Qualifications */}
           {recruitment.metadata && recruitment.metadata.positions && (
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -258,7 +275,59 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </section>
           )}
 
-          {/* Eligibility Section */}
+          {/* Fallback: Available Positions - Card Layout */}
+          {!recruitment.metadata?.positions && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Briefcase size={24} className="text-blue-600" />
+                Available Positions ({posts.length})
+              </h2>
+              <div className="space-y-3">
+                {posts.map((post: any, index: number) => {
+                  const postVacancies = post.vacancies?.reduce((sum: number, v: any) => sum + (v.count || 0), 0) || 0;
+                  return (
+                    <Link
+                      key={post.id}
+                      href={`/jobs/${recruitment.slug}/${post.slug}`}
+                      className="block bg-white border border-gray-300 rounded-lg p-4 md:p-5 hover:border-blue-400 hover:shadow-lg transition-all group"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-bold flex-shrink-0">
+                              {index + 1}
+                            </span>
+                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+                              {post.name}
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 ml-11">
+                            <span className="flex items-center gap-1">
+                              <Users size={16} className="text-blue-600" />
+                              <strong>{postVacancies}</strong> Post{postVacancies !== 1 ? 's' : ''}
+                            </span>
+                            {post.position?.name && (
+                              <span className="flex items-center gap-1">
+                                <Award size={16} className="text-blue-600" />
+                                {post.position.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
+                            Open
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* P1-3: General Eligibility Criteria */}
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <Award size={24} className="text-blue-600" />
@@ -340,69 +409,7 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </div>
           </section>
 
-          {/* Important Dates Section */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Calendar size={24} className="text-blue-600" />
-              Important Dates
-            </h2>
-            <div className="space-y-4">
-              {recruitment.notificationDate && (
-                <div className="flex gap-4 items-start bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
-                      1
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-900">{formatDate(recruitment.notificationDate)}</div>
-                    <div className="text-sm text-gray-600">Notification Published</div>
-                  </div>
-                </div>
-              )}
-              {recruitment.applicationStartDate && (
-                <div className="flex gap-4 items-start bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
-                      2
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-900">{formatDate(recruitment.applicationStartDate)}</div>
-                    <div className="text-sm text-gray-600">Application Window Opens</div>
-                  </div>
-                </div>
-              )}
-              {recruitment.applicationEndDate && (
-                <div className={`flex gap-4 items-start rounded-lg p-4 border-2 ${
-                  isUrgent
-                    ? 'bg-red-50 border-red-300'
-                    : 'bg-white border-gray-200'
-                }`}>
-                  <div className="flex-shrink-0">
-                    <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
-                      isUrgent
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      3
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-bold ${isUrgent ? 'text-red-900' : 'text-gray-900'}`}>
-                      {formatDate(recruitment.applicationEndDate)}
-                      {daysLeft !== null && <span className="text-sm ml-2 font-normal">({daysLeft} days left)</span>}
-                    </div>
-                    <div className={`text-sm ${isUrgent ? 'text-red-700' : 'text-gray-600'}`}>
-                      Application Deadline {isUrgent && '⚠️ CLOSING SOON'}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Application Process from Metadata */}
+          {/* P1-4: How to Apply */}
           {recruitment.metadata?.application_process && (
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -446,17 +453,19 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </section>
           )}
 
-          {/* Selection Process from Metadata */}
+          {/* ========== P2/MEDIUM PRIORITY SECTIONS ========== */}
+
+          {/* P2-1: Selection Process & Stages */}
           {recruitment.metadata?.selection_process_details && (
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <Clock size={24} className="text-blue-600" />
-                Selection Process
+                Selection Process & Stages
               </h2>
               <div className="bg-white border border-gray-200 rounded-lg p-5">
                 {recruitment.metadata.selection_process_details.method && (
                   <div className="mb-4">
-                    <p className="font-semibold text-gray-900 mb-2">Method:</p>
+                    <p className="font-semibold text-gray-900 mb-2">Selection Method:</p>
                     <p className="text-gray-700">{recruitment.metadata.selection_process_details.method}</p>
                   </div>
                 )}
@@ -484,10 +493,33 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </section>
           )}
 
-          {/* General Guidelines from Metadata */}
+          {/* P2-2: Required Documents (NEW SECTION) */}
+          {recruitment.metadata?.required_documents && (
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <FileText size={24} className="text-blue-600" />
+                Required Documents
+              </h2>
+              <div className="bg-white border border-gray-200 rounded-lg p-5">
+                <ul className="space-y-2">
+                  {(recruitment.metadata.required_documents || []).map((doc: string, idx: number) => (
+                    <li key={idx} className="text-gray-700 flex items-start gap-2">
+                      <CheckCircle size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>{doc}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          {/* P2-3: General Guidelines & T&Cs */}
           {recruitment.metadata?.general_guidelines && (
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">General Guidelines</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <AlertCircle size={24} className="text-blue-600" />
+                General Guidelines & Terms & Conditions
+              </h2>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
                 <ul className="space-y-2">
                   {(recruitment.metadata.general_guidelines || []).map((guideline: string, idx: number) => (
@@ -501,7 +533,7 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </section>
           )}
 
-          {/* Standard How to Apply Section (fallback) */}
+          {/* Fallback: How to Apply Section (when no metadata) */}
           {!recruitment.metadata?.application_process && (
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -541,7 +573,62 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </section>
           )}
 
-          {/* Action Buttons - Sticky or Fixed */}
+          {/* ========== P3/LOW PRIORITY SECTIONS ========== */}
+
+          {/* P3-1: Contact & Support */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Phone size={24} className="text-blue-600" />
+              Contact & Support
+            </h2>
+            <div className="space-y-4">
+              {recruitment.metadata?.contact_details && (
+                <>
+                  {recruitment.metadata.contact_details.email && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-5">
+                      <p className="font-semibold text-gray-900 mb-2">Email Address:</p>
+                      <p className="text-blue-600 font-mono">{recruitment.metadata.contact_details.email}</p>
+                    </div>
+                  )}
+                  {recruitment.metadata.contact_details.phone && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-5">
+                      <p className="font-semibold text-gray-900 mb-2">Phone:</p>
+                      <p className="text-gray-700">{recruitment.metadata.contact_details.phone}</p>
+                    </div>
+                  )}
+                  {recruitment.metadata.contact_details.website && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-5">
+                      <p className="font-semibold text-gray-900 mb-2">Official Website:</p>
+                      <a href={recruitment.metadata.contact_details.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 break-all">
+                        {recruitment.metadata.contact_details.website}
+                      </a>
+                    </div>
+                  )}
+                </>
+              )}
+              {recruitment.metadata?.contact_details?.office_address && (
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <p className="font-semibold text-gray-900 mb-2">Office Address:</p>
+                  <p className="text-gray-700 whitespace-pre-line">{recruitment.metadata.contact_details.office_address}</p>
+                </div>
+              )}
+
+              {/* Fallback contact section */}
+              {!recruitment.metadata?.contact_details && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
+                  <p className="text-gray-700 mb-3">
+                    For further information and clarifications, visit the official recruitment website or contact the recruiting organization directly.
+                  </p>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>💡 <strong>Tip:</strong> Most organizations provide support through their official website portal.</p>
+                    <p>📧 <strong>Email:</strong> Check the official notification for contact email</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Action Buttons - Call to Action */}
           <section className="flex gap-3 flex-col md:flex-row">
             <button className="flex-1 bg-blue-600 text-white font-bold py-3 md:py-4 rounded-lg hover:bg-blue-700 transition text-center">
               📝 Read Full Notification
@@ -551,9 +638,12 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </button>
           </section>
 
-          {/* FAQ Section */}
+          {/* P3-2: FAQs & Resources */}
           <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Globe size={24} className="text-blue-600" />
+              Frequently Asked Questions & Resources
+            </h2>
             <div className="space-y-4">
               {[
                 { q: 'Can I apply for multiple positions?', a: 'Yes, if you meet the eligibility for each position, submit separate applications.' },
@@ -570,7 +660,9 @@ const RecruitmentHub: React.FC<RecruitmentHubProps> = ({ recruitment, posts }) =
             </div>
           </section>
 
-          {/* Footer Verification */}
+          {/* ========== VERIFICATION & CLOSURE ========== */}
+
+          {/* Footer Verification Banner */}
           <section className="bg-green-50 border-l-4 border-green-600 rounded-r-lg p-6">
             <div className="flex gap-3">
               <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
