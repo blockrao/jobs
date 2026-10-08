@@ -19,8 +19,6 @@ import {
   isHiringOpen,
   jsonLdGraph,
 } from "@/lib/structured-data";
-
-export const dynamic = "force-dynamic";
 import {
   EMPLOYMENT_TYPE_LABELS,
   KIND_LABELS,
