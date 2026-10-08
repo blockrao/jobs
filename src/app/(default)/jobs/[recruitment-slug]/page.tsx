@@ -35,7 +35,7 @@ export async function generateMetadata({
   const { recruitment, totalPosts } = recruitmentData;
 
   return {
-    title: `${recruitment.name} - JobOye`,
+    title: recruitment.name,
     description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? 's' : ''}. View eligibility criteria and application details.`,
     alternates: {
       canonical: `/jobs/${recruitment.slug}`,

@@ -34,7 +34,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${post.title} - ${post.organizationName} | JobOye`,
+    title: `${post.title} - ${post.organizationName}`,
     description:
       post.description ||
       `${post.title} vacancy at ${post.organizationName}. Total vacancies: ${post.enrichment?.vacanciesTotal || "N/A"}. Apply now on JobOye.`,
