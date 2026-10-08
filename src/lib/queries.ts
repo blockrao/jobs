@@ -900,8 +900,8 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       p."updatedAt",
       p."officialSourceUrl",
       p."applyPortalUrl",
-      COALESCE(e."salary_min", pt."salary_min") as "salaryMin",
-      COALESCE(e."salary_max", pt."salary_max") as "salaryMax",
+      e."salary_min" as "salaryMin",
+      e."salary_max" as "salaryMax",
       e."salaryNote",
       e."payScale",
       e."payLevel",
@@ -922,14 +922,9 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       e."experience",
       e."sourceVerificationStatus",
       e."extractionConfidence",
-      e."dataGaps",
-      pt."employment_type",
-      pt."age_limit_min",
-      pt."age_limit_max",
-      COALESCE(p."applyPortalUrl", pt."apply_url") as "apply_url_merged"
+      e."dataGaps"
     FROM posts p
     LEFT JOIN post_enrichments e ON p.id = e.post_id
-    LEFT JOIN postings pt ON p.id = pt."inferred_post_id"
     WHERE p."isLive" = true
     ORDER BY p."postedAt" DESC
     LIMIT ${limit}
@@ -948,7 +943,7 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     postedAt: new Date(data.postedAt),
     updatedAt: new Date(data.updatedAt),
     officialSourceUrl: data.officialSourceUrl,
-    applyPortalUrl: data.apply_url_merged,
+    applyPortalUrl: data.applyPortalUrl,
     vacanciesTotal: data.vacanciesTotal,
     vacanciesByCategory: data.vacanciesByCategory,
     salaryMin: data.salaryMin,
@@ -968,9 +963,6 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     sourceVerificationStatus: data.sourceVerificationStatus,
     extractionConfidence: data.extractionConfidence,
     dataGaps: data.dataGaps,
-    employmentType: data.employment_type,
-    ageLimitMin: data.age_limit_min,
-    ageLimitMax: data.age_limit_max,
   }));
 }
 
