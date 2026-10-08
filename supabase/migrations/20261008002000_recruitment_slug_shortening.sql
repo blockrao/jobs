@@ -5,23 +5,30 @@
 ALTER TABLE recruitments ADD COLUMN IF NOT EXISTS slug_new TEXT;
 
 -- Step 2: Generate new slugs using sequential numbering per org-year
-UPDATE recruitments r
-SET slug_new = CONCAT(
-  o.slug,
-  '-',
-  r.year::TEXT,
-  '-',
-  LPAD(
-    ROW_NUMBER() OVER (
-      PARTITION BY r.organization_id, r.year
-      ORDER BY r.id
-    )::TEXT,
-    2,
-    '0'
-  )
+WITH numbered_recruitments AS (
+  SELECT
+    r.id,
+    CONCAT(
+      o.slug,
+      '-',
+      r.year::TEXT,
+      '-',
+      LPAD(
+        ROW_NUMBER() OVER (
+          PARTITION BY r.organization_id, r.year
+          ORDER BY r.id
+        )::TEXT,
+        2,
+        '0'
+      )
+    ) as new_slug
+  FROM recruitments r
+  JOIN organizations o ON r.organization_id = o.id
 )
-FROM organizations o
-WHERE r.organization_id = o.id;
+UPDATE recruitments r
+SET slug_new = nr.new_slug
+FROM numbered_recruitments nr
+WHERE r.id = nr.id;
 
 -- Step 3: Verify no duplicates (should return 0)
 SELECT COUNT(*) as duplicate_count FROM (
