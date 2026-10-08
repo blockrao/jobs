@@ -1,6 +1,6 @@
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities } from "../schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 /**
  * Get recruitment by slug
@@ -114,6 +114,21 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     const recruitment = recruitmentResult[0];
     const recruitmentId = recruitment.id;
+
+    // Gate 4D: if ORM totalVacancies is null, try raw SQL as a cross-check
+    if (recruitment.totalVacancies == null) {
+      const rawResult = await db.execute(
+        sql`SELECT total_vacancies FROM recruitments WHERE id = ${recruitmentId} LIMIT 1`
+      );
+      const rawRows = rawResult.rows ?? (rawResult as any);
+      const rawVacancies = Array.isArray(rawRows) && rawRows.length > 0
+        ? (rawRows[0] as any).total_vacancies
+        : null;
+      if (rawVacancies != null) {
+        (recruitment as any).totalVacancies = Number(rawVacancies);
+        console.log("[Gate4D] ORM returned null for totalVacancies; raw SQL returned", rawVacancies, "for id=", recruitmentId);
+      }
+    }
 
     // Step 2: Get all posts for this recruitment with positions
     const postsResult = await db

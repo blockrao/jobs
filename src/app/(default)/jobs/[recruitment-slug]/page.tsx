@@ -66,6 +66,9 @@ export default async function RecruitmentHubPage({
 
   const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData;
 
+  // Gate 4D debug: log what the ORM actually returns for total_vacancies
+  console.log("[Gate4D debug] recruitment.id=", recruitment.id, "totalVacancies=", recruitment.totalVacancies, "typeof=", typeof recruitment.totalVacancies);
+
   // Resolve canonical vacancy counts via the single resolver layer (Gate 4D).
   // The Hub must not read old relational vacancies table (always empty for most posts).
   const resolvedRecruitmentVacancies = resolveRecruitmentVacancy({
