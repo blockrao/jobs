@@ -70,7 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const articleEntries: MetadataRoute.Sitemap = articleRows.map((row) => ({
     url: `${SITE_URL}/articles/${row.slug}`,
-    lastModified: row.updatedAt,
+    lastModified: pickSitemapLastmod(row.updatedAt, undefined),
     changeFrequency: "weekly",
     priority: 0.6,
     ...sitemapAlternates("/articles", row.slug, Boolean((row as any).titleHi)),
@@ -119,7 +119,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   //   - lastmod = GREATEST(posts.updatedAt, recruitments.updatedAt): most recent meaningful change.
   const postLeafEntries: MetadataRoute.Sitemap = postLeafRows.map((row) => ({
     url: `${SITE_URL}/jobs/${row.recruitmentSlug}/${row.postSlug}`,
-    lastModified: row.lastModified ?? undefined,
+    // row.lastModified comes from a raw SQL GREATEST() expression — the postgres
+    // driver returns it as a string, not a Date. pickSitemapLastmod coerces it.
+    lastModified: pickSitemapLastmod(row.lastModified, undefined),
     changeFrequency: row.isLive ? ("weekly" as const) : ("yearly" as const),
     priority: row.isLive ? 0.75 : 0.5,
   }));
