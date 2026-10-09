@@ -7,10 +7,10 @@ import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostingBySlug, getPostsForRecruitment } from "@/lib/queries";
+import { getPostingBySlug, getPostingBySlugCached, getPostsForRecruitment } from "@/lib/queries";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
-import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
+import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
 import {
   buildBreadcrumbSchema,
@@ -61,7 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // so the canonical tag is correct. The page component makes the same check
   // and renders RecruitmentHub; metadata must match.
   if (locale !== "hi") {
-    const recruitmentData = await safeQuery(() => getRecruitmentWithPosts(slug), null);
+    const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
     if (recruitmentData) {
       const { recruitment, totalPosts } = recruitmentData;
       return {
@@ -78,7 +78,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  const posting = await safeQuery(() => getPostingBySlug(slug), null);
+  const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
   if (!posting) return {};
 
   const isHi = locale === "hi";
@@ -169,11 +169,11 @@ export default async function LocaleJobPage({ params }: Props) {
 
   if (isNestedSlug) {
     // Direct to posting for nested slugs like "recruitment-slug/post-slug"
-    posting = await safeQuery(() => getPostingBySlug(slug), null);
+    posting = await safeQuery(() => getPostingBySlugCached(slug), null);
     if (!posting) notFound();
   } else {
     // Try as recruitment hub first, then fall back to posting
-    recruitmentData = await safeQuery(() => getRecruitmentWithPosts(slug), null);
+    recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
     if (recruitmentData) {
       return (
         <>
@@ -187,7 +187,7 @@ export default async function LocaleJobPage({ params }: Props) {
     }
 
     // Not a recruitment hub, try as a posting
-    posting = await safeQuery(() => getPostingBySlug(slug), null);
+    posting = await safeQuery(() => getPostingBySlugCached(slug), null);
     if (!posting) notFound();
   }
 
