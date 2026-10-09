@@ -4,11 +4,12 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedRecruitmentFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface SelectionProcessProps {
   post: JobPostingData;
-  recruitmentResolvedFacts?: { selectionProcess: string | null } | null;
+  recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
 }
 
 export default function SelectionProcess({ post, recruitmentResolvedFacts }: SelectionProcessProps) {

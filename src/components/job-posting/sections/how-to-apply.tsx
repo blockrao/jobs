@@ -4,11 +4,12 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedRecruitmentFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface HowToApplyProps {
   post: JobPostingData;
-  recruitmentResolvedFacts?: { applicationUrl: string | null; officialSource: string | null } | null;
+  recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
 }
 
 export default function HowToApply({ post, recruitmentResolvedFacts }: HowToApplyProps) {
