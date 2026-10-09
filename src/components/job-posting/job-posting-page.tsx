@@ -144,9 +144,9 @@ export default function JobPostingPage({
         <EligibilityCriteria post={post} />
         <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
         <ImportantDates post={post} />
-        <SelectionProcess post={post} />
+        <SelectionProcess post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
         <ApplicationFee post={post} />
-        <HowToApply post={post} />
+        <HowToApply post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
         <DocumentsRequired post={post} />
         <DutiesResponsibilities post={post} />
         <OfficialSourceVerification post={post} />
