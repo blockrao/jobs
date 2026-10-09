@@ -8,10 +8,12 @@ import styles from "../job-posting-page.module.css";
 
 interface HowToApplyProps {
   post: JobPostingData;
+  recruitmentResolvedFacts?: { applicationUrl: string | null; officialSource: string | null } | null;
 }
 
-export default function HowToApply({ post }: HowToApplyProps) {
-  const applyPortalUrl = post.applyPortalUrl;
+export default function HowToApply({ post, recruitmentResolvedFacts }: HowToApplyProps) {
+  const applyPortalUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
+  const hasApplicationUrl = Boolean(applyPortalUrl);
 
   return (
     <div className={styles.section}>
@@ -34,12 +36,12 @@ export default function HowToApply({ post }: HowToApplyProps) {
               Click here to apply on official portal →
             </a>
           ) : (
-            "Application URL not available"
+            "Application link is not available in the current record. Check the official notification for application instructions."
           )}
         </div>
       </div>
 
-      <ol style={{ paddingLeft: "20px", color: "#4b5563" }}>
+      {hasApplicationUrl && <ol style={{ paddingLeft: "20px", color: "#4b5563" }}>
         <li style={{ marginBottom: "12px" }}>
           Visit the official application portal
         </li>
@@ -59,7 +61,7 @@ export default function HowToApply({ post }: HowToApplyProps) {
           Review your application and submit
         </li>
         <li>Download and keep a copy of your confirmation for records</li>
-      </ol>
+      </ol>}
 
       <div className={styles.featureBox} style={{ marginTop: "20px" }}>
         <strong>Important:</strong> JobOye does not handle applications directly.
