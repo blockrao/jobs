@@ -28,6 +28,8 @@ import type { ResolvedDeadline, ResolvedSalary } from "@/lib/resolvers/fact-reso
 const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   FULL_TIME: "FULL_TIME",
   PART_TIME: "PART_TIME",
+  CONTRACT: "CONTRACTOR",
+  CONTRACTUAL: "CONTRACTOR",
   CONTRACTOR: "CONTRACTOR",
   INTERN: "INTERN",
   TEMPORARY: "TEMPORARY",
@@ -165,9 +167,13 @@ export default function PostLeafStructuredData({
     if (vtIso) jobPosting["validThrough"] = vtIso;
   }
 
-  // employmentType — defaults to FULL_TIME for Indian government positions
-  jobPosting["employmentType"] =
-    EMPLOYMENT_TYPE_MAP[post.employmentType ?? ""] ?? "FULL_TIME";
+  // employmentType — emit only recognized, explicitly mapped values.
+  // Never guess FULL_TIME for an unknown or missing value.
+  const employmentType =
+    EMPLOYMENT_TYPE_MAP[post.employmentType?.trim().toUpperCase() ?? ""];
+  if (employmentType) {
+    jobPosting["employmentType"] = employmentType;
+  }
 
   // hiringOrganization — emit when name is present; omit sameAs (no verified URL yet).
   // Use "Organization" not "GovernmentOrganization": Google's Jobs validator rejects
