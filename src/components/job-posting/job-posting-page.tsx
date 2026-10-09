@@ -149,7 +149,7 @@ export default function JobPostingPage({
         <HowToApply post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
         <DocumentsRequired post={post} />
         <DutiesResponsibilities post={post} />
-        <OfficialSourceVerification post={post} />
+        <OfficialSourceVerification post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
 
         {/* Related Roles Section - For multi-post recruitments */}
         {siblingPosts.length > 0 && (
