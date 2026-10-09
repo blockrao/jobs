@@ -1,6 +1,6 @@
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations } from "../schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * Get recruitment by slug
@@ -93,6 +93,7 @@ export async function getRecruitmentVacancyCount(recruitmentId: number) {
 
 /**
  * Get recruitment with all posts and enrichment data
+ * PERF-001: Optimized to eliminate N+1 queries by fetching all vacancies/eligibilities upfront
  * Used for job posting leaf pages to display recruitment context
  * Returns recruitment metadata + all posts for that recruitment
  */
@@ -132,31 +133,55 @@ export async function getRecruitmentWithPosts(slug: string) {
       .innerJoin(positions, eq(posts.positionId, positions.id))
       .where(eq(posts.recruitmentId, recruitmentId));
 
-    // Step 3: For each post, get vacancies and eligibilities
-    const enrichedPosts = await Promise.all(
-      postsResult.map(async (row) => {
-        const postId = row.post.id;
+    if (postsResult.length === 0) {
+      return {
+        recruitment,
+        posts: [],
+        totalPosts: 0,
+        isSingleJobRecruitment: false,
+      };
+    }
 
-        // Get vacancies for this post
-        const vacanciesResult = await db
-          .select()
-          .from(vacancies)
-          .where(eq(vacancies.postId, postId));
+    const postIds = postsResult.map((r) => r.post.id);
 
-        // Get eligibilities for this post
-        const eligibilitiesResult = await db
-          .select()
-          .from(eligibilities)
-          .where(eq(eligibilities.postId, postId));
+    // Step 3: Fetch ALL vacancies and eligibilities in parallel, not per-post
+    // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities
+    const [allVacancies, allEligibilities] = await Promise.all([
+      db
+        .select()
+        .from(vacancies)
+        .where(inArray(vacancies.postId, postIds)),
+      db
+        .select()
+        .from(eligibilities)
+        .where(inArray(eligibilities.postId, postIds)),
+    ]);
 
-        return {
-          ...row.post,
-          position: row.position,
-          vacancies: vacanciesResult,
-          eligibilities: eligibilitiesResult,
-        };
-      })
-    );
+    // Step 4: Group vacancies and eligibilities by post ID (client-side)
+    const vacanciesByPostId = new Map<number, typeof allVacancies>();
+    const eligibilitiesByPostId = new Map<number, typeof allEligibilities>();
+
+    for (const vacancy of allVacancies) {
+      if (!vacanciesByPostId.has(vacancy.postId)) {
+        vacanciesByPostId.set(vacancy.postId, []);
+      }
+      vacanciesByPostId.get(vacancy.postId)!.push(vacancy);
+    }
+
+    for (const eligibility of allEligibilities) {
+      if (!eligibilitiesByPostId.has(eligibility.postId)) {
+        eligibilitiesByPostId.set(eligibility.postId, []);
+      }
+      eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
+    }
+
+    // Step 5: Enrich posts with their vacancies and eligibilities
+    const enrichedPosts = postsResult.map((row) => ({
+      ...row.post,
+      position: row.position,
+      vacancies: vacanciesByPostId.get(row.post.id) ?? [],
+      eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
+    }));
 
     return {
       recruitment,

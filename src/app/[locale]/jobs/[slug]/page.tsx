@@ -37,7 +37,9 @@ import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
 import { CanonicalPostCard, LegacyPostCard } from "@/components/ui/post-card";
 
-export const dynamic = "force-dynamic";
+// Enable ISR with 60-second revalidation instead of force-dynamic
+// force-dynamic prevents static generation and forces every request to hit the database
+export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 
@@ -158,23 +160,36 @@ function buildFaqs(
 export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
 
-  // Try to fetch as a recruitment first (hub page)
-  const recruitmentData = await safeQuery(() => getRecruitmentWithPosts(slug), null);
-  if (recruitmentData) {
-    return (
-      <>
-        <RecruitmentHubStructuredData
-          recruitment={recruitmentData.recruitment}
-          totalPosts={recruitmentData.totalPosts}
-        />
-        <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
-      </>
-    );
-  }
+  // Route intelligently: if slug contains "/" it's a nested post slug, otherwise it's a recruitment
+  // This avoids expensive query attempts when we already know the structure
+  const isNestedSlug = slug.includes("/");
 
-  // Fall back to fetching as a posting (detail page)
-  const posting = await safeQuery(() => getPostingBySlug(slug), null);
-  if (!posting) notFound();
+  let posting = null;
+  let recruitmentData = null;
+
+  if (isNestedSlug) {
+    // Direct to posting for nested slugs like "recruitment-slug/post-slug"
+    posting = await safeQuery(() => getPostingBySlug(slug), null);
+    if (!posting) notFound();
+  } else {
+    // Try as recruitment hub first, then fall back to posting
+    recruitmentData = await safeQuery(() => getRecruitmentWithPosts(slug), null);
+    if (recruitmentData) {
+      return (
+        <>
+          <RecruitmentHubStructuredData
+            recruitment={recruitmentData.recruitment}
+            totalPosts={recruitmentData.totalPosts}
+          />
+          <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
+        </>
+      );
+    }
+
+    // Not a recruitment hub, try as a posting
+    posting = await safeQuery(() => getPostingBySlug(slug), null);
+    if (!posting) notFound();
+  }
 
   const canonicalRecruitmentId = (posting as any).canonicalRecruitment?.id ?? null;
   const siblingPosts = canonicalRecruitmentId
