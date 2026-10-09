@@ -19,16 +19,12 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
   const resolvedTotal = resolvedFacts?.vacancyCount;
 
   if (!hasDetails) {
+    if (resolvedTotal == null) return null;
     return (
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>📊 Vacancy Details</h2>
         <p style={{ color: "#4b5563" }}>
-          Total Vacancies:{" "}
-          <strong>
-            {resolvedTotal != null
-              ? resolvedTotal.toLocaleString("en-IN")
-              : "See Notification"}
-          </strong>
+          Total Vacancies: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
         </p>
       </div>
     );
