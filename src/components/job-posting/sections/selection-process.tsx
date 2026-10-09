@@ -17,14 +17,7 @@ export default function SelectionProcess({ post, recruitmentResolvedFacts }: Sel
   const recruitmentProcess = recruitmentResolvedFacts?.selectionProcess ?? null;
 
   if (selectionProcess.length === 0 && !recruitmentProcess) {
-    return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
-        <p style={{ color: "#4b5563" }}>
-          Selection process details not available
-        </p>
-      </div>
-    );
+    return null;
   }
 
   if (selectionProcess.length === 0 && recruitmentProcess) {

@@ -29,14 +29,7 @@ export default function ImportantDates({ post }: ImportantDatesProps) {
 
   const availableDates = dates.filter((d) => d.date);
 
-  if (availableDates.length === 0) {
-    return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>📅 Important Dates</h2>
-        <p style={{ color: "#4b5563" }}>Dates information not available</p>
-      </div>
-    );
-  }
+  if (availableDates.length === 0) return null;
 
   return (
     <div className={styles.section}>

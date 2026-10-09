@@ -14,16 +14,7 @@ export default function ApplicationFee({ post }: ApplicationFeeProps) {
   const feesByCategory = post.enrichment?.feesByCategory || {};
   const hasDetails = Object.keys(feesByCategory).length > 0;
 
-  if (!hasDetails) {
-    return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>💳 Application Fee</h2>
-        <p style={{ color: "#4b5563" }}>
-          Application fee details not available
-        </p>
-      </div>
-    );
-  }
+  if (!hasDetails) return null;
 
   return (
     <div className={styles.section}>

@@ -20,14 +20,10 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
   if (
     !enrichment?.payScale &&
     !resolvedSalary &&
-    !enrichment?.benefits
+    (!enrichment?.benefits || enrichment.benefits.length === 0) &&
+    !enrichment?.salaryNote
   ) {
-    return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>💰 Salary & Compensation</h2>
-        <p style={{ color: "#4b5563" }}>Salary details not available</p>
-      </div>
-    );
+    return null;
   }
 
   return (

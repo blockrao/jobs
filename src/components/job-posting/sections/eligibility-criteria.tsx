@@ -12,6 +12,17 @@ interface EligibilityCriteriaProps {
 
 export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) {
   const enrichment = post.enrichment;
+  const hasEligibilityContent = Boolean(
+    enrichment?.education ||
+    enrichment?.experience ||
+    (enrichment?.ageRulesByCategory && Object.keys(enrichment.ageRulesByCategory).length > 0) ||
+    enrichment?.ageReferenceDate ||
+    enrichment?.ageNote ||
+    enrichment?.ageRelaxationRules ||
+    (enrichment?.eligibilityPathways && enrichment.eligibilityPathways.length > 0)
+  );
+
+  if (!hasEligibilityContent) return null;
 
   return (
     <div className={styles.section}>
