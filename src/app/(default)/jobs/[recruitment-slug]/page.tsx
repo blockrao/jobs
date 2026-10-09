@@ -181,7 +181,7 @@ export default async function RecruitmentHubPage({
       vacancyTotal: post.vacancyTotal ?? null,
       recruitmentVacancyTotal: recruitment.totalVacancies ?? null,
       // Hub ORM posts don't carry enrichment; enrichment is undefined here.
-      // resolvePostVacancy will fall through to the reconciled legacy path.
+      // resolvePostVacancy will fall through to Branch 2 (vacancy_total with scope guard).
     } as any),
   }));
 

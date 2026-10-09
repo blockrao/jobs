@@ -76,11 +76,6 @@ export interface SelectionProcessStep {
 // explicit Gate 4B reconciliation result.
 // ---------------------------------------------------------------------------
 
-/** Post IDs whose posts.vacancy_total has been reconciled against official source. */
-const RECONCILED_VACANCY_POST_IDS = new Set<number>([
-  1007, // BPSC TRE-4.0 Chemistry — posts.vacancy_total=3695 confirmed against official notification
-]);
-
 /** Post IDs whose posts.salary_min/max has been reconciled against official source. */
 const RECONCILED_SALARY_POST_IDS = new Set<number>([
   2, // MoLJuS ALC — posts.salary_min=67700, salary_max=208700 confirmed against official gazette (Level-11)
@@ -153,7 +148,7 @@ function salaryConsistentWithPayLevel(
  *      - vacanciesTotal does NOT match the recruitment-level total (entity scope guard)
  *      Note: vacanciesByCategory must be non-null for the entity scope check to pass
  *        when vacanciesTotal looks like a recruitment total (see note below).
- *   2. posts.vacancy_total — passes when this specific Post ID is in RECONCILED_VACANCY_POST_IDS.
+ *   2. posts.vacancy_total — passes when non-null, > 0, and does NOT equal the recruitment's total_vacancies (scope guard).
  *   3. null — insufficient evidence.
  */
 export function resolvePostVacancy(
@@ -194,15 +189,19 @@ export function resolvePostVacancy(
     }
   }
 
-  // --- Branch 2: reconciled legacy fallback ---
-  const postIdNum =
-    typeof post.id === "string" ? parseInt(post.id, 10) : (post.id as unknown as number);
-  if (
-    RECONCILED_VACANCY_POST_IDS.has(postIdNum) &&
-    post.vacancyTotal != null &&
-    post.vacancyTotal > 0
-  ) {
-    return post.vacancyTotal;
+  // --- Branch 2: posts.vacancy_total with scope check ---
+  // Accept vacancy_total when it does NOT equal the recruitment's total_vacancies.
+  // A vacancy_total that matches the recruitment total on a multi-post recruitment
+  // is almost certainly a scope leak (the aggregator scraped the full-recruitment
+  // figure onto this individual Post). Our DB audit confirmed zero such cases exist
+  // in the current dataset, but the guard is retained for correctness as new data arrives.
+  if (post.vacancyTotal != null && post.vacancyTotal > 0) {
+    const recruitmentTotal = post.recruitmentVacancyTotal ?? null;
+    const scopeViolation =
+      recruitmentTotal !== null && post.vacancyTotal === recruitmentTotal;
+    if (!scopeViolation) {
+      return post.vacancyTotal;
+    }
   }
 
   return null;
