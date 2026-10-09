@@ -8,18 +8,29 @@ import styles from "../job-posting-page.module.css";
 
 interface SelectionProcessProps {
   post: JobPostingData;
+  recruitmentResolvedFacts?: { selectionProcess: string | null } | null;
 }
 
-export default function SelectionProcess({ post }: SelectionProcessProps) {
+export default function SelectionProcess({ post, recruitmentResolvedFacts }: SelectionProcessProps) {
   const selectionProcess = post.enrichment?.selectionProcess || [];
+  const recruitmentProcess = recruitmentResolvedFacts?.selectionProcess ?? null;
 
-  if (selectionProcess.length === 0) {
+  if (selectionProcess.length === 0 && !recruitmentProcess) {
     return (
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
         <p style={{ color: "#4b5563" }}>
           Selection process details not available
         </p>
+      </div>
+    );
+  }
+
+  if (selectionProcess.length === 0 && recruitmentProcess) {
+    return (
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
+        <p style={{ color: "#4b5563", whiteSpace: "pre-line" }}>{recruitmentProcess}</p>
       </div>
     );
   }
