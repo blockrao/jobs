@@ -30,6 +30,10 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
       ? "CLOSED"
       : "CHECK NOTIFICATION";
 
+  const employmentType = post.employmentType
+    ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
+    : "See Notification";
+
   return (
     <div style={headerStyles.container}>
       <div style={headerStyles.headerTop}>
@@ -55,7 +59,7 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
         )}
         <div style={headerStyles.metaItem}>
           <span style={headerStyles.metaLabel}>Type:</span>
-          <span style={headerStyles.metaValue}>Permanent</span>
+          <span style={headerStyles.metaValue}>{employmentType}</span>
         </div>
         {resolvedFacts?.vacancyCount != null && (
           <div style={headerStyles.metaItem}>
