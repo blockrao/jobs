@@ -65,7 +65,7 @@ Do not assume this proves all page paths are fixed. Confirm the live route passe
 |---|---|---|---|---|---|---|
 | DUI-001 | P0 | Post vacancy total | 1,443/1,543 Post rows have `vacancy_total`; Hub cards use `resolvedVacancyCount`. | Trace query mapping and Post Leaf display; compare representative DB rows with live UI. | Correct stored Post total displays in Post Leaf and Hub summary; no invented recruitment total. | Open |
 | DUI-002 | P0 | Recruitment vacancy total | 16/1,083 recruitment rows have `total_vacancies`. | Check BPSC and other reported cases; determine whether missing is genuinely unknown or stored in another recruitment-owned field. | Explicit recruitment total appears where populated; missing total is not inferred by summing Posts. | Open |
-| DUI-003 | P0 | Notification/application URLs | 794 notification URLs, 126 official application URLs, 10 apply URLs populated. | Verify precedence, labels, URL reachability, and all Hub/Leaf consumers. | Correct link and label render whenever the appropriate stored field exists; no URL-purpose substitution. | In progress |
+| DUI-003 | P0 | Notification/application URLs | 794 notification URLs, 126 official application URLs, 10 apply URLs populated. IIM Nagpur Recruitment 923 has both official URLs in production, but the resolver's domain allowlist excludes `.ac.in` and `.samarth.edu.in`; the Leaf Official Sources section also only read Post-owned URL fields. | PR #7 proposes resolver allowlist and Leaf source-section fixes. Verify official ownership of the exact Samarth destination, CI, deployed CTA + source links, and URL labels across Hub/Leaf. | Correct link and label render whenever the appropriate stored field exists; no URL-purpose substitution. | In progress — code fix proposed, awaiting review/CI/live verification |
 | DUI-004 | P0 | Application deadline and dates | 687 end dates, 124 start dates, 13 notification dates populated. | Trace all page date sources, timezone formatting, and status/deadline logic. | Dates are consistent across Hub and Leaf; no date invented or shifted. | Open |
 | DUI-005 | P1 | Salary | 103 salary minima and 102 maxima populated. | Find Post Leaf UI and ensure null/partial ranges are handled. | Populated values display with correct units/range; partial data is not misrepresented. | Open |
 | DUI-006 | P1 | Post description | Only 9 Posts have a non-empty `description` in this column. | Inspect enrichment/content tables and page rendering before diagnosing content absence. | Correct Post-owned description appears where stored in the canonical source. | Open |
@@ -73,6 +73,21 @@ Do not assume this proves all page paths are fixed. Confirm the live route passe
 | DUI-008 | P1 | Organization website | Reported recent backfill needs count/quality verification. | Recount non-empty values; validate domain-to-organization mapping and organization structured data. | Values match the organization, and structured-data behavior is verified independently. | Open |
 | DUI-009 | P1 | Selection process | 12 recruitment rows populated. | Trace Hub and Leaf ownership and resolver fallback. | Stored value renders on the appropriate recruitment page when present. | Open |
 | DUI-010 | P1 | Qualification/eligibility | Eligibility rows are fetched by shared recruitment query. | Trace eligibility relation, per-Post ownership, and leaf display; check cross-Post leakage. | Eligibility is attached to the correct Post only and shown when data exists. | Open |
+
+## Gate 1 — IIM Nagpur URL trace (2026-10-09)
+
+Read-only production query for Recruitment 923 (`indian-institute-of-management-nagpur-2026-01`) returned:
+- `official_notification_url`: `https://www.iimnagpur.ac.in/junior-executive-regular-obc-2/`
+- `official_application_url`: `https://iimnagpurnt.samarth.edu.in/index.php/site/login`
+- `official_link_source`: `AGGREGATOR_DISCOVERED`
+- `application_end_date`: `2026-10-10 00:00:00+00`
+- `application_start_date`, `notification_date`, `selection_process`, and recruitment total vacancies: null.
+
+Code trace found:
+- The Post Leaf route calls `resolveRecruitmentApplicationUrl(recruitmentData.recruitment)` and passes the result into `JobPostingPage`.
+- The resolver accepts only `.gov.in` and `.nic.in` domains, so the stored IIM Nagpur institution domain and Samarth portal URL resolve to null.
+- The top-level action buttons and How to Apply section already consume the resolved Recruitment application URL, but the Official Sources section reads only `post.officialSourceUrl` and `post.applyPortalUrl`, omitting Recruitment-owned URLs.
+- Draft PR #7 proposes the resolver and Official Sources fixes. Because the application URL provenance is currently `AGGREGATOR_DISCOVERED`, confirm the exact portal destination against the institution's official link before considering the source provenance verified. CI and live behavior remain unverified.
 
 ## Required verification matrix
 
