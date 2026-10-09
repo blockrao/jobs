@@ -53,6 +53,11 @@ export function isLocaleAwarePath(pathname: string): boolean {
     (prefix) => stripped.startsWith(prefix) && stripped.length > prefix.length,
   )) return true;
 
+  // JKSSB's temporary preview hub has a dedicated static route in `(default)`.
+  // Keep this exact path out of next-intl so it isn't rewritten to the generic
+  // locale-aware job detail page, which cannot resolve the preview fixture.
+  if (stripped === '/jobs/jkssb-advertisement-08-of-2026') return false;
+
   // /jobs/[slug] — locale-aware (src/app/[locale]/jobs/[slug]/page.tsx exists)
   // /jobs/[slug]/[post-slug] — NOT locale-aware (only in (default) tree)
   // Distinguish by counting segments after /jobs/: exactly one → locale-aware.
