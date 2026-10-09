@@ -185,19 +185,19 @@ export default function PostLeafStructuredData({
     };
   }
 
-  // jobLocation — India-specific: addressCountry always "IN"
-  // Only emit when at least one location field is present
-  if (post.locationCity || post.locationState) {
-    jobPosting["jobLocation"] = {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        ...(post.locationCity ? { addressLocality: post.locationCity } : {}),
-        ...(post.locationState ? { addressRegion: post.locationState } : {}),
-        addressCountry: "IN",
-      },
-    };
-  }
+  // jobLocation — all posts are Indian government jobs; addressCountry "IN" is
+  // always a real fact. Emit city/state when present; always emit country.
+  // postalCode and streetAddress are intentionally omitted: no verified data
+  // exists in the schema — emitting invented values would be a fabricated fact.
+  jobPosting["jobLocation"] = {
+    "@type": "Place",
+    address: {
+      "@type": "PostalAddress",
+      ...(post.locationCity ? { addressLocality: post.locationCity } : {}),
+      ...(post.locationState ? { addressRegion: post.locationState } : {}),
+      addressCountry: "IN",
+    },
+  };
 
   // baseSalary — resolver-gated: only when resolveSalary returned a value
   if (resolvedSalary) {
