@@ -71,13 +71,13 @@ export function withMetrics<T>(
   operationName: string,
   fn: () => Promise<T>
 ): Promise<T> {
-  return async () => {
+  return (async () => {
     const start = Date.now();
     const result = await fn();
     const duration = Date.now() - start;
     recordQuery(operationName, duration);
     return result;
-  }();
+  })();
 }
 
 /**
