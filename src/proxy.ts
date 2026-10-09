@@ -60,26 +60,32 @@ export async function proxy(request: NextRequest) {
   const jobsMatch = pathname.match(/^\/jobs\/([^\/]+)$/);
   if (jobsMatch) {
     const slug = jobsMatch[1];
-    try {
-      const db = getDb();
-      const redirectRecord = await db
-        .select()
-        .from(recruitment_slug_redirects)
-        .where(eq(recruitment_slug_redirects.old_slug, slug))
-        .limit(1);
 
-      if (redirectRecord && redirectRecord.length > 0) {
-        const newSlug = redirectRecord[0].new_slug;
-        const url = new URL(`/jobs/${newSlug}`, request.url);
+    // Canonical semantic slugs end in -YYYY-NN. They cannot be legacy slugs,
+    // so skip the redirect-table query on the common canonical navigation path.
+    // Old descriptive slugs still use the indexed lookup and preserve 301s.
+    if (!/-\d{4}-\d{2}$/.test(slug)) {
+      try {
+        const db = getDb();
+        const redirectRecord = await db
+          .select()
+          .from(recruitment_slug_redirects)
+          .where(eq(recruitment_slug_redirects.old_slug, slug))
+          .limit(1);
 
-        // Return 301 permanent redirect
-        return NextResponse.redirect(url, {
-          status: 301,
-        });
+        if (redirectRecord && redirectRecord.length > 0) {
+          const newSlug = redirectRecord[0].new_slug;
+          const url = new URL(`/jobs/${newSlug}`, request.url);
+
+          // Return 301 permanent redirect
+          return NextResponse.redirect(url, {
+            status: 301,
+          });
+        }
+      } catch (error) {
+        console.error("Redirect lookup error:", error);
+        // Continue on error — don't block page access
       }
-    } catch (error) {
-      console.error("Redirect lookup error:", error);
-      // Continue on error — don't block page access
     }
   }
 
