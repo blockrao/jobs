@@ -23,7 +23,7 @@ export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
       <h2 className={styles.sectionTitle}>📋 Documents Required</h2>
 
       {/* Required Documents */}
-      {docsRequired.required && docsRequired.required.length > 0 && (
+      {docsRequired?.required && docsRequired.required.length > 0 && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Required Documents</div>
           <div className={styles.checklist}>
@@ -37,7 +37,7 @@ export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
       )}
 
       {/* Common Documents */}
-      {docsRequired.common && docsRequired.common.length > 0 && (
+      {docsRequired?.common && docsRequired.common.length > 0 && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Common Documents</div>
           <div className={styles.checklist}>
