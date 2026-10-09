@@ -209,6 +209,19 @@ export default function RecruitmentHub({
   const appEnd = formatDate(recruitment.applicationEndDate);
   const closed = isRecruitmentClosed(recruitment.status);
 
+  // Render values already maintained by the admin/data pipeline. Resolvers may
+  // enrich these values, but a missing resolver result must not hide stored data.
+  // Recruitment-level vacancy total is shown only when explicitly stored; never
+  // derive it by summing post-level vacancy records.
+  const displayTotalVacancies =
+    resolvedTotalVacancies ?? recruitment.totalVacancies ?? null;
+  const displayApplicationUrl =
+    resolvedApplicationUrl ?? recruitment.officialApplicationUrl ?? recruitment.applyUrl ?? null;
+  const displayOfficialSource =
+    resolvedOfficialSource ?? recruitment.officialNotificationUrl ?? null;
+  const displaySelectionProcess =
+    resolvedSelectionProcess ?? recruitment.selectionProcess ?? null;
+
   // Urgency: days remaining for deadline
   const daysLeft = daysUntil(recruitment.applicationEndDate);
   const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && !closed;
@@ -231,10 +244,10 @@ export default function RecruitmentHub({
     });
   }
 
-  if (resolvedTotalVacancies != null) {
+  if (displayTotalVacancies != null) {
     faqItems.push({
       q: 'How many vacancies are available?',
-      a: `A total of ${resolvedTotalVacancies.toLocaleString('en-IN')} vacancies are available across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`,
+      a: `A total of ${displayTotalVacancies.toLocaleString('en-IN')} vacancies are available across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`,
     });
   }
 
@@ -255,14 +268,14 @@ export default function RecruitmentHub({
     }
   }
 
-  if (resolvedSelectionProcess) {
+  if (displaySelectionProcess) {
     faqItems.push({
       q: 'What is the selection process?',
-      a: resolvedSelectionProcess,
+      a: displaySelectionProcess,
     });
   }
 
-  if (resolvedOfficialSource) {
+  if (displayOfficialSource) {
     faqItems.push({
       q: 'Where is the official notification?',
       a: `The official notification is available at the link below in the Sources section.`,
@@ -322,12 +335,12 @@ export default function RecruitmentHub({
           {/* ── Hero stat row (YuvaResult pattern) ── */}
           {/* Vacancy count, deadline, post count as scannable chips */}
           <div className="flex flex-wrap gap-3 mb-6">
-            {resolvedTotalVacancies != null && (
+            {displayTotalVacancies != null && (
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
                 <Users size={18} className="text-blue-600 flex-shrink-0" />
                 <div>
                   <div className="text-xl font-bold text-blue-700 leading-none">
-                    {resolvedTotalVacancies.toLocaleString('en-IN')}
+                    {displayTotalVacancies.toLocaleString('en-IN')}
                   </div>
                   <div className="text-xs text-blue-600 mt-0.5">Total Vacancies</div>
                 </div>
@@ -413,9 +426,9 @@ export default function RecruitmentHub({
               </a>
             ) : null}
 
-            {resolvedApplicationUrl && !closed && (
+            {displayApplicationUrl && !closed && (
               <a
-                href={resolvedApplicationUrl}
+                href={displayApplicationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-green-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-green-700 transition text-sm"
@@ -425,9 +438,9 @@ export default function RecruitmentHub({
               </a>
             )}
 
-            {resolvedOfficialSource && (
+            {displayOfficialSource && (
               <a
-                href={resolvedOfficialSource}
+                href={displayOfficialSource}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm"
@@ -454,7 +467,7 @@ export default function RecruitmentHub({
             SECTION 2 — RECRUITMENT OVERVIEW TABLE
             Compact details: org, selection process, official links
             ═══════════════════════════════════════════ */}
-        {(displayOrg || resolvedSelectionProcess || resolvedOfficialSource || resolvedApplicationUrl || appStart) && (
+        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart) && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-3">Recruitment Details</h2>
             <dl className="divide-y divide-gray-100">
@@ -495,18 +508,18 @@ export default function RecruitmentHub({
                 </div>
               )}
 
-              {resolvedSelectionProcess && (
+              {displaySelectionProcess && (
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Selection</dt>
-                  <dd className="text-sm text-gray-900">{resolvedSelectionProcess}</dd>
+                  <dd className="text-sm text-gray-900">{displaySelectionProcess}</dd>
                 </div>
               )}
 
-              {resolvedOfficialSource && (
+              {displayOfficialSource && (
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Notification</dt>
                   <dd className="text-sm">
-                    <a href={resolvedOfficialSource} target="_blank" rel="noopener noreferrer"
+                    <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
                       View Official PDF <ExternalLink size={12} />
                     </a>
@@ -514,11 +527,11 @@ export default function RecruitmentHub({
                 </div>
               )}
 
-              {resolvedApplicationUrl && (
+              {displayApplicationUrl && (
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Apply Portal</dt>
                   <dd className="text-sm">
-                    <a href={resolvedApplicationUrl} target="_blank" rel="noopener noreferrer"
+                    <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer"
                       className="text-green-700 hover:text-green-800 font-medium inline-flex items-center gap-1">
                       Official Apply Link <ExternalLink size={12} />
                     </a>
@@ -706,7 +719,7 @@ export default function RecruitmentHub({
         {/* ═══════════════════════════════════════════
             SECTION 6 — OFFICIAL SOURCES
             ═══════════════════════════════════════════ */}
-        {(resolvedOfficialSource || resolvedApplicationUrl) && (
+        {(displayOfficialSource || displayApplicationUrl) && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
               <CheckCircle size={16} className="text-green-600" />
@@ -716,25 +729,25 @@ export default function RecruitmentHub({
               <p className="text-xs text-green-700">
                 Verify all details directly from official sources before applying.
               </p>
-              {resolvedOfficialSource && (
+              {displayOfficialSource && (
                 <div className="flex items-start gap-3">
                   <FileText size={15} className="text-green-700 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-xs text-green-700 font-medium mb-0.5">Official Notification</div>
-                    <a href={resolvedOfficialSource} target="_blank" rel="noopener noreferrer"
+                    <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer"
                       className="text-sm text-blue-700 hover:text-blue-800 break-all inline-flex items-center gap-1">
-                      {resolvedOfficialSource}
+                      {displayOfficialSource}
                       <ExternalLink size={12} className="flex-shrink-0" />
                     </a>
                   </div>
                 </div>
               )}
-              {resolvedApplicationUrl && (
+              {displayApplicationUrl && (
                 <div className="flex items-start gap-3">
                   <Globe size={15} className="text-green-700 flex-shrink-0 mt-0.5" />
                   <div>
                     <div className="text-xs text-green-700 font-medium mb-0.5">Official Apply Portal</div>
-                    <a href={resolvedApplicationUrl} target="_blank" rel="noopener noreferrer"
+                    <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer"
                       className="text-sm text-green-800 hover:text-green-900 font-semibold break-all inline-flex items-center gap-1">
                       Apply on Official Website
                       <ExternalLink size={12} className="flex-shrink-0" />
