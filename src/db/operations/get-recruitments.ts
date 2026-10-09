@@ -1,20 +1,41 @@
 import { getDb } from "../index";
-import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations } from "../schema";
+import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects } from "../schema";
 import { eq, inArray } from "drizzle-orm";
 
 /**
  * Get recruitment by slug
  * Returns the full recruitment object with related organization
+ * Handles both new semantic slugs and old descriptive slugs (via redirect table)
  */
 export async function getRecruitmentBySlug(slug: string) {
   const db = getDb();
-  const result = await db
+
+  // First, try to find by the current slug
+  let result = await db
     .select()
     .from(recruitments)
     .where(eq(recruitments.slug, slug))
     .limit(1);
 
-  return result.length > 0 ? result[0] : null;
+  // If not found, check if this is an old slug that was redirected
+  if (!result || result.length === 0) {
+    const redirect_record = await db
+      .select()
+      .from(recruitment_slug_redirects)
+      .where(eq(recruitment_slug_redirects.old_slug, slug))
+      .limit(1);
+
+    if (redirect_record && redirect_record.length > 0) {
+      const newSlug = redirect_record[0].new_slug;
+      result = await db
+        .select()
+        .from(recruitments)
+        .where(eq(recruitments.slug, newSlug))
+        .limit(1);
+    }
+  }
+
+  return result && result.length > 0 ? result[0] : null;
 }
 
 /**
@@ -96,10 +117,23 @@ export async function getRecruitmentVacancyCount(recruitmentId: number) {
  * PERF-001: Optimized to eliminate N+1 queries by fetching all vacancies/eligibilities upfront
  * Used for job posting leaf pages to display recruitment context
  * Returns recruitment metadata + all posts for that recruitment
+ * Handles both new semantic slugs and old descriptive slugs (via redirect table)
  */
 export async function getRecruitmentWithPosts(slug: string) {
   try {
     const db = getDb();
+
+    // Step 0: Handle redirects from old slugs to new slugs
+    let resolvedSlug = slug;
+    const redirect_record = await db
+      .select()
+      .from(recruitment_slug_redirects)
+      .where(eq(recruitment_slug_redirects.old_slug, slug))
+      .limit(1);
+
+    if (redirect_record && redirect_record.length > 0) {
+      resolvedSlug = redirect_record[0].new_slug;
+    }
 
     // Step 1: Get the recruitment by slug, joined with its organization for the name.
     const recruitmentResult = await db
@@ -109,7 +143,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       })
       .from(recruitments)
       .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
-      .where(eq(recruitments.slug, slug))
+      .where(eq(recruitments.slug, resolvedSlug))
       .limit(1);
 
     if (!recruitmentResult || recruitmentResult.length === 0) {

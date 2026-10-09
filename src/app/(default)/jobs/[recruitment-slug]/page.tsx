@@ -4,13 +4,18 @@
  *
  * Displays recruitment details and lists all associated job postings.
  * For single-job recruitments, displays the job details directly.
+ *
+ * Handles redirects from old slugs to new semantic slugs with 301 status.
  */
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
+import { getDb } from "@/db";
+import { recruitment_slug_redirects } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import {
   resolveRecruitmentVacancy,
   resolvePostVacancy,
@@ -71,7 +76,29 @@ export async function generateMetadata({
   params,
 }: RecruitmentHubProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const recruitmentData = await getRecruitmentWithPosts(resolvedParams["recruitment-slug"]);
+  const slug = resolvedParams["recruitment-slug"];
+
+  // Check if this is an old slug that needs redirect
+  try {
+    const db = getDb();
+    const redirectRecord = await db
+      .select()
+      .from(recruitment_slug_redirects)
+      .where(eq(recruitment_slug_redirects.old_slug, slug))
+      .limit(1);
+
+    if (redirectRecord && redirectRecord.length > 0) {
+      // Return empty metadata for redirects; the redirect will happen in the page component
+      return {
+        title: "Redirecting...",
+        robots: { index: false },
+      };
+    }
+  } catch {
+    // Continue to normal flow on error
+  }
+
+  const recruitmentData = await getRecruitmentWithPosts(slug);
 
   if (!recruitmentData) {
     return {

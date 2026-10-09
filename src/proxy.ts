@@ -4,6 +4,11 @@ import { adminSessionToken } from "@/lib/admin-token";
 import { locales, defaultLocale, type Locale } from "@/i18n/request";
 import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 
+// Import Supabase client for redirect lookups
+import { getDb } from "@/db";
+import { recruitment_slug_redirects } from "@/db/schema";
+import { eq } from "drizzle-orm";
+
 const COOKIE_NAME = "admin_session";
 
 // Create the next-intl middleware
@@ -47,6 +52,34 @@ export async function proxy(request: NextRequest) {
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Handle URL slug redirects from old format to new semantic format
+  // This handles the migration from descriptive slugs (150+ chars) to semantic slugs (33-48 chars)
+  const jobsMatch = pathname.match(/^\/jobs\/([^\/]+)$/);
+  if (jobsMatch) {
+    const slug = jobsMatch[1];
+    try {
+      const db = getDb();
+      const redirectRecord = await db
+        .select()
+        .from(recruitment_slug_redirects)
+        .where(eq(recruitment_slug_redirects.old_slug, slug))
+        .limit(1);
+
+      if (redirectRecord && redirectRecord.length > 0) {
+        const newSlug = redirectRecord[0].new_slug;
+        const url = new URL(`/jobs/${newSlug}`, request.url);
+
+        // Return 301 permanent redirect
+        return NextResponse.redirect(url, {
+          status: 301,
+        });
+      }
+    } catch (error) {
+      console.error("Redirect lookup error:", error);
+      // Continue on error — don't block page access
     }
   }
 
