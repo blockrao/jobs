@@ -1,0 +1,97 @@
+{
+  "recordType": "recruitment_prototype",
+  "verificationStatus": "UNVERIFIED",
+  "publicationStatus": "RESEARCH_ONLY_NOT_PUBLISHED",
+  "lastReviewedAt": null,
+  "verificationOwner": null,
+  "organization": {
+    "canonicalName": "Jammu and Kashmir Services Selection Board",
+    "displayName": "JKSSB",
+    "slug": "jkssb",
+    "status": "MATCH_REQUIRED",
+    "note": "Do not create a duplicate organization if a canonical JKSSB organization already exists."
+  },
+  "recruitment": {
+    "displayTitle": "JKSSB Advertisement Notification No. 08 of 2026",
+    "slug": "jkssb-advertisement-08-of-2026",
+    "notificationNumber": "08 of 2026",
+    "notificationDate": "2026-08-04",
+    "referenceNumber": "JKSSB-PLAN/6/2025-03 (E-7661495)",
+    "recruitmentTotalVacancies": 518,
+    "departmentBreakdown": [
+      { "department": "Agriculture Production", "vacancies": 46 },
+      { "department": "Health & Medical Education", "vacancies": 421 },
+      { "department": "Higher Education", "vacancies": 48 },
+      { "department": "Labour & Employment", "vacancies": 3 }
+    ],
+    "applicationStartDate": "2026-09-10",
+    "applicationEndDate": "2026-10-09",
+    "applicationMode": "ONLINE_ONLY",
+    "applicationUrl": null,
+    "officialNotificationUrl": null,
+    "recruitmentStatus": "UNKNOWN_PENDING_OFFICIAL_CHECK",
+    "factOrigin": "THIRD_PARTY_RESEARCH_LEAD",
+    "factNote": "Values were extracted from a FreeJobAlert article and have not been checked against the official notification. Dates are historical/current-window-sensitive; do not display this as open or closed without a fresh official check."
+  },
+  "postPrototype": {
+    "title": "Horticulture Technician Grade-IV",
+    "slug": "horticulture-technician-grade-iv-srinagar",
+    "postCodeOrItemNumber": "105",
+    "location": "Srinagar",
+    "postVacancies": null,
+    "categoryBreakdown": null,
+    "qualification": null,
+    "ageRules": null,
+    "payScale": null,
+    "selectionProcess": null,
+    "applicationDeadline": null,
+    "factOrigin": "THIRD_PARTY_RESEARCH_LEAD",
+    "factNote": "Aggregator table indicated item 105, Srinagar, 3 posts (OM 2, SC 1). The count and category breakdown are deliberately not promoted into the Post record until confirmed from the official notification."
+  },
+  "urlPreview": {
+    "organizationHub": "/organizations/jkssb",
+    "recruitmentHub": "/jobs/jkssb-advertisement-08-of-2026",
+    "postLeaf": "/jobs/jkssb-advertisement-08-of-2026/horticulture-technician-grade-iv-srinagar",
+    "rolePostHub": "/posts/horticulture-technician-grade-iv",
+    "rolePostHubNote": "Use the existing canonical Position/role slug if one exists. Do not create this role hub from this fixture alone, and do not assume this URL currently resolves to this recruitment."
+  },
+  "canonicalRules": {
+    "recruitmentCanonical": "/jobs/jkssb-advertisement-08-of-2026",
+    "postLeafCanonical": "/jobs/jkssb-advertisement-08-of-2026/horticulture-technician-grade-iv-srinagar",
+    "legacyRecruitmentPath": "/recruitments/jkssb-advertisement-08-of-2026",
+    "legacyPathBehavior": "redirect_to_recruitment_canonical",
+    "indexing": "NOINDEX_UNTIL_OFFICIAL_VERIFICATION_AND_ROUTE_DATA_INTEGRATION"
+  },
+  "evidence": [
+    {
+      "sourceType": "THIRD_PARTY_DISCOVERY_ONLY",
+      "publisher": "FreeJobAlert",
+      "sourceUrl": "https://www.freejobalert.com/articles/jkssb-recruitment-2026-apply-online-for-518-horticulture-technician-junior-staff-nurse-and-more-posts-3061465",
+      "articleId": "3061465",
+      "sourceUpdatedAt": "2026-08-05",
+      "allowedUse": "research lead and discrepancy discovery only",
+      "prohibitedUse": "not an official evidence source; do not publish aggregator URL/content or mark any field verified from it"
+    },
+    {
+      "sourceType": "OFFICIAL_NOTIFICATION",
+      "publisher": "JKSSB",
+      "sourceUrl": null,
+      "documentId": null,
+      "contentHash": null,
+      "retrievedAt": null,
+      "verificationStatus": "MISSING"
+    }
+  ],
+  "verificationChecklist": {
+    "officialNotificationObtained": false,
+    "notificationNumberAndDateMatched": false,
+    "recruitmentTotalReconciled": false,
+    "departmentTotalsReconciled": false,
+    "postItemNumbersAndVacanciesReconciled": false,
+    "qualificationsAndAgeRulesReviewed": false,
+    "feeAndPayRulesReviewed": false,
+    "applicationDatesAndPortalChecked": false,
+    "corrigendaAndExtensionsChecked": false,
+    "reviewerApproved": false
+  }
+}
