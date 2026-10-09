@@ -14,6 +14,7 @@
  */
 
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import { getPostBySlug } from "@/db/operations/get-posts";
@@ -85,6 +86,12 @@ function buildPostMetaDescription(params: {
   return rest.length > 0 ? `${head} — ${rest.join(" · ")}` : head;
 }
 
+// React request memoization shares the Post lookup between generateMetadata and Page.
+// This is request-scoped, not persistent caching, so deadlines and eligibility stay fresh.
+const getPostBySlugForRequest = cache(async (recruitmentSlug: string, postSlug: string) =>
+  getPostBySlug(recruitmentSlug, postSlug)
+);
+
 interface JobPostingPageRouteProps {
   params: Promise<{
     "recruitment-slug": string;
@@ -96,7 +103,7 @@ export async function generateMetadata({
   params,
 }: JobPostingPageRouteProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const post = await getPostBySlug(
+  const post = await getPostBySlugForRequest(
     resolvedParams["recruitment-slug"],
     resolvedParams["post-slug"]
   );
@@ -148,7 +155,7 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
   const postSlug = resolvedParams["post-slug"];
 
   // Fetch post with enrichment data
-  const post = await getPostBySlug(recruitmentSlug, postSlug);
+  const post = await getPostBySlugForRequest(recruitmentSlug, postSlug);
 
   if (!post) {
     notFound();
