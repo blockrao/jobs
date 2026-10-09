@@ -84,7 +84,9 @@ export default function PostLeafStructuredData({
   const hubUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
 
   // ── BreadcrumbList ─────────────────────────────────────────────────────────
-  // Jobs → [Org Name] → Recruitment → Post title
+  // Jobs → Recruitment (hub, linked) → Post title (leaf, linked)
+  // Org node intentionally omitted: Google requires `item` URL on every non-terminal
+  // node and we have no verified org page URL yet.
   const breadcrumbItems: object[] = [
     {
       "@type": "ListItem",
@@ -96,13 +98,10 @@ export default function PostLeafStructuredData({
 
   let position = 2;
 
-  if (post.organizationName) {
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      position: position++,
-      name: post.organizationName,
-    });
-  }
+  // Note: org node omitted — no verified org URL to use as `item`.
+  // Google requires every non-terminal breadcrumb node to carry an `item` URL;
+  // emitting a name-only node triggers a validation error. Hub link carries the
+  // recruitment name instead, which is always linked.
 
   if (post.recruitmentName) {
     breadcrumbItems.push({
@@ -170,10 +169,12 @@ export default function PostLeafStructuredData({
   jobPosting["employmentType"] =
     EMPLOYMENT_TYPE_MAP[post.employmentType ?? ""] ?? "FULL_TIME";
 
-  // hiringOrganization — emit when name is present; omit sameAs (no verified URL yet)
+  // hiringOrganization — emit when name is present; omit sameAs (no verified URL yet).
+  // Use "Organization" not "GovernmentOrganization": Google's Jobs validator rejects
+  // GovernmentOrganization as an invalid object type for this field.
   if (post.organizationName) {
     jobPosting["hiringOrganization"] = {
-      "@type": "GovernmentOrganization",
+      "@type": "Organization",
       name: post.organizationName,
     };
   }
