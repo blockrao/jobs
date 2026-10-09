@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
@@ -1150,3 +1151,7 @@ export async function listPostsEnhanced(opts?: {
     return [];
   }
 }
+
+
+/** Request-scoped memoization for metadata/page lookups of the same posting. */
+export const getPostingBySlugCached = cache(getPostingBySlug);
