@@ -21,7 +21,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE = "https://www.freejobalert.com";
-const USER_AGENT = "ClaudeBot (JobOye public-facts comparison; no production writes)";
+const USER_AGENT = "JobOyeResearchSnapshot/1.0 (public recruitment facts comparison; no production writes)";
 const MAX_PAGES = positiveInt(process.env.MAX_PAGES, 100000);
 const DELAY_MS = positiveInt(process.env.DELAY_MS, 1200);
 const OUT_DIR = process.env.OUT_DIR || path.resolve("data/research/freejobalert");
