@@ -12,7 +12,7 @@ import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
-import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
+import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
 import { getDb } from "@/db";
 import { recruitment_slug_redirects } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -78,27 +78,30 @@ export async function generateMetadata({
   const resolvedParams = await params;
   const slug = resolvedParams["recruitment-slug"];
 
-  // Check if this is an old slug that needs redirect
-  try {
-    const db = getDb();
-    const redirectRecord = await db
-      .select()
-      .from(recruitment_slug_redirects)
-      .where(eq(recruitment_slug_redirects.old_slug, slug))
-      .limit(1);
+  // Canonical semantic slugs cannot be legacy redirect sources. Skip the
+  // redirect-table lookup for the common path; retain the fallback for old slugs.
+  if (!/-\d{4}-\d{2}$/.test(slug)) {
+    try {
+      const db = getDb();
+      const redirectRecord = await db
+        .select()
+        .from(recruitment_slug_redirects)
+        .where(eq(recruitment_slug_redirects.old_slug, slug))
+        .limit(1);
 
-    if (redirectRecord && redirectRecord.length > 0) {
-      // Return empty metadata for redirects; the redirect will happen in the page component
-      return {
-        title: "Redirecting...",
-        robots: { index: false },
-      };
+      if (redirectRecord && redirectRecord.length > 0) {
+        // Return empty metadata for redirects; the proxy/page handles the redirect.
+        return {
+          title: "Redirecting...",
+          robots: { index: false },
+        };
+      }
+    } catch {
+      // Continue to normal flow on error
     }
-  } catch {
-    // Continue to normal flow on error
   }
 
-  const recruitmentData = await getRecruitmentWithPosts(slug);
+  const recruitmentData = await getRecruitmentWithPostsCached(slug);
 
   if (!recruitmentData) {
     return {
@@ -147,7 +150,7 @@ export default async function RecruitmentHubPage({
   const recruitmentSlug = resolvedParams["recruitment-slug"];
 
   // Fetch recruitment data with all posts
-  const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
+  const recruitmentData = await getRecruitmentWithPostsCached(recruitmentSlug);
 
   if (!recruitmentData) {
     notFound();
