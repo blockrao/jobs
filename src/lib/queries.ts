@@ -72,10 +72,10 @@ export async function getPostingBySlug(slug: string) {
 
     if (fetchedPost) {
       canonicalPost = fetchedPost;
-      canonicalRecruitment = fetchedPost.recruitment;
-      canonicalPosition = fetchedPost.position;
+      canonicalRecruitment = (fetchedPost as any).recruitment;
+      canonicalPosition = (fetchedPost as any).position;
     } else if (fetchedRecruitment) {
-      canonicalRecruitment = fetchedRecruitment;
+      canonicalRecruitment = fetchedRecruitment as any;
     }
   } catch (e) {
     console.warn("Could not fetch canonical links:", e);
