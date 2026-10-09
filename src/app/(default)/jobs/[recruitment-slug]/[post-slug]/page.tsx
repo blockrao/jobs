@@ -17,6 +17,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
+import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import {
@@ -189,12 +190,34 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
     : null;
 
   return (
-    <JobPostingPage
-      post={post}
-      recruitment={recruitmentData}
-      isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
-      resolvedFacts={resolvedFacts}
-      recruitmentResolvedFacts={recruitmentResolvedFacts}
-    />
+    <>
+      <PostLeafStructuredData
+        post={{
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          description: post.description ?? null,
+          organizationName: post.organizationName ?? null,
+          recruitmentSlug: recruitmentSlug,
+          recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
+          employmentType: post.employmentType ?? null,
+          locationCity: post.locationCity ?? null,
+          locationState: post.locationState ?? null,
+          notificationPublicationDate: post.notificationPublicationDate ?? null,
+          postedAt: post.postedAt ?? null,
+          updatedAt: post.updatedAt ?? null,
+        }}
+        resolvedVacancy={resolvedFacts.vacancyCount}
+        resolvedSalary={resolvedFacts.salary}
+        resolvedDeadline={resolvedFacts.deadline}
+      />
+      <JobPostingPage
+        post={post}
+        recruitment={recruitmentData}
+        isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
+        resolvedFacts={resolvedFacts}
+        recruitmentResolvedFacts={recruitmentResolvedFacts}
+      />
+    </>
   );
 }
