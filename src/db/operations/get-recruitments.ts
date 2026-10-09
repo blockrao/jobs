@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects } from "../schema";
 import { eq, inArray } from "drizzle-orm";
@@ -241,3 +242,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     return null;
   }
 }
+
+
+/** Request-scoped memoization shared by generateMetadata and page rendering. */
+export const getRecruitmentWithPostsCached = cache(getRecruitmentWithPosts);
