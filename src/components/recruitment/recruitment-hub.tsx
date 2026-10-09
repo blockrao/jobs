@@ -62,6 +62,8 @@ interface RecruitmentHubProps {
   resolvedEmployer?: string | null;
   /** Resolved selection process from resolveSelectionProcess() */
   resolvedSelectionProcess?: string | null;
+  /** Org slug for breadcrumb link — from organizations.slug */
+  orgSlug?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -202,6 +204,7 @@ export default function RecruitmentHub({
   resolvedOfficialSource,
   resolvedEmployer,
   resolvedSelectionProcess,
+  orgSlug,
 }: RecruitmentHubProps) {
   const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
   const notificationDate = formatDate(recruitment.notificationDate);
@@ -295,9 +298,15 @@ export default function RecruitmentHub({
             {displayOrg && (
               <>
                 <ChevronRight size={14} className="text-gray-400" />
-                <span className="text-gray-500 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
-                  {displayOrg}
-                </span>
+                {orgSlug ? (
+                  <Link href={`/organizations/${orgSlug}`} className="text-blue-600 hover:text-blue-700 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
+                    {displayOrg}
+                  </Link>
+                ) : (
+                  <span className="text-gray-500 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
+                    {displayOrg}
+                  </span>
+                )}
               </>
             )}
             <ChevronRight size={14} className="text-gray-400" />

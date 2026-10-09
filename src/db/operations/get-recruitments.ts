@@ -140,6 +140,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       .select({
         recruitment: recruitments,
         organizationName: organizations.name,
+        organizationSlug: organizations.slug,
       })
       .from(recruitments)
       .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
@@ -154,6 +155,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     const recruitment = {
       ...recruitmentResult[0].recruitment,
       organizationName: recruitmentResult[0].organizationName,
+      organizationSlug: recruitmentResult[0].organizationSlug,
     };
     const recruitmentId = recruitment.id;
 

@@ -202,6 +202,7 @@ export default async function RecruitmentHubPage({
         resolvedOfficialSource={resolvedOfficialSource}
         resolvedEmployer={resolvedEmployer}
         resolvedSelectionProcess={resolvedSelectionProcess}
+        orgSlug={recruitment.organizationSlug ?? null}
       />
     </>
   );

@@ -81,19 +81,16 @@ export default function JobPostingPage({
       <JobPostingStructuredData post={post} />
 
       <div className={styles.container}>
-        {/* Breadcrumb - Updated to link to recruitment hub */}
+        {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
         <div className={styles.breadcrumb}>
           <a href="/jobs">Jobs</a>
           <span>›</span>
-          {post.examTypeSlug && (
+          {recruitment?.recruitment?.organizationSlug && post.organizationName && (
             <>
-              <a href="/exams">Exams</a>
-              <span>›</span>
-              <a href={`/exams/${post.examTypeSlug}`}>{post.examType}</a>
+              <a href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</a>
               <span>›</span>
             </>
           )}
-          {/* Direct link to recruitment hub instead of exams path */}
           <a href={`/jobs/${post.recruitmentSlug}`}>{post.recruitmentName}</a>
           <span>›</span>
           <span>{post.title}</span>
