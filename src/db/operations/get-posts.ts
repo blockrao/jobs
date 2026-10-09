@@ -264,7 +264,7 @@ export async function getPostsByRecruitment(
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
-      WHERE p."recruitmentSlug" = ${recruitmentSlug}
+      WHERE COALESCE(p."recruitmentSlug", r.slug) = ${recruitmentSlug}
         AND p."isLive" = true
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
