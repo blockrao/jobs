@@ -4,16 +4,21 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedRecruitmentFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface OfficialSourceVerificationProps {
   post: JobPostingData;
+  recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
 }
 
 export default function OfficialSourceVerification({
   post,
+  recruitmentResolvedFacts,
 }: OfficialSourceVerificationProps) {
   const enrichment = post.enrichment;
+  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
+  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
   const verificationStatus = enrichment?.sourceVerificationStatus || "PENDING";
   const verificationDate = enrichment?.sourceVerificationDate;
   const extractionConfidence = enrichment?.extractionConfidence || 0;
@@ -134,9 +139,9 @@ export default function OfficialSourceVerification({
       <div className={styles.infoGroup}>
         <div className={styles.infoLabel}>Official Sources</div>
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          {post.officialSourceUrl && (
+          {officialSourceUrl && (
             <a
-              href={post.officialSourceUrl}
+              href={officialSourceUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -156,9 +161,9 @@ export default function OfficialSourceVerification({
               📄 Official Notification
             </a>
           )}
-          {post.applyPortalUrl && (
+          {applicationUrl && (
             <a
-              href={post.applyPortalUrl}
+              href={applicationUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{
