@@ -17,14 +17,7 @@ export default function DutiesResponsibilities({
   const responsibilities = post.enrichment?.responsibilities || [];
 
   if (duties.length === 0 && responsibilities.length === 0) {
-    return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>📝 Duties & Responsibilities</h2>
-        <p style={{ color: "#4b5563" }}>
-          Duties and responsibilities not available
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
