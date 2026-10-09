@@ -18,6 +18,9 @@ export interface JobPostingData {
   examType: string;
   examTypeSlug: string;
   description?: string;
+  employmentType?: string | null;
+  locationCity?: string | null;
+  locationState?: string | null;
 
   // Live Status
   isLive: boolean;
@@ -37,7 +40,9 @@ export interface JobPostingData {
   recruitmentVacancyTotal?: number | null;
   recruitmentOfficialNotificationUrl?: string | null;
   recruitmentOfficialApplicationUrl?: string | null;
+  recruitmentApplicationStartDate?: Date | null;
   recruitmentApplicationEndDate?: Date | null;
+  recruitmentSelectionProcess?: string | null;
   notificationPublicationDate?: Date | null;
 
   // Enrichment Data (from post_enrichments table)

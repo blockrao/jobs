@@ -33,6 +33,9 @@ export async function getPostBySlug(
         p."examType",
         p."examTypeSlug",
         p.description,
+        p.employment_type AS "employmentType",
+        p.location_city AS "locationCity",
+        p.location_state AS "locationState",
         p."isLive",
         p."postedAt",
         p."createdAt",
@@ -48,7 +51,10 @@ export async function getPostBySlug(
         r.official_notification_url AS "recruitmentOfficialNotificationUrl",
         r.official_application_url AS "recruitmentOfficialApplicationUrl",
         r.application_end_date AS "recruitmentApplicationEndDate",
+        r.application_start_date AS "recruitmentApplicationStartDate",
         r.notification_date AS "notificationPublicationDate",
+        r.selection_process AS "recruitmentSelectionProcess",
+        e.id AS "enrichmentId",
         e."vacanciesByCategory",
         e."vacanciesTotal",
         e."feesByCategory",
@@ -110,6 +116,9 @@ export async function getPostBySlug(
       examType: data.examType,
       examTypeSlug: data.examTypeSlug,
       description: data.description,
+      employmentType: data.employmentType ?? null,
+      locationCity: data.locationCity ?? null,
+      locationState: data.locationState ?? null,
       isLive: data.isLive,
       postedAt: new Date(data.postedAt),
       updatedAt: new Date(data.updatedAt),
@@ -126,10 +135,17 @@ export async function getPostBySlug(
       recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
         ? new Date(data.recruitmentApplicationEndDate)
         : null,
+      recruitmentApplicationStartDate: data.recruitmentApplicationStartDate
+        ? new Date(data.recruitmentApplicationStartDate)
+        : null,
+      recruitmentSelectionProcess: data.recruitmentSelectionProcess ?? null,
       notificationPublicationDate: data.notificationPublicationDate
         ? new Date(data.notificationPublicationDate)
         : null,
-      enrichment: data.vacanciesTotal !== null ? {
+      // Do not gate the entire enrichment object on vacanciesTotal: other
+      // valid enrichment fields (dates, fees, eligibility, salary) can exist
+      // independently of a vacancy count.
+      enrichment: data.enrichmentId != null ? {
         vacanciesByCategory: data.vacanciesByCategory,
         vacanciesTotal: data.vacanciesTotal,
         feesByCategory: data.feesByCategory,
@@ -268,6 +284,9 @@ export async function getPostsByRecruitment(
         examType: data.examType,
         examTypeSlug: data.examTypeSlug,
         description: data.description,
+        employmentType: data.employmentType ?? null,
+        locationCity: data.locationCity ?? null,
+        locationState: data.locationState ?? null,
         isLive: data.isLive,
         postedAt: new Date(data.postedAt),
         updatedAt: new Date(data.updatedAt),
@@ -284,6 +303,10 @@ export async function getPostsByRecruitment(
         recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
           ? new Date(data.recruitmentApplicationEndDate)
           : null,
+        recruitmentApplicationStartDate: data.recruitmentApplicationStartDate
+          ? new Date(data.recruitmentApplicationStartDate)
+          : null,
+        recruitmentSelectionProcess: data.recruitmentSelectionProcess ?? null,
         notificationPublicationDate: data.notificationPublicationDate
           ? new Date(data.notificationPublicationDate)
           : null,

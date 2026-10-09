@@ -48,7 +48,9 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
     },
     {
       label: "Job Type",
-      value: "Permanent",
+      value: post.employmentType
+        ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
+        : "See Notification",
     },
   ];
 

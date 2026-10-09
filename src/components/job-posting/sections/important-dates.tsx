@@ -14,11 +14,11 @@ export default function ImportantDates({ post }: ImportantDatesProps) {
   const enrichment = post.enrichment;
 
   const dates = [
-    { label: "Notification Date", date: enrichment?.notificationDate },
-    { label: "Application Open Date", date: enrichment?.applicationOpenDate },
+    { label: "Notification Date", date: enrichment?.notificationDate ?? post.notificationPublicationDate },
+    { label: "Application Open Date", date: enrichment?.applicationOpenDate ?? post.recruitmentApplicationStartDate },
     {
       label: "Application Closing Date",
-      date: enrichment?.applicationClosingDate,
+      date: enrichment?.applicationClosingDate ?? post.recruitmentApplicationEndDate,
     },
     { label: "Exam Date", date: enrichment?.examDate },
     { label: "Admit Card Date", date: enrichment?.admitCardDate },
