@@ -136,19 +136,6 @@ function extractFacts(html: string, sourceUrl: string, retrievedAt: string) {
       if (pattern.test(cells[0]) && facts[key] == null) facts[key] = cells.slice(1).join(" | ");
     }
   });
-  // Preserve useful labelled sections and paragraphs as evidence, not as verified canonical facts.
-  const sections: { heading: string; text: string }[] = [];
-  $("h2, h3").each((_, heading) => {
-    const label = normalizedText($(heading).text());
-    if (!label) return;
-    const parts: string[] = [];
-    let next = $(heading).next();
-    for (let i = 0; i < 8 && next.length && !/^h[1-6]$/i.test(next[0].tagName); i++, next = next.next()) {
-      const value = normalizedText(next.text());
-      if (value) parts.push(value);
-    }
-    if (parts.length) sections.push({ heading: label, text: parts.join("\n").slice(0, 5000) });
-  });
   const links = $("a[href]").toArray().map((a) => ({
     text: normalizedText($(a).text()).slice(0, 200),
     url: absoluteHttpUrl($(a).attr("href"), sourceUrl),
@@ -167,8 +154,6 @@ function extractFacts(html: string, sourceUrl: string, retrievedAt: string) {
     extraction_status: title ? "extracted" : "weak_page_structure",
     facts,
     official_link_candidates: officialCandidates,
-    section_evidence: sections,
-    visible_text: bodyText,
   };
 }
 async function main() {
