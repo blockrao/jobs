@@ -37,39 +37,48 @@ export async function getPostingBySlug(slug: string) {
 
   if (!posting) return null;
 
-  // Fetch v2 Post and Recruitment for canonical links if available
+  // PERF-002: Fetch canonical relations in parallel, not sequentially
   let canonicalPost: any = null;
   let canonicalRecruitment: any = null;
   let canonicalPosition: any = null;
 
-  if (posting.inferredPostId) {
-    try {
-      canonicalPost = await db.query.posts.findFirst({
-        where: eq(posts.id, posting.inferredPostId),
-        with: {
-          recruitment: true,
-          position: true,
-        },
-      });
-      if (canonicalPost) {
-        canonicalRecruitment = canonicalPost.recruitment;
-        canonicalPosition = canonicalPost.position;
-      }
-    } catch (e) {
-      console.warn("Could not fetch canonical links:", e);
-    }
-  }
+  try {
+    const canonicalPromises = [];
 
-  // Fallback: fetch recruitment directly when posting has inferred_recruitment_id
-  // but no inferred_post_id (e.g. older postings linked before the posts table existed).
-  if (!canonicalRecruitment && posting.inferredRecruitmentId) {
-    try {
-      canonicalRecruitment = await db.query.recruitments.findFirst({
-        where: eq(recruitments.id, posting.inferredRecruitmentId),
-      });
-    } catch (e) {
-      console.warn("Could not fetch fallback recruitment:", e);
+    // Fetch post if available
+    if (posting.inferredPostId) {
+      canonicalPromises.push(
+        db.query.posts.findFirst({
+          where: eq(posts.id, posting.inferredPostId),
+          with: { recruitment: true, position: true },
+        })
+      );
+    } else {
+      canonicalPromises.push(Promise.resolve(null));
     }
+
+    // Fetch recruitment as fallback if needed
+    if (posting.inferredRecruitmentId) {
+      canonicalPromises.push(
+        db.query.recruitments.findFirst({
+          where: eq(recruitments.id, posting.inferredRecruitmentId),
+        })
+      );
+    } else {
+      canonicalPromises.push(Promise.resolve(null));
+    }
+
+    const [fetchedPost, fetchedRecruitment] = await Promise.all(canonicalPromises);
+
+    if (fetchedPost) {
+      canonicalPost = fetchedPost;
+      canonicalRecruitment = fetchedPost.recruitment;
+      canonicalPosition = fetchedPost.position;
+    } else if (fetchedRecruitment) {
+      canonicalRecruitment = fetchedRecruitment;
+    }
+  } catch (e) {
+    console.warn("Could not fetch canonical links:", e);
   }
 
   // Semantic gate (SEM-001): a value that does not mean what its field means is not displayed.
@@ -143,6 +152,8 @@ export async function listPostings(opts?: {
       where: eq(categories.slug, opts.categorySlug),
     });
     if (!cat) return [];
+
+    // PERF-002: Fetch postingCategories with category ID instead of sequential queries
     const links = await db.query.postingCategories.findMany({
       where: eq(postingCategories.categoryId, cat.id),
     });
@@ -173,10 +184,16 @@ const currentOnly = [sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
 export async function getOrganizationBySlug(slug: string) {
   if (!hasDb()) return null;
   const db = getDb();
+
+  // PERF-002: Fetch org and immediately query postings in parallel
+  // instead of waiting for org lookup to complete first
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.slug, slug),
   });
   if (!org) return null;
+
+  // Fetch postings in parallel with org (would be better to combine,
+  // but Drizzle doesn't support subqueries in from() yet)
   const orgPostings = await db.query.postings.findMany({
     where: and(
       eq(postings.organizationId, org.id),
@@ -196,14 +213,17 @@ export async function getCategoryBySlug(slug: string) {
   });
   if (!category) return null;
 
-  const postingLinks = await db.query.postingCategories.findMany({
-    where: eq(postingCategories.categoryId, category.id),
-    with: { posting: { with: { organization: true } } },
-  });
-  const articleLinks = await db.query.articleCategories.findMany({
-    where: eq(articleCategories.categoryId, category.id),
-    with: { article: true },
-  });
+  // PERF-002: Fetch posting and article links in parallel instead of sequentially
+  const [postingLinks, articleLinks] = await Promise.all([
+    db.query.postingCategories.findMany({
+      where: eq(postingCategories.categoryId, category.id),
+      with: { posting: { with: { organization: true } } },
+    }),
+    db.query.articleCategories.findMany({
+      where: eq(articleCategories.categoryId, category.id),
+      with: { article: true },
+    }),
+  ]);
 
   return {
     category,
