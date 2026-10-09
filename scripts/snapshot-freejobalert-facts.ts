@@ -84,7 +84,7 @@ async function robotsAllows(url: string): Promise<boolean> {
 }
 async function collectExplicitUrls(filePath: string): Promise<string[]> {
   const input = await (await import("node:fs/promises")).readFile(filePath, "utf8");
-  const urls = [...new Set(input.split(/\\r?\\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")))];
+  const urls = [...new Set(input.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")))];
   if (urls.length === 0) throw new Error(`URLS_FILE contains no URLs: ${filePath}`);
   for (const value of urls) {
     let url: URL;
