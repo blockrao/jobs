@@ -145,12 +145,12 @@ function salaryConsistentWithPayLevel(
  * Returns the authoritative vacancy count for a specific Post, or null.
  *
  * Pipeline:
+ *   0. If both Post-level candidate counts are populated, positive, and disagree,
+ *      return null. Neither candidate wins without explicit reconciliation.
  *   1. post_enrichments.vacanciesTotal — passes when:
  *      - sourceVerificationStatus === VERIFIED
  *      - extractionConfidence >= 70
  *      - vacanciesTotal does NOT match the recruitment-level total (entity scope guard)
- *      Note: vacanciesByCategory must be non-null for the entity scope check to pass
- *        when vacanciesTotal looks like a recruitment total (see note below).
  *   2. posts.vacancy_total — passes when non-null, > 0, and does NOT equal the recruitment's total_vacancies (scope guard).
  *   3. null — insufficient evidence.
  */
@@ -161,6 +161,20 @@ export function resolvePostVacancy(
   }
 ): number | null {
   const enrichment = post.enrichment;
+
+  // A populated disagreement between two candidate Post-level counts is an
+  // unresolved integrity conflict. Verification status and extraction confidence
+  // do not establish which value belongs to this Post, so do not publish either
+  // value until the conflict has been reconciled against source evidence.
+  if (
+    enrichment?.vacanciesTotal != null &&
+    enrichment.vacanciesTotal > 0 &&
+    post.vacancyTotal != null &&
+    post.vacancyTotal > 0 &&
+    enrichment.vacanciesTotal !== post.vacancyTotal
+  ) {
+    return null;
+  }
 
   // --- Branch 1: enrichment pipeline ---
   if (enrichment) {
