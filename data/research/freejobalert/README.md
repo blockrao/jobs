@@ -15,7 +15,7 @@ The script:
 - uses a descriptive user agent and a delay between requests;
 - stops if it receives access-denied or rate-limit responses;
 - writes timestamped JSONL records and a separate JSONL error log here;
-- records source URL, retrieval timestamp, SHA-256 of the retrieved HTML, table facts, candidate official links, section evidence, and visible text;
+- records source URL, retrieval timestamp, SHA-256 of the retrieved HTML, table facts, candidate official links, ;
 - does **not** connect to Supabase, alter JobOye data, publish pages, or treat any extracted value as verified.
 
 Outputs are deliberately not checked into Git. Keep snapshots in a local research workspace and avoid committing full page text/HTML. Before running, review the site's current robots.txt and applicable terms. If robots rules or terms do not permit the crawl, do not run it.
@@ -31,4 +31,4 @@ Outputs are deliberately not checked into Git. Keep snapshots in a local researc
 
 ## Snapshot fields
 
-Each JSONL record is one source article. The extracted table fields are intentionally conservative; some pages will need manual/official-document review. `visible_text` and `section_evidence` are evidence aids, not approved JobOye copy.
+Each JSONL record is one source article. The extracted table fields are intentionally conservative; some pages will need manual/official-document review. The utility intentionally does not save page prose or page HTML; it records only labelled factual fields, source metadata, and candidate official links.
