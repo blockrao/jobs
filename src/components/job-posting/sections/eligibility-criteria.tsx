@@ -50,8 +50,12 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
           <div className={styles.infoLabel}>Experience Required</div>
           <div className={styles.infoValue}>
             Minimum {enrichment.experience.minYears} year
-            {enrichment.experience.minYears !== 1 ? "s" : ""} in{" "}
-            <strong>{enrichment.experience.domains.join(", ")}</strong>
+            {enrichment.experience.minYears !== 1 ? "s" : ""}{" "}
+            {Array.isArray(enrichment.experience.domains) && enrichment.experience.domains.length > 0 ? (
+              <>in <strong>{enrichment.experience.domains.join(", ")}</strong></>
+            ) : (
+              "of relevant experience"
+            )}
             {enrichment.experience.countedFrom && (
               <>
                 <br />
