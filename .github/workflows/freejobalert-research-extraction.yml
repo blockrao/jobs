@@ -12,11 +12,11 @@ permissions:
 
 concurrency:
   group: freejobalert-research-extraction
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   extract:
-    name: Extract dated open listings (research only)
+    name: Extract dated listings for 2026-10-09 (research only)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -28,17 +28,17 @@ jobs:
       - run: npm ci
       - name: Run bounded public-source extraction
         env:
-          START_DATE: "2026-10-02"
+          START_DATE: "2026-10-09"
           AS_OF_DATE: "2026-10-09"
           MAX_LIST_PAGES: "20"
           DELAY_MS: "1200"
-          OUT_DIR: "artifacts/freejobalert-full-extraction"
+          OUT_DIR: "artifacts/freejobalert-2026-10-09"
         run: npx tsx scripts/extract-freejobalert-open-updates.ts
       - name: Upload extraction evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: freejobalert-full-extraction
-          path: artifacts/freejobalert-full-extraction/
+          name: freejobalert-2026-10-09
+          path: artifacts/freejobalert-2026-10-09/
           if-no-files-found: warn
           retention-days: 14
