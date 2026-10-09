@@ -14,7 +14,7 @@ export default function ApplicationFee({ post }: ApplicationFeeProps) {
   const feesByCategory = post.enrichment?.feesByCategory || {};
   const hasDetails = Object.keys(feesByCategory).length > 0;
 
-  if (!hasDetails && !post.enrichment?.feeNote) return null;
+  if (!hasDetails) return null;
 
   return (
     <div className={styles.section}>
