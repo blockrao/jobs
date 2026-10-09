@@ -177,9 +177,8 @@ export default function JobPostingPage({
           <section className={styles.recruitmentContext}>
             <h2>About This Recruitment</h2>
             <p>
-              This is the sole position in{" "}
-              <strong>{post.recruitmentName}</strong>. For additional details about
-              the recruitment process, timeline, and FAQs, visit the{" "}
+              For recruitment-wide details, timeline, and related information,
+              visit the{" "}
               <a href={`/jobs/${post.recruitmentSlug}`}>recruitment hub</a>.
             </p>
           </section>
