@@ -85,11 +85,10 @@ const RECONCILED_SALARY_POST_IDS = new Set<number>([
 // Authoritative domain check
 // ---------------------------------------------------------------------------
 
-// Official Indian higher-education institution domains are authoritative sources
-// for their own recruitment notices and application pages. Third-party portal
-// hosts (for example, hosted application platforms) still require separate
-// source validation and are not trusted by this suffix allowlist alone.
-const AUTHORITATIVE_DOMAINS = [".gov.in", ".nic.in", ".ac.in"];
+// Official government domains and institution-controlled Samarth application
+// portal tenants accepted by the recruitment fact resolver. Do not add generic
+// hosting domains without source and ownership validation.
+const AUTHORITATIVE_DOMAINS = [".gov.in", ".nic.in", ".samarth.edu.in"];
 
 function isAuthoritativeDomain(url: string): boolean {
   try {
@@ -608,7 +607,7 @@ export interface RecruitmentInput {
  *   1. MANUAL_VERIFIED link on an authoritative domain — highest confidence.
  *      officialLinkSource === 'MANUAL_VERIFIED' means a human confirmed the URL
  *      points to the correct official notification for this recruitment.
- *   2. Authoritative domain (*.gov.in, *.nic.in, *.ac.in) without MANUAL_VERIFIED —
+ *   2. Authoritative domain (*.gov.in, *.nic.in, *.samarth.edu.in) without MANUAL_VERIFIED —
  *      domain is authoritative but provenance is aggregator-discovered; still
  *      preferred over null.
  *   3. Non-authoritative domain or null — return null. Do not expose aggregator
