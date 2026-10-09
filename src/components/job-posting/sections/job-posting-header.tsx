@@ -19,7 +19,12 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
     ? Math.ceil((deadline.date.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const statusColor = daysUntilClose !== null && daysUntilClose <= 7 ? "danger" : "success";
+  const statusColor =
+    deadline?.state === "UNKNOWN" || deadline?.state === "CLOSED"
+      ? "neutral"
+      : daysUntilClose !== null && daysUntilClose <= 7
+        ? "danger"
+        : "success";
   // UNKNOWN deadline must never be shown as "OPEN"
   const statusText =
     deadline?.state === "OPEN" && daysUntilClose !== null
@@ -41,7 +46,12 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
         <span
           style={{
             ...headerStyles.statusBadge,
-            background: statusColor === "danger" ? "#ef4444" : "#059669",
+            background:
+              statusColor === "danger"
+                ? "#ef4444"
+                : statusColor === "neutral"
+                  ? "#6b7280"
+                  : "#059669",
           }}
         >
           {statusText}
