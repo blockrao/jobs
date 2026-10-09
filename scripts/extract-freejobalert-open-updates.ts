@@ -135,7 +135,8 @@ async function main(){
   const eligible=records.filter(r=>r.open_status==="OPEN_AS_OF_CUTOFF");
   const fields=["update_date","title","listing_url","detail_url","open_status","derived_close_date","organization","post_name","vacancies","qualification","age_limit","salary_pay","application_start_date","application_end_date","job_location","advertisement_number","raw_html_file"];
   const csvCell=(v:any)=>{const s=Array.isArray(v)?JSON.stringify(v):String(v??"");return '"'+s.replace(/"/g,'""')+'"';};
-  const csv=[fields.join(","),...eligible.map(r=>fields.map(f=>csvCell(f==="organization"?r.facts?.organization:f==="post_name"?r.facts?.post_name:f==="vacancies"?r.facts?.vacancies:f==="qualification"?r.facts?.qualification:f==="age_limit"?r.facts?.age_limit:f==="salary_pay"?r.facts?.salary_pay:f==="application_start_date"?r.facts?.application_start_date:f==="application_end_date"?r.facts?.application_end_date:f==="job_location"?r.facts?.job_location:f==="advertisement_number"?r.facts?.advertisement_number:r[f]).join(","))].join("\n");
+  const csvValue=(r:any,f:string)=>f==="organization"?r.facts?.organization:f==="post_name"?r.facts?.post_name:f==="vacancies"?r.facts?.vacancies:f==="qualification"?r.facts?.qualification:f==="age_limit"?r.facts?.age_limit:f==="salary_pay"?r.facts?.salary_pay:f==="application_start_date"?r.facts?.application_start_date:f==="application_end_date"?r.facts?.application_end_date:f==="job_location"?r.facts?.job_location:f==="advertisement_number"?r.facts?.advertisement_number:r[f];
+  const csv=[fields.join(","),...eligible.map(r=>fields.map(f=>csvCell(csvValue(r,f))).join(","))].join("\n");
   await writeFile(path.join(OUT,"all-in-window-listings.json"),JSON.stringify(records,null,2));
   await writeFile(path.join(OUT,"open-as-of-cutoff.csv"),csv+"\n");
   await writeFile(path.join(OUT,"crawl-errors.json"),JSON.stringify(errors,null,2));
