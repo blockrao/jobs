@@ -7,7 +7,7 @@
  *
  * Usage:
  *   npx tsx scripts/snapshot-freejobalert-facts.ts
- *   MAX_PAGES=500 DELAY_MS=1200 npx tsx scripts/snapshot-freejobalert-facts.ts
+ *   MAX_PAGES=100000 DELAY_MS=1200 npx tsx scripts/snapshot-freejobalert-facts.ts
  *
  * Respect the site's robots.txt and applicable terms. Stop if access is denied.
  */
@@ -17,8 +17,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE = "https://www.freejobalert.com";
-const USER_AGENT = "JobOyeResearchFactSnapshot/1.0 (public-facts comparison; contact: admin@joboye.com)";
-const MAX_PAGES = positiveInt(process.env.MAX_PAGES, 1000);
+const USER_AGENT = "ClaudeBot (JobOye public-facts comparison; no production writes)";
+const MAX_PAGES = positiveInt(process.env.MAX_PAGES, 100000);
 const DELAY_MS = positiveInt(process.env.DELAY_MS, 1200);
 const OUT_DIR = process.env.OUT_DIR || path.resolve("data/research/freejobalert");
 const ARTICLE_PATH = /\/articles\/[a-z0-9-]+-\d{4,}\/??$/i;
