@@ -42,32 +42,18 @@ export default function HowToApply({ post, recruitmentResolvedFacts }: HowToAppl
         </div>
       </div>
 
-      {hasApplicationUrl && <ol style={{ paddingLeft: "20px", color: "#4b5563" }}>
-        <li style={{ marginBottom: "12px" }}>
-          Visit the official application portal
-        </li>
-        <li style={{ marginBottom: "12px" }}>
-          Create an account or login with your credentials
-        </li>
-        <li style={{ marginBottom: "12px" }}>
-          Fill in the application form with accurate information
-        </li>
-        <li style={{ marginBottom: "12px" }}>
-          Upload all required documents (as per document checklist)
-        </li>
-        <li style={{ marginBottom: "12px" }}>
-          Pay the application fee (if applicable for your category)
-        </li>
-        <li style={{ marginBottom: "12px" }}>
-          Review your application and submit
-        </li>
-        <li>Download and keep a copy of your confirmation for records</li>
-      </ol>}
+      {hasApplicationUrl && (
+        <p style={{ color: "#4b5563" }}>
+          Follow the application instructions on the linked portal and in the
+          official notification. Requirements, account setup, documents, and
+          payment steps vary by recruitment.
+        </p>
+      )}
 
       <div className={styles.featureBox} style={{ marginTop: "20px" }}>
-        <strong>Important:</strong> JobOye does not handle applications directly.
-        All applications must be submitted through the official portal. Keep
-        your login credentials and application reference number safe.
+        <strong>Important:</strong> JobOye does not process applications. Check
+        the linked portal and official notification for the requirements and
+        submission steps that apply to this recruitment.
       </div>
     </div>
   );
