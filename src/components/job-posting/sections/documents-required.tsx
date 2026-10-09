@@ -13,16 +13,10 @@ interface DocumentsRequiredProps {
 export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
   const docsRequired = post.enrichment?.documentsRequired;
 
-  if (!docsRequired || (!docsRequired.required && !docsRequired.common)) {
-    return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>📋 Documents Required</h2>
-        <p style={{ color: "#4b5563" }}>
-          Document requirements not available
-        </p>
-      </div>
-    );
-  }
+  const hasRequired = Boolean(docsRequired?.required && docsRequired.required.length > 0);
+  const hasCommon = Boolean(docsRequired?.common && docsRequired.common.length > 0);
+
+  if (!hasRequired && !hasCommon) return null;
 
   return (
     <div className={styles.section}>
