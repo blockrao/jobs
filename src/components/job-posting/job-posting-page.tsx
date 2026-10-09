@@ -132,9 +132,6 @@ export default function JobPostingPage({
                   📄 View Official Notification
                 </a>
               )}
-              <a href="#" className={`${styles.btn} ${styles.btnSecondary}`}>
-                📤 Share
-              </a>
             </div>
           );
         })()}
@@ -190,27 +187,11 @@ export default function JobPostingPage({
 
         {/* Footer Note */}
         <div className={styles.footerNote}>
-          <strong>About This Posting:</strong> This job posting is sourced from
-          the official{" "}
-          <strong>{post.organizationName}</strong> notification
-          {post.enrichment?.notificationDate && (
-            <>
-              {" "}
-              dated{" "}
-              {new Date(post.enrichment.notificationDate).toLocaleDateString(
-                "en-IN",
-                {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }
-              )}
-            </>
-          )}
-          . Information has been verified and structured by JobOye for accuracy
-          and completeness. For the most authoritative information, always refer
-          to the official notification PDF and website. JobOye is not affiliated
-          with {post.organizationName} and does not handle applications directly
+          <strong>About This Posting:</strong> JobOye organizes available
+          information about this role to help candidates review it more easily.
+          Details can be incomplete or change over time. For application-critical
+          information, consult the official notification and the responsible
+          organization's website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
           — all applications must be submitted through the official portal.
         </div>
       </div>
