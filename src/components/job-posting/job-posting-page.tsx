@@ -6,6 +6,7 @@
  * Includes recruitment context for single-job recruitments.
  */
 
+import Link from "next/link";
 import { JobPostingData } from "@/types/job-posting";
 import JobPostingHeader from "./sections/job-posting-header";
 import QuickFacts from "./sections/quick-facts";
@@ -19,7 +20,6 @@ import HowToApply from "./sections/how-to-apply";
 import DocumentsRequired from "./sections/documents-required";
 import DutiesResponsibilities from "./sections/duties-responsibilities";
 import OfficialSourceVerification from "./sections/official-source-verification";
-import JobPostingStructuredData from "./structured-data/job-posting-schema";
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
@@ -76,23 +76,25 @@ export default function JobPostingPage({
   const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
 
   return (
-    <>
-      {/* Structured Data */}
-      <JobPostingStructuredData post={post} />
-
-      <div className={styles.container}>
+    <div className={styles.container}>
         {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
         <div className={styles.breadcrumb}>
-          <a href="/jobs">Jobs</a>
+          <Link href="/jobs">Jobs</Link>
           <span>›</span>
           {recruitment?.recruitment?.organizationSlug && post.organizationName && (
             <>
-              <a href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</a>
+              <Link href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
               <span>›</span>
             </>
           )}
-          <a href={`/jobs/${post.recruitmentSlug}`}>{post.recruitmentName}</a>
-          <span>›</span>
+          {post.recruitmentSlug && (
+            <>
+              <Link href={`/jobs/${post.recruitmentSlug}`}>
+                {post.recruitmentName ?? recruitment?.recruitment?.name ?? "Recruitment"}
+              </Link>
+              <span>›</span>
+            </>
+          )}
           <span>{post.title}</span>
         </div>
 
@@ -158,14 +160,14 @@ export default function JobPostingPage({
             <ul className={styles.relatedRolesList}>
               {recruitment?.posts?.map((p) => (
                 <li key={p.id}>
-                  <a href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
+                  <Link href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
                     <span className={styles.roleTitle}>{p.title}</span>
                     {p.vacancies?.[0]?.count && (
                       <span className={styles.roleVacancies}>
                         {p.vacancies[0].count} position{p.vacancies[0].count !== 1 ? 's' : ''}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -179,7 +181,7 @@ export default function JobPostingPage({
             <p>
               For recruitment-wide details, timeline, and related information,
               visit the{" "}
-              <a href={`/jobs/${post.recruitmentSlug}`}>recruitment hub</a>.
+              <Link href={`/jobs/${post.recruitmentSlug}`}>recruitment hub</Link>.
             </p>
           </section>
         )}
@@ -194,6 +196,5 @@ export default function JobPostingPage({
           — all applications must be submitted through the official portal.
         </div>
       </div>
-    </>
   );
 }
