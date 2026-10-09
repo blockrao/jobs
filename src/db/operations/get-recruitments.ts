@@ -123,20 +123,9 @@ export async function getRecruitmentWithPosts(slug: string) {
   try {
     const db = getDb();
 
-    // Step 0: Handle redirects from old slugs to new slugs
-    let resolvedSlug = slug;
-    const redirect_record = await db
-      .select()
-      .from(recruitment_slug_redirects)
-      .where(eq(recruitment_slug_redirects.old_slug, slug))
-      .limit(1);
-
-    if (redirect_record && redirect_record.length > 0) {
-      resolvedSlug = redirect_record[0].new_slug;
-    }
-
-    // Step 1: Get the recruitment by slug, joined with its organization for the name.
-    const recruitmentResult = await db
+    // Step 0: Try the requested slug first. Canonical URLs are the common path,
+    // so avoid a redirect-table round trip unless the recruitment isn't found.
+    let recruitmentResult = await db
       .select({
         recruitment: recruitments,
         organizationName: organizations.name,
@@ -144,8 +133,30 @@ export async function getRecruitmentWithPosts(slug: string) {
       })
       .from(recruitments)
       .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
-      .where(eq(recruitments.slug, resolvedSlug))
+      .where(eq(recruitments.slug, slug))
       .limit(1);
+
+    // Legacy slugs still resolve through the redirect table as before.
+    if (!recruitmentResult || recruitmentResult.length === 0) {
+      const redirectRecord = await db
+        .select()
+        .from(recruitment_slug_redirects)
+        .where(eq(recruitment_slug_redirects.old_slug, slug))
+        .limit(1);
+
+      if (redirectRecord && redirectRecord.length > 0) {
+        recruitmentResult = await db
+          .select({
+            recruitment: recruitments,
+            organizationName: organizations.name,
+            organizationSlug: organizations.slug,
+          })
+          .from(recruitments)
+          .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
+          .where(eq(recruitments.slug, redirectRecord[0].new_slug))
+          .limit(1);
+      }
+    }
 
     if (!recruitmentResult || recruitmentResult.length === 0) {
       console.warn("No recruitment found with slug:", slug);
