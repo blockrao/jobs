@@ -11,6 +11,7 @@
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
+import { recruitmentHubCanonicalPath } from "@/lib/canonical-job-routes";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
@@ -129,15 +130,21 @@ export async function generateMetadata({
     ? `${metaVacancies.toLocaleString("en-IN")} vacancies · ${recruitment.name} on JobOye`
     : `${recruitment.name} on JobOye`;
 
+  // Recruitment URLs are transitional hubs, not canonical public projections.
+  // Canonicalize to a role hub only when every linked Post has the same Position;
+  // otherwise keep a noindex self-canonical rather than choosing an unrelated role.
+  const canonicalPath = recruitmentHubCanonicalPath(recruitment, recruitmentData.posts)
+    ?? `/jobs/${recruitment.slug}`;
+
   return {
     title: recruitment.name,
     description,
-    ...pageSeo(`/jobs/${recruitment.slug}`),
+    ...pageSeo(canonicalPath, { index: false }),
     openGraph: {
       title: recruitment.name,
       description: ogDescription,
       type: "website",
-      url: `https://www.joboye.com/jobs/${recruitment.slug}`,
+      url: `https://www.joboye.com${canonicalPath}`,
     },
   };
 }
