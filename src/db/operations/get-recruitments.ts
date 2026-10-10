@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects } from "../schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 /**
  * Get recruitment by slug
@@ -223,7 +223,8 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
     }
 
-    // Step 5: Enrich posts with their vacancies and eligibilities
+    // Enrich posts with linked FreeJobAlert source inventory for the recruitment hub.
+    // This is read-only and preserves the source's current verification status.
     const enrichedPosts = postsResult.map((row) => ({
       ...row.post,
       position: row.position,
@@ -231,9 +232,32 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
     }));
 
+    const inventoryResult = await db.execute(sql`
+      SELECT id, external_id, qualification_raw, experience_raw, age_limit_raw,
+        age_reference_date_raw, age_relaxation_rules_raw, salary_raw, pay_level_raw,
+        employment_type_raw, tenure_raw, location_raw, duties_responsibilities_raw,
+        eligibility_conditions_raw, vacancy_count_raw, milestones_raw,
+        application_selection_raw, other_info_raw, extraction_status,
+        official_verification_status, source_slug, updated_at
+      FROM fja_post_inventory
+      WHERE source_slug = 'freejobalert'
+        AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
+      ORDER BY id
+    `);
+    const inventoryRows = ((inventoryResult as any).rows ?? inventoryResult) as any[];
+    const inventoryByPostId = new Map<number, any>();
+    for (const item of inventoryRows) {
+      const postId = Number(item.other_info_raw?.canonical_post_id);
+      if (Number.isFinite(postId)) inventoryByPostId.set(postId, item);
+    }
+    const postsWithInventory = enrichedPosts.map((post) => ({
+      ...post,
+      fjaInventory: inventoryByPostId.get(post.id) ?? null,
+    }));
+
     return {
       recruitment,
-      posts: enrichedPosts,
+      posts: postsWithInventory,
       totalPosts: enrichedPosts.length,
       isSingleJobRecruitment: enrichedPosts.length === 1,
     };
