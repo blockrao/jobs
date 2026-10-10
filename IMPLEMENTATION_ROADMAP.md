@@ -356,3 +356,87 @@ All sprints complete when:
 - **Weekly**: Monitor orphaned postings; adjust inference confidence thresholds
 - **Monthly**: Update recruitment statuses (ACTIVE → RESULTS); refresh positions data
 - **Quarterly**: Add new exams/organizations; expand position coverage
+
+
+---
+
+# Production Hardening & Scale Readiness (Added 2026-10-10)
+
+This programme is additive to the frozen Recruitment → Post → Position model. It does not authorize a broad rewrite, unreviewed production database changes, weakening CI gates, or expanding locale middleware before route ownership is explicit.
+
+## Product architecture principles
+
+- **Correctness before scale:** canonical entities, route ownership, metadata and ingestion identity must be correct before increasing traffic or adding locale coverage.
+- **Evidence before optimization:** capture route/query/cache baselines; use traces, query plans and load tests to select optimizations.
+- **Fail safely:** bound external/database waits, avoid unbounded retries, preserve useful public pages during optional-service failures, and expose failures to operators.
+- **One source of truth:** shared canonical/SEO policy, shared locale route classifier, canonical schema definitions, and explicit source provenance.
+- **Small reversible changes:** one concern per PR, migration rollback plan, preview smoke tests and explicit rollback steps.
+- **No false green:** never swallow critical errors as successful empty output without monitoring; never claim readiness without current-deployment evidence.
+- **Multilingual by contract:** English remains unprefixed; Hindi uses `/hi`; URL determines locale; untranslated Hindi is reachable but noindex/follow and canonical to English; hreflang only for genuinely translated, indexable pairs.
+
+## Execution sequence and release gates
+
+### H0 — Close the current routing foundation (PR #32)
+- [ ] Keep PR #32 open until a current-head deployment/preview is available and verified.
+- [ ] Confirm CI architecture contracts and both TypeScript checks pass; diagnose lint failure without disabling rules or introducing new debt.
+- [ ] HTTP-smoke-test legacy Posting → canonical Post Leaf, legacy Recruitment redirects, mixed-role Recruitment noindex/canonical behavior, and supported `/hi` leaf routes.
+- [ ] Assert status, Location, canonical, robots, html lang, hreflang, structured data, and absence of duplicate JSON-LD.
+- [ ] Verify query strings, trailing slashes, invalid locale prefixes, unknown paths and redirect loops.
+- [ ] Do not merge on a stale preview or inferred behavior.
+
+### H1 — Root route ownership (issue #34)
+- [ ] Inventory indexed/linked legacy root exam-slug URLs.
+- [ ] Benchmark a narrow redirect-table/proxy approach; no database lookup for arbitrary root paths.
+- [ ] Add integration tests for known legacy slugs, unknown roots, `/hi`, `/en`, invalid prefixes and static assets.
+- [ ] Remove the legacy exam redirect's dependency on `[locale]` only after the replacement redirect is verified end-to-end.
+
+### H2 — Route-family Hindi coverage (issue #33)
+- [ ] Maintain an explicit route matrix: owner, translation readiness, canonical, robots, hreflang, structured data and sitemap policy.
+- [ ] Ship one page-family batch at a time; do not broaden middleware globally.
+- [ ] Test direct navigation, internal links, language switching, query strings and trailing slashes.
+- [ ] Ensure `/en` never appears in canonical URLs, hreflang or sitemap; add reciprocal hreflang only for truly translated/indexable pairs.
+
+### H3 — Database and request-path resilience
+- [ ] Inventory hot routes and their queries; collect p50/p95/p99 latency and query-count baselines.
+- [ ] Verify serverless connection/pooler limits, connection and query timeouts, idle cleanup, and bounded concurrency.
+- [ ] Review indexes with query plans and production-safe evidence before migration.
+- [ ] Remove N+1 access patterns and unsafe data-boundary casts where evidence supports it.
+- [ ] Bound retries and degrade only optional data; critical failures must be observable.
+- [ ] Review admin auth, ingestion validation, least privilege/RLS, secret handling, abuse controls and dependency advisories.
+
+### H4 — Rendering, cache and CDN
+- [ ] Classify each page family as static, ISR, dynamic or no-store and document freshness requirements.
+- [ ] Reproduce the Post Leaf stale-404 case before changing current no-store headers.
+- [ ] Define cache key, TTL, invalidation and stale-content policy; verify actual response headers on the deployed platform.
+- [ ] Preserve correct redirects, freshness and error behavior while reducing avoidable origin/database requests.
+
+### H5 — Observability and operations
+- [ ] Add structured request/error logs with request correlation; do not log secrets or sensitive data.
+- [ ] Measure route latency, DB latency, 4xx/5xx, cache hit rate, ingestion freshness and ingestion-quality metrics.
+- [ ] Add uptime/route smoke checks and actionable alerts with documented response instructions.
+- [ ] Document environment validation, health checks, deploy rollback, database backup and restore verification.
+- [ ] Make sitemap query failures visible and monitor sitemap URL counts/completeness; avoid silent empty sitemap success.
+
+### H6 — Performance and capacity proof
+- [ ] Establish production baseline for TTFB, Core Web Vitals, build/client bundle size, route p75/p95, query p95 and cache hit ratio.
+- [ ] Set explicit budgets after baseline collection; target p95 under 2 seconds for canonical hubs as an initial objective, subject to measurement.
+- [ ] Load-test realistic mixes of listing, search, Post Leaf and Recruitment/Position pages at expected peak concurrency.
+- [ ] Test degraded DB/network behavior, cold starts and cache misses; document safe capacity and bottlenecks.
+- [ ] Optimize based on evidence and rerun the same benchmark after each material change.
+
+## Definition of done for production hardening
+
+- All critical/high findings have evidence, a tracked remediation and a rollback plan.
+- Route/SEO/entity contract suites, application and test type-checks, lint policy and production build are green.
+- Current-head preview passes route/header smoke tests; no known critical redirect, canonical or leaf-render failure.
+- Query and cache behavior has measured baselines; capacity claims are backed by load-test results.
+- Ingestion/provenance and sitemap health are observable; operational alerts and recovery procedures are tested.
+- No production schema/data mutation occurs without reviewed migration and rollback instructions.
+- Issues #32/#34/#33 remain in dependency order; the multilingual rollout is not used to bypass unresolved routing foundations.
+
+## Active tracking
+
+- PR #32: canonical Post Leaf and locale route-dispatch foundation — finish verification before merge.
+- Issue #34: decouple legacy root exam redirects from the `[locale]` route segment.
+- Issue #33: explicit route-family matrix and phased `/hi` rollout.
+- Issue #36: production hardening audit — database, cache, performance, resilience, security and observability.
