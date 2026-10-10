@@ -11,6 +11,7 @@ const RUN_ID = `fja-${new Date().toISOString().replace(/[:.]/g, "-")}`;
 const OUT = process.env.FJA_OUT_DIR ?? "artifacts/fja";
 const MAX_PAGES = Number(process.env.FJA_MAX_PAGES ?? 1200);
 const CONCURRENCY = Number(process.env.FJA_CONCURRENCY ?? 4);
+const RUN_MODE = process.env.FJA_RUN_MODE ?? "pilot";
 const PILOT_URLS = (process.env.FJA_PILOT_URLS ?? "").split(",").map((url) => url.trim()).filter(Boolean);
 const USER_AGENT = "JobOye-FJA-Inventory/1.0 (+https://joboye.com; inventory contact)";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -174,6 +175,8 @@ async function crawlSitemaps(): Promise<string[]> {
 }
 async function main() {
   if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
+  if (RUN_MODE === "pilot" && PILOT_URLS.length === 0) throw new Error("Pilot mode requires FJA_PILOT_URLS; refusing to fall back to broad crawl.");
+  if (RUN_MODE !== "pilot" && RUN_MODE !== "full") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
   const db = postgres(process.env.DATABASE_URL,{max:4,ssl:"require",connect_timeout:20});
   const startedAt = new Date().toISOString();
   const listingPages = [`${BASE}/`,`${BASE}/latest-notifications/`,`${BASE}/government-jobs/`];
