@@ -192,6 +192,40 @@ function PostStatusBadge({ post, appEndDate }: { post: any; appEndDate?: any }) 
   return null;
 }
 
+// Database-complete renderer: every key returned by the loader is represented,
+// including nullable fields and nested JSON/relations.
+function formatRecordValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Not populated';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.length ? JSON.stringify(value, null, 2) : 'Empty array';
+  if (typeof value === 'object') return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
+function RecordFieldGrid({ title, record }: { title: string; record: unknown }) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+  const entries = Object.entries(record as Record<string, unknown>);
+  return (
+    <details className="rounded-xl border border-gray-200 bg-white">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+        {title} <span className="ml-2 text-xs font-normal text-gray-500">{entries.length} fields</span>
+      </summary>
+      <div className="grid grid-cols-1 gap-2 border-t border-gray-100 p-4 md:grid-cols-2">
+        {entries.map(([key, value]) => (
+          <div key={key} className="min-w-0 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <div className="mb-1 break-words text-xs font-semibold text-gray-500">{key}</div>
+            {typeof value === 'string' && /^https?:\/\//i.test(value) ? (
+              <a href={value} target="_blank" rel="noopener noreferrer" className="break-all text-sm text-blue-700 hover:underline">{value}</a>
+            ) : (
+              <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 font-sans">{formatRecordValue(value)}</pre>
+            )}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -809,6 +843,26 @@ export default function RecruitmentHub({
               {recruitment.metadata && <details className="rounded-lg border border-gray-200 p-3"><summary className="cursor-pointer text-sm font-semibold text-gray-800">Additional recruitment metadata</summary><pre className="mt-3 text-xs text-gray-700 whitespace-pre-wrap break-words overflow-x-auto">{JSON.stringify(recruitment.metadata, null, 2)}</pre></details>}
             </div>
           )}
+        </section>
+
+        <section className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 md:p-6 space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Database Field Coverage</h2>
+            <p className="mt-1 text-sm text-gray-600">Audit view of every field returned for this recruitment and its related records. Empty values are labelled “Not populated”; nested JSON is shown as readable data. This is separate from candidate-facing summary content.</p>
+          </div>
+          <RecordFieldGrid title="Recruitment — all returned database columns" record={recruitment} />
+          <RecordFieldGrid title="Organization — linked record" record={recruitment.organization ?? recruitment.organizationRecord ?? null} />
+          <RecordFieldGrid title="Recruitment metadata — complete object" record={recruitment.metadata ?? null} />
+          {posts.map((post: Record<string, unknown> & { id: number; fjaInventory?: Record<string, unknown> | null; position?: Record<string, unknown> | null; vacancies?: unknown[]; eligibilities?: unknown[] }) => (
+            <div key={post.id} className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 md:p-4">
+              <h3 className="text-sm font-bold text-gray-900">Post #{post.id}: {String(post.name ?? post.slug ?? 'Untitled post')}</h3>
+              <RecordFieldGrid title="Post — all returned database columns" record={post} />
+              <RecordFieldGrid title="Position — linked record" record={post.position ?? null} />
+              <RecordFieldGrid title="Vacancy rows — all columns" record={{ rows: post.vacancies ?? [] }} />
+              <RecordFieldGrid title="Eligibility rows — all columns" record={{ rows: post.eligibilities ?? [] }} />
+              <RecordFieldGrid title="FreeJobAlert source inventory — all columns" record={post.fjaInventory ?? null} />
+            </div>
+          ))}
         </section>
 
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
