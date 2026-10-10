@@ -20,7 +20,7 @@ function collectPublicUiSources(directory: string): string[] {
       if (entry === "api" || entry === "admin" || entry === "__tests__") return [];
       return collectPublicUiSources(path);
     }
-    return /\\.(tsx?|jsx?|css|mdx?)$/i.test(path) ? [path] : [];
+    return /\.(tsx?|jsx?|css|mdx?)$/i.test(path) ? [path] : [];
   });
 }
 
@@ -39,7 +39,7 @@ describe("candidate-facing Recruitment and Post UI", () => {
       ...collectPublicUiSources("src/components"),
       ...collectPublicUiSources("src/content"),
     ];
-    const prohibited = /free\\s*job\\s*alert|freejobalert\\.com|\\bfja\\b/i;
+    const prohibited = /free\s*job\s*alert|freejobalert\.com|\bfja\b/i;
     const matches = publicSources.flatMap((path) => {
       const source = readFileSync(path, "utf8");
       return prohibited.test(source) ? [path] : [];
@@ -49,7 +49,7 @@ describe("candidate-facing Recruitment and Post UI", () => {
 
   test("candidate-facing Recruitment and Post components contain no source-aggregator branding", () => {
     for (const source of [recruitmentHub, postLeaf]) {
-      expect(source).not.toMatch(/free\\s*job\\s*alert|freejobalert|\\bfja\\b/i);
+      expect(source).not.toMatch(/free\s*job\s*alert|freejobalert|\bfja\b/i);
       expect(source).not.toContain("source extraction is not an official confirmation");
       expect(source).not.toContain("All Posts — Detailed Comparison");
     }
