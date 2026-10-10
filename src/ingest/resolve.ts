@@ -13,7 +13,7 @@
  * and stays where it is in the writer.
  */
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
@@ -156,6 +156,21 @@ export async function resolveRecruitment(
       ),
     });
     if (existing) return { id: existing.id, created: false };
+
+    // Older rows may still store the source's raw label (for example,
+    // "Advt. No. 17/2026"). Compare normalized values within this organization
+    // before creating a new row, otherwise normalization alone can duplicate
+    // an entity that predates this resolver.
+    const organizationRecruitments = await db.query.recruitments.findMany({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        isNotNull(recruitments.officialNotificationNumber),
+      ),
+    });
+    const normalizedMatch = organizationRecruitments.find(
+      (row) => normalizeAdvertisementNumber(row.officialNotificationNumber) === notificationNumber,
+    );
+    if (normalizedMatch) return { id: normalizedMatch.id, created: false };
   }
 
   // Fallback: organization + exam + year, narrowed further by title
