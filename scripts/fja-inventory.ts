@@ -200,8 +200,8 @@ async function main() {
           const href=$(a).attr("href"); if(!href)return;
           try {
             const next=new URL(href,url);
-            if(next.hostname.replace(/^www\\./,"")!=="freejobalert.com")return;
-            if(/\\/articles\\//i.test(next.pathname))return;
+            if(next.hostname.replace(/^www\./,"")!=="freejobalert.com")return;
+            if(/\/articles\//i.test(next.pathname))return;
             const isPagination=/page|older|next|load-more|latest-notifications|government-jobs|category|jobs/i.test((collapse($(a).text())+" "+next.pathname));
             if(isPagination && (next.pathname!=="/" || next.search) && !visitedPages.has(next.toString()) && pageQueue.length<MAX_PAGES) pageQueue.push(next.toString());
           } catch {}
