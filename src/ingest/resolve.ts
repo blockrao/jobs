@@ -141,13 +141,17 @@ export async function resolveRecruitment(
   identity: RecruitmentIdentity,
   slug: string,
 ): Promise<ResolvedRecruitment> {
+  // Normalize before lookup and persistence so equivalent source formats
+  // (for example, "Advt. No. 17/2026" and "17/2026") share one identity key.
+  const notificationNumber = normalizeAdvertisementNumber(identity.officialNotificationNumber);
+
   // Strong key: organization + official notification number. Enforced
   // unique at the DB level (recruitments_org_notification_idx).
-  if (identity.officialNotificationNumber) {
+  if (notificationNumber) {
     const existing = await db.query.recruitments.findFirst({
       where: and(
         eq(recruitments.organizationId, identity.organizationId),
-        eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+        eq(recruitments.officialNotificationNumber, notificationNumber),
       ),
     });
     if (existing) return { id: existing.id, created: false };
@@ -196,7 +200,7 @@ export async function resolveRecruitment(
       year: finalYear,
       name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
       slug: finalSlug,
-      officialNotificationNumber: identity.officialNotificationNumber,
+      officialNotificationNumber: notificationNumber,
       applicationStartDate: identity.applicationStartDate ?? null,
       applicationEndDate: identity.applicationEndDate ?? null,
     })
@@ -207,11 +211,11 @@ export async function resolveRecruitment(
 
   // A slug collision is not proof that this is the same Recruitment. Resolve
   // a concurrent insert only through domain identity keys, never the URL slug.
-  if (identity.officialNotificationNumber) {
+  if (notificationNumber) {
     const byNotification = await db.query.recruitments.findFirst({
       where: and(
         eq(recruitments.organizationId, identity.organizationId),
-        eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+        eq(recruitments.officialNotificationNumber, notificationNumber),
       ),
     });
     if (byNotification) return { id: byNotification.id, created: false };
