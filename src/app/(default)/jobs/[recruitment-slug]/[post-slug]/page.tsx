@@ -14,6 +14,7 @@
  */
 
 import { notFound } from "next/navigation";
+import { pageSeo } from "@/lib/seo";
 import { cache } from "react";
 import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
@@ -138,9 +139,7 @@ export async function generateMetadata({
   return {
     title: `${post.title} - ${post.organizationName}`,
     description,
-    alternates: {
-      canonical: `/jobs/${post.recruitmentSlug}/${post.slug}`,
-    },
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`),
     openGraph: {
       title: post.title,
       description: ogDescription,

@@ -73,10 +73,13 @@ export function noindexRobots(): Metadata["robots"] {
 }
 
 /** A single-language page at a fixed path (hub, static page, detail page). */
-export function pageSeo(path: string, opts: { index?: boolean } = {}): Seo {
+export function pageSeo(path: string, opts: { index?: boolean; noarchive?: boolean } = {}): Seo {
+  const robots = opts.index === false
+    ? { ...NOINDEX_FOLLOW, ...(opts.noarchive ? { noarchive: true } : {}) }
+    : undefined;
   return {
     alternates: { canonical: path },
-    robots: opts.index === false ? NOINDEX_FOLLOW : undefined,
+    robots,
   };
 }
 

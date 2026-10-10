@@ -1,5 +1,32 @@
 # Implementation Roadmap: Graph Model & Canonical Hubs
 
+> **Current architecture addendum — 2026-10-10 (supersedes the legacy URL examples below where they conflict)**
+>
+> The roadmap below records the original graph-model implementation plan. Current public URL ownership is governed by the frozen Recruitment → Post architecture and `docs/architecture/SEO001_PUBLIC_REPRESENTATION.md`, plus `docs/architecture/ADR_JOB_ROUTE_LOCALE_DISPATCH.md`.
+>
+> - `/posts/[slug]`: primary role/Position discovery hub.
+> - `/jobs/[recruitment-slug]/[post-slug]`: canonical individual Post Leaf, indexable only under the current content/SEO policy.
+> - `/jobs/[recruitment-slug]`: transitional Recruitment hub; `noindex, follow`; canonical to the matching `/posts/[position-slug]` only when the Recruitment maps unambiguously to one Position.
+> - Legacy flat Posting URLs at `/jobs/[posting-slug]`: permanently redirect to the canonical Post Leaf when the canonical Recruitment → Post relationship is known.
+> - `/hi` routes must follow the same entity/route contract. Untranslated Hindi remains reachable but noindex, canonical to English, and without hreflang until genuine translated content exists. Do not let middleware silently remove the locale from a valid two-segment Post Leaf URL.
+> - The middleware route classifier and language switcher share `src/i18n/locale-aware-paths.ts`; add each route family to this central contract only when the corresponding localized route exists. Full `/hi` coverage across all page families is tracked in GitHub issue #33. The root-level legacy exam redirect's dependency on the `[locale]` segment is separately tracked in issue #34; resolve it after the current Post Leaf routing fix is preview-verified and before broad locale expansion.
+>
+> **Current work (PR #32):** route classifier, canonical route helpers, one-segment compatibility dispatch, hub noindex/canonical metadata, regression tests, and the ADR are implemented on the branch. Remaining gates: latest CI, fresh Vercel preview, HTTP redirect/canonical/lang/structured-data verification, and the existing lint release gate. Do not merge or promote until these gates pass.
+
+> **Locale coverage decision — 2026-10-10:** Treat multilingual support as a site-wide route contract, not a collection of ad-hoc `/hi` exceptions. Route-family inventory: `docs/architecture/LOCALE_ROUTE_MATRIX.md`. Tracked implementation issue: [#33](https://github.com/blockrao/jobs/issues/33). The current tree does **not** support every page family under `/hi`: for example, `/hi/news`, `/hi/search`, `/hi/categories`, `/hi/states`, `/hi/posts`, and several static pages have no corresponding locale route and are currently redirected back to the unprefixed path by `src/proxy.ts`. That behavior is a compatibility fallback, not full Hindi support. Do not claim site-wide multilingual readiness until route coverage is implemented and verified.
+
+> **Required locale rollout (track as one programme with route-family sub-tasks):**
+> 1. Inventory every public route family and mark it `localized + translated`, `localized with English fallback + noindex`, `English-only canonical`, or `redirect/retired`.
+> 2. Refactor locale dispatch so the URL is authoritative (`/hi` remains `/hi`), while preserving the existing no Accept-Language redirects, admin protection, static/API exclusions, and legacy slug redirects. Avoid a generic catch-all that silently renders the wrong page or strips `/hi`.
+> 3. Add `/hi` route counterparts for all intended public families, reusing shared page/data components rather than maintaining divergent copies. Prioritize home, jobs/search/listings, posts/Position hubs, exams, organizations, articles, commissions, states, categories, and static information pages.
+> 4. Centralize page language, canonical, robots and hreflang decisions. English fallback under `/hi` stays reachable but noindex/canonical-to-English until real translated content exists; only genuinely translated and indexable pairs get reciprocal hreflang.
+> 5. Test the route matrix and language switcher on every family, including direct loads, in-app navigation, query/filter variants, redirects, `html[lang]`, canonical, robots, hreflang, sitemap and structured data.
+> 6. Roll out in batches; no production promotion until a fresh preview passes the route matrix. Keep existing SEO-001 and canonical Post Leaf contracts intact.
+
+> **New defect fixed in branch:** the English `/jobs/[recruitment-slug]` route previously queried Recruitment only and returned 404 when given a legacy flat Posting slug. The locale one-segment page already tried both entities and redirected known Posting → Recruitment → Post relationships to the canonical Post Leaf. The default route now uses the same fallback. Legacy Recruitment redirects also preserve `/hi` and use permanent redirects.
+>
+> ---
+>
 ## Summary
 
 Transitioning from single-entity (postings) to multi-entity graph model with canonical hubs for Position, Exam, Recruitment, and Organization. Postings become data instances linking to normalized graph.

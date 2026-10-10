@@ -60,12 +60,25 @@ describe("listings and fixed pages", () => {
     const { readSource, stripComments } = await import("../helpers/source");
     for (const f of [
       "src/app/(default)/recruitments/page.tsx",
-      "src/app/(default)/recruitments/[slug]/page.tsx",
       "src/app/(default)/positions/page.tsx",
       "src/app/(default)/positions/[slug]/page.tsx",
     ]) {
       expect(stripComments(readSource(f)), f).toMatch(/pageSeo\([^)]*\{ index: false \}\)/);
     }
+
+    // This legacy endpoint is a redirect, not a rendered entity page; its
+    // indexability is determined by the /jobs/[slug] destination.
+    const redirectRoute = stripComments(readSource("src/app/(default)/recruitments/[slug]/page.tsx"));
+    expect(redirectRoute).toContain("permanentRedirect");
+    expect(redirectRoute).toContain("/jobs/${slug}");
+  });
+
+  test("JOB-LEGACY-01 English job compatibility route consolidates flat Posting URLs to Post Leaves", async () => {
+    const { readSource, stripComments } = await import("../helpers/source");
+    const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
+    expect(route).toContain("getPostingBySlugCached");
+    expect(route).toContain("canonicalPostLeafPath");
+    expect(route).toContain("permanentRedirect(canonicalLeaf)");
   });
 });
 

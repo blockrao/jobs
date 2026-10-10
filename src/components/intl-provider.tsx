@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import { IntlErrorCode, NextIntlClientProvider } from 'next-intl';
-import { Locale } from '@/i18n/request';
+import { Locale, getMessages } from '@/i18n/request';
 
 export function IntlProvider({
   children,
@@ -11,7 +11,7 @@ export function IntlProvider({
 }: {
   children: ReactNode;
   locale: Locale;
-  messages: Record<string, any>;
+  messages: Awaited<ReturnType<typeof getMessages>>;
 }) {
   return (
     <NextIntlClientProvider

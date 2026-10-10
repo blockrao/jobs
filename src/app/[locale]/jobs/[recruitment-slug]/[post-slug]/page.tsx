@@ -7,7 +7,7 @@
 import { Metadata } from "next";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
-import JobPostingStructuredData from "@/components/job-posting/structured-data/job-posting-schema";
+import { pageSeo } from "@/lib/seo";
 
 interface Props {
   params: Promise<{
@@ -36,13 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${title} - ${post.organizationName}`,
     description,
-    alternates: {
-      canonical: `/jobs/${recruitmentSlug}/${postSlug}`,
-      languages: {
-        en: `/jobs/${recruitmentSlug}/${postSlug}`,
-        hi: `/hi/jobs/${recruitmentSlug}/${postSlug}`,
-      },
-    },
+    // This route currently reuses English Post content; do not advertise it as a Hindi alternate.
+    ...pageSeo(`/jobs/${recruitmentSlug}/${postSlug}`, { index: false }),
     openGraph: {
       title: `${title} | ${post.organizationName}`,
       description,
@@ -73,7 +68,6 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   return (
     <>
-      <JobPostingStructuredData post={post} />
       <JobPostingPage post={post} locale={locale} />
     </>
   );

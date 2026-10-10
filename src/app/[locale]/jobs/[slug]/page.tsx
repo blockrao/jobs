@@ -2,11 +2,13 @@ import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/co
 import { buildCoreFaqs } from "@/lib/content/faq-gate";
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
-import { entitySeo } from "@/lib/seo";
+import { entitySeo, pageSeo } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/site";
+import { canonicalPostLeafPath, recruitmentHubCanonicalPath } from "@/lib/canonical-job-routes";
 import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getPostingBySlug, getPostingBySlugCached, getPostsForRecruitment } from "@/lib/queries";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
@@ -31,7 +33,6 @@ import {
   formatCurrencyRange,
   formatDate,
   formatFee,
-  vacanciesPhrase,
 } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
@@ -57,38 +58,44 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
 
-  // If this slug resolves to a recruitment hub, return hub-specific metadata
-  // so the canonical tag is correct. The page component makes the same check
-  // and renders RecruitmentHub; metadata must match.
-  if (locale !== "hi") {
-    const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
-    if (recruitmentData) {
-      const { recruitment, totalPosts } = recruitmentData;
-      return {
+  // Recruitment resolution has priority in every locale, matching the page
+  // body's dispatch. Recruitment hubs are transitional/noindex; when all linked
+  // Posts share one Position, canonicalize to that role hub. Never choose an
+  // arbitrary role for a mixed-role Recruitment.
+  const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  if (recruitmentData) {
+    const { recruitment, totalPosts, posts } = recruitmentData;
+    const canonicalPath = recruitmentHubCanonicalPath(recruitment, posts) ?? `/jobs/${recruitment.slug}`;
+    const description = `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`;
+    return {
+      title: recruitment.name,
+      description,
+      ...pageSeo(canonicalPath, { index: false }),
+      openGraph: {
         title: recruitment.name,
-        description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-        alternates: { canonical: `/jobs/${recruitment.slug}` },
-        openGraph: {
-          title: recruitment.name,
-          description: `${recruitment.name} recruitment on JobOye`,
-          type: "website",
-          url: `https://www.joboye.com/jobs/${recruitment.slug}`,
-        },
-      };
-    }
+        description: `${recruitment.name} recruitment on JobOye`,
+        type: "website",
+        url: absoluteUrl(canonicalPath),
+      },
+    };
   }
 
+  // A flat posting slug is a legacy address, not a second canonical job page.
+  // Send it to the canonical Recruitment → Post Leaf URL before metadata or
+  // body content can create a duplicate indexable representation.
   const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
   if (!posting) return {};
+  const canonicalLeaf = canonicalPostLeafPath(posting, locale);
+  if (canonicalLeaf) permanentRedirect(canonicalLeaf);
 
   const isHi = locale === "hi";
-  const titleHi = (posting as any).titleHi as string | null;
-  const descriptionHi = (posting as any).descriptionHi as string | null;
+  const titleHi = "titleHi" in posting ? posting.titleHi : null;
+  const descriptionHi = "descriptionHi" in posting ? posting.descriptionHi : null;
   const hasHindi = Boolean(titleHi);
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescriptionSource = isHi && descriptionHi ? descriptionHi : posting.description;
 
-  const orgNameHi = (posting.organization as any).nameHi as string | null;
+  const orgNameHi = posting.organization.nameHi as string | null;
   const title = composeJobMetaTitle(
     displayTitle,
     isHi && orgNameHi ? [orgNameHi, posting.organization.name] : [posting.organization.name]
@@ -140,7 +147,7 @@ function buildFaqs(
   displayEligibility: string | null,
 ) {
   // SEM-001: every FAQ is built from a validated field, or it is not built (see faq-gate.ts).
-  const extra = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
+  const extra = (posting.extraContent ?? null) as import("@/db/schema").ExtraContent | null;
   return buildCoreFaqs({
     isHi,
     displayTitle,
@@ -160,50 +167,46 @@ function buildFaqs(
 export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
 
-  // Route intelligently: if slug contains "/" it's a nested post slug, otherwise it's a recruitment
-  // This avoids expensive query attempts when we already know the structure
-  const isNestedSlug = slug.includes("/");
-
-  let posting = null;
-  let recruitmentData = null;
-
-  if (isNestedSlug) {
-    // Direct to posting for nested slugs like "recruitment-slug/post-slug"
-    posting = await safeQuery(() => getPostingBySlugCached(slug), null);
-    if (!posting) notFound();
-  } else {
-    // Try as recruitment hub first, then fall back to posting
-    recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
-    if (recruitmentData) {
-      return (
-        <>
-          <RecruitmentHubStructuredData
-            recruitment={recruitmentData.recruitment}
-            totalPosts={recruitmentData.totalPosts}
-          />
-          <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
-        </>
-      );
-    }
-
-    // Not a recruitment hub, try as a posting
-    posting = await safeQuery(() => getPostingBySlugCached(slug), null);
-    if (!posting) notFound();
+  // This route is the one-segment compatibility endpoint only. Canonical
+  // Post Leaves have their own two-segment route under [locale], so there is
+  // no meaningful nested-slug branch here.
+  const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  if (recruitmentData) {
+    return (
+      <>
+        <RecruitmentHubStructuredData
+          recruitment={recruitmentData.recruitment}
+          totalPosts={recruitmentData.totalPosts}
+        />
+        <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} locale={locale} />
+      </>
+    );
   }
 
-  const canonicalRecruitmentId = (posting as any).canonicalRecruitment?.id ?? null;
+  // Not a Recruitment: this is either a legacy flat Posting address or a
+  // genuine unlinked legacy page. Consolidate the former; render the latter
+  // only when no canonical entity relationship is available.
+  const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
+  if (!posting) notFound();
+
+  // Preserve the requested language prefix while permanently consolidating
+  // legacy flat posting URLs onto the canonical Post Leaf route.
+  const canonicalLeaf = canonicalPostLeafPath(posting, locale);
+  if (canonicalLeaf) permanentRedirect(canonicalLeaf);
+
+  const canonicalRecruitmentId = posting.canonicalRecruitment?.id ?? null;
   const siblingPosts = canonicalRecruitmentId
     ? await safeQuery(() => getPostsForRecruitment(canonicalRecruitmentId), [])
     : [];
 
   const isHi = locale === "hi";
   const dateLocale = isHi ? "hi-IN" : "en-IN";
-  const titleHi = (posting as any).titleHi as string | null;
-  const descriptionHi = (posting as any).descriptionHi as string | null;
-  const eligibilityHi = (posting as any).eligibilityHi as string | null;
-  const requirementsHi = (posting as any).requirementsHi as string | null;
-  const responsibilitiesHi = (posting as any).responsibilitiesHi as string | null;
-  const locationCityHi = (posting as any).locationCityHi as string | null;
+  const titleHi = posting.titleHi as string | null;
+  const descriptionHi = posting.descriptionHi as string | null;
+  const eligibilityHi = posting.eligibilityHi as string | null;
+  const requirementsHi = posting.requirementsHi as string | null;
+  const responsibilitiesHi = posting.responsibilitiesHi as string | null;
+  const locationCityHi = posting.locationCityHi as string | null;
 
   // Per-field fallback: show the Hindi text where it exists, English
   // otherwise — a posting can have a translated title but no translated
@@ -211,18 +214,18 @@ export default async function LocaleJobPage({ params }: Props) {
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescription = isHi && descriptionHi ? descriptionHi : posting.description;
   const displayEligibility = isHi && eligibilityHi ? eligibilityHi : posting.eligibility;
-  const extraContent = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
+  const extraContent = (posting.extraContent ?? null) as import("@/db/schema").ExtraContent | null;
   const displayRequirements = isHi && requirementsHi ? requirementsHi : posting.requirements;
   const displayResponsibilities =
     isHi && responsibilitiesHi ? responsibilitiesHi : posting.responsibilities;
   const displayLocationCity = isHi && locationCityHi ? locationCityHi : posting.locationCity;
 
   const org = posting.organization;
-  const orgNameHi = (org as any).nameHi as string | null;
+  const orgNameHi = org.nameHi as string | null;
   const displayOrgName = isHi && orgNameHi ? orgNameHi : org.name;
   // Only link into the Hindi org page when it actually has Hindi content.
-  const orgHref = isHi && orgNameHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
-  const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
+  const orgHref = isHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
+  const stateHub = getStateBySlug((posting.stateSlug as string | null) ?? "");
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting, isHi, displayTitle, displayOrgName, displayEligibility);
   // Notice-specific FAQs and a minimal timeline are derived from the stored facts at render time
@@ -354,7 +357,7 @@ export default async function LocaleJobPage({ params }: Props) {
         /{" "}
         {posting.canonicalPosition && (
           <>
-            <Link href={`/positions/${posting.canonicalPosition.slug}`} className="hover:underline">
+            <Link href={`${isHi ? "/hi" : ""}/positions/${posting.canonicalPosition.slug}`} className="hover:underline">
               {posting.canonicalPosition.name}
             </Link>
             {" / "}
@@ -362,7 +365,7 @@ export default async function LocaleJobPage({ params }: Props) {
         )}
         {posting.canonicalRecruitment && (
           <>
-            <Link href={`/jobs/${posting.canonicalRecruitment.slug}`} className="hover:underline">
+            <Link href={`${isHi ? "/hi" : ""}/jobs/${posting.canonicalRecruitment.slug}`} className="hover:underline">
               {posting.canonicalRecruitment.name}
             </Link>
             {" / "}
@@ -571,7 +574,7 @@ export default async function LocaleJobPage({ params }: Props) {
             {posting.canonicalPosition && (
               <InfoCard
                 tone="brand"
-                href={`/positions/${posting.canonicalPosition.slug}`}
+                href={`${isHi ? "/hi" : ""}/positions/${posting.canonicalPosition.slug}`}
                 title={posting.canonicalPosition.name}
                 subtitle={L.viewPositionHub}
               />
@@ -580,7 +583,7 @@ export default async function LocaleJobPage({ params }: Props) {
             {posting.canonicalRecruitment && (
               <InfoCard
                 tone="success"
-                href={`/jobs/${posting.canonicalRecruitment.slug}`}
+                href={`${isHi ? "/hi" : ""}/jobs/${posting.canonicalRecruitment.slug}`}
                 title={posting.canonicalRecruitment.name}
                 subtitle={L.viewRecruitmentHub}
               />
@@ -760,7 +763,7 @@ export default async function LocaleJobPage({ params }: Props) {
             <Link href="/contact" className="underline hover:text-neutral-600">
               Report it
             </Link>
-            {" "}and we'll fix it.
+            {" "}and we&apos;ll fix it.
           </>
         )}
       </p>

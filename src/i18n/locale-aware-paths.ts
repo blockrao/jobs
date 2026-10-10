@@ -13,10 +13,11 @@
 // redirects).
 
 // Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4
-// NOTE: /jobs/ is special — only single-slug paths (/jobs/[slug]) have a
-// [locale] counterpart. Post leaf pages (/jobs/[slug]/[post-slug]) only
-// exist in (default) and must NOT pass through next-intl's middleware.
-// That special case is handled explicitly in isLocaleAwarePath below.
+// /jobs/ has two real locale-aware shapes: the legacy one-segment route
+// (/jobs/[slug]) and the canonical Post Leaf route
+// (/jobs/[recruitment-slug]/[post-slug]). Keep this classifier aligned with
+// the actual route tree; excluding the leaf here makes /hi Post Leaf URLs
+// unreachable and also breaks the language switcher.
 export const LOCALE_AWARE_PREFIXES = [
   '/articles/',
   '/exams/',
@@ -58,13 +59,14 @@ export function isLocaleAwarePath(pathname: string): boolean {
   // locale-aware job detail page, which cannot resolve the preview fixture.
   if (stripped === '/jobs/jkssb-advertisement-08-of-2026') return false;
 
-  // /jobs/[slug] — locale-aware (src/app/[locale]/jobs/[slug]/page.tsx exists)
-  // /jobs/[slug]/[post-slug] — NOT locale-aware (only in (default) tree)
-  // Distinguish by counting segments after /jobs/: exactly one → locale-aware.
+  // Both concrete job-detail route shapes exist below [locale]:
+  // /jobs/[slug] and /jobs/[recruitment-slug]/[post-slug].
+  // Match exactly one or two path segments; do not accidentally route deeper
+  // unknown paths through next-intl.
   if (stripped.startsWith('/jobs/')) {
-    const afterPrefix = stripped.slice('/jobs/'.length); // e.g. "bpsc-tre-4" or "bpsc-tre-4/some-post"
-    if (afterPrefix.length > 0 && !afterPrefix.includes('/')) return true;
-    // Two or more segments (post leaf): fall through, not locale-aware.
+    const afterPrefix = stripped.slice('/jobs/'.length);
+    const segments = afterPrefix.split('/').filter(Boolean);
+    if (segments.length === 1 || segments.length === 2) return true;
   }
 
   // Entity prefixes: require a slug after the prefix (same rule as above).

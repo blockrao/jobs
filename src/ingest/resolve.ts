@@ -13,7 +13,7 @@
  * and stays where it is in the writer.
  */
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
@@ -42,11 +42,13 @@ export interface RecruitmentIdentity {
  */
 export function normalizeAdvertisementNumber(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let v = raw
+  const v = raw
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/^(advertisement|advt|notification|notice|ref)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
-    .trim();
+    .replace(/^(advertisement|advt|notification|notice|ref|no)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
+    .trim()
+    .replace(/\s*([/.-])\s*/g, "$1")
+    .toUpperCase();
   if (v.length < 3 || v.length > 200) return null;
   if (!/\d/.test(v)) return null;
   return v;
@@ -139,18 +141,36 @@ const POST_NAME_MAX_LENGTH = 200;
 export async function resolveRecruitment(
   db: Db,
   identity: RecruitmentIdentity,
-  slug: string,
 ): Promise<ResolvedRecruitment> {
+  // Normalize before lookup and persistence so equivalent source formats
+  // (for example, "Advt. No. 17/2026" and "17/2026") share one identity key.
+  const notificationNumber = normalizeAdvertisementNumber(identity.officialNotificationNumber);
+
   // Strong key: organization + official notification number. Enforced
   // unique at the DB level (recruitments_org_notification_idx).
-  if (identity.officialNotificationNumber) {
+  if (notificationNumber) {
     const existing = await db.query.recruitments.findFirst({
       where: and(
         eq(recruitments.organizationId, identity.organizationId),
-        eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+        eq(recruitments.officialNotificationNumber, notificationNumber),
       ),
     });
     if (existing) return { id: existing.id, created: false };
+
+    // Older rows may still store the source's raw label (for example,
+    // "Advt. No. 17/2026"). Compare normalized values within this organization
+    // before creating a new row, otherwise normalization alone can duplicate
+    // an entity that predates this resolver.
+    const organizationRecruitments = await db.query.recruitments.findMany({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        isNotNull(recruitments.officialNotificationNumber),
+      ),
+    });
+    const normalizedMatch = organizationRecruitments.find(
+      (row) => normalizeAdvertisementNumber(row.officialNotificationNumber) === notificationNumber,
+    );
+    if (normalizedMatch) return { id: normalizedMatch.id, created: false };
   }
 
   // Fallback: organization + exam + year, narrowed further by title
@@ -196,24 +216,46 @@ export async function resolveRecruitment(
       year: finalYear,
       name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
       slug: finalSlug,
-      officialNotificationNumber: identity.officialNotificationNumber,
+      officialNotificationNumber: notificationNumber,
       applicationStartDate: identity.applicationStartDate ?? null,
       applicationEndDate: identity.applicationEndDate ?? null,
     })
-    .onConflictDoNothing({ target: recruitments.slug })
+    .onConflictDoNothing()
     .returning({ id: recruitments.id });
 
   if (created) return { id: created.id, created: true };
 
-  const existingBySlug = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, finalSlug),
-  });
-  if (existingBySlug) return { id: existingBySlug.id, created: false };
+  // A slug collision is not proof that this is the same Recruitment. Resolve
+  // a concurrent insert only through domain identity keys, never the URL slug.
+  if (notificationNumber) {
+    const byNotification = await db.query.recruitments.findFirst({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.officialNotificationNumber, notificationNumber),
+      ),
+    });
+    if (byNotification) return { id: byNotification.id, created: false };
+  }
 
-  // Insert raced and lost, but the winning row isn't visible yet (unlikely
-  // outside real concurrency) — surface clearly rather than silently
-  // returning a bogus id.
-  throw new Error(`resolveRecruitment: slug "${finalSlug}" conflicted but no row found`);
+  if (identity.examId && identity.year) {
+    const candidates = await db.query.recruitments.findMany({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.examId, identity.examId),
+        eq(recruitments.year, identity.year),
+      ),
+    });
+    const best = candidates
+      .map((c) => ({ c, score: titleSimilarity(c.name, identity.title) }))
+      .sort((a, b) => b.score - a.score)[0];
+    if (best && best.score >= FALLBACK_SIMILARITY_THRESHOLD) {
+      return { id: best.c.id, created: false };
+    }
+  }
+
+  // A unique-key race occurred, but no row matched the Recruitment identity.
+  // Fail explicitly rather than attaching the source to an unrelated entity.
+  throw new Error("resolveRecruitment: insert conflicted for " + finalSlug + " but no identity match was found");
 }
 
 export interface PostIdentity {

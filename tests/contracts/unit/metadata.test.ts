@@ -14,9 +14,17 @@ const getArticleBySlug = vi.fn();
 const getOrganizationBySlug = vi.fn();
 const getExamBySlug = vi.fn();
 
+vi.mock("@/db/operations/get-recruitments", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getRecruitmentWithPostsCached: async () => null,
+}));
 vi.mock("@/lib/queries", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getPostingBySlug: (...a: unknown[]) => getPostingBySlug(...a),
+  // Keep recruitment-hub resolution out of posting metadata fixtures.
+  getRecruitmentWithPostsCached: async () => null,
+  // The localized job route uses the cached variant in generateMetadata.
+  getPostingBySlugCached: (...a: unknown[]) => getPostingBySlug(...a),
   getArticleBySlug: (...a: unknown[]) => getArticleBySlug(...a),
 }));
 vi.mock("@/db/operations/get-organizations", async (importOriginal) => ({
@@ -175,9 +183,9 @@ describe("job page quality gate", () => {
       id: 2,
       slug: "thin",
       title: "Thin posting",
-      titleHi: "पतली पोस्टिंग",
+      titleHi: null,
       description: "x",
-      descriptionHi: "x",
+      descriptionHi: null,
       indexTier: "B",
       organization: { name: "Sample Org" },
     });

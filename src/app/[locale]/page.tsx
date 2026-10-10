@@ -1,5 +1,6 @@
-import { permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { listCommissionsWithExams } from "@/lib/queries";
+import { getExamBySlug } from "@/db/operations/get-exams";
 
 // This file lives at src/app/[locale]/page.tsx — i.e. it shares a folder
 // (and therefore Next's dynamic-segment name, "locale") with layout.tsx and
@@ -52,8 +53,14 @@ export async function generateStaticParams() {
 
 export default async function LegacyExamRedirect({ params }: Props) {
   const { locale: examSlug } = await params;
-  // Unknown slugs redirect too — /exams/[slug] is responsible for 404ing
-  // those (via notFound()), so there's no need to look the exam up twice
-  // here just to decide whether to redirect.
+
+  // The segment is also used by the locale root route tree. Only known legacy
+  // exam slugs may redirect; arbitrary unknown paths should remain real 404s
+  // instead of creating redirect chains to another 404.
+  // A genuine missing row is a 404. Database/connection errors must
+  // propagate as server errors so monitoring can detect an outage; do not
+  // disguise infrastructure failures as a missing exam.
+  const exam = await getExamBySlug(examSlug);
+  if (!exam) notFound();
   permanentRedirect(`/exams/${examSlug}`);
 }

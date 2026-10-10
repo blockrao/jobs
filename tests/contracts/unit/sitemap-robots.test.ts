@@ -11,6 +11,7 @@ const rows = {
   categories: [] as unknown[],
   organizations: [] as unknown[],
   exams: [] as unknown[],
+  postLeaves: [] as unknown[],
 };
 
 vi.mock("@/lib/queries", async (importOriginal) => ({
@@ -20,6 +21,8 @@ vi.mock("@/lib/queries", async (importOriginal) => ({
   getAllCategorySlugsForSitemap: async () => rows.categories,
   getAllOrganizationSlugsForSitemap: async () => rows.organizations,
   getAllExamSlugsForSitemap: async () => rows.exams,
+  getPostSlugsForSitemap: async () => rows.postLeaves,
+  listCommissionsWithExams: async () => [],
 }));
 
 const now = new Date("2026-10-01T00:00:00Z");
@@ -38,6 +41,9 @@ beforeEach(() => {
   rows.exams = [
     { slug: "exam-translated", labelHi: "परीक्षा" },
     { slug: "exam-english-only", labelHi: null },
+  ];
+  rows.postLeaves = [
+    { recruitmentSlug: "sample-recruitment-2026-01", postSlug: "project-nurse-iii", lastModified: now, isLive: true },
   ];
 });
 
@@ -68,6 +74,17 @@ describe("sitemap", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
+  test("IDX-04d canonical job postings and Post Leaves are included; legacy recruitment hubs are not", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    expect(paths).toContain("/jobs/job-translated");
+    expect(paths).toContain("/jobs/job-english-only");
+    expect(paths).toContain("/jobs/sample-recruitment-2026-01/project-nurse-iii");
+    expect(paths).not.toContain("/jobs/sample-recruitment-2026-01");
+    expect(paths.some((p) => p.startsWith("/recruitments/"))).toBe(false);
+    expect(paths.some((p) => p.startsWith("/positions/"))).toBe(false);
+  });
+
+
   test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
     const byPath = new Map((await entries()).map((e) => [new URL(e.url).pathname, e]));
     const expectations: [string, boolean][] = [
@@ -90,17 +107,29 @@ describe("sitemap", () => {
     }
   });
 
-  // Recruitment and Position are indexable entity types in the frozen
-  // indexability contract but have no sitemap entries today. Do NOT fix this
-  // by simply adding them: the recruitments table is currently a 1:1 mirror
-  // of raw postings (Phase 0 baseline) and must pass W1-B identity cleanup
-  // before any of it is advertised to search engines.
-  test("IDX-06 every indexable entity type in the indexability contract has a sitemap source", async () => {
+  // Sitemap policy follows the canonical URL contract: individual job pages,
+  // Post role hubs, organizations, exams and articles may be indexed. Legacy
+  // recruitment/position entity URLs are not sitemap destinations.
+  test("IDX-06 sitemap covers canonical indexable entities and excludes legacy entity hubs", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
-    const covered = ["jobs", "organizations", "exams", "articles", "recruitments", "positions"].filter((t) =>
-      src.includes(`/${t}/`),
-    );
-    expect(covered).toEqual(["jobs", "organizations", "exams", "articles", "recruitments", "positions"]);
+    for (const route of ["/jobs/", "/posts/", "/organizations/", "/exams/", "/articles/"]) {
+      expect(src, `missing sitemap source for ${route}`).toContain(route);
+    }
+    expect(src).not.toContain("getRecruitmentSlugsForSitemap");
+    expect(src).not.toContain("recruitmentEntries");
+    expect(src).not.toContain("getPositionSlugsForSitemap");
+  });
+
+  test("IDX-07 sitemap query excludes flat Posting URLs that redirect to canonical Post Leaves", async () => {
+    const src = (await import("../helpers/source")).readSource("src/lib/queries.ts");
+    const start = src.indexOf("export async function getPostingSlugsPageForSitemap");
+    const end = src.indexOf("export async function getAllArticleSlugsForSitemap", start);
+    expect(start, "posting sitemap query must exist").toBeGreaterThanOrEqual(0);
+    expect(end, "posting sitemap query boundary must exist").toBeGreaterThan(start);
+    const query = src.slice(start, end);
+    expect(query).toContain("postings.inferredPostId");
+    expect(query).toContain("postings.inferredRecruitmentId");
+    expect(query).toContain("IS NULL OR");
   });
 });
 

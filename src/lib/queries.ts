@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   articleCategories,
@@ -7,12 +7,11 @@ import {
   categories,
   commissions,
   exams,
-  locations,
   organizations,
   postingCategories,
   postings,
 } from "@/db/schema";
-import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
+import { posts, recruitments } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
 
 // Before DATABASE_URL is configured, every query degrades to an empty
@@ -292,6 +291,10 @@ export async function getPostingSlugsPageForSitemap(
         eq(postings.reviewStatus, "APPROVED"),
         sql`${postings.indexTier} IN ('A', 'B')`,
         sql`${postings.isExpired} IS NOT TRUE`,
+        // Canonicalized flat Posting URLs permanently redirect to the two-segment
+        // Post Leaf when both entity links exist. Do not advertise those redirect
+        // sources in the sitemap; the canonical Post Leaf is emitted separately.
+        sql`(${postings.inferredPostId} IS NULL OR ${postings.inferredRecruitmentId} IS NULL)`,
         notPastLastDate,
       ),
     )

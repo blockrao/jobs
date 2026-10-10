@@ -8,11 +8,14 @@
  * Handles redirects from old slugs to new semantic slugs with 301 status.
  */
 
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Metadata } from "next";
+import { pageSeo } from "@/lib/seo";
+import { canonicalPostLeafPath, recruitmentHubCanonicalPath } from "@/lib/canonical-job-routes";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
+import { getPostingBySlugCached } from "@/lib/queries";
 import { getDb } from "@/db";
 import { recruitment_slug_redirects } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -93,7 +96,7 @@ export async function generateMetadata({
         // Return empty metadata for redirects; the proxy/page handles the redirect.
         return {
           title: "Redirecting...",
-          robots: { index: false },
+          ...pageSeo(`/jobs/${slug}`, { index: false }),
         };
       }
     } catch {
@@ -104,9 +107,17 @@ export async function generateMetadata({
   const recruitmentData = await getRecruitmentWithPostsCached(slug);
 
   if (!recruitmentData) {
+    // This compatibility route historically received both Recruitment slugs
+    // and flat scraped Posting slugs. Consolidate a legacy Posting to its
+    // canonical Recruitment → Post Leaf instead of creating a second detail URL.
+    const legacyPosting = await getPostingBySlugCached(slug);
+    const canonicalLeaf = canonicalPostLeafPath(legacyPosting);
+    if (canonicalLeaf) permanentRedirect(canonicalLeaf);
+
     return {
       title: "Recruitment Not Found",
       description: "The requested recruitment could not be found",
+      robots: { index: false, follow: true },
     };
   }
 
@@ -128,17 +139,21 @@ export async function generateMetadata({
     ? `${metaVacancies.toLocaleString("en-IN")} vacancies · ${recruitment.name} on JobOye`
     : `${recruitment.name} on JobOye`;
 
+  // Recruitment URLs are transitional hubs, not canonical public projections.
+  // Canonicalize to a role hub only when every linked Post has the same Position;
+  // otherwise keep a noindex self-canonical rather than choosing an unrelated role.
+  const canonicalPath = recruitmentHubCanonicalPath(recruitment, recruitmentData.posts)
+    ?? `/jobs/${recruitment.slug}`;
+
   return {
     title: recruitment.name,
     description,
-    alternates: {
-      canonical: `/jobs/${recruitment.slug}`,
-    },
+    ...pageSeo(canonicalPath, { index: false }),
     openGraph: {
       title: recruitment.name,
       description: ogDescription,
       type: "website",
-      url: `https://www.joboye.com/jobs/${recruitment.slug}`,
+      url: `https://www.joboye.com${canonicalPath}`,
     },
   };
 }
@@ -149,15 +164,19 @@ export default async function RecruitmentHubPage({
   const resolvedParams = await params;
   const recruitmentSlug = resolvedParams["recruitment-slug"];
 
-  // Fetch recruitment data with all posts
+  // Resolve Recruitment first. If none exists at this slug, check whether
+  // it is a legacy flat Posting URL and permanently consolidate it to the
+  // canonical Post Leaf before returning a genuine 404.
   const recruitmentData = await getRecruitmentWithPostsCached(recruitmentSlug);
 
   if (!recruitmentData) {
+    const legacyPosting = await getPostingBySlugCached(recruitmentSlug);
+    const canonicalLeaf = canonicalPostLeafPath(legacyPosting);
+    if (canonicalLeaf) permanentRedirect(canonicalLeaf);
     notFound();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData!;
+  const { recruitment, posts, totalPosts } = recruitmentData;
 
   // ── Gate 4D resolver contract ──────────────────────────────────────────────
   // All canonical facts must be resolved through the approved resolvers.
@@ -177,7 +196,7 @@ export default async function RecruitmentHubPage({
 
   // Annotate each post with its resolved vacancy count so the Hub
   // does not independently select database columns.
-  const postsWithResolvedVacancies = posts.map((post: any) => ({
+  const postsWithResolvedVacancies = posts.map((post) => ({
     ...post,
     resolvedVacancyCount: resolvePostVacancy({
       id: String(post.id),
@@ -185,7 +204,7 @@ export default async function RecruitmentHubPage({
       recruitmentVacancyTotal: recruitment.totalVacancies ?? null,
       // Hub ORM posts don't carry enrichment; enrichment is undefined here.
       // resolvePostVacancy will fall through to Branch 2 (vacancy_total with scope guard).
-    } as any),
+    } as Parameters<typeof resolvePostVacancy>[0]),
   }));
 
   return (

@@ -5,6 +5,7 @@
 import { getCommissionBySlug, getPostingsByCommission } from "@/lib/queries";
 import { CommissionContent } from "@/components/commission-content";
 import { safeQuery } from "@/lib/safe-query";
+import { pageSeo } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -17,15 +18,14 @@ export async function generateMetadata({ params }: Props) {
   const isHi = locale === "hi";
   const commission = await safeQuery(() => getCommissionBySlug(commission_slug), null);
   const name = isHi
-    ? (commission as any)?.nameHi || commission?.name || "Commission"
+    ? commission?.nameHi || commission?.name || "Commission"
     : commission?.name || "Commission";
   return {
     title: name,
     description: isHi
       ? `${name} की सभी परीक्षाओं और पदों की जानकारी।`
       : `Browse all open ${name} job exams and positions.`,
-    robots: { index: false, follow: true },
-    alternates: { canonical: `/commissions/${commission_slug}` },
+    ...pageSeo(`/commissions/${commission_slug}`, { index: false }),
   };
 }
 
