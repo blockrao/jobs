@@ -10,6 +10,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
+import { pageSeo } from "@/lib/seo";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
@@ -93,7 +94,7 @@ export async function generateMetadata({
         // Return empty metadata for redirects; the proxy/page handles the redirect.
         return {
           title: "Redirecting...",
-          robots: { index: false },
+          ...pageSeo(`/jobs/${slug}`, { index: false }),
         };
       }
     } catch {
@@ -131,9 +132,7 @@ export async function generateMetadata({
   return {
     title: recruitment.name,
     description,
-    alternates: {
-      canonical: `/jobs/${recruitment.slug}`,
-    },
+    ...pageSeo(`/jobs/${recruitment.slug}`),
     openGraph: {
       title: recruitment.name,
       description: ogDescription,
