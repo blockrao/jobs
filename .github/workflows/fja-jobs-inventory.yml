@@ -1,8 +1,7 @@
 name: FJA Jobs Inventory
 on:
+  # Intentionally manual-only until the 3-record end-to-end pilot passes review.
   workflow_dispatch:
-  schedule:
-    - cron: "0 2 * * *"
 permissions:
   contents: read
   actions: write
