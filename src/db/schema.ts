@@ -1153,6 +1153,26 @@ export const fjaPostInventory = pgTable(
   ],
 ).enableRLS();
 
+export const fjaSourceCaptures = pgTable(
+  "fja_source_captures",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "number" }).notNull().references(() => fjaJobInventory.id, { onDelete: "cascade" }),
+    sourceSlug: text("source_slug").notNull().default("freejobalert"),
+    externalId: text("external_id").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    htmlSha256: text("html_sha256").notNull(),
+    normalizedTextSha256: text("normalized_text_sha256"),
+    rawHtml: text("raw_html").notNull(),
+    runId: text("run_id"),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("fja_source_captures_identity_hash_unique").on(t.sourceSlug, t.externalId, t.htmlSha256),
+    index("fja_source_captures_parent_idx").on(t.recruitmentInventoryId, t.capturedAt),
+  ],
+).enableRLS();
+
 export const sourceObservations = pgTable(
   "source_observations",
   {
