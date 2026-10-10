@@ -860,6 +860,7 @@ export default function RecruitmentHub({
               <RecordFieldGrid title="Position — linked record" record={post.position ?? null} />
               <RecordFieldGrid title="Vacancy rows — all columns" record={{ rows: post.vacancies ?? [] }} />
               <RecordFieldGrid title="Eligibility rows — all columns" record={{ rows: post.eligibilities ?? [] }} />
+              <RecordFieldGrid title="Post enrichment — all columns" record={post.postEnrichment ?? null} />
               <RecordFieldGrid title="FreeJobAlert source inventory — all columns" record={post.fjaInventory ?? null} />
             </div>
           ))}
