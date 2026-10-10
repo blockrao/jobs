@@ -38,8 +38,9 @@ const identity = {
 describe("official notification identity normalization", () => {
   test.each([
     ["Advt. No. 17/2026", "17/2026"],
+    [" 17 / 2026 ", "17/2026"],
     [" Notification No:  22/2026-RC ", "22/2026-RC"],
-    ["REF # AB-123 ", "AB-123"],
+    ["REF # ab-123 ", "AB-123"],
   ])("normalizes %s to a stable key", (raw, expected) => {
     expect(normalizeAdvertisementNumber(raw)).toBe(expected);
   });
