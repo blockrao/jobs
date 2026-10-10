@@ -176,8 +176,7 @@ export default async function RecruitmentHubPage({
     notFound();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { recruitment, posts, totalPosts, isSingleJobRecruitment } = recruitmentData!;
+  const { recruitment, posts, totalPosts } = recruitmentData;
 
   // ── Gate 4D resolver contract ──────────────────────────────────────────────
   // All canonical facts must be resolved through the approved resolvers.
@@ -197,7 +196,7 @@ export default async function RecruitmentHubPage({
 
   // Annotate each post with its resolved vacancy count so the Hub
   // does not independently select database columns.
-  const postsWithResolvedVacancies = posts.map((post: any) => ({
+  const postsWithResolvedVacancies = posts.map((post) => ({
     ...post,
     resolvedVacancyCount: resolvePostVacancy({
       id: String(post.id),
@@ -205,7 +204,7 @@ export default async function RecruitmentHubPage({
       recruitmentVacancyTotal: recruitment.totalVacancies ?? null,
       // Hub ORM posts don't carry enrichment; enrichment is undefined here.
       // resolvePostVacancy will fall through to Branch 2 (vacancy_total with scope guard).
-    } as any),
+    } as Parameters<typeof resolvePostVacancy>[0]),
   }));
 
   return (
