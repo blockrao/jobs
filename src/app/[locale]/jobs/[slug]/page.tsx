@@ -96,7 +96,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescriptionSource = isHi && descriptionHi ? descriptionHi : posting.description;
 
-  const orgNameHi = (posting.organization as any).nameHi as string | null;
+  const orgNameHi = posting.organization.nameHi as string | null;
   const title = composeJobMetaTitle(
     displayTitle,
     isHi && orgNameHi ? [orgNameHi, posting.organization.name] : [posting.organization.name]
@@ -148,7 +148,7 @@ function buildFaqs(
   displayEligibility: string | null,
 ) {
   // SEM-001: every FAQ is built from a validated field, or it is not built (see faq-gate.ts).
-  const extra = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
+  const extra = (posting.extraContent ?? null) as import("@/db/schema").ExtraContent | null;
   return buildCoreFaqs({
     isHi,
     displayTitle,
@@ -195,19 +195,19 @@ export default async function LocaleJobPage({ params }: Props) {
   const canonicalLeaf = canonicalPostLeafPath(posting, locale);
   if (canonicalLeaf) permanentRedirect(canonicalLeaf);
 
-  const canonicalRecruitmentId = (posting as any).canonicalRecruitment?.id ?? null;
+  const canonicalRecruitmentId = posting.canonicalRecruitment?.id ?? null;
   const siblingPosts = canonicalRecruitmentId
     ? await safeQuery(() => getPostsForRecruitment(canonicalRecruitmentId), [])
     : [];
 
   const isHi = locale === "hi";
   const dateLocale = isHi ? "hi-IN" : "en-IN";
-  const titleHi = (posting as any).titleHi as string | null;
-  const descriptionHi = (posting as any).descriptionHi as string | null;
-  const eligibilityHi = (posting as any).eligibilityHi as string | null;
-  const requirementsHi = (posting as any).requirementsHi as string | null;
-  const responsibilitiesHi = (posting as any).responsibilitiesHi as string | null;
-  const locationCityHi = (posting as any).locationCityHi as string | null;
+  const titleHi = posting.titleHi as string | null;
+  const descriptionHi = posting.descriptionHi as string | null;
+  const eligibilityHi = posting.eligibilityHi as string | null;
+  const requirementsHi = posting.requirementsHi as string | null;
+  const responsibilitiesHi = posting.responsibilitiesHi as string | null;
+  const locationCityHi = posting.locationCityHi as string | null;
 
   // Per-field fallback: show the Hindi text where it exists, English
   // otherwise — a posting can have a translated title but no translated
@@ -215,18 +215,18 @@ export default async function LocaleJobPage({ params }: Props) {
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescription = isHi && descriptionHi ? descriptionHi : posting.description;
   const displayEligibility = isHi && eligibilityHi ? eligibilityHi : posting.eligibility;
-  const extraContent = ((posting as any).extraContent ?? null) as import("@/db/schema").ExtraContent | null;
+  const extraContent = (posting.extraContent ?? null) as import("@/db/schema").ExtraContent | null;
   const displayRequirements = isHi && requirementsHi ? requirementsHi : posting.requirements;
   const displayResponsibilities =
     isHi && responsibilitiesHi ? responsibilitiesHi : posting.responsibilities;
   const displayLocationCity = isHi && locationCityHi ? locationCityHi : posting.locationCity;
 
   const org = posting.organization;
-  const orgNameHi = (org as any).nameHi as string | null;
+  const orgNameHi = org.nameHi as string | null;
   const displayOrgName = isHi && orgNameHi ? orgNameHi : org.name;
   // Only link into the Hindi org page when it actually has Hindi content.
   const orgHref = isHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
-  const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
+  const stateHub = getStateBySlug((posting.stateSlug as string | null) ?? "");
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting, isHi, displayTitle, displayOrgName, displayEligibility);
   // Notice-specific FAQs and a minimal timeline are derived from the stored facts at render time
