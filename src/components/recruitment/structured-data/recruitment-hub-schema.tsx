@@ -20,18 +20,6 @@
 
 import { SITE_URL } from "@/lib/site";
 
-const AUTHORITATIVE_DOMAINS = [".gov.in", ".nic.in"];
-
-function isAuthoritativeDomain(url: string | null | undefined): boolean {
-  if (!url) return false;
-  try {
-    const { hostname } = new URL(url);
-    return AUTHORITATIVE_DOMAINS.some((d) => hostname.endsWith(d));
-  } catch {
-    return false;
-  }
-}
-
 interface RecruitmentHubSchemaProps {
   recruitment: {
     slug: string;
@@ -138,17 +126,14 @@ export default function RecruitmentHubStructuredData({
     webPage["datePosted"] = datePostedIso;
   }
 
-  // Organization: link when we have a canonical name; add sameAs only when
-  // the resolved official source is an authoritative domain (.gov.in/.nic.in).
+  // Organization: identify the entity by name only. A recruitment-specific
+  // notice/listing URL is not necessarily the organization's canonical identity
+  // page, so never use it as Organization.sameAs.
   if (orgName) {
-    const orgNode: Record<string, unknown> = {
+    webPage["about"] = {
       "@type": "Organization",
       name: orgName,
     };
-    if (isAuthoritativeDomain(resolvedOfficialSource)) {
-      orgNode["sameAs"] = resolvedOfficialSource;
-    }
-    webPage["about"] = orgNode;
   }
 
   // expires / validThrough: applicationEndDate is a legitimate temporal bound
