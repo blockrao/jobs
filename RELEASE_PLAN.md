@@ -80,6 +80,9 @@ Publish a trustworthy job-discovery product where Recruitment hubs describe the 
 **NO-GO** for any confirmed wrong-entity content, broken critical Post Leaf route, invalid canonical/robots behavior, aggregator presented as official source, missing required production configuration, failed production build, or unresolved critical database error.
 
 ## Current known evidence (2026-10-11; refresh before release)
+- PR #40 preview deployment for commit 248cc1ccb62a503d20f34e82284ebfa8920f39fe reached READY after successful Next.js compilation and Vercel TypeScript check. Build logs also recorded DB-query fallbacks and first-attempt >60-second static-generation timeouts for three Position hubs; this is tracked in [issue #42](https://github.com/blockrao/jobs/issues/42) and requires verification before release.
+- GitHub Actions on the current branch still fails the same 15 architecture/metadata tests already failing on main; application and contract-test type-checks pass on the corrected code. Lint remains a baseline failure (279 errors on the latest audited run vs 283 on main), so changed-file regressions must continue to be separated from repository debt.
+
 - Canonical database baseline: 1,087 Recruitments and 1,553 Posts; core Recruitment/Post relationships passed basic integrity counts.
 - The normalized vacancies table was empty at audit time; salary/pay was populated on only 128 Posts; only 9 Posts had eligibility rows; fee and selection-process normalized rows were sparse. This is a content-mapping risk, not proof the corresponding facts are absent from legacy/enrichment fields.
 - Source inventory pilot was 3 Recruitment records and 8 Post candidates, all partial; no immutable source-capture rows existed at audit time.
