@@ -46,10 +46,14 @@ jobs:
           FJA_RUN_MODE: ${{ inputs.mode || 'pilot' }}
           FJA_PILOT_URLS: ${{ inputs.mode == 'pilot' && inputs.pilot_urls || '' }}
         run: npx tsx scripts/fja-inventory.ts
-      - name: Generate Excel workbook
+      - name: Generate two-table Excel workbook
         env:
           FJA_OUT_DIR: artifacts/fja
         run: python scripts/export-fja-inventory.py
+      - name: Validate workbook, parent-child mappings and source preservation
+        env:
+          FJA_OUT_DIR: artifacts/fja
+        run: python scripts/validate-fja-inventory-export.py
       - name: Upload workbook, CSV and raw extraction
         uses: actions/upload-artifact@v4
         with:

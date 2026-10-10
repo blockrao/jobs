@@ -92,7 +92,7 @@ This is a semantic mapping contract, not a claim that every destination column c
 | `selection_process_json` | Ordered stages and conditions | Details / supporting relation | Selection content |
 | `document_requirements_json` | Required/advisory docs, scope, categories and raw wording | Details / supporting relation | Candidate-facing document checklist |
 | `source_capture_ref` | Internal immutable artifact ID/hash | Capture storage + source observations | Not public |
-| `raw_source_payload_json` | Preserve unmapped substantive content | Details or versioned payload | Enrich into canonical content after review |
+| `other_info_raw` + `details` JSONB | Preserve every unmapped substantive field and full structured source payload; never discard a value because a typed header is absent | Explicit `fja_job_inventory.other_info_raw` plus full `details` JSONB; post-level `fja_post_inventory.other_info_raw` | AI may rephrase only in a later enrichment stage; raw capture and raw wording remain immutable |
 | `official_verification_status` | Controlled state; never inferred from extraction status | Internal review state | Publication gate input, not a public badge by default |
 | `extraction_status` | `EXTRACTED`, `PARTIAL`, `FAILED`, `PENDING` | `detail_status` mapping | Not equivalent to factual verification |
 
@@ -195,13 +195,13 @@ This is a candidate mapping, not a claim that every field is required or eligibl
 The workbook stays at two sheets. The internal system can have more supporting tables because these are different concerns:
 
 1. `fja_job_inventory`: one source article/recruitment candidate; current observed snapshot and internal source metadata.
-2. `fja_post_inventory` (proposed): post candidates linked to a parent inventory recruitment; source-specific identity, post fields, extraction status and payload.
+2. `fja_post_inventory`: source-specific post candidates linked to `fja_job_inventory`, with typed raw fields, unresolved payload, extraction state and official-verification state. The migration is included in the implementation branch and must be applied before running the updated crawler. This table is distinct from canonical `posts`.
 3. `source_observations`: append-only hash/version history for changed source content.
-4. Immutable source capture storage: original HTML/PDF bytes and metadata/hash; do not store only normalized text.
-5. Field evidence/verification records: normalized field path, source capture, excerpt, reviewer/state and conflicts. Can begin as structured JSON if relational review/query needs are low, but do not lose field-level provenance.
+4. `fja_source_captures`: append-only original FJA HTML captures keyed by source identity and HTML SHA-256; this supplements the 90-day workflow artifact and preserves historical source versions in the database.
+5. Field evidence/verification records: normalized field path, source capture, excerpt, reviewer/state and conflicts. The current post inventory retains candidate-level evidence payloads, but a consistent field-level verification model across all entity types remains follow-up work.
 6. Existing canonical JobOye organization/recruitment/post entities: populated only through a reviewed promotion workflow, never by the discovery crawler directly.
 
-Before creating the post table, inspect actual existing canonical table definitions and migration conventions. The inventory post table must not be confused with canonical `posts`.
+The two source-inventory migrations must be applied before the updated crawler runs. The inventory post table must not be confused with canonical `posts`. Raw official-notification PDF capture remains a separate verification-stage requirement; the current immutable capture implementation covers the source article HTML.
 
 ## 8. Quality gates and automated tests
 

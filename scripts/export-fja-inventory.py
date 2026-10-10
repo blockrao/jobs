@@ -1,168 +1,383 @@
-import csv, json, os, re
+import csv
+import json
+import os
+import re
 from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 
-base = Path(os.environ.get("FJA_OUT_DIR", "artifacts/fja"))
-payload = json.loads((base / "fja-inventory.json").read_text(encoding="utf-8"))
-rows = payload.get("results", [])
-base.mkdir(parents=True, exist_ok=True)
-wb = Workbook()
+BASE = Path(os.environ.get("FJA_OUT_DIR", "artifacts/fja"))
+PAYLOAD_PATH = BASE / "fja-inventory.json"
+MAX_CELL_CHARS = 30000
+payload = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
+items = payload.get("results", [])
+BASE.mkdir(parents=True, exist_ok=True)
 
-def setup_sheet(ws, headers, widths=None):
+def as_json(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str) if value is not None else ""
+
+def as_text(value):
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        return as_json(value)
+    return str(value)
+
+def chunks(value):
+    value = as_text(value)
+    return [value[i:i + MAX_CELL_CHARS] for i in range(0, len(value), MAX_CELL_CHARS)] if value else [""]
+
+def chunk_headers(prefix, count):
+    return [f"{prefix}_part_{i:02d}" for i in range(1, count + 1)]
+
+def padded_chunks(value, count):
+    parts = chunks(value) if value else []
+    return (parts + [""] * count)[:count]
+
+def first_field(fields, patterns):
+    for key, value in (fields or {}).items():
+        if value is not None and str(value).strip() and any(re.search(pattern, str(key), re.I) for pattern in patterns):
+            return str(value).strip()
+    return ""
+
+def setup_sheet(ws, headers):
     ws.append(headers)
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="1F4E78")
         cell.alignment = Alignment(wrap_text=True, vertical="top")
     ws.freeze_panes = "A2"
-    ws.auto_filter.ref = ws.dimensions
-    if widths:
-        for i, width in enumerate(widths, 1):
-            ws.column_dimensions[get_column_letter(i)].width = width
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}1"
+    for index, header in enumerate(headers, 1):
+        ws.column_dimensions[get_column_letter(index)].width = min(60, max(18, len(header) + 2))
 
-def add_rows(ws, data_rows):
-    for row in data_rows:
-        ws.append([("" if v is None else v) for v in row])
+def append_rows(ws, rows):
+    for row in rows:
+        ws.append(["" if value is None else value for value in row])
     for row in ws.iter_rows(min_row=2):
         for cell in row:
-            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
 
-def as_text(value):
-    if value is None:
+def extract_links(details):
+    # Prefer a full-link capture when the crawler provides it; retain legacy officialLinks otherwise.
+    return details.get("allLinks") or details.get("officialLinks") or []
+
+def classify_link_candidates(links):
+    notification, application = [], []
+    for link in links:
+        label = str(link.get("label") or "")
+        url = str(link.get("url") or "")
+        if not url:
+            continue
+        if re.search(r"notification|advertisement|recruitment notice|detailed notice|official pdf", label, re.I):
+            notification.append({"label": label, "url": url})
+        if re.search(r"apply|application|registration|online form", label, re.I):
+            application.append({"label": label, "url": url})
+    return notification, application
+
+def split_candidates(value):
+    if not value or not str(value).strip():
+        return []
+    # Heuristic candidates only; preserve the original complete postNames value elsewhere.
+    return [part.strip(" \t\r\n-•") for part in re.split(r"\r?\n|\s*\|\s*|\s*;\s*", str(value)) if part.strip(" \t\r\n-•")]
+
+def explicit_post_rows(details):
+    """Extract post facts only from tables with an explicit post-title column."""
+    output = []
+    for table in details.get("tables") or []:
+        rows = table.get("rows") or []
+        header_index = None
+        headers = []
+        for index, row in enumerate(rows):
+            cells = row.get("cells") or []
+            if any(re.search(r"post name|name of post|post title|job title|designation|position", str(cell), re.I) for cell in cells):
+                header_index = index
+                headers = [str(cell).strip() for cell in cells]
+                break
+        if header_index is None:
+            continue
+        for row in rows[header_index + 1:]:
+            cells = row.get("cells") or []
+            if not cells or not any(str(cell).strip() for cell in cells):
+                continue
+            record = {headers[i]: cells[i] for i in range(min(len(headers), len(cells))) if str(headers[i]).strip() and str(cells[i]).strip()}
+            title = next((str(value).strip() for key, value in record.items() if re.search(r"post name|name of post|post title|job title|designation|position", key, re.I)), "")
+            if title and not re.search(r"total|grand total|note|important", title, re.I):
+                output.append({"postName": title, "fields": record, "tableIndex": table.get("tableIndex"), "rowIndex": row.get("rowIndex")})
+    return output
+
+def matching_field(record, patterns):
+    fields = (record or {}).get("fields") or {}
+    for key, value in fields.items():
+        if value is not None and str(value).strip() and any(re.search(pattern, str(key), re.I) for pattern in patterns):
+            return str(value).strip()
+    return ""
+
+def normalized_count(value):
+    match = re.fullmatch(r"\s*([\d,]+)\s*", str(value or ""))
+    if not match:
         return ""
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
-    return str(value)
+    try:
+        return int(match.group(1).replace(",", ""))
+    except ValueError:
+        return ""
 
-# A — Recruitment Inventory: one row per FJA article, not one row per post.
-ws = wb.active
-ws.title = "Recruitment Inventory"
-headers = ["External ID","FJA Article Title","Organization","FJA Source URL","Page Classification","FJA Published Date","Application Start (summary only)","Application End (summary only)","Advertisement Number","Qualification (summary only)","Recruitment Vacancy Total (source-stated only)","Source Status","Extraction Status","Official Notification URL(s)","Application URL(s)","Canonical Ingestion Gate","Gate Reason","Run ID","Content Hash"]
-setup_sheet(ws, headers, [16,46,30,62,22,18,22,22,26,42,24,16,18,58,58,30,44,32,66])
-for r in rows:
-    d = r.get("details") or {}
-    links = d.get("officialLinks") or []
-    notification_urls = [x.get("url","") for x in links if re.search(r"official|notification|advertisement|pdf", x.get("label",""), re.I)]
-    application_urls = [x.get("url","") for x in links if re.search(r"apply|registration|application", x.get("label",""), re.I)]
-    gate = "WAITING_FOR_OFFICIAL_NOTIFICATION" if not notification_urls else "READY_FOR_MANUAL_VERIFICATION"
-    reason = "No likely official notification link identified by label; manual source search required" if not notification_urls else "Candidate link detected; official source and facts still require manual verification"
-    ws.append([r.get("externalId"),r.get("title"),r.get("organizationName"),r.get("sourceUrl"),r.get("listingCategory"),r.get("publishedDate"),r.get("applicationStartDate"),r.get("applicationEndDate"),r.get("advertisementNumber"),r.get("qualification"),r.get("vacancyCount"),r.get("sourceStatus"),r.get("detailStatus"),"; ".join(notification_urls),"; ".join(application_urls),gate,reason,payload.get("runId"),r.get("contentHash")])
-add_rows(ws, [])
+def other_payload(item, details, fields, links):
+    known_detail_keys = {
+        "tableFields", "tables", "allLinks", "officialLinks", "headings", "lists",
+        "sourceCapture", "postNames", "ageLimit", "applicationFee", "selectionProcess",
+        "salary", "location", "rawText", "otherInfoRaw"
+    }
+    return {
+        "unmapped_table_fields": {
+            key: value for key, value in fields.items()
+            if not re.search(
+                r"organization|recruiting body|department|advertisement|notification|published|updated|application start|start date|starting date|last date|closing date|application end|total vacan|total post|number of vacan|no.? of post|qualification|eligibility|educational|application fee|exam fee|selection process|selection procedure|salary|pay scale|pay level|remuneration|job location|place of posting|location|name of post|post name",
+                str(key), re.I
+            )
+        },
+        "other_detail_fields": {key: value for key, value in details.items() if key not in known_detail_keys},
+        "preservation_policy": "Raw source evidence only. No AI rewrite or official verification is performed by this exporter; source body, tables, links, headings and lists are retained in dedicated columns and the full details payload."
+    }
 
-# B — Post Details: deliberately does not invent a post breakdown.
-ws = wb.create_sheet("Post Details")
-setup_sheet(ws, ["Parent External ID","Post Key","Raw Post Name / Candidate","Vacancies","Qualification / Eligibility Raw Text","Experience Raw Text","Age Raw Text","Salary Raw Text","Location Raw Text","Source URL","Evidence / Table Fields","Post Structure Status"], [18,24,48,16,54,38,30,32,28,62,80,30])
-for r in rows:
-    d = r.get("details") or {}
-    table_fields = d.get("tableFields") or {}
-    post_names = d.get("postNames")
-    candidates = []
-    if isinstance(post_names, str) and post_names.strip():
-        # Split only on explicit separators that commonly indicate separate lines/items.
-        candidates = [p.strip() for p in re.split(r"\n|\s*\|\s*|\s*;\s*", post_names) if p.strip()]
+recruitment_fixed_headers = [
+    "recruitment_key", "import_action", "source_name_internal", "source_external_id_internal",
+    "source_article_title_raw", "source_article_url_internal", "source_published_date_raw",
+    "organization_name_raw", "organization_canonical_match_id", "official_notification_number_raw",
+    "official_notification_url_candidate", "official_application_url_candidate",
+    "recruitment_vacancy_total_raw", "recruitment_vacancy_total_normalized_candidate",
+    "application_start_date_raw", "application_start_date_normalized_candidate",
+    "application_deadline_date_raw", "application_deadline_date_normalized_candidate",
+    "application_method_raw", "application_url_raw", "recruitment_location_raw",
+    "recruitment_salary_summary_raw", "qualification_summary_raw", "fee_rules_raw_json",
+    "selection_process_raw_json", "milestones_raw_json", "document_requirements_and_instructions_raw",
+    "source_status_reported", "extraction_status", "official_verification_status",
+    "canonical_promotion_gate", "promotion_gate_reason", "source_capture_ref_internal",
+    "source_content_hash", "source_html_sha256", "run_id", "table_fields_json",
+    "all_tables_json", "all_links_json", "headings_json", "lists_json", "unmapped_fields_json"
+]
+post_fixed_headers = [
+    "post_key", "recruitment_key", "source_external_id_internal", "source_post_name_raw",
+    "post_name_normalized_candidate", "source_post_code_raw", "vacancy_count_raw",
+    "vacancy_count_normalized_candidate", "qualification_raw", "experience_raw",
+    "minimum_age_years_candidate", "maximum_age_years_candidate", "age_limit_raw", "age_reference_date_raw",
+    "age_relaxation_rules_raw", "salary_min_amount_candidate", "salary_max_amount_candidate",
+    "salary_currency_candidate", "salary_period_candidate", "salary_raw", "pay_level_raw",
+    "employment_type_raw", "tenure_raw", "location_raw", "duties_responsibilities_raw",
+    "eligibility_conditions_raw", "post_milestones_json", "post_application_selection_json",
+    "shared_source_fields_unresolved_json", "source_capture_ref_internal", "source_content_hash",
+    "run_id", "post_structure_status", "extraction_status", "official_verification_status",
+    "canonical_mapping_status", "review_note"
+]
+
+recruitment_base_rows = []
+post_base_rows = []
+recruitment_body_values = []
+recruitment_details_values = []
+recruitment_other_values = []
+post_other_values = []
+
+for item in items:
+    details = item.get("details") or {}
+    fields = details.get("tableFields") or {}
+    links = extract_links(details)
+    notification_links, application_links = classify_link_candidates(links)
+    body = item.get("rawText") or details.get("rawText") or ""
+    details_json = as_json(details)
+    other_json = as_json(other_payload(item, details, fields, links))
+    source_capture = details.get("sourceCapture") or {}
+    external_id = str(item.get("externalId") or "")
+    recruitment_key = f"FJA-{external_id}"
+    start_raw = first_field(fields, [r"application start", r"start date", r"starting date"])
+    end_raw = first_field(fields, [r"last date", r"closing date", r"application end", r"last date to apply"])
+    fees = {key: value for key, value in fields.items() if re.search(r"fee", str(key), re.I)}
+    selection = {key: value for key, value in fields.items() if re.search(r"selection", str(key), re.I)}
+    milestones = {key: value for key, value in fields.items() if re.search(r"date|deadline|exam|interview|correction|age.*reckon|notification", str(key), re.I)}
+    documents = {key: value for key, value in fields.items() if re.search(r"document|instruction|how to apply|application process", str(key), re.I)}
+    notification_url = "; ".join(link["url"] for link in notification_links)
+    application_url = "; ".join(link["url"] for link in application_links)
+    gate = "BLOCKED_OFFICIAL_NOTIFICATION_REQUIRED" if not notification_links else "BLOCKED_PENDING_OFFICIAL_VERIFICATION"
+    gate_reason = (
+        "No likely notification link detected; retain inventory and find the issuing body's official notice during enrichment"
+        if not notification_links else
+        "Detected URL is only a candidate; validate issuing authority and facts before canonical promotion"
+    )
+    source_ref = source_capture.get("artifactPath") or f"source-observation:{external_id}:{item.get('contentHash','')}"
+    recruitment_base = [
+        recruitment_key, "REVIEW_ONLY", "freejobalert", external_id, item.get("title"),
+        item.get("sourceUrl"), item.get("publishedDate"), item.get("organizationName"), "",
+        item.get("advertisementNumber"), notification_url, application_url,
+        first_field(fields, [r"total vacan", r"total post", r"number of vacan", r"no.? of post"]),
+        item.get("vacancyCount"), start_raw, item.get("applicationStartDate"), end_raw,
+        item.get("applicationEndDate"),
+        first_field(fields, [r"application mode", r"how to apply", r"application process", r"apply mode"]),
+        application_url,
+        details.get("location") or first_field(fields, [r"job location", r"place of posting", r"location"]),
+        details.get("salary") or first_field(fields, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"]),
+        item.get("qualification") or first_field(fields, [r"qualification", r"eligibility", r"educational"]),
+        as_json(fees), as_json(selection), as_json(milestones), as_json(documents),
+        item.get("sourceStatus"), item.get("detailStatus"), "PENDING_OFFICIAL_REVIEW",
+        gate, gate_reason, source_ref, item.get("contentHash"), source_capture.get("htmlSha256", ""),
+        payload.get("runId"), as_json(fields), as_json(details.get("tables") or []), as_json(links),
+        as_json(details.get("headings") or []), as_json(details.get("lists") or []),
+        as_json(other_payload(item, details, fields, links).get("unmapped_table_fields"))
+    ]
+    recruitment_base_rows.append(recruitment_base)
+    recruitment_body_values.append(chunks(body))
+    recruitment_details_values.append(chunks(details_json))
+    recruitment_other_values.append(chunks(other_json))
+
+    table_post_rows = explicit_post_rows(details)
+    if table_post_rows:
+        candidates = []
+        for record in table_post_rows:
+            if record["postName"] not in candidates:
+                candidates.append(record["postName"])
+    else:
+        candidates = split_candidates(details.get("postNames"))
     if not candidates:
         candidates = [""]
-    for idx, name in enumerate(candidates, 1):
-        status = "CANDIDATE_NEEDS_REVIEW" if name else "POST_BREAKDOWN_NOT_EXTRACTED"
-        ws.append([r.get("externalId"),f"{r.get('externalId')}-P{idx:02d}" if name else "",name,"",
-          as_text(r.get("qualification")), "", as_text(d.get("ageLimit")), as_text(d.get("salary")),
-          as_text(d.get("location")),r.get("sourceUrl"),as_text(table_fields),status])
-add_rows(ws, [])
+    one_unambiguous_post = len(candidates) == 1 and bool(candidates[0]) and not table_post_rows
+    for index, candidate in enumerate(candidates, 1):
+        explicit_record = next((record for record in table_post_rows if record["postName"] == candidate), None)
+        if explicit_record:
+            qualification = matching_field(explicit_record, [r"qualification", r"eligibility", r"educational"])
+            experience = matching_field(explicit_record, [r"experience"])
+            age = matching_field(explicit_record, [r"age limit", r"age criteria"])
+            age_reference = matching_field(explicit_record, [r"age as on", r"age reckoning date"])
+            age_relaxation = matching_field(explicit_record, [r"age relaxation", r"relaxation"])
+            source_post_code = matching_field(explicit_record, [r"post code", r"serial no", r"sl.? no", r"post id"])
+            salary = matching_field(explicit_record, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"])
+            location = matching_field(explicit_record, [r"location", r"place of posting"])
+            vacancy_raw = matching_field(explicit_record, [r"vacanc", r"no.? of post", r"number of post", r"number of position"])
+            pay_level = matching_field(explicit_record, [r"pay level", r"pay scale", r"grade pay"])
+            tenure = matching_field(explicit_record, [r"duration", r"tenure", r"contract period"])
+            employment_type = matching_field(explicit_record, [r"employment type", r"nature of appointment", r"job type"])
+            duties = matching_field(explicit_record, [r"job profile", r"roles and responsibilities", r"duties", r"responsibilities"])
+            eligibility_conditions = matching_field(explicit_record, [r"eligibility criteria", r"other conditions", r"conditions", r"minimum requirements"])
+            post_milestones = [{"field": k, "value": v} for k, v in explicit_record["fields"].items() if re.search(r"date|deadline|exam|interview|correction", str(k), re.I)]
+            post_application_selection = [{"field": k, "value": v} for k, v in explicit_record["fields"].items() if re.search(r"fee|apply|application|selection|document|instruction", str(k), re.I)]
+            unresolved_shared_fields = {}
+            note = "Mapped from a source table with an explicit post-title column; source-reported only and requires official verification."
+        elif one_unambiguous_post:
+            qualification = item.get("qualification") or first_field(fields, [r"qualification", r"eligibility", r"educational"])
+            experience = first_field(fields, [r"experience", r"work experience"])
+            age = details.get("ageLimit") or first_field(fields, [r"age limit", r"age criteria"])
+            age_reference = first_field(fields, [r"age as on", r"age reckoning date"])
+            age_relaxation = first_field(fields, [r"age relaxation", r"relaxation"])
+            source_post_code = first_field(fields, [r"post code", r"serial no", r"sl.? no", r"post id"])
+            salary = details.get("salary") or first_field(fields, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"])
+            location = details.get("location") or first_field(fields, [r"job location", r"place of posting", r"location"])
+            vacancy_raw = first_field(fields, [r"vacanc", r"number of post", r"no.? of post"])
+            pay_level = first_field(fields, [r"pay level", r"pay scale", r"grade pay"])
+            tenure = first_field(fields, [r"duration", r"tenure", r"contract period"])
+            employment_type = first_field(fields, [r"employment type", r"nature of appointment", r"job type"])
+            duties = first_field(fields, [r"job profile", r"roles and responsibilities", r"duties"])
+            eligibility_conditions = first_field(fields, [r"other eligibility", r"eligibility criteria", r"other conditions", r"minimum requirements"])
+            post_milestones = {}
+            post_application_selection = {}
+            unresolved_shared_fields = {}
+            note = "Single candidate; generic article fields are candidates only and still require official verification."
+        else:
+            qualification = experience = age = age_reference = age_relaxation = source_post_code = salary = location = vacancy_raw = pay_level = tenure = employment_type = duties = eligibility_conditions = ""
+            post_milestones = {}
+            post_application_selection = {}
+            unresolved_shared_fields = fields
+            note = "MULTI_POST_SCOPE_UNRESOLVED: generic article-level facts retained in other info; not copied onto this post."
+        post_other = {
+            "candidate_name_raw": candidate,
+            "article_post_names_field_raw": details.get("postNames") or "",
+            "explicit_source_table_row": explicit_record,
+            "unmapped_and_unassigned_fields": unresolved_shared_fields,
+            "all_details_keys": sorted(details.keys()),
+            "raw_source_text_reference": source_ref,
+            "preservation_policy": "Candidate only; do not AI-rewrite or mark verified during extraction."
+        }
+        post_key = f"{external_id}-P{index:02d}"
+        post_base_rows.append([
+            post_key, recruitment_key, external_id, candidate, "", source_post_code,
+            vacancy_raw, normalized_count(vacancy_raw), qualification, experience, "", "", age, age_reference, age_relaxation, "", "", "", "",
+            salary, pay_level, employment_type, tenure, location, duties, eligibility_conditions,
+            as_json(post_milestones), as_json(post_application_selection),
+            as_json(unresolved_shared_fields), source_ref, item.get("contentHash"), payload.get("runId"),
+            "CANDIDATE_NEEDS_REVIEW" if candidate else "POST_DECOMPOSITION_NOT_EXTRACTED",
+            item.get("detailStatus"), "PENDING_OFFICIAL_REVIEW",
+            "TABLE_MAPPED_REVIEW_REQUIRED" if explicit_record else "NOT_MAPPED_TO_CANONICAL", note
+        ])
+        post_other_values.append(chunks(as_json(post_other)))
 
-# C — Dates & Milestones: preserves date-bearing source rows as separate events.
-ws = wb.create_sheet("Dates & Milestones")
-setup_sheet(ws, ["Parent External ID","Post Key (if explicit)","Event Type (normalized guess)","Date Value(s) (parsed where recognized)","Raw Date / Row Wording","Source URL","Evidence Status"], [18,22,32,34,72,62,24])
-date_label = re.compile(r"date|deadline|last date|closing|start|exam|interview|correction|age.*reckon|notification", re.I)
-date_pattern = re.compile(r"\b(?:\d{1,2}[ ./-](?:\d{1,2}|[A-Za-z]{3,9})[ ./,-]\d{4}|\d{4}-\d{2}-\d{2})\b")
-for r in rows:
-    d = r.get("details") or {}
-    table_fields = d.get("tableFields") or {}
-    emitted = False
-    for label, value in table_fields.items():
-        if date_label.search(str(label)):
-            dates = "; ".join(date_pattern.findall(str(value)))
-            event = "APPLICATION_DEADLINE" if re.search(r"last date|closing|deadline", str(label), re.I) else "DATE_EVENT_NEEDS_REVIEW"
-            ws.append([r.get("externalId"),"",event,dates,str(label)+": "+str(value),r.get("sourceUrl"),"SOURCE_REPORTED_UNVERIFIED"])
-            emitted = True
-    if not emitted:
-        ws.append([r.get("externalId"),"","NO_DATE_ROW_DETECTED","","No date-bearing table row detected; review full source text",r.get("sourceUrl"),"NEEDS_REVIEW"])
-add_rows(ws, [])
+max_body = max((len(value) for value in recruitment_body_values), default=1)
+max_details = max((len(value) for value in recruitment_details_values), default=1)
+max_recruitment_other = max((len(value) for value in recruitment_other_values), default=1)
+max_post_other = max((len(value) for value in post_other_values), default=1)
 
-# D — Application & Selection: rows remain source-reported and are not treated as verified.
-ws = wb.create_sheet("Application & Selection")
-setup_sheet(ws, ["Parent External ID","Post Key (if explicit)","Record Type","Raw Field / Heading","Raw Value","Source URL","Verification Status"], [18,22,28,40,90,62,26])
-rule_label = re.compile(r"fee|selection|application|apply|document|eligib|experience|relaxation|reservation|instruction|how to|mode of", re.I)
-for r in rows:
-    d = r.get("details") or {}
-    table_fields = d.get("tableFields") or {}
-    emitted = False
-    for label, value in table_fields.items():
-        if rule_label.search(str(label)):
-            kind = "FEE" if re.search(r"fee", str(label), re.I) else ("SELECTION_STAGE" if re.search(r"selection", str(label), re.I) else "APPLICATION_OR_ELIGIBILITY_RULE")
-            ws.append([r.get("externalId"),"",kind,str(label),str(value),r.get("sourceUrl"),"SOURCE_REPORTED_UNVERIFIED"])
-            emitted = True
-    for key in ("applicationFee","selectionProcess"):
-        value = d.get(key)
-        if value and not any(str(value) == str(x[4]) for x in ws.iter_rows(min_row=2, values_only=True)):
-            ws.append([r.get("externalId"),"",key.upper(),key,str(value),r.get("sourceUrl"),"SOURCE_REPORTED_UNVERIFIED"])
-            emitted = True
-    if not emitted:
-        ws.append([r.get("externalId"),"","NO_RULE_ROW_DETECTED","","Manual review required; no matching table row detected",r.get("sourceUrl"),"NEEDS_REVIEW"])
-add_rows(ws, [])
+recruitment_headers = (
+    recruitment_fixed_headers + chunk_headers("source_body_text", max_body)
+    + chunk_headers("source_details_json", max_details)
+    + chunk_headers("other_info_raw", max_recruitment_other)
+)
+post_headers = post_fixed_headers + chunk_headers("post_other_info_raw", max_post_other)
 
-# E — Source Content & Field Evidence: table rows + the available full normalized text.
-ws = wb.create_sheet("Source Content & Field Evidence")
-setup_sheet(ws, ["Parent External ID","Post Key (if explicit)","Field Path / Content Type","Extracted Value","Source URL","Source Section","Evidence Text","Extraction Method","Extraction Status","Official Verification State","Review Note"], [18,22,38,76,62,34,90,26,22,28,56])
-for r in rows:
-    d = r.get("details") or {}
-    for label, value in (d.get("tableFields") or {}).items():
-        ws.append([r.get("externalId"),"",f"tableFields.{label}",str(value),r.get("sourceUrl"),"HTML table row",f"{label}: {value}","HTML table extraction",r.get("detailStatus"),"NOT_VERIFIED","Preserved from FJA; confirm against official notification"])
-    raw_text = r.get("rawText") or ""
-    ws.append([r.get("externalId"),"","rawText.full_normalized_body",raw_text[:32000],r.get("sourceUrl"),"Full page body text","Full text is preserved in fja-inventory.json; Excel cell is capped at 32,000 characters","DOM body text extraction",r.get("detailStatus"),"NOT_VERIFIED","Excel cell length limit; use JSON artifact for full text"])
-    for link in d.get("officialLinks") or []:
-        ws.append([r.get("externalId"),"", "link",link.get("url",""),r.get("sourceUrl"),"Anchor element",link.get("label",""),"HTML link extraction",r.get("detailStatus"),"NOT_VERIFIED","Link label is a discovery hint, not proof that the URL is official"])
-add_rows(ws, [])
-
-# F — Run Summary: report coverage and limitations, not only successful extraction counts.
-ws = wb.create_sheet("Run Summary")
-setup_sheet(ws, ["Metric","Value","Interpretation / Limitation"], [38,52,100])
-metrics = [
- ("Run ID",payload.get("runId"),"Identifier for this crawl run"),
- ("Started at",payload.get("startedAt"),"ISO timestamp"),
- ("Finished at",payload.get("finishedAt"),"ISO timestamp"),
- ("Listing pages visited",payload.get("listingPagesVisited"),"In URL-scoped pilot mode this is zero by design"),
- ("Unvisited listing queue remaining",payload.get("listingPageQueueRemaining"),"Relevant only to discovery crawl mode"),
- ("Sitemap article URLs",payload.get("sitemapArticleUrls"),"Sitemap discovery supplement; not proof of exhaustive coverage"),
- ("Discovered article URLs",payload.get("discoveredArticleUrls"),"In pilot mode this should equal supplied valid unique article URLs"),
- ("Recruitment rows exported",len(rows),"One row per article; not the number of posts"),
- ("Fully extracted",sum(r.get("detailStatus")=="EXTRACTED" for r in rows),"Process classification only; does not mean factually verified"),
- ("Partial",sum(r.get("detailStatus")=="PARTIAL" for r in rows),"Requires review"),
- ("Failed detail fetches",sum(r.get("detailStatus")=="FAILED" for r in rows),"See failedDetailUrls in JSON"),
- ("Non-recruitment pages skipped",payload.get("nonRecruitmentPagesSkipped"),"Skipped page count from crawler classifier"),
- ("Failed detail URL list",as_text(payload.get("failedDetailUrls") or []),"Review each failure; run is not clean if non-empty"),
- ("Articles with no detected official notification link",sum(1 for r in rows if not any(re.search(r"official|notification|advertisement|pdf",x.get("label",""),re.I) for x in ((r.get("details") or {}).get("officialLinks") or []))),"Must remain blocked from canonical ingestion pending manual source discovery"),
- ("Posts structurally resolved",sum(1 for r in rows if (r.get("details") or {}).get("postNames")),"Candidate only; post-level facts still require verification"),
- ("Workbook limitation","Not yet a publication-ready normalized dataset","Post decomposition and dates are evidence candidates; manual review is mandatory"),
- ("Raw capture limitation","JSON artifact preserves the full normalized body text; no immutable original HTML file is emitted yet","Before scaling, decide whether to persist raw HTML separately with content hash and retention policy"),
- ("Source authority","FJA reported, not officially verified","Official notification and application links must be checked separately"),
- ("Run outcome","REVIEW_REQUIRED","Do not scale until the three sample records pass manual field-by-field review"),
+recruitment_rows = []
+for index, base_row in enumerate(recruitment_base_rows):
+    recruitment_rows.append(
+        base_row
+        + padded_chunks("".join(recruitment_body_values[index]), max_body)
+        + padded_chunks("".join(recruitment_details_values[index]), max_details)
+        + padded_chunks("".join(recruitment_other_values[index]), max_recruitment_other)
+    )
+post_rows = [
+    base_row + padded_chunks("".join(post_other_values[index]), max_post_other)
+    for index, base_row in enumerate(post_base_rows)
 ]
-add_rows(ws, [[a,b,c] for a,b,c in metrics])
 
-xlsx = base / "FJA_Jobs_Inventory.xlsx"
-wb.save(xlsx)
-headers = ["External ID","FJA Article Title","Organization","FJA Source URL","Page Classification","FJA Published Date","Application Start (summary only)","Application End (summary only)","Advertisement Number","Qualification (summary only)","Recruitment Vacancy Total (source-stated only)","Source Status","Extraction Status","Official Notification URL(s)","Application URL(s)","Canonical Ingestion Gate","Gate Reason","Run ID","Content Hash"]
-with (base / "FJA_Jobs_Inventory.csv").open("w", newline="", encoding="utf-8-sig") as f:
-    writer = csv.writer(f)
-    writer.writerow(headers)
-    for r in rows:
-        d = r.get("details") or {}
-        links = d.get("officialLinks") or []
-        notification_urls = [x.get("url","") for x in links if re.search(r"official|notification|advertisement|pdf", x.get("label",""), re.I)]
-        application_urls = [x.get("url","") for x in links if re.search(r"apply|registration|application", x.get("label",""), re.I)]
-        gate = "WAITING_FOR_OFFICIAL_NOTIFICATION" if not notification_urls else "READY_FOR_MANUAL_VERIFICATION"
-        reason = "No likely official notification link identified by label; manual source search required" if not notification_urls else "Candidate link detected; official source and facts still require manual verification"
-        writer.writerow([r.get("externalId"),r.get("title"),r.get("organizationName"),r.get("sourceUrl"),r.get("listingCategory"),r.get("publishedDate"),r.get("applicationStartDate"),r.get("applicationEndDate"),r.get("advertisementNumber"),r.get("qualification"),r.get("vacancyCount"),r.get("sourceStatus"),r.get("detailStatus"),"; ".join(notification_urls),"; ".join(application_urls),gate,reason,payload.get("runId"),r.get("contentHash")])
-print(f"Workbook generated: {xlsx} ({len(rows)} recruitment article rows; six sheets)")
+# Ensure every output row has exactly as many cells as its header.
+assert all(len(row) == len(recruitment_headers) for row in recruitment_rows), "Recruitments row/header width mismatch"
+assert all(len(row) == len(post_headers) for row in post_rows), "Posts row/header width mismatch"
+
+workbook = Workbook()
+recruitments_ws = workbook.active
+recruitments_ws.title = "Recruitments"
+setup_sheet(recruitments_ws, recruitment_headers)
+append_rows(recruitments_ws, recruitment_rows)
+posts_ws = workbook.create_sheet("Posts")
+setup_sheet(posts_ws, post_headers)
+append_rows(posts_ws, post_rows)
+workbook.properties.title = "JobOye Recruitment and Post Source Inventory"
+workbook.properties.subject = "Two-table source inventory; not verified or approved for canonical publication"
+workbook.properties.description = "Source-reported content preserved. Official verification and any AI rewriting are later, separate stages."
+workbook.save(BASE / "FJA_Jobs_Inventory.xlsx")
+
+def write_csv(path, headers, rows):
+    with path.open("w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(headers)
+        writer.writerows(rows)
+
+write_csv(BASE / "Recruitments.csv", recruitment_headers, recruitment_rows)
+write_csv(BASE / "Posts.csv", post_headers, post_rows)
+
+summary = {
+    "runId": payload.get("runId"),
+    "recruitmentRows": len(recruitment_rows),
+    "postCandidateRows": len(post_rows),
+    "unresolvedPostRows": sum(1 for row in post_rows if not row[0]),
+    "workbookSheets": ["Recruitments", "Posts"],
+    "sourceBodyTextChunkColumns": max_body,
+    "sourceDetailsJsonChunkColumns": max_details,
+    "recruitmentOtherInfoChunkColumns": max_recruitment_other,
+    "postOtherInfoChunkColumns": max_post_other,
+    "sourceReportedOnly": True,
+    "officialVerificationComplete": False,
+    "aiRewritingPerformed": False,
+    "canonicalPromotionAuthorized": False,
+    "limitations": [
+        "Post decomposition is heuristic candidate data requiring review.",
+        "Generic article-level facts are not copied onto each post for multi-post notices.",
+        "Detected official/application URLs are candidates based on link labels, not verified URLs.",
+        "The crawler must emit full links, structured table/list/heading content and immutable original HTML capture for maximum preservation."
+    ]
+}
+(BASE / "export-summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+print(f"Workbook generated: {BASE / 'FJA_Jobs_Inventory.xlsx'} ({len(recruitment_rows)} recruitment rows; {len(post_rows)} post candidate rows; exactly two sheets)")
