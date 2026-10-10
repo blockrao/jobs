@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { resolveRecruitment } from "@/ingest/resolve";
+import { normalizeAdvertisementNumber, resolveRecruitment } from "@/ingest/resolve";
 
 type RecruitmentDb = Parameters<typeof resolveRecruitment>[0];
 
@@ -34,6 +34,23 @@ const identity = {
   officialNotificationNumber: null,
   title: "Assistant Engineer Recruitment 2026",
 };
+
+describe("official notification identity normalization", () => {
+  test.each([
+    ["Advt. No. 17/2026", "17/2026"],
+    [" Notification No:  22/2026-RC ", "22/2026-RC"],
+    ["REF # AB-123 ", "AB-123"],
+  ])("normalizes %s to a stable key", (raw, expected) => {
+    expect(normalizeAdvertisementNumber(raw)).toBe(expected);
+  });
+
+  test.each([null, "", "General Recruitment", "No. 1", "x".repeat(201)])(
+    "rejects non-identifying or invalid notification numbers",
+    (raw) => {
+      expect(normalizeAdvertisementNumber(raw)).toBeNull();
+    },
+  );
+});
 
 describe("recruitment identity conflict handling", () => {
   test("does not treat a generated-slug collision as entity identity", async () => {
