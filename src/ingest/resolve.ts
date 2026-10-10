@@ -42,7 +42,7 @@ export interface RecruitmentIdentity {
  */
 export function normalizeAdvertisementNumber(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let v = raw
+  const v = raw
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^(advertisement|advt|notification|notice|ref)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
