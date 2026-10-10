@@ -181,7 +181,7 @@ export default async function LocaleJobPage({ params }: Props) {
             recruitment={recruitmentData.recruitment}
             totalPosts={recruitmentData.totalPosts}
           />
-          <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
+          <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} locale={locale} />
         </>
       );
     }
