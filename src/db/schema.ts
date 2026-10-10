@@ -1092,6 +1092,7 @@ export const fjaJobInventory = pgTable(
     detailStatus: text("detail_status").notNull().default("PENDING"),
     sourceStatus: text("source_status").notNull().default("UNKNOWN"),
     details: jsonb("details").notNull().default({}),
+    otherInfoRaw: jsonb("other_info_raw").$type<Record<string, unknown>>().notNull().default({}),
     rawText: text("raw_text"),
     contentHash: text("content_hash").notNull(),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
