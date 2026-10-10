@@ -63,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: pickSitemapLastmod(row.contentChangedAt, row.updatedAt),
     changeFrequency: "daily",
     priority: 0.8,
-    ...sitemapAlternates("/jobs", row.slug, Boolean((row as any).titleHi)),
+    ...sitemapAlternates("/jobs", row.slug, Boolean(row.titleHi)),
   }));
 
   const articleEntries: MetadataRoute.Sitemap = articleRows.map((row) => ({
@@ -84,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/organizations/${row.slug}`,
     changeFrequency: "weekly",
     priority: 0.4,
-    ...sitemapAlternates("/organizations", row.slug, Boolean((row as any).nameHi)),
+    ...sitemapAlternates("/organizations", row.slug, Boolean(row.nameHi)),
   }));
 
   const examEntries: MetadataRoute.Sitemap = examRows.map((row) => ({
