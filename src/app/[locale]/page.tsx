@@ -57,15 +57,10 @@ export default async function LegacyExamRedirect({ params }: Props) {
   // The segment is also used by the locale root route tree. Only known legacy
   // exam slugs may redirect; arbitrary unknown paths should remain real 404s
   // instead of creating redirect chains to another 404.
-  let exam: Awaited<ReturnType<typeof getExamBySlug>> | null = null;
-  try {
-    exam = await getExamBySlug(examSlug);
-  } catch {
-    // Fail closed: without a successful lookup we cannot safely classify an
-    // arbitrary root slug as a legacy exam URL.
-    notFound();
-  }
-
+  // A genuine missing row is a 404. Database/connection errors must
+  // propagate as server errors so monitoring can detect an outage; do not
+  // disguise infrastructure failures as a missing exam.
+  const exam = await getExamBySlug(examSlug);
   if (!exam) notFound();
   permanentRedirect(`/exams/${examSlug}`);
 }
