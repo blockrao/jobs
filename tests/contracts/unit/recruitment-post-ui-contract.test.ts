@@ -34,6 +34,14 @@ describe("candidate-facing Recruitment and Post UI", () => {
     expect(internalReviewRoute).not.toContain("freejobalert.com");
   });
 
+  test("public pages never fall back to unverified raw source/application URLs", () => {
+    expect(recruitmentHub).not.toContain("recruitment.officialNotificationUrl ?? null");
+    expect(recruitmentHub).not.toContain("recruitment.officialApplicationUrl ?? recruitment.applyUrl");
+    expect(postLeaf).not.toContain("post.officialSourceUrl ?? null");
+    expect(postLeaf).not.toContain("post.applyPortalUrl ?? null");
+    expect(readFileSync("src/components/job-posting/sections/official-source-verification.tsx", "utf8")).not.toContain("post.officialSourceUrl ?? null");
+  });
+
   test("Recruitment source link is not incorrectly labelled as an official PDF", () => {
     expect(recruitmentHub).toContain("Notification / source link");
     expect(recruitmentHub).not.toContain("View Official PDF");
