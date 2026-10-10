@@ -5,6 +5,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
+import { publicLink } from "@/lib/aggregators";
 
 const recruitmentHub = readFileSync("src/components/recruitment/recruitment-hub.tsx", "utf8");
 const postLeaf = readFileSync("src/components/job-posting/job-posting-page.tsx", "utf8");
@@ -67,6 +68,14 @@ describe("candidate-facing Recruitment and Post UI", () => {
     expect(postLeaf).not.toContain("post.officialSourceUrl ?? null");
     expect(postLeaf).not.toContain("post.applyPortalUrl ?? null");
     expect(readFileSync("src/components/job-posting/sections/official-source-verification.tsx", "utf8")).not.toContain("post.officialSourceUrl ?? null");
+  });
+
+  test("public outbound-link guard rejects source aggregators and keeps official links", () => {
+    expect(publicLink("https://www.freejobalert.com/articles/sample")).toBeNull();
+    expect(publicLink("https://sarkariresult.com/sample")).toBeNull();
+    expect(publicLink("https://example.com/not-verified")).toBe("https://example.com/not-verified");
+    expect(publicLink("https://www.example.gov.in/notice.pdf")).toBe("https://www.example.gov.in/notice.pdf");
+    expect(publicLink("not a URL")).toBeNull();
   });
 
   test("Recruitment source link is not incorrectly labelled as an official PDF", () => {
