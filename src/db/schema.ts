@@ -1158,7 +1158,7 @@ export const fjaSourceCaptures = pgTable(
   "fja_source_captures",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "number" }).notNull().references(() => fjaJobInventory.id, { onDelete: "cascade" }),
+    recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "number" }).notNull().references(() => fjaJobInventory.id, { onDelete: "restrict" }),
     sourceSlug: text("source_slug").notNull().default("freejobalert"),
     externalId: text("external_id").notNull(),
     sourceUrl: text("source_url").notNull(),
