@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from "axios";
-import type { Browser, Page } from "playwright";
+import { chromium, type Browser, type Page } from "playwright";
 import type { RawPosting } from "../types";
 import { isDateLabel } from "../../lib/semantic-fields";
 
@@ -63,10 +63,6 @@ let browserInstance: Browser | null = null;
 /** Get or create a Playwright browser instance. */
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance) {
-    // Keep Playwright out of the normal ingestion module load path. The scheduled
-    // ingestion route uses Axios fetches; eagerly importing Playwright causes the
-    // Vercel function to fail at startup when browsers.json is not packaged.
-    const { chromium } = await import("playwright");
     browserInstance = await chromium.launch({ headless: true });
   }
   return browserInstance;
