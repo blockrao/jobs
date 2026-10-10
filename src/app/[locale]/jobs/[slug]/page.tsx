@@ -2,11 +2,13 @@ import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/co
 import { buildCoreFaqs } from "@/lib/content/faq-gate";
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
-import { entitySeo } from "@/lib/seo";
+import { entitySeo, pageSeo } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/site";
+import { canonicalPostLeafPath, recruitmentHubCanonicalPath } from "@/lib/canonical-job-routes";
 import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getPostingBySlug, getPostingBySlugCached, getPostsForRecruitment } from "@/lib/queries";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
@@ -57,29 +59,35 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
 
-  // If this slug resolves to a recruitment hub, return hub-specific metadata
-  // so the canonical tag is correct. The page component makes the same check
-  // and renders RecruitmentHub; metadata must match.
-  if (locale !== "hi") {
-    const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
-    if (recruitmentData) {
-      const { recruitment, totalPosts } = recruitmentData;
-      return {
+  // Recruitment resolution has priority in every locale, matching the page
+  // body's dispatch. Recruitment hubs are transitional/noindex; when all linked
+  // Posts share one Position, canonicalize to that role hub. Never choose an
+  // arbitrary role for a mixed-role Recruitment.
+  const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  if (recruitmentData) {
+    const { recruitment, totalPosts, posts } = recruitmentData;
+    const canonicalPath = recruitmentHubCanonicalPath(recruitment, posts) ?? `/jobs/${recruitment.slug}`;
+    const description = `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`;
+    return {
+      title: recruitment.name,
+      description,
+      ...pageSeo(canonicalPath, { index: false }),
+      openGraph: {
         title: recruitment.name,
-        description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-        alternates: { canonical: `/jobs/${recruitment.slug}` },
-        openGraph: {
-          title: recruitment.name,
-          description: `${recruitment.name} recruitment on JobOye`,
-          type: "website",
-          url: `https://www.joboye.com/jobs/${recruitment.slug}`,
-        },
-      };
-    }
+        description: `${recruitment.name} recruitment on JobOye`,
+        type: "website",
+        url: absoluteUrl(canonicalPath),
+      },
+    };
   }
 
+  // A flat posting slug is a legacy address, not a second canonical job page.
+  // Send it to the canonical Recruitment → Post Leaf URL before metadata or
+  // body content can create a duplicate indexable representation.
   const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
   if (!posting) return {};
+  const canonicalLeaf = canonicalPostLeafPath(posting, locale);
+  if (canonicalLeaf) permanentRedirect(canonicalLeaf);
 
   const isHi = locale === "hi";
   const titleHi = (posting as any).titleHi as string | null;
@@ -189,6 +197,11 @@ export default async function LocaleJobPage({ params }: Props) {
     // Not a recruitment hub, try as a posting
     posting = await safeQuery(() => getPostingBySlugCached(slug), null);
     if (!posting) notFound();
+
+    // Preserve the requested language prefix while permanently consolidating
+    // legacy flat posting URLs onto the canonical Post Leaf route.
+    const canonicalLeaf = canonicalPostLeafPath(posting, locale);
+    if (canonicalLeaf) permanentRedirect(canonicalLeaf);
   }
 
   const canonicalRecruitmentId = (posting as any).canonicalRecruitment?.id ?? null;
