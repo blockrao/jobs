@@ -45,7 +45,7 @@ export function normalizeAdvertisementNumber(raw: string | null | undefined): st
   const v = raw
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/^(advertisement|advt|notification|notice|ref)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
+    .replace(/^(advertisement|advt|notification|notice|ref|no)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
     .trim();
   if (v.length < 3 || v.length > 200) return null;
   if (!/\d/.test(v)) return null;
