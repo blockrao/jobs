@@ -28,7 +28,7 @@ describe("locale-aware route classification", () => {
     expect(route).toContain("getExamBySlug(examSlug)");
     expect(route).toContain("if (!exam) notFound()");
     expect(route).toContain("permanentRedirect(`/exams/${examSlug}`)");
-    expect(route).not.toContain("catch");
+    expect(route).not.toMatch(/catch\s*[{(]/);
   });
 
   test.each([
