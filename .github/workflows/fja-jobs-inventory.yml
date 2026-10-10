@@ -2,6 +2,20 @@ name: FJA Jobs Inventory
 on:
   # Intentionally manual-only until the 3-record end-to-end pilot passes review.
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run a three-article pilot or the full discovery crawl"
+        required: true
+        type: choice
+        options:
+          - pilot
+          - full
+        default: pilot
+      pilot_urls:
+        description: "Comma-separated FJA article URLs (used in pilot mode)"
+        required: true
+        type: string
+        default: "https://www.freejobalert.com/articles/ucsl-supervisor-recruitment-2026-apply-online-3071727,https://www.freejobalert.com/articles/mdu-recruitment-2026-apply-online-for-7-field-investigator-research-assistant-and-more-posts-3071555,https://www.freejobalert.com/articles/aai-consultant-recruitment-2026-apply-online-3071441"
 permissions:
   contents: read
   actions: write
