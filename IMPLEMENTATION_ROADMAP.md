@@ -356,3 +356,8 @@ All sprints complete when:
 - **Weekly**: Monitor orphaned postings; adjust inference confidence thresholds
 - **Monthly**: Update recruitment statuses (ACTIVE → RESULTS); refresh positions data
 - **Quarterly**: Add new exams/organizations; expand position coverage
+
+
+## Release Planning (current)
+
+The current, gated release plan is maintained in [RELEASE_PLAN.md](./RELEASE_PLAN.md). Follow its execution order: public trust/UI hygiene → Recruitment/Post data-to-UI correctness → bounded inventory pilot and reconciliation → canonical URL/redirect repairs → release-candidate CI/build → production smoke tests and operational checks → controlled launch. Do not declare launch readiness from merged code alone; each gate needs evidence on the release commit and deployed production version.
