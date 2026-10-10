@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { pageSeo } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "FreeJobAlert Pilot Review | JobOye",
   description: "Review the three selected FreeJobAlert source inventory records and post breakdown.",
-  robots: { index: false, follow: false, noarchive: true },
+  ...pageSeo("/fja-review", { index: false, noarchive: true }),
 };
 
 const items = [
