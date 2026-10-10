@@ -39,11 +39,12 @@
 These counts are the audit snapshot and must be refreshed before launch:
 
 - 1,087 Recruitment rows and 1,553 canonical Post rows.
-- 1,453 Posts had a vacancy total in the earlier coverage query; the normalized vacancies table had zero rows.
-- 128 Posts had salary/pay populated in the earlier query.
-- Only 9 Post records had normalized eligibilities rows.
-- Only 2 Recruitment records had normalized fee rows and 2 had normalized selection-process rows.
-- 572 Posts had post_enrichments records in the earlier query.
+- Canonical posts: 1,553 total; 1,453 have vacancy_total; 112 have salary_min/max; 37 have pay_level; only 19 have a non-empty canonical description.
+- post_enrichments: 572 rows; 531 have vacancy totals/category data; 412 have salary values; 56 have pay level/scale; 212 have eligibility-pathway/education/experience data.
+- eligibilities: 9 rows across 9 Post IDs; all 9 have age fields and qualification fields, while 4 have experience_text.
+- vacancies: 0 rows.
+- recruitment_fees: 4 rows across 2 Recruitments.
+- selection_processes: 2 rows across 2 Recruitments.
 - The initial source inventory pilot contained 3 Recruitments and 8 Post candidates, all partial; immutable source-capture rows were absent before the extractor-wiring work.
 - Current whole-row source-name scan: posts 0 matches; recruitments 11; legacy postings 1; articles 0; organizations 0; exams 0; post_enrichments 0; fja_post_inventory 8; source_documents 24; sources 1. Matches in source/provenance columns are intentionally retained internally and must never be rendered to candidates.
 - A separate field-level check showed the remaining Recruitment matches in source_url and metadata; the one legacy Posting match was in source, source_portals, and source_url. Public legacy link rendering must keep using the aggregator-blocking URL helper.
