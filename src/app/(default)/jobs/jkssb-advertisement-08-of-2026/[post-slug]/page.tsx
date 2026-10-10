@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { pageSeo } from "@/lib/seo";
 
 const recruitmentSlug = "jkssb-advertisement-08-of-2026";
 const postSlug = "horticulture-technician-grade-iv";
@@ -7,8 +8,7 @@ const postSlug = "horticulture-technician-grade-iv";
 export const metadata: Metadata = {
   title: "Horticulture Technician Grade-IV — JKSSB | JobOye",
   description: "Preview of Horticulture Technician Grade-IV under JKSSB Advertisement No. 08 of 2026. Post details await official verification.",
-  robots: { index: false, follow: false, noarchive: true },
-  alternates: { canonical: `/jobs/${recruitmentSlug}/${postSlug}` },
+  ...pageSeo(`/jobs/${recruitmentSlug}/${postSlug}`, { index: false, noarchive: true }),
 };
 
 export default function JkssbHorticultureTechnicianPostPage() {
