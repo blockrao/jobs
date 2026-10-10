@@ -72,6 +72,14 @@ describe("listings and fixed pages", () => {
     expect(redirectRoute).toContain("permanentRedirect");
     expect(redirectRoute).toContain("/jobs/${slug}");
   });
+
+  test("JOB-LEGACY-01 English job compatibility route consolidates flat Posting URLs to Post Leaves", async () => {
+    const { readSource, stripComments } = await import("../helpers/source");
+    const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
+    expect(route).toContain("getPostingBySlugCached");
+    expect(route).toContain("canonicalPostLeafPath");
+    expect(route).toContain("permanentRedirect(canonicalLeaf)");
+  });
 });
 
 describe("sitemap", () => {
