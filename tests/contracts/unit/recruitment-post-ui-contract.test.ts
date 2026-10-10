@@ -16,7 +16,10 @@ function collectPublicUiSources(directory: string): string[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory).flatMap((entry) => {
     const path = join(directory, entry);
-    if (statSync(path).isDirectory()) return collectPublicUiSources(path);
+    if (statSync(path).isDirectory()) {
+      if (entry === "api" || entry === "admin" || entry === "__tests__") return [];
+      return collectPublicUiSources(path);
+    }
     return /\\.(tsx?|jsx?|css|mdx?)$/i.test(path) ? [path] : [];
   });
 }
