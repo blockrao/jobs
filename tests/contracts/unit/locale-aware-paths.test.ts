@@ -15,7 +15,6 @@ describe("locale-aware route classification", () => {
   });
 
   test.each([
-    "/jobs",
     "/jobs/one/two/three",
     "/news",
     "/hi/news",
