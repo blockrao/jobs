@@ -11,6 +11,7 @@ const RUN_ID = `fja-${new Date().toISOString().replace(/[:.]/g, "-")}`;
 const OUT = process.env.FJA_OUT_DIR ?? "artifacts/fja";
 const MAX_PAGES = Number(process.env.FJA_MAX_PAGES ?? 1200);
 const CONCURRENCY = Number(process.env.FJA_CONCURRENCY ?? 4);
+const PILOT_URLS = (process.env.FJA_PILOT_URLS ?? "").split(",").map((url) => url.trim()).filter(Boolean);
 const USER_AGENT = "JobOye-FJA-Inventory/1.0 (+https://joboye.com; inventory contact)";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const collapse = (value: string) => value.replace(/\s+/g, " ").trim();
@@ -178,31 +179,42 @@ async function main() {
   const listingPages = [`${BASE}/`,`${BASE}/latest-notifications/`,`${BASE}/government-jobs/`];
   const listings = new Map<string,{url:string;title:string;externalId:string}>();
   const pageQueue = [...listingPages]; const visitedPages = new Set<string>();
-  while(pageQueue.length && visitedPages.size < MAX_PAGES) {
-    const url = pageQueue.shift()!;
-    if(visitedPages.has(url)) continue; visitedPages.add(url);
-    try {
-      const html = await getHtml(url);
-      for(const item of articleLinks(html,url)) if(!listings.has(item.externalId)) listings.set(item.externalId,item);
-      const $ = cheerio.load(html);
-      $("a[href]").each((_,a)=>{
-        const href=$(a).attr("href"); if(!href)return;
-        try {
-          const next=new URL(href,url);
-          if(next.hostname.replace(/^www\./,"")!=="freejobalert.com")return;
-          if(/\/articles\//i.test(next.pathname))return;
-          const isPagination=/page|older|next|load-more|latest-notifications|government-jobs|category|jobs/i.test((collapse($(a).text())+" "+next.pathname));
-          if(isPagination && (next.pathname!=="/" || next.search) && !visitedPages.has(next.toString()) && pageQueue.length<MAX_PAGES) pageQueue.push(next.toString());
-        } catch {}
-      });
-    } catch(error) { console.error(`Listing page failed: ${url}: ${(error as Error).message}`); }
-    await sleep(350);
-  }
-  // Sitemap is a discovery supplement, not a replacement for live listing pages.
-  const sitemapUrls = await crawlSitemaps();
-  for(const url of sitemapUrls) {
-    const id=url.match(ARTICLE_RE)?.[1];
-    if(id && !listings.has(id)) listings.set(id,{url,title:"",externalId:id});
+  let sitemapUrls: string[] = [];
+  if (PILOT_URLS.length > 0) {
+    // Pilot mode deliberately bypasses broad discovery and processes only the supplied article URLs.
+    for (const suppliedUrl of PILOT_URLS) {
+      const normalized = normalizeUrl(suppliedUrl, BASE);
+      const id = normalized?.pathname.match(ARTICLE_RE)?.[1];
+      if (!normalized || !id) throw new Error(`Invalid FJA pilot article URL: ${suppliedUrl}`);
+      listings.set(id, { url: normalized.toString(), title: "", externalId: id });
+    }
+  } else {
+    while(pageQueue.length && visitedPages.size < MAX_PAGES) {
+      const url = pageQueue.shift()!;
+      if(visitedPages.has(url)) continue; visitedPages.add(url);
+      try {
+        const html = await getHtml(url);
+        for(const item of articleLinks(html,url)) if(!listings.has(item.externalId)) listings.set(item.externalId,item);
+        const $ = cheerio.load(html);
+        $("a[href]").each((_,a)=>{
+          const href=$(a).attr("href"); if(!href)return;
+          try {
+            const next=new URL(href,url);
+            if(next.hostname.replace(/^www\\./,"")!=="freejobalert.com")return;
+            if(/\\/articles\\//i.test(next.pathname))return;
+            const isPagination=/page|older|next|load-more|latest-notifications|government-jobs|category|jobs/i.test((collapse($(a).text())+" "+next.pathname));
+            if(isPagination && (next.pathname!=="/" || next.search) && !visitedPages.has(next.toString()) && pageQueue.length<MAX_PAGES) pageQueue.push(next.toString());
+          } catch {}
+        });
+      } catch(error) { console.error(`Listing page failed: ${url}: ${(error as Error).message}`); }
+      await sleep(350);
+    }
+    // Sitemap is a discovery supplement, not a replacement for live listing pages.
+    sitemapUrls = await crawlSitemaps();
+    for(const url of sitemapUrls) {
+      const id=url.match(ARTICLE_RE)?.[1];
+      if(id && !listings.has(id)) listings.set(id,{url,title:"",externalId:id});
+    }
   }
   const allItems=[...listings.values()];
   console.log(JSON.stringify({runId:RUN_ID,listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,uniqueArticles:allItems.length}));
