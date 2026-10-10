@@ -8,11 +8,11 @@
  * /jobs/[slug]/page.tsx and is not duplicated here.
  */
 
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export default async function RecruitmentsRedirectPage({ params }: Props) {
   const { slug } = await params;
-  redirect(`/jobs/${slug}`);
+  permanentRedirect(`/jobs/${slug}`);
 }
