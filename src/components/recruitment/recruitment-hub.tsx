@@ -814,7 +814,7 @@ export default function RecruitmentHub({
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
           <div className="mb-4">
             <h2 className="text-base font-bold text-gray-900">All Posts — Detailed Comparison</h2>
-            <p className="text-sm text-gray-600 mt-1">Includes normalized JobOye post data and linked FreeJobAlert extraction fields where available. Source extraction is not an official confirmation.</p>
+            <p className="text-sm text-gray-600 mt-1">Includes normalized JobOye&apos;s post data and linked FreeJobAlert extraction fields where available. Source extraction is not an official confirmation.</p>
           </div>
           {posts.length === 0 ? (
             <p className="text-sm text-gray-600">No posts are linked to this recruitment record yet.</p>
@@ -825,9 +825,35 @@ export default function RecruitmentHub({
                   <tr>{['Post / IDs','Vacancies','Location','Pay / salary','Employment','Qualification','Experience','Age','Duties / eligibility','Source status'].map((heading) => <th key={heading} className="px-3 py-3 font-semibold align-top">{heading}</th>)}</tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {posts.map((post: any) => {
+                  {posts.map((post: {
+                    id: number;
+                    slug: string;
+                    name?: string | null;
+                    positionId?: number | null;
+                    position_id?: number | null;
+                    resolvedVacancyCount?: number | null;
+                    vacancyCount?: number | null;
+                    vacancy_count?: number | null;
+                    locationText?: string | null;
+                    salary?: unknown;
+                    salaryRange?: unknown;
+                    payLevel?: unknown;
+                    employmentType?: unknown;
+                    employment_type?: unknown;
+                    qualification?: unknown;
+                    qualificationText?: unknown;
+                    experience?: unknown;
+                    experienceText?: unknown;
+                    ageLimit?: unknown;
+                    age_limit?: unknown;
+                    duties?: unknown;
+                    eligibility?: unknown;
+                    eligibilityText?: unknown;
+                    position?: { id?: number; name?: string | null; locationText?: string | null } | null;
+                    fjaInventory?: Record<string, unknown> | null;
+                  }) => {
                     const inv = post.fjaInventory ?? {};
-                    const show = (...values: any[]) => {
+                    const show = (...values: unknown[]) => {
                       const value = values.find((v) => v !== null && v !== undefined && v !== '');
                       if (value === undefined) return 'Not recorded';
                       return typeof value === 'object' ? JSON.stringify(value) : String(value);
