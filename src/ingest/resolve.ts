@@ -46,7 +46,9 @@ export function normalizeAdvertisementNumber(raw: string | null | undefined): st
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^(advertisement|advt|notification|notice|ref|no)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
-    .trim();
+    .trim()
+    .replace(/\s*([/.-])\s*/g, "$1")
+    .toUpperCase();
   if (v.length < 3 || v.length > 200) return null;
   if (!/\d/.test(v)) return null;
   return v;
