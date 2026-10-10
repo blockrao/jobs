@@ -232,13 +232,29 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
     }));
 
-    const inventoryResult = await db.execute(sql`
+    const [enrichmentResult, inventoryResult] = await Promise.all([
+      db.execute(sql`
+        SELECT *
+        FROM post_enrichments
+        WHERE post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
+        ORDER BY post_id
+      `),
+      db.execute(sql`
       SELECT *
       FROM fja_post_inventory
       WHERE source_slug = 'freejobalert'
         AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
       ORDER BY id
-    `);
+      `)
+    ]);
+    const enrichmentRows = (
+      (enrichmentResult as unknown as { rows?: unknown[] }).rows ?? enrichmentResult
+    ) as Array<Record<string, unknown>>;
+    const enrichmentByPostId = new Map<number, Record<string, unknown>>();
+    for (const item of enrichmentRows) {
+      const postId = Number(item.post_id);
+      if (Number.isFinite(postId)) enrichmentByPostId.set(postId, item);
+    }
     const inventoryRows = (
       (inventoryResult as unknown as { rows?: unknown[] }).rows ?? inventoryResult
     ) as Array<Record<string, unknown>>;
@@ -251,6 +267,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     const postsWithInventory = enrichedPosts.map((post) => ({
       ...post,
       fjaInventory: inventoryByPostId.get(post.id) ?? null,
+      postEnrichment: enrichmentByPostId.get(post.id) ?? null,
     }));
 
     return {
