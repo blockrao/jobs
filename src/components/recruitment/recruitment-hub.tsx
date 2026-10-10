@@ -940,7 +940,7 @@ export default function RecruitmentHub({
                           <div className="text-xs"><span className="font-semibold">Source: </span>{show(inv.source_slug)}</div>
                           <div className="mt-1 text-xs"><span className="font-semibold">Extraction: </span>{show(inv.extraction_status)}</div>
                           <div className="mt-1 text-xs"><span className="font-semibold">Official verification: </span>{show(inv.official_verification_status)}</div>
-                          {inv.external_id && <div className="mt-1 text-xs text-gray-500">Source article ID: {String(inv.external_id)}</div>}
+                          {Boolean(inv.external_id) && <div className="mt-1 text-xs text-gray-500">Source article ID: {String(inv.external_id)}</div>}
                           {typeof inv.other_info_raw === 'object' && inv.other_info_raw !== null && 'source_article_url' in inv.other_info_raw && typeof (inv.other_info_raw as Record<string, unknown>).source_article_url === 'string' && (inv.other_info_raw as Record<string, unknown>).source_article_url !== '' && <a href={String((inv.other_info_raw as Record<string, unknown>).source_article_url)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-blue-700 hover:underline break-all">Open source article</a>}
                         </td>
                       </tr>
