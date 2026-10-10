@@ -912,10 +912,17 @@ export default function RecruitmentHub({
                     fjaInventory?: Record<string, unknown> | null;
                   }) => {
                     const inv = post.fjaInventory ?? {};
-                    const show = (...values: unknown[]) => {
+                    const show = (...values: unknown[]): string => {
                       const value = values.find((v) => v !== null && v !== undefined && v !== '');
                       if (value === undefined) return 'Not recorded';
-                      return typeof value === 'object' ? JSON.stringify(value) : String(value);
+                      if (typeof value === 'object') {
+                        try {
+                          return JSON.stringify(value) ?? String(value);
+                        } catch {
+                          return String(value);
+                        }
+                      }
+                      return String(value);
                     };
                     const postTitle = post.name ?? post.position?.name ?? post.slug ?? 'Post';
                     return (
