@@ -128,7 +128,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
       : "UNKNOWN";
   const importantFields = [find(/recruiting body|organization|department/i), vacancyRaw, endRaw, find(/qualification|eligibility|educational/i)];
   const populated = importantFields.filter(Boolean).length;
-  const hashInput = JSON.stringify({title,rows,details});
+  const hashInput = JSON.stringify({title,rows,details,rawText:text});
   return {
     externalId:listing.externalId, sourceUrl:listing.url, title,
     organizationName:find(/recruiting body|organization|department/i),
@@ -140,7 +140,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     qualification:find(/qualification|eligibility|educational qualification/i),
     vacancyCount:vacancyMatch ? Number(vacancyMatch[0]) : undefined,
     detailStatus:populated >= 3 ? "EXTRACTED" : populated > 0 ? "PARTIAL" : "FAILED",
-    sourceStatus:status, details, rawText:text.slice(0,25000), contentHash:sha(hashInput),
+    sourceStatus:status, details, rawText:text, contentHash:sha(hashInput),
   };
 }
 async function pool<T,R>(items:T[], limit:number, fn:(item:T)=>Promise<R>):Promise<R[]> {
