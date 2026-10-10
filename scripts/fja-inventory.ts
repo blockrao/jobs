@@ -121,7 +121,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     qualification:find(/qualification|eligibility|educational qualification/i),
     vacancyCount:vacancyMatch ? Number(vacancyMatch[0]) : undefined,
     detailStatus:populated >= 3 ? "EXTRACTED" : populated > 0 ? "PARTIAL" : "FAILED",
-    sourceStatus:status, details, rawText:text.slice(0,100000), contentHash:sha(hashInput),
+    sourceStatus:status, details, rawText:text.slice(0,25000), contentHash:sha(hashInput),
   };
 }
 async function pool<T,R>(items:T[], limit:number, fn:(item:T)=>Promise<R>):Promise<R[]> {
@@ -206,6 +206,16 @@ async function main() {
           vacancy_count=excluded.vacancy_count,detail_status=excluded.detail_status,source_status=excluded.source_status,
           details=excluded.details,raw_text=excluded.raw_text,content_hash=excluded.content_hash,
           last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
+      `;
+      await db`
+        INSERT INTO public.source_observations
+          (source, external_id, source_url, observed_at, content_hash, facts, links, raw, run_id, outcome, outcome_reason)
+        VALUES
+          ('freejobalert', ${parsed.externalId}, ${parsed.sourceUrl}, now(), ${parsed.contentHash},
+           ${db.json({title:parsed.title, organizationName:parsed.organizationName, publishedDate:parsed.publishedDate, applicationStartDate:parsed.applicationStartDate, applicationEndDate:parsed.applicationEndDate, advertisementNumber:parsed.advertisementNumber, qualification:parsed.qualification, vacancyCount:parsed.vacancyCount, detailStatus:parsed.detailStatus, sourceStatus:parsed.sourceStatus})},
+           ${db.json(parsed.details.officialLinks ?? [])}, ${db.json({details:parsed.details, rawText:parsed.rawText})},
+           ${RUN_ID}, ${parsed.detailStatus === "EXTRACTED" ? "RECEIVED" : "SKIPPED"}, ${parsed.detailStatus === "EXTRACTED" ? null : "Detail extraction incomplete"})
+        ON CONFLICT (source, external_id, content_hash) DO NOTHING
       `;
       return parsed;
     } catch(error) {
