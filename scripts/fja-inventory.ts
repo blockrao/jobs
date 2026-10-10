@@ -395,14 +395,14 @@ async function main() {
              other_info_raw,source_table_row_raw,extraction_status,official_verification_status,content_hash,last_crawl_run_id,
              first_seen_at,last_seen_at,updated_at)
           VALUES
-            (\${inventoryRow.id},'freejobalert',\${parsed.externalId},\${candidate.sourcePostKey},\${candidate.postNameRaw},
-             NULL,\${candidate.sourcePostCodeRaw},\${candidate.vacancyCountRaw},\${candidate.vacancyCountCandidate},
-             \${candidate.qualificationRaw},\${candidate.experienceRaw},\${candidate.ageLimitRaw},\${candidate.ageReferenceDateRaw},
-             \${candidate.ageRelaxationRulesRaw},\${candidate.salaryRaw},\${candidate.payLevelRaw},\${candidate.employmentTypeRaw},
-             \${candidate.tenureRaw},\${candidate.locationRaw},\${candidate.dutiesResponsibilitiesRaw},\${candidate.eligibilityConditionsRaw},
-             \${db.json(candidate.milestonesRaw)},\${db.json(candidate.applicationSelectionRaw)},\${db.json(candidate.otherInfoRaw)},
-             \${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw) : null},\${candidate.extractionStatus},'PENDING',
-             \${candidate.contentHash},\${RUN_ID},now(),now(),now())
+            (${inventoryRow.id},'freejobalert',${parsed.externalId},${candidate.sourcePostKey},${candidate.postNameRaw},
+             NULL,${candidate.sourcePostCodeRaw},${candidate.vacancyCountRaw},${candidate.vacancyCountCandidate},
+             ${candidate.qualificationRaw},${candidate.experienceRaw},${candidate.ageLimitRaw},${candidate.ageReferenceDateRaw},
+             ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${candidate.payLevelRaw},${candidate.employmentTypeRaw},
+             ${candidate.tenureRaw},${candidate.locationRaw},${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
+             ${db.json(candidate.milestonesRaw)},${db.json(candidate.applicationSelectionRaw)},${db.json(candidate.otherInfoRaw)},
+             ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw) : null},${candidate.extractionStatus},'PENDING',
+             ${candidate.contentHash},${RUN_ID},now(),now(),now())
           ON CONFLICT (source_slug,external_id,source_post_key) DO UPDATE SET
             recruitment_inventory_id=excluded.recruitment_inventory_id,
             post_name_raw=excluded.post_name_raw,source_post_code_raw=excluded.source_post_code_raw,
