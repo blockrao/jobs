@@ -63,6 +63,8 @@ export default function JobPostingPage({
   resolvedFacts,
   recruitmentResolvedFacts,
 }: JobPostingPageProps) {
+  const localePrefix = locale === "hi" ? "/hi" : "";
+
   // For single-job recruitments, enrich post data from recruitment context
   const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
     ? {
@@ -79,17 +81,17 @@ export default function JobPostingPage({
     <div className={styles.container}>
         {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
         <div className={styles.breadcrumb}>
-          <Link href="/jobs">Jobs</Link>
+          <Link href={`${localePrefix}/jobs`}>Jobs</Link>
           <span>›</span>
           {recruitment?.recruitment?.organizationSlug && post.organizationName && (
             <>
-              <Link href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
+              <Link href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
               <span>›</span>
             </>
           )}
           {post.recruitmentSlug && (
             <>
-              <Link href={`/jobs/${post.recruitmentSlug}`}>
+              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
                 {post.recruitmentName ?? recruitment?.recruitment?.name ?? "Recruitment"}
               </Link>
               <span>›</span>
@@ -160,7 +162,7 @@ export default function JobPostingPage({
             <ul className={styles.relatedRolesList}>
               {recruitment?.posts?.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
+                  <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
                     <span className={styles.roleTitle}>{p.title}</span>
                     {p.vacancies?.[0]?.count && (
                       <span className={styles.roleVacancies}>
