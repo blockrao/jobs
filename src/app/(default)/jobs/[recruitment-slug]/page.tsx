@@ -8,13 +8,14 @@
  * Handles redirects from old slugs to new semantic slugs with 301 status.
  */
 
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
-import { recruitmentHubCanonicalPath } from "@/lib/canonical-job-routes";
+import { canonicalPostLeafPath, recruitmentHubCanonicalPath } from "@/lib/canonical-job-routes";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
+import { getPostingBySlugCached } from "@/lib/queries";
 import { getDb } from "@/db";
 import { recruitment_slug_redirects } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -106,9 +107,17 @@ export async function generateMetadata({
   const recruitmentData = await getRecruitmentWithPostsCached(slug);
 
   if (!recruitmentData) {
+    // This compatibility route historically received both Recruitment slugs
+    // and flat scraped Posting slugs. Consolidate a legacy Posting to its
+    // canonical Recruitment → Post Leaf instead of creating a second detail URL.
+    const legacyPosting = await getPostingBySlugCached(slug);
+    const canonicalLeaf = canonicalPostLeafPath(legacyPosting);
+    if (canonicalLeaf) permanentRedirect(canonicalLeaf);
+
     return {
       title: "Recruitment Not Found",
       description: "The requested recruitment could not be found",
+      robots: { index: false, follow: true },
     };
   }
 
@@ -155,10 +164,15 @@ export default async function RecruitmentHubPage({
   const resolvedParams = await params;
   const recruitmentSlug = resolvedParams["recruitment-slug"];
 
-  // Fetch recruitment data with all posts
+  // Resolve Recruitment first. If none exists at this slug, check whether
+  // it is a legacy flat Posting URL and permanently consolidate it to the
+  // canonical Post Leaf before returning a genuine 404.
   const recruitmentData = await getRecruitmentWithPostsCached(recruitmentSlug);
 
   if (!recruitmentData) {
+    const legacyPosting = await getPostingBySlugCached(recruitmentSlug);
+    const canonicalLeaf = canonicalPostLeafPath(legacyPosting);
+    if (canonicalLeaf) permanentRedirect(canonicalLeaf);
     notFound();
   }
 
