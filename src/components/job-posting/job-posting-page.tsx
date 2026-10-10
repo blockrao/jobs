@@ -23,8 +23,16 @@ import OfficialSourceVerification from "./sections/official-source-verification"
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
-  recruitment: any;
-  posts: any[];
+  recruitment: {
+    organizationSlug?: string | null;
+    name?: string | null;
+  };
+  posts: Array<{
+    id: string | number;
+    slug: string;
+    title: string;
+    vacancies?: Array<{ count: number }>;
+  }>;
   totalPosts: number;
   isSingleJobRecruitment: boolean;
 }
@@ -63,14 +71,7 @@ export default function JobPostingPage({
   resolvedFacts,
   recruitmentResolvedFacts,
 }: JobPostingPageProps) {
-  // For single-job recruitments, enrich post data from recruitment context
-  const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
-    ? {
-        ...post,
-        // Recruitment-level context can enhance single-job posting
-        recruitmentContext: recruitment.recruitment,
-      }
-    : post;
+  const localePrefix = locale === "hi" ? "/hi" : "";
 
   // Get sibling posts for multi-post recruitments
   const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
@@ -79,17 +80,17 @@ export default function JobPostingPage({
     <div className={styles.container}>
         {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
         <div className={styles.breadcrumb}>
-          <Link href="/jobs">Jobs</Link>
+          <Link href={`${localePrefix}/jobs`}>Jobs</Link>
           <span>›</span>
           {recruitment?.recruitment?.organizationSlug && post.organizationName && (
             <>
-              <Link href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
+              <Link href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
               <span>›</span>
             </>
           )}
           {post.recruitmentSlug && (
             <>
-              <Link href={`/jobs/${post.recruitmentSlug}`}>
+              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
                 {post.recruitmentName ?? recruitment?.recruitment?.name ?? "Recruitment"}
               </Link>
               <span>›</span>
@@ -110,8 +111,8 @@ export default function JobPostingPage({
           as a last resort. Never show a "#" dead link for Apply.
         */}
         {(() => {
-          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
-          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
+          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
           return (
             <div className={styles.actions}>
               {applyUrl && (
@@ -160,7 +161,7 @@ export default function JobPostingPage({
             <ul className={styles.relatedRolesList}>
               {recruitment?.posts?.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
+                  <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
                     <span className={styles.roleTitle}>{p.title}</span>
                     {p.vacancies?.[0]?.count && (
                       <span className={styles.roleVacancies}>
@@ -192,7 +193,7 @@ export default function JobPostingPage({
           information about this role to help candidates review it more easily.
           Details can be incomplete or change over time. For application-critical
           information, consult the official notification and the responsible
-          organization's website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
+          organization&apos;s website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
           — all applications must be submitted through the official portal.
         </div>
       </div>
