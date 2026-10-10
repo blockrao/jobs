@@ -23,8 +23,15 @@ import OfficialSourceVerification from "./sections/official-source-verification"
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
-  recruitment: any;
-  posts: any[];
+  recruitment: {
+    organizationSlug?: string | null;
+    name?: string | null;
+  };
+  posts: Array<{
+    id: string | number;
+    slug: string;
+    name?: string | null;
+  }>;
   totalPosts: number;
   isSingleJobRecruitment: boolean;
 }
@@ -64,15 +71,6 @@ export default function JobPostingPage({
   recruitmentResolvedFacts,
 }: JobPostingPageProps) {
   const localePrefix = locale === "hi" ? "/hi" : "";
-
-  // For single-job recruitments, enrich post data from recruitment context
-  const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
-    ? {
-        ...post,
-        // Recruitment-level context can enhance single-job posting
-        recruitmentContext: recruitment.recruitment,
-      }
-    : post;
 
   // Get sibling posts for multi-post recruitments
   const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
@@ -194,7 +192,7 @@ export default function JobPostingPage({
           information about this role to help candidates review it more easily.
           Details can be incomplete or change over time. For application-critical
           information, consult the official notification and the responsible
-          organization's website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
+          organization&apos;s website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
           — all applications must be submitted through the official portal.
         </div>
       </div>
