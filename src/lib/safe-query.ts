@@ -2,22 +2,66 @@
  * Runs a database query and returns `fallback` instead of throwing if it
  * fails (connection timeout, pool exhaustion, transient outage, etc).
  *
- * Detail pages (jobs/[slug], exams/[slug], organizations/[slug], ...) call
- * their lookup query directly in generateMetadata/the page body with no
- * try/catch, unlike generateStaticParams in these same files, which already
- * wraps its DB calls and falls back to an empty array. An uncaught query
- * error there crashes straight through to the root error boundary
- * (src/app/error.tsx) — a generic "Something went wrong" page — instead of
- * the existing, much friendlier "this isn't available" handling these pages
- * already have for a genuinely missing slug. Wrapping the lookup with this
- * (fallback: null, matching what "not found" already looks like in every
- * one of these queries) lets a transient DB hiccup degrade to that same
- * path instead of a hard crash.
- *
- * DIAGNOSTIC: errors are logged with full detail so they surface in Vercel
- * function logs rather than silently becoming 404s. When the error is
- * persistent (not transient), the log shows the actual exception.
+ * Detail pages call lookup queries from metadata/page rendering. A transient
+ * database error should degrade to the page's explicit fallback rather than
+ * crash the whole render. The diagnostic log records root-cause details but
+ * never logs SQL text or bound query parameters.
  */
+type ErrorLike = {
+  name?: unknown;
+  message?: unknown;
+  code?: unknown;
+  cause?: unknown;
+  errors?: unknown;
+};
+
+function errorLike(value: unknown): ErrorLike | null {
+  return value !== null && typeof value === "object" ? (value as ErrorLike) : null;
+}
+
+function errorCode(value: unknown): string | number | undefined {
+  const code = errorLike(value)?.code;
+  return typeof code === "string" || typeof code === "number" ? code : undefined;
+}
+
+function errorName(value: unknown): string | undefined {
+  const name = errorLike(value)?.name;
+  return typeof name === "string" ? name : undefined;
+}
+
+function safeErrorMessage(value: unknown): string | undefined {
+  const message = errorLike(value)?.message;
+  if (typeof message !== "string" || !message.trim()) return undefined;
+
+  // Drizzle's wrapper message embeds SQL and bound values. Never log that.
+  if (/failed query:\s*(select|insert|update|delete|with)\b/i.test(message)) {
+    return undefined;
+  }
+
+  return message
+    .replace(/postgres(?:ql)?:\/\/[^\s'"]+/gi, "[redacted database URL]")
+    .replace(/\bparams:\s*.*$/i, "params: [redacted]")
+    .slice(0, 300);
+}
+
+function deepestCause(error: unknown): unknown {
+  let current = error;
+  const seen = new Set<object>();
+
+  for (let depth = 0; depth < 5; depth += 1) {
+    const currentObject = errorLike(current);
+    if (!currentObject || typeof current !== "object" || seen.has(current)) break;
+    seen.add(current);
+
+    const nestedErrors = Array.isArray(currentObject.errors) ? currentObject.errors : [];
+    const next = currentObject.cause ?? nestedErrors[0];
+    if (!next || next === current) break;
+    current = next;
+  }
+
+  return current;
+}
+
 export async function safeQuery<T>(
   fn: () => Promise<T>,
   fallback: T,
@@ -25,17 +69,16 @@ export async function safeQuery<T>(
   try {
     return await fn();
   } catch (error) {
-    // Log with enough structure to diagnose in Vercel logs.
-    // A missing record is not an error (queries return null); only thrown
-    // exceptions reach here, which means a real DB/query failure.
-    console.error(
-      "[safeQuery] DB query threw — returning fallback instead of crashing.",
-      {
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorName: error instanceof Error ? error.name : typeof error,
-        errorStack: error instanceof Error ? error.stack?.split("\n").slice(0, 5).join(" | ") : undefined,
-      }
-    );
+    const rootCause = deepestCause(error);
+
+    console.error("[safeQuery] DB query threw — returning fallback instead of crashing.", {
+      errorName: errorName(error) ?? (error instanceof Error ? error.name : typeof error),
+      errorCode: errorCode(error),
+      rootCauseName: errorName(rootCause),
+      rootCauseCode: errorCode(rootCause),
+      rootCauseMessage: safeErrorMessage(rootCause),
+    });
+
     return fallback;
   }
 }
