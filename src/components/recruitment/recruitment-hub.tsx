@@ -772,6 +772,102 @@ export default function RecruitmentHub({
           </div>
         )}
 
+        {/* Full source-backed recruitment and post inventory. Source extraction is not official verification. */}
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-gray-900">Complete Recruitment Record</h2>
+            <p className="text-sm text-gray-600 mt-1">Recruitment-level fields available in JobOye's database, followed by source-derived post details. Unverified source data is labelled as such.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              ['Recruitment ID', recruitment.id],
+              ['Recruitment name', recruitment.name],
+              ['Slug', recruitment.slug],
+              ['Status', recruitment.status],
+              ['Year', recruitment.year],
+              ['Total vacancies', recruitment.totalVacancies ?? recruitment.total_vacancies ?? resolvedTotalVacancies],
+              ['Application opens', formatDate(recruitment.applicationStartDate ?? recruitment.application_start_date)],
+              ['Application closes', formatDate(recruitment.applicationEndDate ?? recruitment.application_end_date)],
+              ['Notification number', recruitment.officialNotificationNumber ?? recruitment.official_notification_number],
+              ['Verification status', recruitment.officialVerificationStatus ?? recruitment.official_verification_status ?? 'Not recorded'],
+              ['Last verified', formatDate(recruitment.lastVerifiedAt ?? recruitment.last_verified_at)],
+              ['Notification / source URL', recruitment.notificationUrl ?? recruitment.notification_url ?? displayOfficialSource],
+            ].filter((item) => item[1] !== null && item[1] !== undefined && item[1] !== '').map(([label, value]) => (
+              <div key={String(label)} className="rounded-lg border border-gray-100 bg-gray-50 p-3 min-w-0">
+                <div className="text-xs font-medium text-gray-500 mb-1">{label}</div>
+                {String(label).toLowerCase().includes('url') && String(value).startsWith('http') ? (
+                  <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-700 hover:underline break-all">{String(value)}</a>
+                ) : (
+                  <div className="text-sm font-medium text-gray-900 break-words">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</div>
+                )}
+              </div>
+            ))}
+          </div>
+          {(recruitment.description || recruitment.metadata) && (
+            <div className="mt-4 space-y-3">
+              {recruitment.description && <div><h3 className="text-sm font-semibold text-gray-800 mb-1">Recruitment description</h3><p className="text-sm text-gray-700 whitespace-pre-wrap">{recruitment.description}</p></div>}
+              {recruitment.metadata && <details className="rounded-lg border border-gray-200 p-3"><summary className="cursor-pointer text-sm font-semibold text-gray-800">Additional recruitment metadata</summary><pre className="mt-3 text-xs text-gray-700 whitespace-pre-wrap break-words overflow-x-auto">{JSON.stringify(recruitment.metadata, null, 2)}</pre></details>}
+            </div>
+          )}
+        </section>
+
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+          <div className="mb-4">
+            <h2 className="text-base font-bold text-gray-900">All Posts — Detailed Comparison</h2>
+            <p className="text-sm text-gray-600 mt-1">Includes normalized JobOye post data and linked FreeJobAlert extraction fields where available. Source extraction is not an official confirmation.</p>
+          </div>
+          {posts.length === 0 ? (
+            <p className="text-sm text-gray-600">No posts are linked to this recruitment record yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-[1100px] w-full text-left text-sm">
+                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600">
+                  <tr>{['Post / IDs','Vacancies','Location','Pay / salary','Employment','Qualification','Experience','Age','Duties / eligibility','Source status'].map((heading) => <th key={heading} className="px-3 py-3 font-semibold align-top">{heading}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {posts.map((post: any) => {
+                    const inv = post.fjaInventory ?? {};
+                    const show = (...values: any[]) => {
+                      const value = values.find((v) => v !== null && v !== undefined && v !== '');
+                      if (value === undefined) return 'Not recorded';
+                      return typeof value === 'object' ? JSON.stringify(value) : String(value);
+                    };
+                    const postTitle = post.name ?? post.position?.name ?? post.slug ?? 'Post';
+                    return (
+                      <tr key={post.id} className="align-top">
+                        <td className="px-3 py-3 min-w-[180px]">
+                          <Link href={`/jobs/${recruitment.slug}/${post.slug}`} className="font-semibold text-blue-700 hover:underline">{postTitle}</Link>
+                          <div className="mt-1 text-xs text-gray-500">Post ID: {post.id}</div>
+                          <div className="text-xs text-gray-500">Position ID: {show(post.positionId, post.position_id, post.position?.id)}</div>
+                        </td>
+                        <td className="px-3 py-3">{show(inv.vacancy_count_raw, post.resolvedVacancyCount, post.vacancyCount, post.vacancy_count)}</td>
+                        <td className="px-3 py-3">{show(inv.location_raw, post.locationText, post.position?.locationText)}</td>
+                        <td className="px-3 py-3">{show(inv.salary_raw, inv.pay_level_raw, post.salary, post.salaryRange, post.payLevel)}</td>
+                        <td className="px-3 py-3">{show(inv.employment_type_raw, post.employmentType, post.employment_type)}</td>
+                        <td className="px-3 py-3 max-w-[230px] whitespace-pre-wrap">{show(inv.qualification_raw, post.qualification, post.qualificationText)}</td>
+                        <td className="px-3 py-3 max-w-[220px] whitespace-pre-wrap">{show(inv.experience_raw, post.experience, post.experienceText)}</td>
+                        <td className="px-3 py-3 max-w-[180px] whitespace-pre-wrap">{show(inv.age_limit_raw, post.ageLimit, post.age_limit)}</td>
+                        <td className="px-3 py-3 max-w-[300px] whitespace-pre-wrap">
+                          <div><span className="font-semibold">Duties: </span>{show(inv.duties_responsibilities_raw, post.duties)}</div>
+                          <div className="mt-2"><span className="font-semibold">Eligibility: </span>{show(inv.eligibility_conditions_raw, post.eligibility, post.eligibilityText)}</div>
+                        </td>
+                        <td className="px-3 py-3 min-w-[170px]">
+                          <div className="text-xs"><span className="font-semibold">Source: </span>{show(inv.source_slug)}</div>
+                          <div className="mt-1 text-xs"><span className="font-semibold">Extraction: </span>{show(inv.extraction_status)}</div>
+                          <div className="mt-1 text-xs"><span className="font-semibold">Official verification: </span>{show(inv.official_verification_status)}</div>
+                          {inv.external_id && <div className="mt-1 text-xs text-gray-500">Source article ID: {String(inv.external_id)}</div>}
+                          {inv.other_info_raw?.source_article_url && <a href={String(inv.other_info_raw.source_article_url)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-blue-700 hover:underline break-all">Open source article</a>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">Verification note: source-extracted values may be incomplete or unverified. Confirm eligibility, dates, pay and application instructions against the official notification before relying on them.</p>
+        </section>
+
         <div className="h-4" />
       </div>
     </div>
