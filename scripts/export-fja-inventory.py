@@ -157,7 +157,7 @@ post_fixed_headers = [
     "post_key", "recruitment_key", "source_external_id_internal", "source_post_name_raw",
     "post_name_normalized_candidate", "source_post_code_raw", "vacancy_count_raw",
     "vacancy_count_normalized_candidate", "qualification_raw", "experience_raw",
-    "minimum_age_years_candidate", "maximum_age_years_candidate", "age_reference_date_raw",
+    "minimum_age_years_candidate", "maximum_age_years_candidate", "age_limit_raw", "age_reference_date_raw",
     "age_relaxation_rules_raw", "salary_min_amount_candidate", "salary_max_amount_candidate",
     "salary_currency_candidate", "salary_period_candidate", "salary_raw", "pay_level_raw",
     "employment_type_raw", "tenure_raw", "location_raw", "duties_responsibilities_raw",
@@ -248,6 +248,7 @@ for item in items:
             tenure = matching_field(explicit_record, [r"duration", r"tenure", r"contract period"])
             employment_type = matching_field(explicit_record, [r"employment type", r"nature of appointment", r"job type"])
             duties = matching_field(explicit_record, [r"job profile", r"roles and responsibilities", r"duties", r"responsibilities"])
+            eligibility_conditions = matching_field(explicit_record, [r"eligibility criteria", r"other conditions", r"conditions", r"minimum requirements"])
             post_milestones = {k: v for k, v in explicit_record["fields"].items() if re.search(r"date|deadline|exam|interview|correction", str(k), re.I)}
             post_application_selection = {k: v for k, v in explicit_record["fields"].items() if re.search(r"fee|apply|application|selection|document|instruction", str(k), re.I)}
             unresolved_shared_fields = {}
@@ -263,12 +264,13 @@ for item in items:
             tenure = first_field(fields, [r"duration", r"tenure", r"contract period"])
             employment_type = first_field(fields, [r"employment type", r"nature of appointment", r"job type"])
             duties = first_field(fields, [r"job profile", r"roles and responsibilities", r"duties"])
+            eligibility_conditions = first_field(fields, [r"other eligibility", r"eligibility criteria", r"other conditions", r"minimum requirements"])
             post_milestones = {}
             post_application_selection = {}
             unresolved_shared_fields = {}
             note = "Single candidate; generic article fields are candidates only and still require official verification."
         else:
-            qualification = experience = age = salary = location = vacancy_raw = pay_level = tenure = employment_type = duties = ""
+            qualification = experience = age = salary = location = vacancy_raw = pay_level = tenure = employment_type = duties = eligibility_conditions = ""
             post_milestones = {}
             post_application_selection = {}
             unresolved_shared_fields = fields
@@ -285,8 +287,8 @@ for item in items:
         post_key = f"{recruitment_key}-P{index:02d}" if candidate else ""
         post_base_rows.append([
             post_key, recruitment_key, external_id, candidate, "", "",
-            vacancy_raw, "", qualification, experience, "", "", age, "", "", "", "", "",
-            salary, pay_level, employment_type, tenure, location, duties, qualification,
+            vacancy_raw, "", qualification, experience, "", "", age, "", "", "", "", "", "",
+            salary, pay_level, employment_type, tenure, location, duties, eligibility_conditions,
             as_json(post_milestones), as_json(post_application_selection),
             as_json(unresolved_shared_fields), source_ref, item.get("contentHash"), payload.get("runId"),
             "CANDIDATE_NEEDS_REVIEW" if candidate else "POST_DECOMPOSITION_NOT_EXTRACTED",
