@@ -9,6 +9,7 @@ const recruitmentHub = readFileSync("src/components/recruitment/recruitment-hub.
 const postLeaf = readFileSync("src/components/job-posting/job-posting-page.tsx", "utf8");
 const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
 const localeRecruitmentRoute = readFileSync("src/app/[locale]/jobs/[slug]/page.tsx", "utf8");
+const internalReviewRoute = readFileSync("src/app/(default)/fja-review/page.tsx", "utf8");
 
 describe("candidate-facing Recruitment and Post UI", () => {
   test("Recruitment hub does not render raw database or source inventory audit panels", () => {
@@ -17,6 +18,20 @@ describe("candidate-facing Recruitment and Post UI", () => {
     expect(recruitmentHub).not.toContain("RecordFieldGrid");
     expect(recruitmentHub).not.toContain("fjaInventory");
     expect(recruitmentHub).not.toContain("Source article ID:");
+  });
+
+  test("candidate-facing Recruitment and Post components contain no source-aggregator branding", () => {
+    for (const source of [recruitmentHub, postLeaf]) {
+      expect(source).not.toMatch(/free\\s*job\\s*alert|freejobalert|\\bfja\\b/i);
+      expect(source).not.toContain("source extraction is not an official confirmation");
+      expect(source).not.toContain("All Posts — Detailed Comparison");
+    }
+  });
+
+  test("internal source-review route is not publicly accessible", () => {
+    expect(internalReviewRoute).toContain('import { notFound } from "next/navigation";');
+    expect(internalReviewRoute).toContain("notFound();");
+    expect(internalReviewRoute).not.toContain("freejobalert.com");
   });
 
   test("Recruitment source link is not incorrectly labelled as an official PDF", () => {
