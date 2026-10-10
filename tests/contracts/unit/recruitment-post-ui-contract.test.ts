@@ -8,6 +8,7 @@ import { describe, expect, test } from "vitest";
 const recruitmentHub = readFileSync("src/components/recruitment/recruitment-hub.tsx", "utf8");
 const postLeaf = readFileSync("src/components/job-posting/job-posting-page.tsx", "utf8");
 const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
+const localeRecruitmentRoute = readFileSync("src/app/[locale]/jobs/[slug]/page.tsx", "utf8");
 
 describe("candidate-facing Recruitment and Post UI", () => {
   test("Recruitment hub does not render raw database or source inventory audit panels", () => {
@@ -21,6 +22,13 @@ describe("candidate-facing Recruitment and Post UI", () => {
   test("Recruitment source link is not incorrectly labelled as an official PDF", () => {
     expect(recruitmentHub).toContain("Notification / source link");
     expect(recruitmentHub).not.toContain("View Official PDF");
+  });
+
+  test("Recruitment hub preserves locale-prefixed internal links", () => {
+    expect(recruitmentHub).toContain('const localePrefix = locale === "hi" ? "/hi" : "";');
+    expect(recruitmentHub).toContain("localePrefix}/jobs");
+    expect(recruitmentHub).toContain("localePrefix}/organizations");
+    expect(localeRecruitmentRoute).toContain("locale={locale}");
   });
 
   test("Recruitment hub maps stored exam, notification, fee, and selection facts into readable rows", () => {
