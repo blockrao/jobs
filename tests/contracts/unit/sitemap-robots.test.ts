@@ -11,6 +11,7 @@ const rows = {
   categories: [] as unknown[],
   organizations: [] as unknown[],
   exams: [] as unknown[],
+  postLeaves: [] as unknown[],
 };
 
 vi.mock("@/lib/queries", async (importOriginal) => ({
@@ -20,6 +21,8 @@ vi.mock("@/lib/queries", async (importOriginal) => ({
   getAllCategorySlugsForSitemap: async () => rows.categories,
   getAllOrganizationSlugsForSitemap: async () => rows.organizations,
   getAllExamSlugsForSitemap: async () => rows.exams,
+  getPostSlugsForSitemap: async () => rows.postLeaves,
+  listCommissionsWithExams: async () => [],
 }));
 
 const now = new Date("2026-10-01T00:00:00Z");
@@ -38,6 +41,9 @@ beforeEach(() => {
   rows.exams = [
     { slug: "exam-translated", labelHi: "परीक्षा" },
     { slug: "exam-english-only", labelHi: null },
+  ];
+  rows.postLeaves = [
+    { recruitmentSlug: "sample-recruitment-2026-01", postSlug: "project-nurse-iii", lastModified: now, isLive: true },
   ];
 });
 
@@ -67,6 +73,17 @@ describe("sitemap", () => {
     const urls = (await entries()).map((e) => e.url);
     expect(new Set(urls).size).toBe(urls.length);
   });
+
+  test("IDX-04d canonical job postings and Post Leaves are included; legacy recruitment hubs are not", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    expect(paths).toContain("/jobs/job-translated");
+    expect(paths).toContain("/jobs/job-english-only");
+    expect(paths).toContain("/jobs/sample-recruitment-2026-01/project-nurse-iii");
+    expect(paths).not.toContain("/jobs/sample-recruitment-2026-01");
+    expect(paths.some((p) => p.startsWith("/recruitments/"))).toBe(false);
+    expect(paths.some((p) => p.startsWith("/positions/"))).toBe(false);
+  });
+
 
   test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
     const byPath = new Map((await entries()).map((e) => [new URL(e.url).pathname, e]));
