@@ -7,7 +7,6 @@
 import { Metadata } from "next";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
-import JobPostingStructuredData from "@/components/job-posting/structured-data/job-posting-schema";
 import { pageSeo } from "@/lib/seo";
 
 interface Props {
@@ -69,7 +68,6 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   return (
     <>
-      <JobPostingStructuredData post={post} />
       <JobPostingPage post={post} locale={locale} />
     </>
   );
