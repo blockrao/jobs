@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import postgres from "postgres";
+import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -250,11 +251,48 @@ function detailFields(html: string, listing: {url:string; title:string; external
     listContent: lists,
     preservationNote: "Unmapped source fields and page structure are retained as raw evidence; no AI rewrite or official verification is performed during extraction.",
   };
+  const articleFacts = parseFreeJobAlertArticle(html);
+  // Preserve structured section extraction beside the original table/text/link evidence.
+  // These remain discovery-source candidates and do not imply official verification.
+  const articleFactsStored = {
+    ageLimitMin: articleFacts.ageLimitMin ?? null,
+    ageLimitMax: articleFacts.ageLimitMax ?? null,
+    ageRelaxationNotes: articleFacts.ageRelaxationNotes ?? null,
+    applicationFeeGeneral: articleFacts.applicationFeeGeneral ?? null,
+    applicationFeeReserved: articleFacts.applicationFeeReserved ?? null,
+    salaryMin: articleFacts.salaryMin ?? null,
+    salaryMax: articleFacts.salaryMax ?? null,
+    validThrough: articleFacts.validThrough?.toISOString() ?? null,
+    examDate: articleFacts.examDate?.toISOString() ?? null,
+    applyUrl: articleFacts.applyUrl ?? null,
+    officialNotificationUrl: articleFacts.officialNotificationUrl ?? null,
+    officialWebsiteUrl: articleFacts.officialWebsiteUrl ?? null,
+    extraContent: articleFacts.extraContent ?? null,
+    unparsed: articleFacts.unparsed,
+    review: articleFacts.review,
+  };
+  const fieldCoverage = {
+    labeledTableFields: Object.keys(rows),
+    sectionExtractor: {
+      age: articleFacts.ageLimitMin != null || articleFacts.ageLimitMax != null,
+      fee: articleFacts.applicationFeeGeneral != null || articleFacts.applicationFeeReserved != null,
+      salary: articleFacts.salaryMin != null || articleFacts.salaryMax != null,
+      deadline: articleFacts.validThrough != null,
+      examDate: articleFacts.examDate != null,
+      applyUrl: articleFacts.applyUrl != null,
+      notificationUrl: articleFacts.officialNotificationUrl != null,
+      officialWebsiteUrl: articleFacts.officialWebsiteUrl != null,
+    },
+    unparsedSections: articleFacts.unparsed,
+    reviewFlags: articleFacts.review,
+    note: "Coverage reports what extraction found; absence does not prove the source omitted a fact.",
+  };
   const details: Record<string, unknown> = {
     tableFields: rows, tables, headings, lists, allLinks, officialLinks,
     postNames, ageLimit, applicationFee, selectionProcess, salary, location, otherInfoRaw,
+    articleFacts: articleFactsStored, fieldCoverage,
   };
-  const parsedEndDate = endRaw ? parseDate(endRaw) : undefined;
+  const parsedEndDate = (endRaw ? parseDate(endRaw) : undefined) ?? articleFacts.validThrough;
   const today = new Date().toISOString().slice(0, 10);
   const explicitClosed = /application closed|last date.*over|no longer accepting/i.test(text);
   const status = explicitClosed || (parsedEndDate && parsedEndDate < today)
