@@ -127,7 +127,7 @@ def other_payload(item, details, fields, links):
     known_detail_keys = {
         "tableFields", "tables", "allLinks", "officialLinks", "headings", "lists",
         "sourceCapture", "postNames", "ageLimit", "applicationFee", "selectionProcess",
-        "salary", "location", "rawText"
+        "salary", "location", "rawText", "otherInfoRaw"
     }
     return {
         "unmapped_table_fields": {
