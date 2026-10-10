@@ -233,12 +233,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     }));
 
     const inventoryResult = await db.execute(sql`
-      SELECT id, external_id, qualification_raw, experience_raw, age_limit_raw,
-        age_reference_date_raw, age_relaxation_rules_raw, salary_raw, pay_level_raw,
-        employment_type_raw, tenure_raw, location_raw, duties_responsibilities_raw,
-        eligibility_conditions_raw, vacancy_count_raw, milestones_raw,
-        application_selection_raw, other_info_raw, extraction_status,
-        official_verification_status, source_slug, updated_at
+      SELECT *
       FROM fja_post_inventory
       WHERE source_slug = 'freejobalert'
         AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
