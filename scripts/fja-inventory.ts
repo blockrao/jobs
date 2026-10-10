@@ -104,12 +104,14 @@ function extractPostCandidates(item: Listing): FjaPostCandidate[] {
     let headerIndex = -1;
     let headers: string[] = [];
     for (let i=0;i<tableRows.length;i++) {
-      const cells = Array.isArray(tableRows[i].cells) ? tableRows[i].cells.map((v)=>String(v ?? "").trim()) : [];
+      const rawCells = tableRows[i].cells;
+      const cells: string[] = Array.isArray(rawCells) ? rawCells.map((v: unknown)=>String(v ?? "").trim()) : [];
       if (cells.some((cell)=>titleHeader.test(cell))) { headerIndex=i; headers=cells; break; }
     }
     if (headerIndex < 0) continue;
     for (const row of tableRows.slice(headerIndex+1)) {
-      const cells = Array.isArray(row.cells) ? row.cells.map((v)=>String(v ?? "").trim()) : [];
+      const rawCells = row.cells;
+      const cells: string[] = Array.isArray(rawCells) ? rawCells.map((v: unknown)=>String(v ?? "").trim()) : [];
       const fields: Record<string,string> = {};
       headers.forEach((header,index)=>{ if(header && cells[index]) fields[header]=cells[index]; });
       const name = Object.entries(fields).find(([key,value])=>titleHeader.test(key) && value.trim())?.[1]?.trim();
@@ -382,7 +384,7 @@ async function main() {
         INSERT INTO public.fja_job_inventory
           (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,other_info_raw,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
         VALUES
-          ('freejobalert',${parsed.externalId},${parsed.sourceUrl},${parsed.title},${parsed.organizationName ?? null},${parsed.listingCategory ?? null},${parsed.publishedDate ?? null},${parsed.applicationStartDate ?? null},${parsed.applicationEndDate ?? null},${parsed.advertisementNumber ?? null},${parsed.qualification ?? null},${parsed.vacancyCount ?? null},${parsed.detailStatus},${parsed.sourceStatus},${db.json(parsed.details)},${db.json(parsed.details.otherInfoRaw ?? {})},${parsed.rawText ?? null},${parsed.contentHash},${RUN_ID},now(),now(),now())
+          ('freejobalert',${parsed.externalId},${parsed.sourceUrl},${parsed.title},${parsed.organizationName ?? null},${parsed.listingCategory ?? null},${parsed.publishedDate ?? null},${parsed.applicationStartDate ?? null},${parsed.applicationEndDate ?? null},${parsed.advertisementNumber ?? null},${parsed.qualification ?? null},${parsed.vacancyCount ?? null},${parsed.detailStatus},${parsed.sourceStatus},${db.json(parsed.details as never)},${db.json((parsed.details.otherInfoRaw ?? {}) as never)},${parsed.rawText ?? null},${parsed.contentHash},${RUN_ID},now(),now(),now())
         ON CONFLICT (source_slug,external_id) DO UPDATE SET
           source_url=excluded.source_url,title=excluded.title,organization_name=excluded.organization_name,
           listing_category=excluded.listing_category,published_date=excluded.published_date,
@@ -417,8 +419,8 @@ async function main() {
              ${candidate.qualificationRaw},${candidate.experienceRaw},${candidate.ageLimitRaw},${candidate.ageReferenceDateRaw},
              ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${candidate.payLevelRaw},${candidate.employmentTypeRaw},
              ${candidate.tenureRaw},${candidate.locationRaw},${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
-             ${db.json(candidate.milestonesRaw)},${db.json(candidate.applicationSelectionRaw)},${db.json(candidate.otherInfoRaw)},
-             ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw) : null},${candidate.extractionStatus},'PENDING',
+             ${db.json(candidate.milestonesRaw as never)},${db.json(candidate.applicationSelectionRaw as never)},${db.json(candidate.otherInfoRaw as never)},
+             ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw as never) : null},${candidate.extractionStatus},'PENDING',
              ${candidate.contentHash},${RUN_ID},now(),now(),now())
           ON CONFLICT (source_slug,external_id,source_post_key) DO UPDATE SET
             recruitment_inventory_id=excluded.recruitment_inventory_id,
@@ -442,7 +444,7 @@ async function main() {
         VALUES
           ('freejobalert', ${parsed.externalId}, ${parsed.sourceUrl}, now(), ${parsed.contentHash},
            ${db.json({title:parsed.title, organizationName:parsed.organizationName, publishedDate:parsed.publishedDate, applicationStartDate:parsed.applicationStartDate, applicationEndDate:parsed.applicationEndDate, advertisementNumber:parsed.advertisementNumber, qualification:parsed.qualification, vacancyCount:parsed.vacancyCount, detailStatus:parsed.detailStatus, sourceStatus:parsed.sourceStatus})},
-           ${db.json(parsed.details.officialLinks ?? [])}, ${db.json({details:parsed.details, rawText:parsed.rawText})},
+           ${db.json((parsed.details.officialLinks ?? []) as never)}, ${db.json({details:parsed.details, rawText:parsed.rawText} as never)},
            ${RUN_ID}, ${parsed.detailStatus === "EXTRACTED" ? "RECEIVED" : "SKIPPED"}, ${parsed.detailStatus === "EXTRACTED" ? null : "Detail extraction incomplete"})
         ON CONFLICT (source, external_id, content_hash) DO NOTHING
       `;
@@ -454,7 +456,7 @@ async function main() {
       const failed:Listing={externalId:item.externalId,sourceUrl:item.url,title:item.title || `FJA article ${item.externalId}`,detailStatus:"FAILED",sourceStatus:"UNKNOWN",details:{extractionError:(error as Error).message},contentHash:sha(item.url+RUN_ID)};
       await db`
         INSERT INTO public.fja_job_inventory (source_slug,external_id,source_url,title,detail_status,source_status,details,content_hash,last_crawl_run_id)
-        VALUES ('freejobalert',${failed.externalId},${failed.sourceUrl},${failed.title},'FAILED','UNKNOWN',${db.json(failed.details)},${failed.contentHash},${RUN_ID})
+        VALUES ('freejobalert',${failed.externalId},${failed.sourceUrl},${failed.title},'FAILED','UNKNOWN',${db.json(failed.details as never)},${failed.contentHash},${RUN_ID})
         ON CONFLICT (source_slug,external_id) DO UPDATE SET detail_status='FAILED',details=excluded.details,last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
       `;
       return failed;
