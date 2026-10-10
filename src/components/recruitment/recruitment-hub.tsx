@@ -226,10 +226,10 @@ export default function RecruitmentHub({
   // derive it by summing post-level vacancy records.
   const displayTotalVacancies =
     resolvedTotalVacancies ?? recruitment.totalVacancies ?? null;
-  const displayApplicationUrl =
-    resolvedApplicationUrl ?? recruitment.officialApplicationUrl ?? recruitment.applyUrl ?? null;
-  const displayOfficialSource =
-    resolvedOfficialSource ?? recruitment.officialNotificationUrl ?? null;
+  // External source/apply links must pass the authoritative URL resolvers.
+  // If no verified URL is available, omit the link rather than exposing a discovery source.
+  const displayApplicationUrl = resolvedApplicationUrl ?? null;
+  const displayOfficialSource = resolvedOfficialSource ?? null;
   const displaySelectionProcess =
     resolvedSelectionProcess ?? recruitment.selectionProcess ?? null;
 
