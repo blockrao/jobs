@@ -144,7 +144,7 @@ function extractPostCandidates(item: Listing): FjaPostCandidate[] {
     const canUseArticleFields = !multiCandidate && Boolean(candidate.name) && !explicit;
     const fields = candidate.fields;
     const qualification = get(fields,[/qualification/i,/eligibility/i,/educational/i]) || (canUseArticleFields ? String(item.qualification ?? "") : "");
-    const experience = get(fields,[/experience/i]);
+    const experience = get(fields,[/experience/i]) || (canUseArticleFields ? get(tableFields,[/experience/i]) : "");
     const age = get(fields,[/age limit/i,/age criteria/i]) || (canUseArticleFields ? String(details.ageLimit ?? "") : "");
     const salary = get(fields,[/salary/i,/pay scale/i,/pay level/i,/remuneration/i,/emolument/i]) || (canUseArticleFields ? String(details.salary ?? "") : "");
     const location = get(fields,[/location/i,/place of posting/i]) || (canUseArticleFields ? String(details.location ?? "") : "");
@@ -165,17 +165,17 @@ function extractPostCandidates(item: Listing): FjaPostCandidate[] {
     const core = {
       sourcePostKey:item.externalId + "-P" + String(index+1).padStart(2,"0"),
       postNameRaw:candidate.name || null,
-      sourcePostCodeRaw:get(fields,[/post code/i,/serial no/i,/sl\.?\s*no/i,/post id/i]) || null,
+      sourcePostCodeRaw:get(fields,[/post code/i,/serial no/i,/sl\.?\s*no/i,/post id/i]) || (canUseArticleFields ? get(tableFields,[/post code/i,/serial no/i,/sl\.?\s*no/i,/post id/i]) : "") || null,
       vacancyCountRaw:vacancyRaw || null, vacancyCountCandidate:parseCount(vacancyRaw),
       qualificationRaw:qualification || null, experienceRaw:experience || null, ageLimitRaw:age || null,
-      ageReferenceDateRaw:get(fields,[/age as on/i,/age reckoning date/i]) || null,
-      ageRelaxationRulesRaw:get(fields,[/age relaxation/i,/relaxation/i]) || null,
+      ageReferenceDateRaw:get(fields,[/age as on/i,/age reckoning date/i]) || (canUseArticleFields ? get(tableFields,[/age as on/i,/age reckoning date/i]) : "") || null,
+      ageRelaxationRulesRaw:get(fields,[/age relaxation/i,/relaxation/i]) || (canUseArticleFields ? get(tableFields,[/age relaxation/i,/relaxation/i]) : "") || null,
       salaryRaw:salary || null, payLevelRaw:get(fields,[/pay level/i,/pay scale/i,/grade pay/i]) || null,
-      employmentTypeRaw:get(fields,[/employment type/i,/nature of appointment/i,/job type/i]) || null,
-      tenureRaw:get(fields,[/duration/i,/tenure/i,/contract period/i]) || null,
+      employmentTypeRaw:get(fields,[/employment type/i,/nature of appointment/i,/job type/i]) || (canUseArticleFields ? get(tableFields,[/employment type/i,/nature of appointment/i,/job type/i]) : "") || null,
+      tenureRaw:get(fields,[/duration/i,/tenure/i,/contract period/i]) || (canUseArticleFields ? get(tableFields,[/duration/i,/tenure/i,/contract period/i]) : "") || null,
       locationRaw:location || null,
-      dutiesResponsibilitiesRaw:get(fields,[/job profile/i,/roles and responsibilities/i,/duties/i,/responsibilities/i]) || null,
-      eligibilityConditionsRaw:get(fields,[/eligibility criteria/i,/other conditions/i,/minimum requirements/i]) || null,
+      dutiesResponsibilitiesRaw:get(fields,[/job profile/i,/roles and responsibilities/i,/duties/i,/responsibilities/i]) || (canUseArticleFields ? get(tableFields,[/job profile/i,/roles and responsibilities/i,/duties/i,/responsibilities/i]) : "") || null,
+      eligibilityConditionsRaw:get(fields,[/eligibility criteria/i,/other conditions/i,/minimum requirements/i]) || (canUseArticleFields ? get(tableFields,[/eligibility criteria/i,/other conditions/i,/minimum requirements/i]) : "") || null,
       milestonesRaw, applicationSelectionRaw, otherInfoRaw, sourceTableRowRaw:candidate.source ?? null,
       extractionStatus:(candidate.name ? "CANDIDATE_NEEDS_REVIEW" : "POST_DECOMPOSITION_NOT_EXTRACTED") as FjaPostCandidate["extractionStatus"]
     };
