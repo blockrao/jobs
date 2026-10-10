@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 
 const recruitmentHub = readFileSync("src/components/recruitment/recruitment-hub.tsx", "utf8");
 const postLeaf = readFileSync("src/components/job-posting/job-posting-page.tsx", "utf8");
+const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
 
 describe("candidate-facing Recruitment and Post UI", () => {
   test("Recruitment hub does not render raw database or source inventory audit panels", () => {
@@ -20,6 +21,22 @@ describe("candidate-facing Recruitment and Post UI", () => {
   test("Recruitment source link is not incorrectly labelled as an official PDF", () => {
     expect(recruitmentHub).toContain("Notification / source link");
     expect(recruitmentHub).not.toContain("View Official PDF");
+  });
+
+  test("Recruitment hub maps stored exam, notification, fee, and selection facts into readable rows", () => {
+    expect(recruitmentHub).toContain("Notification No.");
+    expect(recruitmentHub).toContain("Application Fee");
+    expect(recruitmentHub).toContain("Selection Process");
+    expect(recruitmentHub).toContain("recruitment.recruitmentFees");
+    expect(recruitmentHub).toContain("recruitment.selectionProcesses");
+    expect(recruitmentHub).toContain("recruitment.exam");
+  });
+
+  test("public Recruitment loader avoids raw inventory and per-post audit joins", () => {
+    expect(recruitmentQueries).not.toContain("fja_post_inventory");
+    expect(recruitmentQueries).not.toContain("post_enrichments");
+    expect(recruitmentQueries).toContain("recruitment_fees");
+    expect(recruitmentQueries).toContain("selection_processes");
   });
 
   test("Post Leaf internal navigation preserves the Hindi prefix", () => {
