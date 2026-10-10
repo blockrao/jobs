@@ -852,6 +852,9 @@ export default function RecruitmentHub({
           </div>
           <RecordFieldGrid title="Recruitment — all returned database columns" record={recruitment} />
           <RecordFieldGrid title="Organization — linked record" record={recruitment.organization ?? recruitment.organizationRecord ?? null} />
+          <RecordFieldGrid title="Exam — linked record" record={recruitment.exam ?? null} />
+          <RecordFieldGrid title="Recruitment fees — all rows" record={{ rows: recruitment.recruitmentFees ?? [] }} />
+          <RecordFieldGrid title="Selection processes — all rows" record={{ rows: recruitment.selectionProcesses ?? [] }} />
           <RecordFieldGrid title="Recruitment metadata — complete object" record={recruitment.metadata ?? null} />
           {posts.map((post: Record<string, unknown> & { id: number; fjaInventory?: Record<string, unknown> | null; position?: Record<string, unknown> | null; vacancies?: unknown[]; eligibilities?: unknown[] }) => (
             <div key={post.id} className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 md:p-4">
@@ -861,6 +864,7 @@ export default function RecruitmentHub({
               <RecordFieldGrid title="Vacancy rows — all columns" record={{ rows: post.vacancies ?? [] }} />
               <RecordFieldGrid title="Eligibility rows — all columns" record={{ rows: post.eligibilities ?? [] }} />
               <RecordFieldGrid title="Post enrichment — all columns" record={post.postEnrichment ?? null} />
+              <RecordFieldGrid title="Post age rules — all rows" record={{ rows: post.ageRules ?? [] }} />
               <RecordFieldGrid title="FreeJobAlert source inventory — all columns" record={post.fjaInventory ?? null} />
             </div>
           ))}
@@ -908,10 +912,17 @@ export default function RecruitmentHub({
                     fjaInventory?: Record<string, unknown> | null;
                   }) => {
                     const inv = post.fjaInventory ?? {};
-                    const show = (...values: unknown[]) => {
+                    const show = (...values: unknown[]): string => {
                       const value = values.find((v) => v !== null && v !== undefined && v !== '');
                       if (value === undefined) return 'Not recorded';
-                      return typeof value === 'object' ? JSON.stringify(value) : String(value);
+                      if (typeof value === 'object') {
+                        try {
+                          return JSON.stringify(value) ?? String(value);
+                        } catch {
+                          return String(value);
+                        }
+                      }
+                      return String(value);
                     };
                     const postTitle = post.name ?? post.position?.name ?? post.slug ?? 'Post';
                     return (
@@ -936,7 +947,7 @@ export default function RecruitmentHub({
                           <div className="text-xs"><span className="font-semibold">Source: </span>{show(inv.source_slug)}</div>
                           <div className="mt-1 text-xs"><span className="font-semibold">Extraction: </span>{show(inv.extraction_status)}</div>
                           <div className="mt-1 text-xs"><span className="font-semibold">Official verification: </span>{show(inv.official_verification_status)}</div>
-                          {inv.external_id && <div className="mt-1 text-xs text-gray-500">Source article ID: {String(inv.external_id)}</div>}
+                          {Boolean(inv.external_id) && <div className="mt-1 text-xs text-gray-500">Source article ID: {String(inv.external_id)}</div>}
                           {typeof inv.other_info_raw === 'object' && inv.other_info_raw !== null && 'source_article_url' in inv.other_info_raw && typeof (inv.other_info_raw as Record<string, unknown>).source_article_url === 'string' && (inv.other_info_raw as Record<string, unknown>).source_article_url !== '' && <a href={String((inv.other_info_raw as Record<string, unknown>).source_article_url)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-blue-700 hover:underline break-all">Open source article</a>}
                         </td>
                       </tr>

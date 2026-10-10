@@ -172,11 +172,13 @@ export async function getRecruitmentWithPosts(slug: string) {
     const recruitmentId = recruitment.id;
 
     // Load complete linked entities for the recruitment hub's database coverage view.
-    const [organizationResult, examResult] = await Promise.all([
+    const [organizationResult, examResult, recruitmentFeesResult, selectionProcessesResult] = await Promise.all([
       db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
+      db.execute(sql`SELECT * FROM recruitment_fees WHERE recruitment_id = ${recruitmentId} ORDER BY id`),
+      db.execute(sql`SELECT * FROM selection_processes WHERE recruitment_id = ${recruitmentId} ORDER BY id`),
     ]);
     const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
       const value = result as { rows?: unknown[] };
@@ -186,6 +188,8 @@ export async function getRecruitmentWithPosts(slug: string) {
     Object.assign(recruitment, {
       organization: rowsOf(organizationResult)[0] ?? null,
       exam: rowsOf(examResult)[0] ?? null,
+      recruitmentFees: rowsOf(recruitmentFeesResult),
+      selectionProcesses: rowsOf(selectionProcessesResult),
     });
 
     // Step 2: Get all posts for this recruitment with positions
@@ -249,7 +253,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
     }));
 
-    const [enrichmentResult, inventoryResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
+    const [enrichmentResult, inventoryResult, vacancyDetailResult, eligibilityQualificationResult, ageRulesResult] = await Promise.all([
       db.execute(sql`
         SELECT *
         FROM post_enrichments
@@ -276,6 +280,12 @@ export async function getRecruitmentWithPosts(slug: string) {
         LEFT JOIN qualifications q ON q.id = e.qualification_id
         WHERE e.post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
         ORDER BY e.post_id, e.id
+      `),
+      db.execute(sql`
+        SELECT *
+        FROM post_age_rules
+        WHERE post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
+        ORDER BY post_id, id
       `)
     ]);
     const enrichmentRows = (
@@ -302,6 +312,13 @@ export async function getRecruitmentWithPosts(slug: string) {
       if (!vacancyDetailsByPostId.has(postId)) vacancyDetailsByPostId.set(postId, []);
       vacancyDetailsByPostId.get(postId)!.push(row);
     }
+    const ageRuleRows = rowsOf(ageRulesResult);
+    const ageRulesByPostId = new Map<number, Array<Record<string, unknown>>>();
+    for (const row of ageRuleRows) {
+      const postId = Number(row.post_id);
+      if (!ageRulesByPostId.has(postId)) ageRulesByPostId.set(postId, []);
+      ageRulesByPostId.get(postId)!.push(row);
+    }
     const eligibilityDetailRows = rowsOf(eligibilityQualificationResult);
     const eligibilityDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
     for (const row of eligibilityDetailRows) {
@@ -315,6 +332,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
       fjaInventory: inventoryByPostId.get(post.id) ?? null,
       postEnrichment: enrichmentByPostId.get(post.id) ?? null,
+      ageRules: ageRulesByPostId.get(post.id) ?? [],
     }));
 
     return {
