@@ -90,8 +90,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (canonicalLeaf) permanentRedirect(canonicalLeaf);
 
   const isHi = locale === "hi";
-  const titleHi = (posting as any).titleHi as string | null;
-  const descriptionHi = (posting as any).descriptionHi as string | null;
+  const titleHi = "titleHi" in posting ? posting.titleHi : null;
+  const descriptionHi = "descriptionHi" in posting ? posting.descriptionHi : null;
   const hasHindi = Boolean(titleHi);
   const displayTitle = isHi && titleHi ? titleHi : posting.title;
   const displayDescriptionSource = isHi && descriptionHi ? descriptionHi : posting.description;
