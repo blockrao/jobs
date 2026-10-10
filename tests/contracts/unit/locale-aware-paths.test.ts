@@ -22,6 +22,15 @@ describe("locale-aware route classification", () => {
     expect(isLocaleAwarePath(path)).toBe(true);
   });
 
+  test("legacy exam root route validates known slugs and does not mask database failures", async () => {
+    const { readSource, stripComments } = await import("../helpers/source");
+    const route = stripComments(readSource("src/app/[locale]/page.tsx"));
+    expect(route).toContain("getExamBySlug(examSlug)");
+    expect(route).toContain("if (!exam) notFound()");
+    expect(route).toContain("permanentRedirect(`/exams/${examSlug}`)");
+    expect(route).not.toContain("catch");
+  });
+
   test.each([
     "/jobs/one/two/three",
     "/news",
