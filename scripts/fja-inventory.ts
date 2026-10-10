@@ -117,8 +117,14 @@ function detailFields(html: string, listing: {url:string; title:string; external
     location: find(/job location|place of posting|location/i),
     officialLinks: bodyLinks.filter((link) => /official|notification|advertisement|apply|registration/i.test(link.label)).slice(0,30),
   };
-  const relevant = /recruitment|vacanc|apply online|government job|notification|posts?|hiring|admit card|result|exam/i.test(title);
-  const status = /application closed|last date.*over|no longer accepting/i.test(text) ? "CLOSED" : /apply online|application form|last date/i.test(text) ? "OPEN" : "UNKNOWN";
+  const parsedEndDate = endRaw ? parseDate(endRaw) : undefined;
+  const today = new Date().toISOString().slice(0, 10);
+  const explicitClosed = /application closed|last date.*over|no longer accepting/i.test(text);
+  const status = explicitClosed || (parsedEndDate && parsedEndDate < today)
+    ? "CLOSED"
+    : parsedEndDate && parsedEndDate >= today && /apply online|application form/i.test(text)
+      ? "OPEN"
+      : "UNKNOWN";
   const importantFields = [find(/recruiting body|organization|department/i), vacancyRaw, endRaw, find(/qualification|eligibility|educational/i)];
   const populated = importantFields.filter(Boolean).length;
   const hashInput = JSON.stringify({title,rows,details});
