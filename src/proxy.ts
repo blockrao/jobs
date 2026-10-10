@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from 'next-intl/middleware';
 import { adminSessionToken } from "@/lib/admin-token";
-import { locales, defaultLocale, type Locale } from "@/i18n/request";
+import { locales, defaultLocale } from "@/i18n/request";
 import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 import { recruitmentSlugRedirectPath } from "@/lib/canonical-job-routes";
 
@@ -14,7 +14,7 @@ const COOKIE_NAME = "admin_session";
 
 // Create the next-intl middleware
 const intlMiddleware = createMiddleware({
-  locales: locales as any,
+  locales,
   defaultLocale: defaultLocale,
   localePrefix: 'as-needed',
   // SEO-001 (ledger A-052): hreflang is decided per page by src/lib/seo and
