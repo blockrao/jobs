@@ -20,6 +20,7 @@ const base: NoticeFacts = {
   age_max: 27,
   date_posted: "2026-09-20T05:00:00+00:00",
   valid_through: "2026-10-10T18:29:59+00:00",
+  application_start: null,
   exam_date: null,
   has_apply: true,
   post_names: ["Clerk", "Typist"],
