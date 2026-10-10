@@ -53,7 +53,7 @@ export function recruitmentHubCanonicalPath(
  * Returns null for paths that are not one-segment job compatibility URLs.
  */
 export function recruitmentSlugRedirectPath(pathname: string, newSlug: string): string | null {
-  const match = pathname.match(/^(\\/hi)?\\/jobs\\/[^/]+\\/?$/);
+  const match = pathname.match(/^(\/hi)?\/jobs\/[^/]+\/?$/);
   if (!match || !newSlug) return null;
   const localePrefix = match[1] ?? "";
   return `${localePrefix}/jobs/${newSlug}`;
