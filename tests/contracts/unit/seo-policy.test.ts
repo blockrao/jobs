@@ -69,7 +69,7 @@ describe("listings and fixed pages", () => {
     // This legacy endpoint is a redirect, not a rendered entity page; its
     // indexability is determined by the /jobs/[slug] destination.
     const redirectRoute = stripComments(readSource("src/app/(default)/recruitments/[slug]/page.tsx"));
-    expect(redirectRoute).toContain("redirect");
+    expect(redirectRoute).toContain("permanentRedirect");
     expect(redirectRoute).toContain("/jobs/${slug}");
   });
 });
