@@ -1,0 +1,45 @@
+name: FJA Inventory Contract Tests
+on:
+  pull_request:
+    paths:
+      - "scripts/fja-inventory.ts"
+      - "scripts/export-fja-inventory.py"
+      - "scripts/validate-fja-inventory-export.py"
+      - "scripts/test-fja-inventory-export.py"
+      - "src/db/schema.ts"
+      - "supabase/migrations/*fja*"
+      - ".github/workflows/fja-inventory-tests.yml"
+  push:
+    branches:
+      - feat/fja-two-table-extraction
+    paths:
+      - "scripts/fja-inventory.ts"
+      - "scripts/export-fja-inventory.py"
+      - "scripts/validate-fja-inventory-export.py"
+      - "scripts/test-fja-inventory-export.py"
+      - "src/db/schema.ts"
+      - "supabase/migrations/*fja*"
+      - ".github/workflows/fja-inventory-tests.yml"
+permissions:
+  contents: read
+jobs:
+  inventory-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: TypeScript type check
+        run: npx tsc --noEmit --pretty false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl
+      - name: Python syntax check
+        run: python -m py_compile scripts/export-fja-inventory.py scripts/validate-fja-inventory-export.py scripts/test-fja-inventory-export.py
+      - name: Two-table export and preservation smoke test
+        run: python scripts/test-fja-inventory-export.py
