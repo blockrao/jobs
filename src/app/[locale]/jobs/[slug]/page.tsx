@@ -168,41 +168,32 @@ function buildFaqs(
 export default async function LocaleJobPage({ params }: Props) {
   const { slug, locale } = await params;
 
-  // Route intelligently: if slug contains "/" it's a nested post slug, otherwise it's a recruitment
-  // This avoids expensive query attempts when we already know the structure
-  const isNestedSlug = slug.includes("/");
-
-  let posting = null;
-  let recruitmentData = null;
-
-  if (isNestedSlug) {
-    // Direct to posting for nested slugs like "recruitment-slug/post-slug"
-    posting = await safeQuery(() => getPostingBySlugCached(slug), null);
-    if (!posting) notFound();
-  } else {
-    // Try as recruitment hub first, then fall back to posting
-    recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
-    if (recruitmentData) {
-      return (
-        <>
-          <RecruitmentHubStructuredData
-            recruitment={recruitmentData.recruitment}
-            totalPosts={recruitmentData.totalPosts}
-          />
-          <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
-        </>
-      );
-    }
-
-    // Not a recruitment hub, try as a posting
-    posting = await safeQuery(() => getPostingBySlugCached(slug), null);
-    if (!posting) notFound();
-
-    // Preserve the requested language prefix while permanently consolidating
-    // legacy flat posting URLs onto the canonical Post Leaf route.
-    const canonicalLeaf = canonicalPostLeafPath(posting, locale);
-    if (canonicalLeaf) permanentRedirect(canonicalLeaf);
+  // This route is the one-segment compatibility endpoint only. Canonical
+  // Post Leaves have their own two-segment route under [locale], so there is
+  // no meaningful nested-slug branch here.
+  const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  if (recruitmentData) {
+    return (
+      <>
+        <RecruitmentHubStructuredData
+          recruitment={recruitmentData.recruitment}
+          totalPosts={recruitmentData.totalPosts}
+        />
+        <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
+      </>
+    );
   }
+
+  // Not a Recruitment: this is either a legacy flat Posting address or a
+  // genuine unlinked legacy page. Consolidate the former; render the latter
+  // only when no canonical entity relationship is available.
+  const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
+  if (!posting) notFound();
+
+  // Preserve the requested language prefix while permanently consolidating
+  // legacy flat posting URLs onto the canonical Post Leaf route.
+  const canonicalLeaf = canonicalPostLeafPath(posting, locale);
+  if (canonicalLeaf) permanentRedirect(canonicalLeaf);
 
   const canonicalRecruitmentId = (posting as any).canonicalRecruitment?.id ?? null;
   const siblingPosts = canonicalRecruitmentId
