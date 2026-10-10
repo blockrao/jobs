@@ -30,7 +30,8 @@ interface RecruitmentData {
   posts: Array<{
     id: string | number;
     slug: string;
-    name?: string | null;
+    title: string;
+    vacancies?: Array<{ count: number }>;
   }>;
   totalPosts: number;
   isSingleJobRecruitment: boolean;
@@ -65,6 +66,7 @@ interface JobPostingPageProps {
 export default function JobPostingPage({
   post,
   recruitment,
+  isSingleJobRecruitment = false,
   locale = "en",
   resolvedFacts,
   recruitmentResolvedFacts,
