@@ -664,7 +664,7 @@ export default function RecruitmentHub({
             {isSinglePost ? (
               /* Single Post: prominent entry point */
               <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-5">
-                <Link href={`/jobs/${recruitment.slug}/${posts[0].slug}`} className="group block">
+                <Link href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`} className="group block">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2">
@@ -691,7 +691,7 @@ export default function RecruitmentHub({
                 </Link>
                 <div className="mt-4 pt-4 border-t border-blue-200">
                   <Link
-                    href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+                    href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
                     className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                   >
                     View Full Post Details
