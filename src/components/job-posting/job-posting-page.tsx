@@ -112,8 +112,8 @@ export default function JobPostingPage({
           as a last resort. Never show a "#" dead link for Apply.
         */}
         {(() => {
-          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
-          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
+          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
           return (
             <div className={styles.actions}>
               {applyUrl && (
