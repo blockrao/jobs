@@ -764,7 +764,7 @@ export default async function LocaleJobPage({ params }: Props) {
             <Link href="/contact" className="underline hover:text-neutral-600">
               Report it
             </Link>
-            {" "}and we'll fix it.
+            {" "}and we&apos;ll fix it.
           </>
         )}
       </p>
