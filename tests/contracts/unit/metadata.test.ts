@@ -17,6 +17,8 @@ const getExamBySlug = vi.fn();
 vi.mock("@/lib/queries", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getPostingBySlug: (...a: unknown[]) => getPostingBySlug(...a),
+  // Keep recruitment-hub resolution out of posting metadata fixtures.
+  getRecruitmentWithPostsCached: async () => null,
   // The localized job route uses the cached variant in generateMetadata.
   getPostingBySlugCached: (...a: unknown[]) => getPostingBySlug(...a),
   getArticleBySlug: (...a: unknown[]) => getArticleBySlug(...a),
