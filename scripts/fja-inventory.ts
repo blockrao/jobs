@@ -24,7 +24,7 @@ type Listing = {
   applicationEndDate?: string; advertisementNumber?: string; qualification?: string;
   vacancyCount?: number; detailStatus: "EXTRACTED" | "PARTIAL" | "FAILED";
   sourceStatus: "OPEN" | "CLOSED" | "UNKNOWN"; details: Record<string, unknown>;
-  rawText?: string; contentHash: string; firstSeenAt?: string; lastSeenAt?: string;
+  rawText?: string; rawHtml?: string; htmlSha256?: string; contentHash: string; firstSeenAt?: string; lastSeenAt?: string;
 };
 
 async function getHtml(url: string): Promise<string> {
@@ -84,9 +84,18 @@ function classifyListing(title: string, text: string, rows: Record<string,string
 function detailFields(html: string, listing: {url:string; title:string; externalId:string}): Listing {
   const $ = cheerio.load(html);
   const rows: Record<string,string> = {};
-  $("tr").each((_, row) => {
-    const cells = $(row).find("th,td").map((__, cell) => collapse($(cell).text())).get().filter(Boolean);
-    if (cells.length >= 2) rows[cells[0].replace(/[:\s]+$/,"").toLowerCase()] = cells.slice(1).join(" | ");
+  const tables: Array<{tableIndex:number; caption:string; rows:Array<{rowIndex:number; cells:string[]}>}> = [];
+  $("table").each((tableIndex, table) => {
+    const tableRows: Array<{rowIndex:number; cells:string[]}> = [];
+    $(table).find("tr").each((rowIndex, row) => {
+      const cells = $(row).find("th,td").map((__, cell) => collapse($(cell).text())).get();
+      if (cells.some(Boolean)) tableRows.push({rowIndex, cells});
+      if (cells.length >= 2 && cells[0]) {
+        const label = cells[0].replace(/[:\s]+$/,"").toLowerCase();
+        rows[label] = [rows[label], cells.slice(1).filter(Boolean).join(" | ")].filter(Boolean).join("\n");
+      }
+    });
+    tables.push({tableIndex, caption:collapse($(table).find("caption").first().text()), rows:tableRows});
   });
   const text = collapse($("body").text());
   const find = (...patterns: RegExp[]) => {
@@ -100,24 +109,41 @@ function detailFields(html: string, listing: {url:string; title:string; external
   const endRaw = find(/last date|closing date|application end|last date to apply/i);
   const vacancyRaw = find(/total vacancy|total post|number of vacancy|no\.? of post/i);
   const vacancyMatch = vacancyRaw?.replace(/,/g,"").match(/\d{1,6}/);
-  const bodyLinks: Array<{label:string;url:string}> = [];
+  const allLinks: Array<{label:string;url:string;rel?:string;title?:string}> = [];
+  const seenLinks = new Set<string>();
   $("a[href]").each((_, a) => {
     const href = $(a).attr("href");
     if (!href) return;
     try {
       const url = new URL(href, listing.url);
-      if (url.protocol === "https:" && !/freejobalert\.com$/i.test(url.hostname)) bodyLinks.push({label:collapse($(a).text()),url:url.toString()});
+      if (!["http:","https:"].includes(url.protocol)) return;
+      const normalizedUrl = url.toString();
+      const label = collapse($(a).text());
+      const key = normalizedUrl + "\n" + label;
+      if (seenLinks.has(key)) return;
+      seenLinks.add(key);
+      allLinks.push({label, url:normalizedUrl, rel:$(a).attr("rel"), title:$(a).attr("title")});
     } catch {}
   });
-  const details = {
-    tableFields: rows,
-    postNames: find(/^name of post$|^post name$|post name\(s\)/i),
-    ageLimit: find(/age limit|age criteria/i),
-    applicationFee: find(/application fee|exam fee/i),
-    selectionProcess: find(/selection process|selection procedure/i),
-    salary: find(/salary|pay scale|pay level|remuneration/i),
-    location: find(/job location|place of posting|location/i),
-    officialLinks: bodyLinks.filter((link) => /official|notification|advertisement|apply|registration/i.test(link.label)).slice(0,30),
+  const headings = $("h1,h2,h3,h4,h5,h6").map((_, el) => ({
+    level: Number((el.tagName || "").slice(1)) || null,
+    text: collapse($(el).text())
+  })).get().filter((item) => item.text);
+  const lists: Array<{listType:string;items:string[]}> = [];
+  $("ul,ol").each((_, list) => {
+    const items = $(list).children("li").map((__, li) => collapse($(li).text())).get().filter(Boolean);
+    if (items.length) lists.push({listType:(list.tagName || "").toLowerCase(),items});
+  });
+  const postNames = find(/^name of post$|^post name$|post name\(s\)/i);
+  const ageLimit = find(/age limit|age criteria/i);
+  const applicationFee = find(/application fee|exam fee/i);
+  const selectionProcess = find(/selection process|selection procedure/i);
+  const salary = find(/salary|pay scale|pay level|remuneration|emolument/i);
+  const location = find(/job location|place of posting|location/i);
+  const officialLinks = allLinks.filter((link) => /official|notification|advertisement|apply|registration|application|download|pdf/i.test(link.label));
+  const details: Record<string, unknown> = {
+    tableFields: rows, tables, headings, lists, allLinks, officialLinks,
+    postNames, ageLimit, applicationFee, selectionProcess, salary, location,
   };
   const parsedEndDate = endRaw ? parseDate(endRaw) : undefined;
   const today = new Date().toISOString().slice(0, 10);
@@ -129,7 +155,8 @@ function detailFields(html: string, listing: {url:string; title:string; external
       : "UNKNOWN";
   const importantFields = [find(/recruiting body|organization|department/i), vacancyRaw, endRaw, find(/qualification|eligibility|educational/i)];
   const populated = importantFields.filter(Boolean).length;
-  const hashInput = JSON.stringify({title,rows,details,rawText:text});
+  const htmlSha256 = sha(html);
+  const hashInput = JSON.stringify({htmlSha256,title,rows,tables,headings,lists,allLinks,details,rawText:text});
   return {
     externalId:listing.externalId, sourceUrl:listing.url, title,
     organizationName:find(/recruiting body|organization|department/i),
@@ -141,7 +168,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     qualification:find(/qualification|eligibility|educational qualification/i),
     vacancyCount:vacancyMatch ? Number(vacancyMatch[0]) : undefined,
     detailStatus:populated >= 3 ? "EXTRACTED" : populated > 0 ? "PARTIAL" : "FAILED",
-    sourceStatus:status, details, rawText:text, contentHash:sha(hashInput),
+    sourceStatus:status, details, rawText:text, rawHtml:html, htmlSha256, contentHash:sha(hashInput),
   };
 }
 async function pool<T,R>(items:T[], limit:number, fn:(item:T)=>Promise<R>):Promise<R[]> {
@@ -228,6 +255,19 @@ async function main() {
     try {
       const html=await getHtml(item.url);
       const parsed=detailFields(html,item);
+      const htmlSha256 = parsed.htmlSha256 ?? sha(html);
+      const rawCaptureRelativePath = path.posix.join("raw-html", parsed.externalId, htmlSha256 + ".html");
+      const rawCapturePath = path.join(OUT, "raw-html", parsed.externalId, htmlSha256 + ".html");
+      await mkdir(path.dirname(rawCapturePath), {recursive:true});
+      await writeFile(rawCapturePath, parsed.rawHtml ?? html, "utf8");
+      parsed.details.sourceCapture = {
+        artifactPath: rawCaptureRelativePath,
+        htmlSha256,
+        byteLength: Buffer.byteLength(parsed.rawHtml ?? html, "utf8"),
+        capturedAt: new Date().toISOString(),
+        normalizedTextSha256: sha(parsed.rawText ?? ""),
+      };
+      delete parsed.rawHtml;
       await sleep(300);
       if (!parsed.listingCategory) { nonRecruitmentPagesSkipped++; return null; }
       await db`
