@@ -201,6 +201,7 @@ async function main() {
   const allItems=[...listings.values()];
   console.log(JSON.stringify({runId:RUN_ID,listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,uniqueArticles:allItems.length}));
   if(allItems.length===0) throw new Error("No FJA article URLs found; refusing to report an empty successful inventory.");
+  const failedDetailUrls: string[] = [];
   const resultsWithNulls = await pool(allItems,CONCURRENCY,async(item):Promise<Listing | null>=>{
     try {
       const html=await getHtml(item.url);
@@ -234,6 +235,8 @@ async function main() {
       return parsed;
     } catch(error) {
       console.error(`Detail failed: ${item.url}: ${(error as Error).message}`);
+      failedDetailUrls.push(item.url);
+      if (!classifyListing(item.title, "", {})) return null;
       const failed:Listing={externalId:item.externalId,sourceUrl:item.url,title:item.title || `FJA article ${item.externalId}`,detailStatus:"FAILED",sourceStatus:"UNKNOWN",details:{extractionError:(error as Error).message},contentHash:sha(item.url+RUN_ID)};
       await db`
         INSERT INTO public.fja_job_inventory (source_slug,external_id,source_url,title,detail_status,source_status,details,content_hash,last_crawl_run_id)
@@ -245,7 +248,7 @@ async function main() {
   });
   const results = resultsWithNulls.filter((item): item is Listing => item !== null);
   await mkdir(OUT,{recursive:true});
-  await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,discoveredArticleUrls:allItems.length,nonRecruitmentPagesSkipped:resultsWithNulls.length-results.length,results},null,2));
+  await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,discoveredArticleUrls:allItems.length,nonRecruitmentPagesSkipped:resultsWithNulls.length-results.length-failedDetailUrls.length,failedDetailUrls,results},null,2));
   const summary=await db`select count(*)::int as total, count(*) filter (where detail_status='EXTRACTED')::int as extracted, count(*) filter (where detail_status='PARTIAL')::int as partial, count(*) filter (where detail_status='FAILED')::int as failed from public.fja_job_inventory where source_slug='freejobalert'`;
   console.log(JSON.stringify({runId:RUN_ID,processed:results.length,summary:summary[0],out:OUT}));
   await db.end();
