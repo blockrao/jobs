@@ -208,12 +208,13 @@ async function main() {
   console.log(JSON.stringify({runId:RUN_ID,listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,uniqueArticles:allItems.length}));
   if(allItems.length===0) throw new Error("No FJA article URLs found; refusing to report an empty successful inventory.");
   const failedDetailUrls: string[] = [];
+  let nonRecruitmentPagesSkipped = 0;
   const resultsWithNulls = await pool(allItems,CONCURRENCY,async(item):Promise<Listing | null>=>{
     try {
       const html=await getHtml(item.url);
       const parsed=detailFields(html,item);
       await sleep(300);
-      if (!parsed.listingCategory) return null;
+      if (!parsed.listingCategory) { nonRecruitmentPagesSkipped++; return null; }
       await db`
         INSERT INTO public.fja_job_inventory
           (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
@@ -242,7 +243,7 @@ async function main() {
     } catch(error) {
       console.error(`Detail failed: ${item.url}: ${(error as Error).message}`);
       failedDetailUrls.push(item.url);
-      if (!classifyListing(item.title, "", {})) return null;
+      if (!classifyListing(item.title, "", {})) { nonRecruitmentPagesSkipped++; return null; }
       const failed:Listing={externalId:item.externalId,sourceUrl:item.url,title:item.title || `FJA article ${item.externalId}`,detailStatus:"FAILED",sourceStatus:"UNKNOWN",details:{extractionError:(error as Error).message},contentHash:sha(item.url+RUN_ID)};
       await db`
         INSERT INTO public.fja_job_inventory (source_slug,external_id,source_url,title,detail_status,source_status,details,content_hash,last_crawl_run_id)
@@ -254,7 +255,7 @@ async function main() {
   });
   const results = resultsWithNulls.filter((item): item is Listing => item !== null);
   await mkdir(OUT,{recursive:true});
-  await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,discoveredArticleUrls:allItems.length,nonRecruitmentPagesSkipped:resultsWithNulls.length-results.length-failedDetailUrls.length,failedDetailUrls,results},null,2));
+  await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,discoveredArticleUrls:allItems.length,nonRecruitmentPagesSkipped,failedDetailUrls,results},null,2));
   const summary=await db`select count(*)::int as total, count(*) filter (where detail_status='EXTRACTED')::int as extracted, count(*) filter (where detail_status='PARTIAL')::int as partial, count(*) filter (where detail_status='FAILED')::int as failed from public.fja_job_inventory where source_slug='freejobalert'`;
   console.log(JSON.stringify({runId:RUN_ID,processed:results.length,summary:summary[0],out:OUT}));
   await db.end();
