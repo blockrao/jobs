@@ -63,8 +63,9 @@ describe("recruitment identity conflict handling", () => {
   test("resolves a concurrent insert by organization + exam + year + title similarity", async () => {
     const fake = fakeDb({
       recruitmentCandidates: [
-        [],
-        [{ id: 456, name: "Assistant Engineer Recruitment 2026" }],
+        [], // initial identity lookup
+        [], // slug sequence count
+        [{ id: 456, name: "Assistant Engineer Recruitment 2026" }], // post-conflict identity recheck
       ],
     });
 
@@ -73,6 +74,6 @@ describe("recruitment identity conflict handling", () => {
       examId: 9,
     }, "legacy-slug")).resolves.toEqual({ id: 456, created: false });
 
-    expect(fake.recruitmentFindMany).toHaveBeenCalledTimes(2);
+    expect(fake.recruitmentFindMany).toHaveBeenCalledTimes(3);
   });
 });
