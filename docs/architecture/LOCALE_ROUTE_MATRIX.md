@@ -1,7 +1,7 @@
 # Site-wide locale route matrix
 
 **Status:** Inventory established 2026-10-10; site-wide implementation is not complete.  
-**Source of truth:** `IMPLEMENTATION_ROADMAP.md`, SEO-001 public-representation policy, and `ADR_JOB_ROUTE_LOCALE_DISPATCH.md`.  
+**Source of truth:** `IMPLEMENTATION_ROADMAP.md`, SEO-001 public-representation policy, and `ADR_JOB_ROUTE_LOCALE_DISPATCH.md`. **Tracked backlog:** [issue #33](https://github.com/blockrao/jobs/issues/33).  
 **Requirement:** Every public page family must support an intentional Hindi experience under `/hi`. A route that silently strips `/hi` is a temporary compatibility behavior, not completion.
 
 ## Route-family inventory
