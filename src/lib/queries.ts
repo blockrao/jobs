@@ -292,6 +292,10 @@ export async function getPostingSlugsPageForSitemap(
         eq(postings.reviewStatus, "APPROVED"),
         sql`${postings.indexTier} IN ('A', 'B')`,
         sql`${postings.isExpired} IS NOT TRUE`,
+        // Canonicalized flat Posting URLs permanently redirect to the two-segment
+        // Post Leaf when both entity links exist. Do not advertise those redirect
+        // sources in the sitemap; the canonical Post Leaf is emitted separately.
+        sql`(${postings.inferredPostId} IS NULL OR ${postings.inferredRecruitmentId} IS NULL)`,
         notPastLastDate,
       ),
     )
