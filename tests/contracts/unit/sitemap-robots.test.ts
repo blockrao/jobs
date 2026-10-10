@@ -119,6 +119,18 @@ describe("sitemap", () => {
     expect(src).not.toContain("recruitmentEntries");
     expect(src).not.toContain("getPositionSlugsForSitemap");
   });
+
+  test("IDX-07 sitemap query excludes flat Posting URLs that redirect to canonical Post Leaves", async () => {
+    const src = (await import("../helpers/source")).readSource("src/lib/queries.ts");
+    const start = src.indexOf("export async function getPostingSlugsPageForSitemap");
+    const end = src.indexOf("export async function getAllArticleSlugsForSitemap", start);
+    expect(start, "posting sitemap query must exist").toBeGreaterThanOrEqual(0);
+    expect(end, "posting sitemap query boundary must exist").toBeGreaterThan(start);
+    const query = src.slice(start, end);
+    expect(query).toContain("postings.inferredPostId");
+    expect(query).toContain("postings.inferredRecruitmentId");
+    expect(query).toContain("IS NULL OR");
+  });
 });
 
 describe("robots.txt", () => {
