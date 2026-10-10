@@ -139,7 +139,6 @@ const POST_NAME_MAX_LENGTH = 200;
 export async function resolveRecruitment(
   db: Db,
   identity: RecruitmentIdentity,
-  slug: string,
 ): Promise<ResolvedRecruitment> {
   // Normalize before lookup and persistence so equivalent source formats
   // (for example, "Advt. No. 17/2026" and "17/2026") share one identity key.
