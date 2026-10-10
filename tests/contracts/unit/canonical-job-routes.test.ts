@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   canonicalPostLeafPath,
   recruitmentHubCanonicalPath,
+  recruitmentSlugRedirectPath,
 } from "@/lib/canonical-job-routes";
 
 describe("canonical legacy job route resolution", () => {
@@ -44,5 +45,28 @@ describe("canonical recruitment hub resolution", () => {
   test("uses a safe self path when Position links are missing", () => {
     expect(recruitmentHubCanonicalPath({ slug: "recruitment-2026-01" }, [])).toBe("/jobs/recruitment-2026-01");
     expect(recruitmentHubCanonicalPath(null, [])).toBeNull();
+  });
+});
+
+
+describe("locale-preserving legacy recruitment redirects", () => {
+  test("keeps English URLs unprefixed", () => {
+    expect(recruitmentSlugRedirectPath(
+      "/jobs/old-recruitment-slug",
+      "new-recruitment-2026-01",
+    )).toBe("/jobs/new-recruitment-2026-01");
+  });
+
+  test("preserves /hi on Hindi URLs", () => {
+    expect(recruitmentSlugRedirectPath(
+      "/hi/jobs/old-recruitment-slug",
+      "new-recruitment-2026-01",
+    )).toBe("/hi/jobs/new-recruitment-2026-01");
+  });
+
+  test("does not rewrite unrelated or nested paths", () => {
+    expect(recruitmentSlugRedirectPath("/posts/old-slug", "new-slug")).toBeNull();
+    expect(recruitmentSlugRedirectPath("/hi/jobs/r/p", "new-slug")).toBeNull();
+    expect(recruitmentSlugRedirectPath("/jobs/old-slug", "")).toBeNull();
   });
 });
