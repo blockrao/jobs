@@ -90,17 +90,17 @@ describe("sitemap", () => {
     }
   });
 
-  // Recruitment and Position are indexable entity types in the frozen
-  // indexability contract but have no sitemap entries today. Do NOT fix this
-  // by simply adding them: the recruitments table is currently a 1:1 mirror
-  // of raw postings (Phase 0 baseline) and must pass W1-B identity cleanup
-  // before any of it is advertised to search engines.
-  test("IDX-06 every indexable entity type in the indexability contract has a sitemap source", async () => {
+  // Sitemap policy follows the canonical URL contract: individual job pages,
+  // Post role hubs, organizations, exams and articles may be indexed. Legacy
+  // recruitment/position entity URLs are not sitemap destinations.
+  test("IDX-06 sitemap covers canonical indexable entities and excludes legacy entity hubs", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
-    const covered = ["jobs", "organizations", "exams", "articles", "recruitments", "positions"].filter((t) =>
-      src.includes(`/${t}/`),
-    );
-    expect(covered).toEqual(["jobs", "organizations", "exams", "articles", "recruitments", "positions"]);
+    for (const route of ["/jobs/", "/posts/", "/organizations/", "/exams/", "/articles/"]) {
+      expect(src, `missing sitemap source for ${route}`).toContain(route);
+    }
+    expect(src).not.toContain("getRecruitmentSlugsForSitemap");
+    expect(src).not.toContain("recruitmentEntries");
+    expect(src).not.toContain("getPositionSlugsForSitemap");
   });
 });
 
