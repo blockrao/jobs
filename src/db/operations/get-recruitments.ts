@@ -244,6 +244,8 @@ export async function getRecruitmentWithPosts(slug: string) {
     // This is read-only and preserves the source's current verification status.
     const enrichedPosts = postsResult.map((row) => ({
       ...row.post,
+      // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
+      title: row.post.name,
       position: row.position,
       vacancies: vacanciesByPostId.get(row.post.id) ?? [],
       eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
