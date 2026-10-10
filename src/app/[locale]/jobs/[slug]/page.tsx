@@ -179,7 +179,7 @@ export default async function LocaleJobPage({ params }: Props) {
           recruitment={recruitmentData.recruitment}
           totalPosts={recruitmentData.totalPosts}
         />
-        <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} />
+        <RecruitmentHub recruitment={recruitmentData.recruitment} posts={recruitmentData.posts} locale={locale} />
       </>
     );
   }
@@ -358,7 +358,7 @@ export default async function LocaleJobPage({ params }: Props) {
         /{" "}
         {posting.canonicalPosition && (
           <>
-            <Link href={`/positions/${posting.canonicalPosition.slug}`} className="hover:underline">
+            <Link href={`${isHi ? "/hi" : ""}/positions/${posting.canonicalPosition.slug}`} className="hover:underline">
               {posting.canonicalPosition.name}
             </Link>
             {" / "}
@@ -366,7 +366,7 @@ export default async function LocaleJobPage({ params }: Props) {
         )}
         {posting.canonicalRecruitment && (
           <>
-            <Link href={`/jobs/${posting.canonicalRecruitment.slug}`} className="hover:underline">
+            <Link href={`${isHi ? "/hi" : ""}/jobs/${posting.canonicalRecruitment.slug}`} className="hover:underline">
               {posting.canonicalRecruitment.name}
             </Link>
             {" / "}
