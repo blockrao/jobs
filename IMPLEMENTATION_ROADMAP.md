@@ -1,5 +1,20 @@
 # Implementation Roadmap: Graph Model & Canonical Hubs
 
+> **Current architecture addendum — 2026-10-10 (supersedes the legacy URL examples below where they conflict)**
+>
+> The roadmap below records the original graph-model implementation plan. Current public URL ownership is governed by the frozen Recruitment → Post architecture and `docs/architecture/SEO001_PUBLIC_REPRESENTATION.md`, plus `docs/architecture/ADR_JOB_ROUTE_LOCALE_DISPATCH.md`.
+>
+> - `/posts/[slug]`: primary role/Position discovery hub.
+> - `/jobs/[recruitment-slug]/[post-slug]`: canonical individual Post Leaf, indexable only under the current content/SEO policy.
+> - `/jobs/[recruitment-slug]`: transitional Recruitment hub; `noindex, follow`; canonical to the matching `/posts/[position-slug]` only when the Recruitment maps unambiguously to one Position.
+> - Legacy flat Posting URLs at `/jobs/[posting-slug]`: permanently redirect to the canonical Post Leaf when the canonical Recruitment → Post relationship is known.
+> - `/hi` routes must follow the same entity/route contract. Untranslated Hindi remains reachable but noindex, canonical to English, and without hreflang until genuine translated content exists. Do not let middleware silently remove the locale from a valid two-segment Post Leaf URL.
+> - The middleware route classifier and language switcher share `src/i18n/locale-aware-paths.ts`; add each route family to this central contract only when the corresponding localized route exists. Full `/hi` coverage across all page families remains a tracked rollout, not an assumption that the current tree already translates every page.
+>
+> **Current work (PR #32):** route classifier, canonical route helpers, one-segment compatibility dispatch, hub noindex/canonical metadata, regression tests, and the ADR are implemented on the branch. Remaining gates: latest CI, fresh Vercel preview, HTTP redirect/canonical/lang/structured-data verification, and the existing lint release gate. Do not merge or promote until these gates pass.
+>
+> ---
+>
 ## Summary
 
 Transitioning from single-entity (postings) to multi-entity graph model with canonical hubs for Position, Exam, Recruitment, and Organization. Postings become data instances linking to normalized graph.
