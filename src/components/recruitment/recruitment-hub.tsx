@@ -579,7 +579,7 @@ export default function RecruitmentHub({
                       {selectionDisplayRows.map((row: { title: string | null; detail: unknown }, index: number) => (
                         <li key={index}>
                           {row.title && <span className="font-medium capitalize">{row.title}</span>}
-                          {row.detail && <span>{row.title ? ': ' : ''}{String(row.detail)}</span>}
+                          {Boolean(row.detail) && <span>{row.title ? ': ' : ''}{String(row.detail)}</span>}
                         </li>
                       ))}
                     </ul>
@@ -597,7 +597,7 @@ export default function RecruitmentHub({
                           <li key={index}>
                             <span className="font-medium">{String(fee.category ?? 'Category')}</span>
                             {fee.amount != null && <span>: {Number(fee.amount) === 0 ? 'No fee' : '₹' + Number(fee.amount).toLocaleString('en-IN')}</span>}
-                            {fee.note && <span> — {String(fee.note)}</span>}
+                            {Boolean(fee.note) && <span> — {String(fee.note)}</span>}
                           </li>
                         ))}
                       </ul>
