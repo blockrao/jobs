@@ -852,6 +852,9 @@ export default function RecruitmentHub({
           </div>
           <RecordFieldGrid title="Recruitment — all returned database columns" record={recruitment} />
           <RecordFieldGrid title="Organization — linked record" record={recruitment.organization ?? recruitment.organizationRecord ?? null} />
+          <RecordFieldGrid title="Exam — linked record" record={recruitment.exam ?? null} />
+          <RecordFieldGrid title="Recruitment fees — all rows" record={{ rows: recruitment.recruitmentFees ?? [] }} />
+          <RecordFieldGrid title="Selection processes — all rows" record={{ rows: recruitment.selectionProcesses ?? [] }} />
           <RecordFieldGrid title="Recruitment metadata — complete object" record={recruitment.metadata ?? null} />
           {posts.map((post: Record<string, unknown> & { id: number; fjaInventory?: Record<string, unknown> | null; position?: Record<string, unknown> | null; vacancies?: unknown[]; eligibilities?: unknown[] }) => (
             <div key={post.id} className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 md:p-4">
