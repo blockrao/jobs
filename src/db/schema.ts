@@ -1108,6 +1108,51 @@ export const fjaJobInventory = pgTable(
   ],
 ).enableRLS();
 
+export const fjaPostInventory = pgTable(
+  "fja_post_inventory",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "number" }).notNull().references(() => fjaJobInventory.id, { onDelete: "cascade" }),
+    sourceSlug: text("source_slug").notNull().default("freejobalert"),
+    externalId: text("external_id").notNull(),
+    sourcePostKey: text("source_post_key").notNull(),
+    postNameRaw: text("post_name_raw"),
+    postNameNormalizedCandidate: text("post_name_normalized_candidate"),
+    sourcePostCodeRaw: text("source_post_code_raw"),
+    vacancyCountRaw: text("vacancy_count_raw"),
+    vacancyCountCandidate: integer("vacancy_count_candidate"),
+    qualificationRaw: text("qualification_raw"),
+    experienceRaw: text("experience_raw"),
+    ageLimitRaw: text("age_limit_raw"),
+    ageReferenceDateRaw: text("age_reference_date_raw"),
+    ageRelaxationRulesRaw: text("age_relaxation_rules_raw"),
+    salaryRaw: text("salary_raw"),
+    payLevelRaw: text("pay_level_raw"),
+    employmentTypeRaw: text("employment_type_raw"),
+    tenureRaw: text("tenure_raw"),
+    locationRaw: text("location_raw"),
+    dutiesResponsibilitiesRaw: text("duties_responsibilities_raw"),
+    eligibilityConditionsRaw: text("eligibility_conditions_raw"),
+    milestonesRaw: jsonb("milestones_raw").$type<Array<Record<string, unknown>>>().notNull().default([]),
+    applicationSelectionRaw: jsonb("application_selection_raw").$type<Array<Record<string, unknown>>>().notNull().default([]),
+    otherInfoRaw: jsonb("other_info_raw").$type<Record<string, unknown>>().notNull().default({}),
+    sourceTableRowRaw: jsonb("source_table_row_raw").$type<Record<string, unknown>>(),
+    extractionStatus: text("extraction_status").notNull().default("PENDING"),
+    officialVerificationStatus: text("official_verification_status").notNull().default("PENDING"),
+    contentHash: text("content_hash").notNull(),
+    lastCrawlRunId: text("last_crawl_run_id"),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("fja_post_inventory_identity_unique").on(t.sourceSlug, t.externalId, t.sourcePostKey),
+    index("fja_post_inventory_parent_idx").on(t.recruitmentInventoryId),
+    index("fja_post_inventory_name_idx").on(t.postNameRaw),
+  ],
+).enableRLS();
+
 export const sourceObservations = pgTable(
   "source_observations",
   {
