@@ -241,6 +241,31 @@ export default function RecruitmentHub({
   const hasPosts = posts.length > 0;
   const isSinglePost = posts.length === 1;
 
+  const examName = recruitment.exam?.name ?? recruitment.exam?.title ?? null;
+  const notificationNumber = recruitment.officialNotificationNumber ?? recruitment.official_notification_number
+    ?? recruitment.advertisementNumber ?? recruitment.advertisement_number ?? null;
+  const feeRows = Array.isArray(recruitment.recruitmentFees) ? recruitment.recruitmentFees : [];
+  const feeGeneral = recruitment.feeGeneral ?? recruitment.fee_general;
+  const feeReserved = recruitment.feeReserved ?? recruitment.fee_reserved;
+  const feeNote = recruitment.feeNote ?? recruitment.fee_note ?? null;
+  const hasFeeDetails = feeRows.length > 0 || feeGeneral != null || feeReserved != null || Boolean(feeNote);
+  const selectionRows = Array.isArray(recruitment.selectionProcesses) ? recruitment.selectionProcesses : [];
+  const selectionDisplayRows = selectionRows.map((row: Record<string, unknown>) => {
+    const processName = row.process_type ?? row.processType ?? null;
+    const stages = Array.isArray(row.stages)
+      ? row.stages.map((stage: unknown) => {
+          if (typeof stage === 'string') return stage;
+          if (stage && typeof stage === 'object') {
+            const item = stage as Record<string, unknown>;
+            return item.name ?? item.title ?? item.stage ?? null;
+          }
+          return null;
+        }).filter((stage): stage is string => typeof stage === 'string').join(' → ')
+      : typeof row.stages === 'string' ? row.stages : null;
+    const details = typeof row.details === 'string' ? row.details : null;
+    return { title: typeof processName === 'string' ? processName.replace(/_/g, ' ') : null, detail: stages || details };
+  }).filter((row: { title: string | null; detail: unknown }) => Boolean(row.title || row.detail));
+
   // FAQ: only questions with non-null answers
   const faqItems: { q: string; a: string }[] = [];
 
@@ -480,7 +505,7 @@ export default function RecruitmentHub({
             SECTION 2 — RECRUITMENT OVERVIEW TABLE
             Compact details: org, selection process, official links
             ═══════════════════════════════════════════ */}
-        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart) && (
+        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart || examName || notificationNumber || hasFeeDetails || selectionDisplayRows.length > 0) && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-3">Recruitment Details</h2>
             <dl className="divide-y divide-gray-100">
@@ -496,6 +521,20 @@ export default function RecruitmentHub({
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Year</dt>
                   <dd className="text-sm text-gray-900">{recruitment.year}</dd>
+                </div>
+              )}
+
+              {examName && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Exam</dt>
+                  <dd className="text-sm text-gray-900">{examName}</dd>
+                </div>
+              )}
+
+              {notificationNumber && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Notification No.</dt>
+                  <dd className="text-sm text-gray-900">{notificationNumber}</dd>
                 </div>
               )}
 
@@ -525,6 +564,47 @@ export default function RecruitmentHub({
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Selection</dt>
                   <dd className="text-sm text-gray-900">{displaySelectionProcess}</dd>
+                </div>
+              )}
+
+              {!displaySelectionProcess && selectionDisplayRows.length > 0 && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Selection Process</dt>
+                  <dd className="text-sm text-gray-900">
+                    <ul className="space-y-1">
+                      {selectionDisplayRows.map((row: { title: string | null; detail: unknown }, index: number) => (
+                        <li key={index}>
+                          {row.title && <span className="font-medium capitalize">{row.title}</span>}
+                          {row.detail && <span>{row.title ? ': ' : ''}{String(row.detail)}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              )}
+
+              {hasFeeDetails && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Application Fee</dt>
+                  <dd className="text-sm text-gray-900">
+                    {feeRows.length > 0 ? (
+                      <ul className="space-y-1">
+                        {feeRows.map((fee: Record<string, unknown>, index: number) => (
+                          <li key={index}>
+                            <span className="font-medium">{String(fee.category ?? 'Category')}</span>
+                            {fee.amount != null && <span>: {Number(fee.amount) === 0 ? 'No fee' : '₹' + Number(fee.amount).toLocaleString('en-IN')}</span>}
+                            {fee.note && <span> — {String(fee.note)}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <ul className="space-y-1">
+                        {feeGeneral != null && <li>General: {Number(feeGeneral) === 0 ? 'No fee' : '₹' + Number(feeGeneral).toLocaleString('en-IN')}</li>}
+                        {feeReserved != null && <li>Reserved categories: {Number(feeReserved) === 0 ? 'No fee' : '₹' + Number(feeReserved).toLocaleString('en-IN')}</li>}
+                      </ul>
+                    )}
+                    {feeNote && <p className="mt-1 text-gray-600">{String(feeNote)}</p>}
+                  </dd>
                 </div>
               )}
 
