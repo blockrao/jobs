@@ -5,7 +5,7 @@ type RecruitmentDb = Parameters<typeof resolveRecruitment>[0];
 
 function fakeDb(options?: {
   notificationMatches?: Array<{ id: number } | null>;
-  recruitmentCandidates?: Array<Array<{ id: number; name: string }>>;
+  recruitmentCandidates?: Array<Array<{ id: number; name: string; officialNotificationNumber?: string | null }>>;
 }) {
   const organizationFindFirst = vi.fn().mockResolvedValue({ id: 1, slug: "example-org" });
   const notificationMatches = [...(options?.notificationMatches ?? [])];
@@ -65,6 +65,23 @@ describe("recruitment identity conflict handling", () => {
     // is attempted after the insert conflict.
     expect(fake.recruitmentFindMany).toHaveBeenCalledTimes(1);
     expect(fake.recruitmentFindFirst).not.toHaveBeenCalled();
+  });
+
+  test("matches an existing legacy row whose raw notification label normalizes to the same key", async () => {
+    const fake = fakeDb({
+      notificationMatches: [null],
+      recruitmentCandidates: [[
+        { id: 122, name: "Legacy Recruitment", officialNotificationNumber: "Advt. No. 17/2026" },
+      ]],
+    });
+
+    await expect(resolveRecruitment(fake.db, {
+      ...identity,
+      officialNotificationNumber: "17 / 2026",
+    })).resolves.toEqual({ id: 122, created: false });
+
+    expect(fake.recruitmentFindFirst).toHaveBeenCalledTimes(1);
+    expect(fake.insert).not.toHaveBeenCalled();
   });
 
   test("resolves a concurrent insert by organization + official notification number", async () => {
