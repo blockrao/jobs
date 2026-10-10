@@ -81,6 +81,105 @@ function classifyListing(title: string, text: string, rows: Record<string,string
   if (structuredRecruitmentEvidence || titleRecruitmentEvidence || bodyRecruitmentEvidence) return "Recruitment";
   return;
 }
+type FjaPostCandidate = {
+  sourcePostKey: string; postNameRaw: string | null; sourcePostCodeRaw: string | null;
+  vacancyCountRaw: string | null; vacancyCountCandidate: number | null;
+  qualificationRaw: string | null; experienceRaw: string | null; ageLimitRaw: string | null;
+  ageReferenceDateRaw: string | null; ageRelaxationRulesRaw: string | null; salaryRaw: string | null;
+  payLevelRaw: string | null; employmentTypeRaw: string | null; tenureRaw: string | null;
+  locationRaw: string | null; dutiesResponsibilitiesRaw: string | null; eligibilityConditionsRaw: string | null;
+  milestonesRaw: Array<Record<string, unknown>>; applicationSelectionRaw: Array<Record<string, unknown>>;
+  otherInfoRaw: Record<string, unknown>; sourceTableRowRaw: Record<string, unknown> | null;
+  extractionStatus: "CANDIDATE_NEEDS_REVIEW" | "POST_DECOMPOSITION_NOT_EXTRACTED"; contentHash: string;
+};
+
+function extractPostCandidates(item: Listing): FjaPostCandidate[] {
+  const details = item.details ?? {};
+  const tableFields = (details.tableFields ?? {}) as Record<string, string>;
+  const tables = Array.isArray(details.tables) ? details.tables as Array<Record<string, unknown>> : [];
+  const explicitRows: Array<{name:string; fields:Record<string,string>; source:Record<string,unknown>}> = [];
+  const titleHeader = /post name|name of post|post title|job title|designation|position/i;
+  for (const table of tables) {
+    const tableRows = Array.isArray(table.rows) ? table.rows as Array<Record<string,unknown>> : [];
+    let headerIndex = -1;
+    let headers: string[] = [];
+    for (let i=0;i<tableRows.length;i++) {
+      const cells = Array.isArray(tableRows[i].cells) ? tableRows[i].cells.map((v)=>String(v ?? "").trim()) : [];
+      if (cells.some((cell)=>titleHeader.test(cell))) { headerIndex=i; headers=cells; break; }
+    }
+    if (headerIndex < 0) continue;
+    for (const row of tableRows.slice(headerIndex+1)) {
+      const cells = Array.isArray(row.cells) ? row.cells.map((v)=>String(v ?? "").trim()) : [];
+      const fields: Record<string,string> = {};
+      headers.forEach((header,index)=>{ if(header && cells[index]) fields[header]=cells[index]; });
+      const name = Object.entries(fields).find(([key,value])=>titleHeader.test(key) && value.trim())?.[1]?.trim();
+      if (name && !/^(total|grand total|note|important)$/i.test(name)) {
+        explicitRows.push({name,fields,source:{tableIndex:table.tableIndex,rowIndex:row.rowIndex,headers,cells}});
+      }
+    }
+  }
+  const get = (fields: Record<string,string>, patterns: RegExp[]) => {
+    for (const [key,value] of Object.entries(fields)) {
+      if (value?.trim() && patterns.some((pattern)=>pattern.test(key))) return value.trim();
+    }
+    return "";
+  };
+  const parseCount = (value: string) => {
+    const match=value.replace(/,/g,"").trim().match(/^(\d+)$/);
+    return match ? Number(match[1]) : null;
+  };
+  const rawPostNames = typeof details.postNames === "string" ? details.postNames : "";
+  let candidates = explicitRows.map((row)=>({name:row.name,fields:row.fields,source:row.source}));
+  if (!candidates.length && rawPostNames.trim()) {
+    const names = rawPostNames.split(/\r?\n|\s*\|\s*|\s*;\s*/).map((name)=>name.trim().replace(/^[-•\s]+|[-•\s]+$/g,"")).filter(Boolean);
+    candidates = names.map((name)=>({name,fields:{},source:null as unknown as Record<string,unknown>}));
+  }
+  if (!candidates.length) candidates = [{name:"",fields:{},source:null as unknown as Record<string,unknown>}];
+  const multiCandidate = candidates.filter((candidate)=>candidate.name).length > 1;
+  return candidates.map((candidate,index) => {
+    const explicit = Boolean(candidate.source);
+    const canUseArticleFields = !multiCandidate && Boolean(candidate.name) && !explicit;
+    const fields = candidate.fields;
+    const qualification = get(fields,[/qualification/i,/eligibility/i,/educational/i]) || (canUseArticleFields ? String(item.qualification ?? "") : "");
+    const experience = get(fields,[/experience/i]);
+    const age = get(fields,[/age limit/i,/age criteria/i]) || (canUseArticleFields ? String(details.ageLimit ?? "") : "");
+    const salary = get(fields,[/salary/i,/pay scale/i,/pay level/i,/remuneration/i,/emolument/i]) || (canUseArticleFields ? String(details.salary ?? "") : "");
+    const location = get(fields,[/location/i,/place of posting/i]) || (canUseArticleFields ? String(details.location ?? "") : "");
+    const vacancyRaw = get(fields,[/vacanc/i,/no\.?\s*of post/i,/number of post/i,/number of position/i]) || (canUseArticleFields ? get(tableFields,[/vacanc/i,/no\.?\s*of post/i]) : "");
+    const milestonesRaw = Object.entries(fields).filter(([key])=>/date|deadline|exam|interview|correction/i.test(key)).map(([field,value])=>({field,value}));
+    const applicationSelectionRaw = Object.entries(fields).filter(([key])=>/fee|apply|application|selection|document|instruction/i.test(key)).map(([field,value])=>({field,value}));
+    const otherInfoRaw: Record<string,unknown> = {
+      articlePostNamesRaw: rawPostNames || null, articleTableFields: tableFields, explicitPostRow: candidate.source,
+      genericArticleFieldsNotAssignedToPost: multiCandidate && !explicit ? {
+        qualification:item.qualification ?? null, ageLimit:details.ageLimit ?? null,
+        salary:details.salary ?? null, location:details.location ?? null
+      } : {},
+      scopeNote: explicit ? "Facts captured from a source table row with an explicit post-title column; still unverified."
+        : multiCandidate ? "Post candidate inferred from a title list; generic article fields intentionally not copied across posts."
+        : candidate.name ? "Single post candidate; article-level fields are candidates only and still require official verification."
+        : "No post decomposition detected; preserve the parent article and review manually."
+    };
+    const core = {
+      sourcePostKey:item.externalId + "-P" + String(index+1).padStart(2,"0"),
+      postNameRaw:candidate.name || null,
+      sourcePostCodeRaw:get(fields,[/post code/i,/serial no/i,/sl\.?\s*no/i,/post id/i]) || null,
+      vacancyCountRaw:vacancyRaw || null, vacancyCountCandidate:parseCount(vacancyRaw),
+      qualificationRaw:qualification || null, experienceRaw:experience || null, ageLimitRaw:age || null,
+      ageReferenceDateRaw:get(fields,[/age as on/i,/age reckoning date/i]) || null,
+      ageRelaxationRulesRaw:get(fields,[/age relaxation/i,/relaxation/i]) || null,
+      salaryRaw:salary || null, payLevelRaw:get(fields,[/pay level/i,/pay scale/i,/grade pay/i]) || null,
+      employmentTypeRaw:get(fields,[/employment type/i,/nature of appointment/i,/job type/i]) || null,
+      tenureRaw:get(fields,[/duration/i,/tenure/i,/contract period/i]) || null,
+      locationRaw:location || null,
+      dutiesResponsibilitiesRaw:get(fields,[/job profile/i,/roles and responsibilities/i,/duties/i,/responsibilities/i]) || null,
+      eligibilityConditionsRaw:get(fields,[/eligibility criteria/i,/other conditions/i,/minimum requirements/i]) || null,
+      milestonesRaw, applicationSelectionRaw, otherInfoRaw, sourceTableRowRaw:candidate.source ?? null,
+      extractionStatus:(candidate.name ? "CANDIDATE_NEEDS_REVIEW" : "POST_DECOMPOSITION_NOT_EXTRACTED") as FjaPostCandidate["extractionStatus"]
+    };
+    return {...core,contentHash:sha(JSON.stringify(core))};
+  });
+}
+
 function detailFields(html: string, listing: {url:string; title:string; externalId:string}): Listing {
   const $ = cheerio.load(html);
   const rows: Record<string,string> = {};
@@ -270,7 +369,7 @@ async function main() {
       delete parsed.rawHtml;
       await sleep(300);
       if (!parsed.listingCategory) { nonRecruitmentPagesSkipped++; return null; }
-      await db`
+      const [inventoryRow] = await db`
         INSERT INTO public.fja_job_inventory
           (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
         VALUES
@@ -283,7 +382,43 @@ async function main() {
           vacancy_count=excluded.vacancy_count,detail_status=excluded.detail_status,source_status=excluded.source_status,
           details=excluded.details,raw_text=excluded.raw_text,content_hash=excluded.content_hash,
           last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
+        RETURNING id
       `;
+      const postCandidates = extractPostCandidates(parsed);
+      for (const candidate of postCandidates) {
+        await db`
+          INSERT INTO public.fja_post_inventory
+            (recruitment_inventory_id,source_slug,external_id,source_post_key,post_name_raw,post_name_normalized_candidate,
+             source_post_code_raw,vacancy_count_raw,vacancy_count_candidate,qualification_raw,experience_raw,age_limit_raw,
+             age_reference_date_raw,age_relaxation_rules_raw,salary_raw,pay_level_raw,employment_type_raw,tenure_raw,
+             location_raw,duties_responsibilities_raw,eligibility_conditions_raw,milestones_raw,application_selection_raw,
+             other_info_raw,source_table_row_raw,extraction_status,official_verification_status,content_hash,last_crawl_run_id,
+             first_seen_at,last_seen_at,updated_at)
+          VALUES
+            (\${inventoryRow.id},'freejobalert',\${parsed.externalId},\${candidate.sourcePostKey},\${candidate.postNameRaw},
+             NULL,\${candidate.sourcePostCodeRaw},\${candidate.vacancyCountRaw},\${candidate.vacancyCountCandidate},
+             \${candidate.qualificationRaw},\${candidate.experienceRaw},\${candidate.ageLimitRaw},\${candidate.ageReferenceDateRaw},
+             \${candidate.ageRelaxationRulesRaw},\${candidate.salaryRaw},\${candidate.payLevelRaw},\${candidate.employmentTypeRaw},
+             \${candidate.tenureRaw},\${candidate.locationRaw},\${candidate.dutiesResponsibilitiesRaw},\${candidate.eligibilityConditionsRaw},
+             \${db.json(candidate.milestonesRaw)},\${db.json(candidate.applicationSelectionRaw)},\${db.json(candidate.otherInfoRaw)},
+             \${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw) : null},\${candidate.extractionStatus},'PENDING',
+             \${candidate.contentHash},\${RUN_ID},now(),now(),now())
+          ON CONFLICT (source_slug,external_id,source_post_key) DO UPDATE SET
+            recruitment_inventory_id=excluded.recruitment_inventory_id,
+            post_name_raw=excluded.post_name_raw,source_post_code_raw=excluded.source_post_code_raw,
+            vacancy_count_raw=excluded.vacancy_count_raw,vacancy_count_candidate=excluded.vacancy_count_candidate,
+            qualification_raw=excluded.qualification_raw,experience_raw=excluded.experience_raw,age_limit_raw=excluded.age_limit_raw,
+            age_reference_date_raw=excluded.age_reference_date_raw,age_relaxation_rules_raw=excluded.age_relaxation_rules_raw,
+            salary_raw=excluded.salary_raw,pay_level_raw=excluded.pay_level_raw,employment_type_raw=excluded.employment_type_raw,
+            tenure_raw=excluded.tenure_raw,location_raw=excluded.location_raw,duties_responsibilities_raw=excluded.duties_responsibilities_raw,
+            eligibility_conditions_raw=excluded.eligibility_conditions_raw,milestones_raw=excluded.milestones_raw,
+            application_selection_raw=excluded.application_selection_raw,other_info_raw=excluded.other_info_raw,
+            source_table_row_raw=excluded.source_table_row_raw,extraction_status=excluded.extraction_status,
+            official_verification_status=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash
+              THEN 'NEEDS_REVIEW' ELSE public.fja_post_inventory.official_verification_status END,
+            content_hash=excluded.content_hash,last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
+        `;
+      }
       await db`
         INSERT INTO public.source_observations
           (source, external_id, source_url, observed_at, content_hash, facts, links, raw, run_id, outcome, outcome_reason)
