@@ -2,7 +2,8 @@
  * Public Recruitment/Post UI contracts.
  * Keeps internal inventory diagnostics out of candidate-facing pages and preserves locale-aware navigation.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const recruitmentHub = readFileSync("src/components/recruitment/recruitment-hub.tsx", "utf8");
@@ -11,6 +12,15 @@ const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts",
 const localeRecruitmentRoute = readFileSync("src/app/[locale]/jobs/[slug]/page.tsx", "utf8");
 const internalReviewRoute = readFileSync("src/app/(default)/fja-review/page.tsx", "utf8");
 
+function collectPublicUiSources(directory: string): string[] {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+    if (statSync(path).isDirectory()) return collectPublicUiSources(path);
+    return /\\.(tsx?|jsx?|css|mdx?)$/i.test(path) ? [path] : [];
+  });
+}
+
 describe("candidate-facing Recruitment and Post UI", () => {
   test("Recruitment hub does not render raw database or source inventory audit panels", () => {
     expect(recruitmentHub).not.toContain("Database Field Coverage");
@@ -18,6 +28,20 @@ describe("candidate-facing Recruitment and Post UI", () => {
     expect(recruitmentHub).not.toContain("RecordFieldGrid");
     expect(recruitmentHub).not.toContain("fjaInventory");
     expect(recruitmentHub).not.toContain("Source article ID:");
+  });
+
+  test("public routes and UI source contain no source-aggregator brand or domain references", () => {
+    const publicSources = [
+      ...collectPublicUiSources("src/app"),
+      ...collectPublicUiSources("src/components"),
+      ...collectPublicUiSources("src/content"),
+    ];
+    const prohibited = /free\\s*job\\s*alert|freejobalert\\.com|\\bfja\\b/i;
+    const matches = publicSources.flatMap((path) => {
+      const source = readFileSync(path, "utf8");
+      return prohibited.test(source) ? [path] : [];
+    });
+    expect(matches).toEqual([]);
   });
 
   test("candidate-facing Recruitment and Post components contain no source-aggregator branding", () => {
