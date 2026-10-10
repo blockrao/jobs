@@ -171,6 +171,23 @@ export async function getRecruitmentWithPosts(slug: string) {
     };
     const recruitmentId = recruitment.id;
 
+    // Load complete linked entities for the recruitment hub's database coverage view.
+    const [organizationResult, examResult] = await Promise.all([
+      db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
+      recruitment.examId
+        ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
+        : Promise.resolve([]),
+    ]);
+    const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
+      const value = result as { rows?: unknown[] };
+      const rows = value?.rows ?? result;
+      return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
+    };
+    Object.assign(recruitment, {
+      organization: rowsOf(organizationResult)[0] ?? null,
+      exam: rowsOf(examResult)[0] ?? null,
+    });
+
     // Step 2: Get all posts for this recruitment with positions
     const postsResult = await db
       .select({
@@ -232,7 +249,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
     }));
 
-    const [enrichmentResult, inventoryResult] = await Promise.all([
+    const [enrichmentResult, inventoryResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
       db.execute(sql`
         SELECT *
         FROM post_enrichments
@@ -245,6 +262,20 @@ export async function getRecruitmentWithPosts(slug: string) {
       WHERE source_slug = 'freejobalert'
         AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
       ORDER BY id
+      `),
+      db.execute(sql`
+        SELECT v.*, to_jsonb(l) AS location_record
+        FROM vacancies v
+        LEFT JOIN locations l ON l.id = v.location_id
+        WHERE v.post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
+        ORDER BY v.post_id, v.id
+      `),
+      db.execute(sql`
+        SELECT e.*, to_jsonb(q) AS qualification_record
+        FROM eligibilities e
+        LEFT JOIN qualifications q ON q.id = e.qualification_id
+        WHERE e.post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
+        ORDER BY e.post_id, e.id
       `)
     ]);
     const enrichmentRows = (
@@ -264,8 +295,24 @@ export async function getRecruitmentWithPosts(slug: string) {
       const postId = Number(otherInfo?.canonical_post_id);
       if (Number.isFinite(postId)) inventoryByPostId.set(postId, item);
     }
+    const vacancyDetailRows = rowsOf(vacancyDetailResult);
+    const vacancyDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
+    for (const row of vacancyDetailRows) {
+      const postId = Number(row.post_id);
+      if (!vacancyDetailsByPostId.has(postId)) vacancyDetailsByPostId.set(postId, []);
+      vacancyDetailsByPostId.get(postId)!.push(row);
+    }
+    const eligibilityDetailRows = rowsOf(eligibilityQualificationResult);
+    const eligibilityDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
+    for (const row of eligibilityDetailRows) {
+      const postId = Number(row.post_id);
+      if (!eligibilityDetailsByPostId.has(postId)) eligibilityDetailsByPostId.set(postId, []);
+      eligibilityDetailsByPostId.get(postId)!.push(row);
+    }
     const postsWithInventory = enrichedPosts.map((post) => ({
       ...post,
+      vacancies: vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
+      eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
       fjaInventory: inventoryByPostId.get(post.id) ?? null,
       postEnrichment: enrichmentByPostId.get(post.id) ?? null,
     }));
