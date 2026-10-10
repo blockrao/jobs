@@ -225,7 +225,7 @@ export default async function LocaleJobPage({ params }: Props) {
   const orgNameHi = (org as any).nameHi as string | null;
   const displayOrgName = isHi && orgNameHi ? orgNameHi : org.name;
   // Only link into the Hindi org page when it actually has Hindi content.
-  const orgHref = isHi && orgNameHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
+  const orgHref = isHi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`;
   const stateHub = getStateBySlug((posting as any).stateSlug ?? "");
   const hiringOpen = isHiringOpen(posting.currentStage, posting.validThrough);
   const faqs = buildFaqs(posting, isHi, displayTitle, displayOrgName, displayEligibility);
