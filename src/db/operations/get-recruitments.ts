@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { getDb } from "../index";
-import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, recruitmentFees, selectionProcesses } from "../schema";
+import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects } from "../schema";
 import { eq, inArray, sql } from "drizzle-orm";
 
 /**
