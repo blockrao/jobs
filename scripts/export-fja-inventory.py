@@ -82,6 +82,38 @@ def split_candidates(value):
     # Heuristic candidates only; preserve the original complete postNames value elsewhere.
     return [part.strip(" \t\r\n-•") for part in re.split(r"\r?\n|\s*\|\s*|\s*;\s*", str(value)) if part.strip(" \t\r\n-•")]
 
+def explicit_post_rows(details):
+    """Extract post facts only from tables with an explicit post-title column."""
+    output = []
+    for table in details.get("tables") or []:
+        rows = table.get("rows") or []
+        header_index = None
+        headers = []
+        for index, row in enumerate(rows):
+            cells = row.get("cells") or []
+            if any(re.search(r"post name|name of post|post title|job title|designation|position", str(cell), re.I) for cell in cells):
+                header_index = index
+                headers = [str(cell).strip() for cell in cells]
+                break
+        if header_index is None:
+            continue
+        for row in rows[header_index + 1:]:
+            cells = row.get("cells") or []
+            if not cells or not any(str(cell).strip() for cell in cells):
+                continue
+            record = {headers[i]: cells[i] for i in range(min(len(headers), len(cells))) if str(headers[i]).strip() and str(cells[i]).strip()}
+            title = next((str(value).strip() for key, value in record.items() if re.search(r"post name|name of post|post title|job title|designation|position", key, re.I)), "")
+            if title and not re.search(r"total|grand total|note|important", title, re.I):
+                output.append({"postName": title, "fields": record, "tableIndex": table.get("tableIndex"), "rowIndex": row.get("rowIndex")})
+    return output
+
+def matching_field(record, patterns):
+    fields = (record or {}).get("fields") or {}
+    for key, value in fields.items():
+        if value is not None and str(value).strip() and any(re.search(pattern, str(key), re.I) for pattern in patterns):
+            return str(value).strip()
+    return ""
+
 def other_payload(item, details, fields, links):
     known_detail_keys = {
         "tableFields", "tables", "allLinks", "officialLinks", "headings", "lists",
@@ -192,31 +224,59 @@ for item in items:
     recruitment_details_values.append(chunks(details_json))
     recruitment_other_values.append(chunks(other_json))
 
-    candidates = split_candidates(details.get("postNames"))
+    table_post_rows = explicit_post_rows(details)
+    if table_post_rows:
+        candidates = []
+        for record in table_post_rows:
+            if record["postName"] not in candidates:
+                candidates.append(record["postName"])
+    else:
+        candidates = split_candidates(details.get("postNames"))
     if not candidates:
         candidates = [""]
-    one_unambiguous_post = len(candidates) == 1 and bool(candidates[0])
+    one_unambiguous_post = len(candidates) == 1 and bool(candidates[0]) and not table_post_rows
     for index, candidate in enumerate(candidates, 1):
-        # Generic article-level facts are not assigned to individual posts for multi-post notices.
-        if one_unambiguous_post:
+        explicit_record = next((record for record in table_post_rows if record["postName"] == candidate), None)
+        if explicit_record:
+            qualification = matching_field(explicit_record, [r"qualification", r"eligibility", r"educational"])
+            experience = matching_field(explicit_record, [r"experience"])
+            age = matching_field(explicit_record, [r"age"])
+            salary = matching_field(explicit_record, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"])
+            location = matching_field(explicit_record, [r"location", r"place of posting"])
+            vacancy_raw = matching_field(explicit_record, [r"vacanc", r"no.? of post", r"number of post", r"number of position"])
+            pay_level = matching_field(explicit_record, [r"pay level", r"pay scale", r"grade pay"])
+            tenure = matching_field(explicit_record, [r"duration", r"tenure", r"contract period"])
+            employment_type = matching_field(explicit_record, [r"employment type", r"nature of appointment", r"job type"])
+            duties = matching_field(explicit_record, [r"job profile", r"roles and responsibilities", r"duties", r"responsibilities"])
+            post_milestones = {k: v for k, v in explicit_record["fields"].items() if re.search(r"date|deadline|exam|interview|correction", str(k), re.I)}
+            post_application_selection = {k: v for k, v in explicit_record["fields"].items() if re.search(r"fee|apply|application|selection|document|instruction", str(k), re.I)}
+            unresolved_shared_fields = {}
+            note = "Mapped from a source table with an explicit post-title column; source-reported only and requires official verification."
+        elif one_unambiguous_post:
             qualification = item.get("qualification") or first_field(fields, [r"qualification", r"eligibility", r"educational"])
             experience = first_field(fields, [r"experience", r"work experience"])
             age = details.get("ageLimit") or first_field(fields, [r"age limit", r"age criteria"])
             salary = details.get("salary") or first_field(fields, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"])
             location = details.get("location") or first_field(fields, [r"job location", r"place of posting", r"location"])
+            vacancy_raw = first_field(fields, [r"vacanc", r"number of post", r"no.? of post"])
             pay_level = first_field(fields, [r"pay level", r"pay scale", r"grade pay"])
             tenure = first_field(fields, [r"duration", r"tenure", r"contract period"])
             employment_type = first_field(fields, [r"employment type", r"nature of appointment", r"job type"])
             duties = first_field(fields, [r"job profile", r"roles and responsibilities", r"duties"])
+            post_milestones = {}
+            post_application_selection = {}
             unresolved_shared_fields = {}
             note = "Single candidate; generic article fields are candidates only and still require official verification."
         else:
-            qualification = experience = age = salary = location = pay_level = tenure = employment_type = duties = ""
+            qualification = experience = age = salary = location = vacancy_raw = pay_level = tenure = employment_type = duties = ""
+            post_milestones = {}
+            post_application_selection = {}
             unresolved_shared_fields = fields
             note = "MULTI_POST_SCOPE_UNRESOLVED: generic article-level facts retained in other info; not copied onto this post."
         post_other = {
             "candidate_name_raw": candidate,
             "article_post_names_field_raw": details.get("postNames") or "",
+            "explicit_source_table_row": explicit_record,
             "unmapped_and_unassigned_fields": unresolved_shared_fields,
             "all_details_keys": sorted(details.keys()),
             "raw_source_text_reference": source_ref,
@@ -225,12 +285,13 @@ for item in items:
         post_key = f"{recruitment_key}-P{index:02d}" if candidate else ""
         post_base_rows.append([
             post_key, recruitment_key, external_id, candidate, "", "",
-            first_field(fields, [r"vacanc", r"number of post", r"no.? of post"]) if one_unambiguous_post else "",
-            "", qualification, experience, "", "", "", "", "", "", "", "", salary, pay_level,
-            employment_type, tenure, location, duties, qualification, "[]", "[]",
+            vacancy_raw, "", qualification, experience, "", "", age, "", "", "", "", "",
+            salary, pay_level, employment_type, tenure, location, duties, qualification,
+            as_json(post_milestones), as_json(post_application_selection),
             as_json(unresolved_shared_fields), source_ref, item.get("contentHash"), payload.get("runId"),
             "CANDIDATE_NEEDS_REVIEW" if candidate else "POST_DECOMPOSITION_NOT_EXTRACTED",
-            item.get("detailStatus"), "PENDING_OFFICIAL_REVIEW", "NOT_MAPPED_TO_CANONICAL", note
+            item.get("detailStatus"), "PENDING_OFFICIAL_REVIEW",
+            "TABLE_MAPPED_REVIEW_REQUIRED" if explicit_record else "NOT_MAPPED_TO_CANONICAL", note
         ])
         post_other_values.append(chunks(as_json(post_other)))
 
@@ -255,7 +316,7 @@ for index, base_row in enumerate(recruitment_base_rows):
         + padded_chunks("".join(recruitment_other_values[index]), max_recruitment_other)
     )
 post_rows = [
-    base_row + padded_chunks(as_json(post_other_values[index][0]) if len(post_other_values[index]) == 1 else "".join(post_other_values[index]), max_post_other)
+    base_row + padded_chunks("".join(post_other_values[index]), max_post_other)
     for index, base_row in enumerate(post_base_rows)
 ]
 
