@@ -280,7 +280,8 @@ describe("WP-001 static rules", () => {
     const src = stripComments(readSource("src/lib/queries.ts"));
     const list = src.slice(src.indexOf("export async function listPostings"), src.indexOf("export async function getOrganizationBySlug"));
     expect(list).toMatch(/notPastLastDate/);
-    expect(src).toMatch(/validThrough\} >= date_trunc/);
+    // Last-date filtering is a UTC-date comparison; null deadlines remain eligible.
+    expect(src).toMatch(/validThrough\} IS NULL OR \$\{postings\.validThrough\} >= now\(\)::date/);
   });
 
   test("WP1-S1 the ingestion path never creates a canonical organization", () => {
