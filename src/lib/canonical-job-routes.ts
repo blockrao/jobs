@@ -31,18 +31,21 @@ export function recruitmentHubCanonicalPath(
 ): string | null {
   if (!recruitment?.slug) return null;
 
-  const positionSlugs = [
-    ...new Set(
-      (linkedPosts ?? [])
-        .map((post) => post.position?.slug)
-        .filter((slug): slug is string => Boolean(slug)),
-    ),
-  ];
+  const posts = linkedPosts ?? [];
+  const positionSlugs = posts.map((post) => post.position?.slug);
 
-  // Only canonicalize to a role hub when the relationship is unambiguous.
-  if (positionSlugs.length === 1) return `/posts/${positionSlugs[0]}`;
+  // A canonical Position is safe only when every linked Post has a Position
+  // and all of those relationships resolve to the same slug. Filtering out
+  // missing relationships would make a partial graph look unambiguous.
+  if (
+    posts.length > 0 &&
+    positionSlugs.every((slug): slug is string => Boolean(slug)) &&
+    new Set(positionSlugs).size === 1
+  ) {
+    return `/posts/${positionSlugs[0]}`;
+  }
 
-  // A multi-role recruitment must not be canonicalized to one arbitrary role.
+  // Mixed-role or incomplete entity graphs must not canonicalize to one role.
   // The caller keeps this transitional hub noindex.
   return `/jobs/${recruitment.slug}`;
 }
