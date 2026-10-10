@@ -200,20 +200,42 @@ export async function resolveRecruitment(
       applicationStartDate: identity.applicationStartDate ?? null,
       applicationEndDate: identity.applicationEndDate ?? null,
     })
-    .onConflictDoNothing({ target: recruitments.slug })
+    .onConflictDoNothing()
     .returning({ id: recruitments.id });
 
   if (created) return { id: created.id, created: true };
 
-  const existingBySlug = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, finalSlug),
-  });
-  if (existingBySlug) return { id: existingBySlug.id, created: false };
+  // A slug collision is not proof that this is the same Recruitment. Resolve
+  // a concurrent insert only through domain identity keys, never the URL slug.
+  if (identity.officialNotificationNumber) {
+    const byNotification = await db.query.recruitments.findFirst({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+      ),
+    });
+    if (byNotification) return { id: byNotification.id, created: false };
+  }
 
-  // Insert raced and lost, but the winning row isn't visible yet (unlikely
-  // outside real concurrency) — surface clearly rather than silently
-  // returning a bogus id.
-  throw new Error(`resolveRecruitment: slug "${finalSlug}" conflicted but no row found`);
+  if (identity.examId && identity.year) {
+    const candidates = await db.query.recruitments.findMany({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.examId, identity.examId),
+        eq(recruitments.year, identity.year),
+      ),
+    });
+    const best = candidates
+      .map((c) => ({ c, score: titleSimilarity(c.name, identity.title) }))
+      .sort((a, b) => b.score - a.score)[0];
+    if (best && best.score >= FALLBACK_SIMILARITY_THRESHOLD) {
+      return { id: best.c.id, created: false };
+    }
+  }
+
+  // A unique-key race occurred, but no row matched the Recruitment identity.
+  // Fail explicitly rather than attaching the source to an unrelated entity.
+  throw new Error("resolveRecruitment: insert conflicted for " + finalSlug + " but no identity match was found");
 }
 
 export interface PostIdentity {
