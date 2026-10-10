@@ -356,14 +356,15 @@ async function main() {
       const html=await getHtml(item.url);
       const parsed=detailFields(html,item);
       const htmlSha256 = parsed.htmlSha256 ?? sha(html);
+      const rawHtmlContent = parsed.rawHtml ?? html;
       const rawCaptureRelativePath = path.posix.join("raw-html", parsed.externalId, htmlSha256 + ".html");
       const rawCapturePath = path.join(OUT, "raw-html", parsed.externalId, htmlSha256 + ".html");
       await mkdir(path.dirname(rawCapturePath), {recursive:true});
-      await writeFile(rawCapturePath, parsed.rawHtml ?? html, "utf8");
+      await writeFile(rawCapturePath, rawHtmlContent, "utf8");
       parsed.details.sourceCapture = {
         artifactPath: rawCaptureRelativePath,
         htmlSha256,
-        byteLength: Buffer.byteLength(parsed.rawHtml ?? html, "utf8"),
+        byteLength: Buffer.byteLength(rawHtmlContent, "utf8"),
         capturedAt: new Date().toISOString(),
         normalizedTextSha256: sha(parsed.rawText ?? ""),
       };
@@ -384,6 +385,14 @@ async function main() {
           details=excluded.details,raw_text=excluded.raw_text,content_hash=excluded.content_hash,
           last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
         RETURNING id
+      `;
+      await db`
+        INSERT INTO public.fja_source_captures
+          (recruitment_inventory_id,source_slug,external_id,source_url,html_sha256,normalized_text_sha256,raw_html,run_id,captured_at)
+        VALUES
+          (${inventoryRow.id},'freejobalert',${parsed.externalId},${parsed.sourceUrl},${htmlSha256},
+           ${sha(parsed.rawText ?? "")},${rawHtmlContent},${RUN_ID},now())
+        ON CONFLICT (source_slug,external_id,html_sha256) DO NOTHING
       `;
       const postCandidates = extractPostCandidates(parsed);
       for (const candidate of postCandidates) {
