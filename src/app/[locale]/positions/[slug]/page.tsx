@@ -8,6 +8,7 @@ import { getDb } from "@/db";
 import { positions, posts, recruitments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { safeQuery } from "@/lib/safe-query";
+import { pageSeo } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -49,8 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `${displayName}: वेतन, आयु सीमा, भर्तियां और पात्रता जानकारी।`
       : (position.description ||
           `${position.name}: Find recruitments, eligibility, and how to apply.`),
-    robots: { index: false, follow: true },
-    alternates: { canonical: `/positions/${slug}` },
+    ...pageSeo(`/positions/${slug}`, { index: false }),
   };
 }
 
