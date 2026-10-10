@@ -23,7 +23,6 @@ interface LocaleLayoutProps {
 
 export async function generateMetadata(
   { params }: LocaleLayoutProps,
-  parent: any
 ): Promise<Metadata> {
   const { locale } = await params;
   const canonicalUrl = new URL(SITE_URL);
@@ -100,7 +99,7 @@ export default async function LocaleLayout({
 
   return (
     <RootShell lang={htmlLang(locale)}>
-      <IntlProvider locale={resolvedLocale} messages={messages as Record<string, any>}>
+      <IntlProvider locale={resolvedLocale} messages={messages}>
         {children}
       </IntlProvider>
     </RootShell>
