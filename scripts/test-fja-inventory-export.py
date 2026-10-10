@@ -94,6 +94,8 @@ def main():
             },
             "https://www.freejobalert.com/articles/example-67890",
         )
+        # Keep the top-level convenience field consistent with the fixture's source table field.
+        item2["qualification"] = "Bachelor's degree"
         (base / "raw-html" / "12345").mkdir(parents=True)
         (base / "raw-html" / "12345" / f"{item1['details']['sourceCapture']['htmlSha256']}.html").write_bytes(html1)
         (base / "raw-html" / "67890").mkdir(parents=True)
