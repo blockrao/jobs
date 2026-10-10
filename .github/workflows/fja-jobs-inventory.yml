@@ -1,0 +1,44 @@
+name: FJA Jobs Inventory
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: fja-jobs-inventory
+  cancel-in-progress: false
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl
+      - name: Crawl FJA actual listing and detail pages; persist to Supabase
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FJA_OUT_DIR: artifacts/fja
+          FJA_MAX_PAGES: "1200"
+          FJA_CONCURRENCY: "4"
+        run: npx tsx scripts/fja-inventory.ts
+      - name: Generate Excel workbook
+        env:
+          FJA_OUT_DIR: artifacts/fja
+        run: python scripts/export-fja-inventory.py
+      - name: Upload workbook, CSV and raw extraction
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-jobs-inventory-${{ github.run_id }}
+          path: artifacts/fja/
+          if-no-files-found: error
+          retention-days: 90
