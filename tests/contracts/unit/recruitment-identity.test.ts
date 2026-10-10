@@ -56,7 +56,7 @@ describe("recruitment identity conflict handling", () => {
   test("does not treat a generated-slug collision as entity identity", async () => {
     const fake = fakeDb();
 
-    await expect(resolveRecruitment(fake.db, identity, "legacy-slug")).rejects.toThrow(
+    await expect(resolveRecruitment(fake.db, identity)).rejects.toThrow(
       /insert conflicted.*no identity match/i,
     );
 
@@ -72,7 +72,7 @@ describe("recruitment identity conflict handling", () => {
     await expect(resolveRecruitment(fake.db, {
       ...identity,
       officialNotificationNumber: "Advt. No. 17/2026",
-    }, "legacy-slug")).resolves.toEqual({ id: 123, created: false });
+    })).resolves.toEqual({ id: 123, created: false });
 
     expect(fake.recruitmentFindFirst).toHaveBeenCalledTimes(2);
   });
@@ -89,7 +89,7 @@ describe("recruitment identity conflict handling", () => {
     await expect(resolveRecruitment(fake.db, {
       ...identity,
       examId: 9,
-    }, "legacy-slug")).resolves.toEqual({ id: 456, created: false });
+    })).resolves.toEqual({ id: 456, created: false });
 
     expect(fake.recruitmentFindMany).toHaveBeenCalledTimes(3);
   });
