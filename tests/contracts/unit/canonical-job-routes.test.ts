@@ -46,6 +46,20 @@ describe("canonical recruitment hub resolution", () => {
     expect(recruitmentHubCanonicalPath({ slug: "recruitment-2026-01" }, [])).toBe("/jobs/recruitment-2026-01");
     expect(recruitmentHubCanonicalPath(null, [])).toBeNull();
   });
+
+  test("does not canonicalize to one Position when any linked Post has no Position", () => {
+    expect(recruitmentHubCanonicalPath(
+      { slug: "mixed-2026-01" },
+      [{ position: { slug: "law-officer" } }, { position: null }],
+    )).toBe("/jobs/mixed-2026-01");
+  });
+
+  test("does not canonicalize to one Position when the graph is incomplete", () => {
+    expect(recruitmentHubCanonicalPath(
+      { slug: "mixed-2026-01" },
+      [{ position: { slug: "law-officer" } }, {}],
+    )).toBe("/jobs/mixed-2026-01");
+  });
 });
 
 
