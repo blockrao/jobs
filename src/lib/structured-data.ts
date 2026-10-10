@@ -131,18 +131,19 @@ export function buildJobPostingSchema(
 ): Record<string, unknown> | null {
   if (!isHiringOpen(posting.currentStage, posting.validThrough)) return null;
 
+  // A generic recruitment page is not an individual job when it contains
+  // multiple post titles. Until each post is resolved to its own canonical
+  // leaf URL, suppress JobPosting markup rather than misrepresent the first
+  // title as the entire recruitment. The leaf-page builder owns per-Post data.
+  if (posting.postNames?.length !== 1) return null;
+
   // Minimum conditions for a valid JobPosting node:
   // - Approved, not expired, hiring is open (checked above)
   // - Tier A (all required content fields present)
   // - A real, resolved organization name (not a bucket name)
   // - A description (Google required field)
-  // Multi-post notices (postNames.length > 1) ARE eligible — we emit the
-  // first extracted post title as the schema title, which is what Google
-  // wants (one title per JobPosting). The page covers the full recruitment;
-  // totalJobOpenings carries the aggregate vacancy count.
   const { eligible, reasons } = evaluateJobPostingEligibility(posting as never, org);
-  const schemaReasons = reasons.filter((r) => r !== "MULTI_POST_UNRESOLVED");
-  if (schemaReasons.length > 0) return null;
+  if (reasons.length > 0) return null;
 
   // JobPosting.title must be the job title (e.g. "Research Associate III"),
   // never the scraped headline ("...Recruitment 2026 – Apply Online for 1
