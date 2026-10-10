@@ -49,8 +49,9 @@ function deepestCause(error: unknown): unknown {
   const seen = new Set<object>();
 
   for (let depth = 0; depth < 5; depth += 1) {
+    if (current === null || typeof current !== "object" || seen.has(current)) break;
     const currentObject = errorLike(current);
-    if (!currentObject || typeof current !== "object" || seen.has(current)) break;
+    if (!currentObject) break;
     seen.add(current);
 
     const nestedErrors = Array.isArray(currentObject.errors) ? currentObject.errors : [];
