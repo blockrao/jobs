@@ -1,7 +1,6 @@
-import { permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { listCommissionsWithExams } from "@/lib/queries";
 import { getExamBySlug } from "@/db/operations/get-exams";
-import { notFound } from "next/navigation";
 
 // This file lives at src/app/[locale]/page.tsx — i.e. it shares a folder
 // (and therefore Next's dynamic-segment name, "locale") with layout.tsx and
