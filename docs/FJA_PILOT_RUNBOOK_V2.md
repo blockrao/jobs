@@ -65,4 +65,4 @@ Do not fabricate posts from ambiguous text. Mark unresolved candidates for revie
 
 ## Known gaps
 
-The current exporter still needs conversion to the exact two-sheet contract. Current post decomposition and date extraction remain heuristic. Official-link detection needs manual validation. Original HTML archival and a separate post inventory persistence model are not yet implemented. Daily scheduling remains disabled until sign-off.
+The exporter and crawler changes in this implementation branch target the exact two-sheet contract, add a source-specific `fja_post_inventory` table, preserve full page structure, and archive immutable HTML captures by content hash. These changes still require review, migration application, a successful pilot run, and manual verification before they can be treated as operational. Post decomposition remains heuristic except where an explicit post-title table row is captured; dates and official-link detection still need manual validation. Daily scheduling remains disabled until sign-off.
