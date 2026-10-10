@@ -1,12 +1,12 @@
-// /hi/recruitments/[slug] — redirects to the canonical /jobs/[slug] URL.
-// The canonical for all recruitment pages is /jobs/[slug].
-// This locale path is unused; it now permanently redirects to maintain clean crawl hygiene.
+// /hi/recruitments/[slug] is a transitional alias for the Recruitment compatibility route.
+// Preserve the explicit locale during redirect; the target applies the shared SEO policy.
 
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 type Props = { params: Promise<{ locale: string; slug: string }> };
 
 export default async function LocaleRecruitmentsRedirectPage({ params }: Props) {
-  const { slug } = await params;
-  redirect(`/jobs/${slug}`);
+  const { slug, locale } = await params;
+  const prefix = locale === "hi" ? "/hi" : "";
+  permanentRedirect(`${prefix}/jobs/${slug}`);
 }
