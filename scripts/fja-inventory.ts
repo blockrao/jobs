@@ -68,6 +68,17 @@ function parseDate(text: string): string | undefined {
   if (!month || Number(month)<1 || Number(month)>12) return;
   return `${m[3]}-${month}-${m[1].padStart(2,"0")}`;
 }
+function classifyListing(title: string, text: string, rows: Record<string,string>): string | undefined {
+  const t = title.toLowerCase();
+  if (/\b(result|admit card|answer key|syllabus|cut.?off|merit list|exam date|exam city|hall ticket)\b/i.test(t) &&
+      !/\b(recruitment|vacancy|apply online|application form)\b/i.test(t)) return;
+  const rowLabels = Object.keys(rows).join(" ").toLowerCase();
+  const structuredRecruitmentEvidence = /recruiting body|total vacan|no\.? of post|application start|last date|educational qualification|eligibility criteria/.test(rowLabels);
+  const titleRecruitmentEvidence = /\b(recruitment|vacanc(?:y|ies)|jobs?|notification|apprentice|hiring|walk.?in|engagement|apply online|career|officer|assistant|engineer|teacher|constable|clerk|driver|nurse|technician|professor|manager|fellow|staff|worker|operator|accountant|stenographer|inspector|group [abc])\b/i.test(title);
+  const bodyRecruitmentEvidence = /recruiting body|total vacancies|number of posts|application start date|educational qualification/i.test(text.slice(0, 18000));
+  if (structuredRecruitmentEvidence || titleRecruitmentEvidence || bodyRecruitmentEvidence) return "Recruitment";
+  return;
+}
 function detailFields(html: string, listing: {url:string; title:string; externalId:string}): Listing {
   const $ = cheerio.load(html);
   const rows: Record<string,string> = {};
@@ -81,6 +92,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     return undefined;
   };
   const title = collapse($("h1").first().text()) || listing.title;
+  const listingCategory = classifyListing(title, text, rows);
   const publishedRaw = find(/notification date|post date|published|updated date/i);
   const startRaw = find(/application start|start date|starting date/i);
   const endRaw = find(/last date|closing date|application end|last date to apply/i);
@@ -113,7 +125,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
   return {
     externalId:listing.externalId, sourceUrl:listing.url, title,
     organizationName:find(/recruiting body|organization|department/i),
-    listingCategory:collapse($("nav").text()).slice(0,200) || undefined,
+    listingCategory,
     publishedDate:publishedRaw ? parseDate(publishedRaw) : undefined,
     applicationStartDate:startRaw ? parseDate(startRaw) : undefined,
     applicationEndDate:endRaw ? parseDate(endRaw) : undefined,
@@ -189,10 +201,12 @@ async function main() {
   const allItems=[...listings.values()];
   console.log(JSON.stringify({runId:RUN_ID,listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,uniqueArticles:allItems.length}));
   if(allItems.length===0) throw new Error("No FJA article URLs found; refusing to report an empty successful inventory.");
-  const results = await pool(allItems,CONCURRENCY,async(item)=>{
+  const resultsWithNulls = await pool(allItems,CONCURRENCY,async(item):Promise<Listing | null>=>{
     try {
       const html=await getHtml(item.url);
       const parsed=detailFields(html,item);
+      await sleep(300);
+      if (!parsed.listingCategory) return null;
       await db`
         INSERT INTO public.fja_job_inventory
           (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
@@ -229,8 +243,9 @@ async function main() {
       return failed;
     }
   });
+  const results = resultsWithNulls.filter((item): item is Listing => item !== null);
   await mkdir(OUT,{recursive:true});
-  await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,results},null,2));
+  await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,discoveredArticleUrls:allItems.length,nonRecruitmentPagesSkipped:resultsWithNulls.length-results.length,results},null,2));
   const summary=await db`select count(*)::int as total, count(*) filter (where detail_status='EXTRACTED')::int as extracted, count(*) filter (where detail_status='PARTIAL')::int as partial, count(*) filter (where detail_status='FAILED')::int as failed from public.fja_job_inventory where source_slug='freejobalert'`;
   console.log(JSON.stringify({runId:RUN_ID,processed:results.length,summary:summary[0],out:OUT}));
   await db.end();
