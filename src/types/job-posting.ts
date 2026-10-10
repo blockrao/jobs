@@ -45,6 +45,27 @@ export interface JobPostingData {
   recruitmentSelectionProcess?: string | null;
   notificationPublicationDate?: Date | null;
 
+  // Raw FreeJobAlert inventory fields; source extraction is not official verification.
+  fjaExtract?: {
+    inventoryId: number | string;
+    externalId?: string | null;
+    qualificationRaw?: string | null;
+    experienceRaw?: string | null;
+    ageLimitRaw?: string | null;
+    ageReferenceDateRaw?: string | null;
+    salaryRaw?: string | null;
+    employmentTypeRaw?: string | null;
+    locationRaw?: string | null;
+    dutiesRaw?: string | null;
+    eligibilityRaw?: string | null;
+    vacancyCountRaw?: string | null;
+    milestonesRaw?: unknown;
+    applicationSelectionRaw?: unknown;
+    otherInfoRaw?: unknown;
+    extractionStatus?: string | null;
+    verificationStatus?: string | null;
+  };
+
   // Enrichment Data (from post_enrichments table)
   enrichment?: PostEnrichment;
 }
