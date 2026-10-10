@@ -33,7 +33,6 @@ import {
   formatCurrencyRange,
   formatDate,
   formatFee,
-  vacanciesPhrase,
 } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
