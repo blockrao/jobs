@@ -129,12 +129,7 @@ def other_payload(item, details, fields, links):
             )
         },
         "other_detail_fields": {key: value for key, value in details.items() if key not in known_detail_keys},
-        "all_headings": details.get("headings") or [],
-        "all_lists": details.get("lists") or [],
-        "all_tables": details.get("tables") or [],
-        "all_links": links,
-        "crawler_raw_text_copy": details.get("rawText") or item.get("rawText") or "",
-        "preservation_policy": "Raw source evidence only. No AI rewrite or official verification is performed by this exporter."
+        "preservation_policy": "Raw source evidence only. No AI rewrite or official verification is performed by this exporter; source body, tables, links, headings and lists are retained in dedicated columns and the full details payload."
     }
 
 recruitment_fixed_headers = [
