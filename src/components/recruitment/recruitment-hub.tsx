@@ -18,7 +18,7 @@
  *
  * Competitor improvements (2026-10-09):
  *   - Vacancy count is a large hero stat, not a table row (YuvaResult pattern)
- *   - "Closing in N days" urgency countdown when deadline ≤ 14 days (FreeJobAlert pattern)
+ *   - "Closing in N days" urgency countdown when deadline ≤ 14 days
  *   - Per-post status colour badges: Open / Closing Soon / Closed (JobOne.in pattern)
  *   - Stats row beneath title: vacancies + deadline + post count as scannable chips
  *
