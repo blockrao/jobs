@@ -29,8 +29,6 @@ describe("locale-aware route classification", () => {
     "/hi/search",
     "/jobs/jkssb-advertisement-08-of-2026",
     "/hi/posts/law-officer",
-    "/hi/news",
-    "/hi/search",
     "/hi/categories/education",
     "/hi",
     "/en",
