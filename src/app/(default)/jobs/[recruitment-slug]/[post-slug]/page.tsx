@@ -198,7 +198,7 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
           slug: post.slug,
           description: post.description ?? null,
           organizationName: post.organizationName ?? null,
-          recruitmentSlug: recruitmentSlug,
+          recruitmentSlug: post.recruitmentSlug,
           recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
           employmentType: post.employmentType ?? null,
           locationCity: post.locationCity ?? null,

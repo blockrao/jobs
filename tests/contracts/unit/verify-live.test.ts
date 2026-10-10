@@ -10,7 +10,7 @@ import {
   checkStatus,
   formatTable,
 } from "../../../src/scripts/verify-live-checks";
-import { isAggregatorUrl, mentionsAggregator } from "../../../src/lib/aggregators";
+import { isAggregatorUrl, mentionsAggregator, publicLink, stripAggregatorTag } from "../../../src/lib/aggregators";
 
 const B = "https://www.joboye.com";
 const E = { enUrl: `${B}/jobs/x`, hiUrl: `${B}/hi/jobs/x` };
@@ -78,7 +78,6 @@ describe("verify-live pure checks", () => {
   });
 });
 
-import { isAggregatorUrl, mentionsAggregator, publicLink, stripAggregatorTag } from "@/lib/aggregators";
 describe("aggregator hygiene helpers", () => {
   test("hosts", () => {
     expect(isAggregatorUrl("https://www.sarkari-naukri.in/gate2027-iitm-ac-in/")).toBe(true);
