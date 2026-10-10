@@ -64,6 +64,8 @@ interface RecruitmentHubProps {
   resolvedSelectionProcess?: string | null;
   /** Org slug for breadcrumb link — from organizations.slug */
   orgSlug?: string | null;
+  /** Preserve the active locale for internal links when rendered in a locale route. */
+  locale?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,7 +241,9 @@ export default function RecruitmentHub({
   resolvedEmployer,
   resolvedSelectionProcess,
   orgSlug,
+  locale,
 }: RecruitmentHubProps) {
+  const localePrefix = locale === "hi" ? "/hi" : "";
   const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
   const notificationDate = formatDate(recruitment.notificationDate);
   const appStart = formatDate(recruitment.applicationStartDate);
@@ -330,14 +334,14 @@ export default function RecruitmentHub({
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-600">
-            <Link href="/jobs" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href={`${localePrefix}/jobs`} className="text-blue-600 hover:text-blue-700 font-medium">
               Jobs
             </Link>
             {displayOrg && (
               <>
                 <ChevronRight size={14} className="text-gray-400" />
                 {orgSlug ? (
-                  <Link href={`/organizations/${orgSlug}`} className="text-blue-600 hover:text-blue-700 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
+                  <Link href={`${localePrefix}/organizations/${orgSlug}`} className="text-blue-600 hover:text-blue-700 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
                     {displayOrg}
                   </Link>
                 ) : (
@@ -457,7 +461,7 @@ export default function RecruitmentHub({
           <div className="flex flex-wrap gap-3">
             {isSinglePost ? (
               <Link
-                href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+                href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
                 className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm"
               >
                 View Post Details
@@ -706,7 +710,7 @@ export default function RecruitmentHub({
                   return (
                     <Link
                       key={post.id}
-                      href={`/jobs/${recruitment.slug}/${post.slug}`}
+                      href={`${localePrefix}/jobs/${recruitment.slug}/${post.slug}`}
                       className="flex items-center justify-between gap-4 px-4 py-3.5 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all group"
                     >
                       <div className="flex-1 min-w-0">
