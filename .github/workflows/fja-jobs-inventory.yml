@@ -29,6 +29,7 @@ jobs:
           FJA_OUT_DIR: artifacts/fja
           FJA_MAX_PAGES: "1200"
           FJA_CONCURRENCY: "4"
+          FJA_PILOT_URLS: ${{ inputs.mode == 'pilot' && inputs.pilot_urls || '' }}
         run: npx tsx scripts/fja-inventory.ts
       - name: Generate Excel workbook
         env:
