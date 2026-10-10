@@ -71,7 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: pickSitemapLastmod(row.updatedAt, undefined),
     changeFrequency: "weekly",
     priority: 0.6,
-    ...sitemapAlternates("/articles", row.slug, Boolean((row as any).titleHi)),
+    ...sitemapAlternates("/articles", row.slug, Boolean(row.titleHi)),
   }));
 
   const categoryEntries: MetadataRoute.Sitemap = categoryRows.map((row) => ({
