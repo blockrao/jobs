@@ -65,7 +65,6 @@ interface JobPostingPageProps {
 export default function JobPostingPage({
   post,
   recruitment,
-  isSingleJobRecruitment = false,
   locale = "en",
   resolvedFacts,
   recruitmentResolvedFacts,
