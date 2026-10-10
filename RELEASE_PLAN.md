@@ -6,6 +6,9 @@
 
 ## Release objective
 
+The detailed field ownership and coverage audit is maintained in [RECRUITMENT_POST_DATA_AUDIT.md](./RECRUITMENT_POST_DATA_AUDIT.md). Treat it as the working contract for the Recruitment/Post data-to-UI audit and refresh its counts before release.
+
+
 Publish a trustworthy job-discovery product where Recruitment hubs describe the hiring exercise, Post Leaves describe individual roles, and Position hubs support evergreen role discovery. Every public page must present the right facts from the database in a readable way, preserve provenance internally, avoid presenting unverified extraction as official truth, and resolve to the intended canonical URL.
 
 ## Non-negotiable release gates
