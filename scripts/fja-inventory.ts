@@ -241,9 +241,16 @@ function detailFields(html: string, listing: {url:string; title:string; external
   const salary = find(/salary|pay scale|pay level|remuneration|emolument/i);
   const location = find(/job location|place of posting|location/i);
   const officialLinks = allLinks.filter((link) => /official|notification|advertisement|apply|registration|application|download|pdf/i.test(link.label));
+  const mappedFieldPattern = /recruiting body|organization|department|advertisement|notification|published|updated|application start|start date|starting date|last date|closing date|application end|total vacan|total post|number of vacan|no\.? of post|qualification|eligibility|educational|application fee|exam fee|selection process|selection procedure|salary|pay scale|pay level|remuneration|job location|place of posting|location|name of post|post name|age limit|age criteria|experience|how to apply|application mode|employment type|tenure|duration/i;
+  const otherInfoRaw = {
+    unmappedTableFields: Object.fromEntries(Object.entries(rows).filter(([label]) => !mappedFieldPattern.test(label))),
+    additionalHeadings: headings,
+    listContent: lists,
+    preservationNote: "Unmapped source fields and page structure are retained as raw evidence; no AI rewrite or official verification is performed during extraction.",
+  };
   const details: Record<string, unknown> = {
     tableFields: rows, tables, headings, lists, allLinks, officialLinks,
-    postNames, ageLimit, applicationFee, selectionProcess, salary, location,
+    postNames, ageLimit, applicationFee, selectionProcess, salary, location, otherInfoRaw,
   };
   const parsedEndDate = endRaw ? parseDate(endRaw) : undefined;
   const today = new Date().toISOString().slice(0, 10);
@@ -373,16 +380,16 @@ async function main() {
       if (!parsed.listingCategory) { nonRecruitmentPagesSkipped++; return null; }
       const [inventoryRow] = await db`
         INSERT INTO public.fja_job_inventory
-          (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
+          (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,other_info_raw,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
         VALUES
-          ('freejobalert',${parsed.externalId},${parsed.sourceUrl},${parsed.title},${parsed.organizationName ?? null},${parsed.listingCategory ?? null},${parsed.publishedDate ?? null},${parsed.applicationStartDate ?? null},${parsed.applicationEndDate ?? null},${parsed.advertisementNumber ?? null},${parsed.qualification ?? null},${parsed.vacancyCount ?? null},${parsed.detailStatus},${parsed.sourceStatus},${db.json(parsed.details)},${parsed.rawText ?? null},${parsed.contentHash},${RUN_ID},now(),now(),now())
+          ('freejobalert',${parsed.externalId},${parsed.sourceUrl},${parsed.title},${parsed.organizationName ?? null},${parsed.listingCategory ?? null},${parsed.publishedDate ?? null},${parsed.applicationStartDate ?? null},${parsed.applicationEndDate ?? null},${parsed.advertisementNumber ?? null},${parsed.qualification ?? null},${parsed.vacancyCount ?? null},${parsed.detailStatus},${parsed.sourceStatus},${db.json(parsed.details)},${db.json(parsed.details.otherInfoRaw ?? {})},${parsed.rawText ?? null},${parsed.contentHash},${RUN_ID},now(),now(),now())
         ON CONFLICT (source_slug,external_id) DO UPDATE SET
           source_url=excluded.source_url,title=excluded.title,organization_name=excluded.organization_name,
           listing_category=excluded.listing_category,published_date=excluded.published_date,
           application_start_date=excluded.application_start_date,application_end_date=excluded.application_end_date,
           advertisement_number=excluded.advertisement_number,qualification=excluded.qualification,
           vacancy_count=excluded.vacancy_count,detail_status=excluded.detail_status,source_status=excluded.source_status,
-          details=excluded.details,raw_text=excluded.raw_text,content_hash=excluded.content_hash,
+          details=excluded.details,other_info_raw=excluded.other_info_raw,raw_text=excluded.raw_text,content_hash=excluded.content_hash,
           last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
         RETURNING id
       `;
