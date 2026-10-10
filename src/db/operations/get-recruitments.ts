@@ -239,10 +239,13 @@ export async function getRecruitmentWithPosts(slug: string) {
         AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
       ORDER BY id
     `);
-    const inventoryRows = ((inventoryResult as any).rows ?? inventoryResult) as any[];
-    const inventoryByPostId = new Map<number, any>();
+    const inventoryRows = (
+      (inventoryResult as unknown as { rows?: unknown[] }).rows ?? inventoryResult
+    ) as Array<Record<string, unknown>>;
+    const inventoryByPostId = new Map<number, Record<string, unknown>>();
     for (const item of inventoryRows) {
-      const postId = Number(item.other_info_raw?.canonical_post_id);
+      const otherInfo = item.other_info_raw as Record<string, unknown> | undefined;
+      const postId = Number(otherInfo?.canonical_post_id);
       if (Number.isFinite(postId)) inventoryByPostId.set(postId, item);
     }
     const postsWithInventory = enrichedPosts.map((post) => ({
