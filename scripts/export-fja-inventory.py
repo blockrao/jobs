@@ -256,8 +256,8 @@ for item in items:
             employment_type = matching_field(explicit_record, [r"employment type", r"nature of appointment", r"job type"])
             duties = matching_field(explicit_record, [r"job profile", r"roles and responsibilities", r"duties", r"responsibilities"])
             eligibility_conditions = matching_field(explicit_record, [r"eligibility criteria", r"other conditions", r"conditions", r"minimum requirements"])
-            post_milestones = {k: v for k, v in explicit_record["fields"].items() if re.search(r"date|deadline|exam|interview|correction", str(k), re.I)}
-            post_application_selection = {k: v for k, v in explicit_record["fields"].items() if re.search(r"fee|apply|application|selection|document|instruction", str(k), re.I)}
+            post_milestones = [{"field": k, "value": v} for k, v in explicit_record["fields"].items() if re.search(r"date|deadline|exam|interview|correction", str(k), re.I)]
+            post_application_selection = [{"field": k, "value": v} for k, v in explicit_record["fields"].items() if re.search(r"fee|apply|application|selection|document|instruction", str(k), re.I)]
             unresolved_shared_fields = {}
             note = "Mapped from a source table with an explicit post-title column; source-reported only and requires official verification."
         elif one_unambiguous_post:
