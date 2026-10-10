@@ -814,7 +814,7 @@ export default function RecruitmentHub({
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
           <div className="mb-4">
             <h2 className="text-base font-bold text-gray-900">Complete Recruitment Record</h2>
-            <p className="text-sm text-gray-600 mt-1">Recruitment-level fields available in JobOye's database, followed by source-derived post details. Unverified source data is labelled as such.</p>
+            <p className="text-sm text-gray-600 mt-1">Recruitment-level fields available in JobOye&apos;s database, followed by source-derived post details. Unverified source data is labelled as such.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
