@@ -183,9 +183,9 @@ describe("job page quality gate", () => {
       id: 2,
       slug: "thin",
       title: "Thin posting",
-      titleHi: "पतली पोस्टिंग",
+      titleHi: null,
       description: "x",
-      descriptionHi: "x",
+      descriptionHi: null,
       indexTier: "B",
       organization: { name: "Sample Org" },
     });
