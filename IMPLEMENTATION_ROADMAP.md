@@ -361,3 +361,6 @@ All sprints complete when:
 ## Release Planning (current)
 
 The current, gated release plan is maintained in [RELEASE_PLAN.md](./RELEASE_PLAN.md). Follow its execution order: public trust/UI hygiene → Recruitment/Post data-to-UI correctness → bounded inventory pilot and reconciliation → canonical URL/redirect repairs → release-candidate CI/build → production smoke tests and operational checks → controlled launch. Do not declare launch readiness from merged code alone; each gate needs evidence on the release commit and deployed production version.
+
+
+Recruitment/Post candidate-facing field ownership, data coverage and reconciliation rules are documented in [RECRUITMENT_POST_DATA_AUDIT.md](./RECRUITMENT_POST_DATA_AUDIT.md). Refresh the audit snapshot before release.
