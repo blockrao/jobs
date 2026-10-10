@@ -129,7 +129,8 @@ function extractPostCandidates(item: Listing): FjaPostCandidate[] {
     return match ? Number(match[1]) : null;
   };
   const rawPostNames = typeof details.postNames === "string" ? details.postNames : "";
-  let candidates = explicitRows.map((row)=>({name:row.name,fields:row.fields,source:row.source}));
+  const uniqueExplicitRows = explicitRows.filter((row,index)=>explicitRows.findIndex((other)=>other.name===row.name)===index);
+  let candidates = uniqueExplicitRows.map((row)=>({name:row.name,fields:row.fields,source:row.source}));
   if (!candidates.length && rawPostNames.trim()) {
     const names = rawPostNames.split(/\r?\n|\s*\|\s*|\s*;\s*/).map((name)=>name.trim().replace(/^[-•\s]+|[-•\s]+$/g,"")).filter(Boolean);
     candidates = names.map((name)=>({name,fields:{},source:null as unknown as Record<string,unknown>}));
