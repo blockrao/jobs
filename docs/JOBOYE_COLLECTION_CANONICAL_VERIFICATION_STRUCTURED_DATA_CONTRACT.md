@@ -92,7 +92,7 @@ This is a semantic mapping contract, not a claim that every destination column c
 | `selection_process_json` | Ordered stages and conditions | Details / supporting relation | Selection content |
 | `document_requirements_json` | Required/advisory docs, scope, categories and raw wording | Details / supporting relation | Candidate-facing document checklist |
 | `source_capture_ref` | Internal immutable artifact ID/hash | Capture storage + source observations | Not public |
-| `raw_source_payload_json` | Preserve unmapped substantive content | Details or versioned payload | Enrich into canonical content after review |
+| `other_info_raw` + `details` JSONB | Preserve every unmapped substantive field and full structured source payload; never discard a value because a typed header is absent | Explicit `fja_job_inventory.other_info_raw` plus full `details` JSONB; post-level `fja_post_inventory.other_info_raw` | AI may rephrase only in a later enrichment stage; raw capture and raw wording remain immutable |
 | `official_verification_status` | Controlled state; never inferred from extraction status | Internal review state | Publication gate input, not a public badge by default |
 | `extraction_status` | `EXTRACTED`, `PARTIAL`, `FAILED`, `PENDING` | `detail_status` mapping | Not equivalent to factual verification |
 
