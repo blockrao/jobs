@@ -24,7 +24,10 @@ describe("locale-aware route classification", () => {
 
   test("legacy exam root route validates known slugs and does not mask database failures", async () => {
     const { readSource, stripComments } = await import("../helpers/source");
-    const route = stripComments(readSource("src/app/[locale]/page.tsx"));
+    const source = stripComments(readSource("src/app/[locale]/page.tsx"));
+    const start = source.indexOf("export default async function LegacyExamRedirect");
+    expect(start, "legacy exam route must exist").toBeGreaterThanOrEqual(0);
+    const route = source.slice(start);
     expect(route).toContain("getExamBySlug(examSlug)");
     expect(route).toContain("if (!exam) notFound()");
     expect(route).toContain("permanentRedirect(`/exams/${examSlug}`)");
