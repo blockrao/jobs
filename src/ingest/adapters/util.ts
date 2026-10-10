@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from "axios";
-import { chromium, type Browser, type Page } from "playwright";
+import type { Browser, Page } from "playwright";
 import type { RawPosting } from "../types";
 import { isDateLabel } from "../../lib/semantic-fields";
 
@@ -63,6 +63,9 @@ let browserInstance: Browser | null = null;
 /** Get or create a Playwright browser instance. */
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance) {
+    // Defer browser runtime loading until a browser-backed adapter is actually used.
+    // The normal ingestion path uses HTTP requests and must not require Playwright browser assets.
+    const { chromium } = await import("playwright");
     browserInstance = await chromium.launch({ headless: true });
   }
   return browserInstance;
