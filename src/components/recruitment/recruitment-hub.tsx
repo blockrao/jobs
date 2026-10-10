@@ -211,6 +211,10 @@ export default function RecruitmentHub({
   const appStart = formatDate(recruitment.applicationStartDate);
   const appEnd = formatDate(recruitment.applicationEndDate);
   const closed = isRecruitmentClosed(recruitment.status);
+  // Internal pilot/seed notes are operational metadata, not candidate-facing copy.
+  const descriptionIsInternal = /seeded from .*sample article|ui\/db validation|sample listing seeded/i.test(
+    String(recruitment.description ?? '')
+  );
 
   // Render values already maintained by the admin/data pipeline. Resolvers may
   // enrich these values, but a missing resolver result must not hide stored data.
@@ -411,7 +415,7 @@ export default function RecruitmentHub({
           </div>
 
           {/* One-sentence description — only from authoritative source */}
-          {recruitment.description && (
+          {recruitment.description && !descriptionIsInternal && (
             <p className="text-gray-600 mb-5 leading-relaxed text-sm">{recruitment.description}</p>
           )}
 
@@ -454,7 +458,7 @@ export default function RecruitmentHub({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm"
               >
-                Official Notification
+                Official recruitment source
                 <ExternalLink size={15} />
               </a>
             )}
@@ -530,7 +534,7 @@ export default function RecruitmentHub({
                   <dd className="text-sm">
                     <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                      View Official PDF <ExternalLink size={12} />
+                      View official recruitment notices <ExternalLink size={12} />
                     </a>
                   </dd>
                 </div>
