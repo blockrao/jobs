@@ -1072,6 +1072,42 @@ export const organizationCandidates = pgTable(
 ).enableRLS();
 
 /** What the source told us at ingestion time. Append-only, one row per distinct content. */
+/** Current structured inventory of FreeJobAlert listings; distinct from canonical JobOye postings. */
+export const fjaJobInventory = pgTable(
+  "fja_job_inventory",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    sourceSlug: text("source_slug").notNull().default("freejobalert"),
+    externalId: text("external_id").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    title: text("title").notNull(),
+    organizationName: text("organization_name"),
+    listingCategory: text("listing_category"),
+    publishedDate: date("published_date"),
+    applicationStartDate: date("application_start_date"),
+    applicationEndDate: date("application_end_date"),
+    advertisementNumber: text("advertisement_number"),
+    qualification: text("qualification"),
+    vacancyCount: integer("vacancy_count"),
+    detailStatus: text("detail_status").notNull().default("PENDING"),
+    sourceStatus: text("source_status").notNull().default("UNKNOWN"),
+    details: jsonb("details").notNull().default({}),
+    rawText: text("raw_text"),
+    contentHash: text("content_hash").notNull(),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastCrawlRunId: text("last_crawl_run_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("fja_job_inventory_source_external_unique").on(t.sourceSlug, t.externalId),
+    index("fja_job_inventory_published_date_idx").on(t.publishedDate),
+    index("fja_job_inventory_application_end_idx").on(t.applicationEndDate),
+    index("fja_job_inventory_category_idx").on(t.listingCategory),
+  ],
+).enableRLS();
+
 export const sourceObservations = pgTable(
   "source_observations",
   {
