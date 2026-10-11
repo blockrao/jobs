@@ -1,12 +1,15 @@
 name: JobOye PR Quality Gates
 
 on:
+  # Run the same quality gates for stacked PRs as well as PRs targeting main.
   pull_request:
-    branches: [main]
   push:
     branches:
       - main
       - 'ci/**'
+      - 'fix/**'
+      - 'feat/**'
+      - 'chore/**'
 
 permissions:
   contents: read
