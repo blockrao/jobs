@@ -5,6 +5,7 @@
  */
 
 import { Metadata } from "next";
+import { entitySeo } from "@/lib/seo";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import JobPostingStructuredData from "@/components/job-posting/structured-data/job-posting-schema";
@@ -19,10 +20,6 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
-  const englishPath = `/jobs/${recruitmentSlug}/${postSlug}`;
-  const hindiPath = `/hi/jobs/${recruitmentSlug}/${postSlug}`;
-  const localizedPath = locale === "hi" ? hindiPath : englishPath;
-
   const post = await getPostBySlug(recruitmentSlug, postSlug);
 
   if (!post) {
@@ -36,21 +33,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     post.description?.substring(0, 160) ||
     `Apply for ${post.title} at ${post.organizationName}`;
 
+  // The current JobPostingData contract does not expose verified Hindi content.
+  // Follow SEO-001: untranslated Hindi pages canonicalize to English and are noindex.
+  const seo = entitySeo({
+    base: "/jobs",
+    slug: `${recruitmentSlug}/${postSlug}`,
+    locale,
+    hasHindi: false,
+  });
+
   return {
     title: `${title} - ${post.organizationName}`,
     description,
-    alternates: {
-      canonical: localizedPath,
-      languages: {
-        en: englishPath,
-        hi: hindiPath,
-      },
-    },
+    alternates: seo.alternates,
+    robots: seo.robots,
     openGraph: {
       title: `${title} | ${post.organizationName}`,
       description,
       type: "website",
-      url: `https://www.joboye.com${localizedPath}`,
+      url: seo.url,
       locale: locale === "hi" ? "hi_IN" : "en_US",
     },
   };
