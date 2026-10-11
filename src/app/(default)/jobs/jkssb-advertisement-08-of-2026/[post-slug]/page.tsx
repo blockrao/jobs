@@ -8,7 +8,7 @@ const postSlug = "horticulture-technician-grade-iv";
 export const metadata: Metadata = {
   title: "Horticulture Technician Grade-IV — JKSSB | JobOye",
   description: "Preview of Horticulture Technician Grade-IV under JKSSB Advertisement No. 08 of 2026. Post details await official verification.",
-  ...pageSeo(`/jobs/${recruitmentSlug}/${postSlug}`, { index: false, follow: false, noarchive: true }),
+  ...pageSeo(`/jobs/${recruitmentSlug}/${postSlug}`, { index: false, noarchive: true }),
 };
 
 export default function JkssbHorticultureTechnicianPostPage() {
