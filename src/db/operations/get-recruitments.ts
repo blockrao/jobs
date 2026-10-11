@@ -169,6 +169,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
       sourceVerificationStatus: null as string | null,
+      sourceListingPublishedDate: null as Date | string | null,
     };
     const recruitmentId = recruitment.id;
 
@@ -179,7 +180,9 @@ export async function getRecruitmentWithPosts(slug: string) {
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
       db.execute(sql`
-        SELECT other_info_raw->>'canonical_verification_status' AS source_verification_status
+        SELECT
+          other_info_raw->>'canonical_verification_status' AS source_verification_status,
+          published_date AS source_listing_published_date
         FROM fja_job_inventory
         WHERE other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
         ORDER BY id DESC
@@ -198,6 +201,11 @@ export async function getRecruitmentWithPosts(slug: string) {
       sourceVerificationStatus:
         typeof sourceInventory?.source_verification_status === "string"
           ? sourceInventory.source_verification_status
+          : null,
+      sourceListingPublishedDate:
+        typeof sourceInventory?.source_listing_published_date === "string" ||
+        sourceInventory?.source_listing_published_date instanceof Date
+          ? sourceInventory.source_listing_published_date as Date | string
           : null,
     });
 
