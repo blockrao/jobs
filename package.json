@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-legacy-exam-slug-manifest.js && node scripts/patch-next-build.js",
+    "prebuild": "node scripts/generate-legacy-exam-slug-manifest.mjs && node scripts/patch-next-build.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
