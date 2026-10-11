@@ -558,9 +558,17 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 
 ## CI and bounded lint follow-up — 2026-10-11
 
-- [x] Fixed stacked-branch CI trigger coverage in `.github/workflows/quality-gates.yml`: pull-request checks are no longer restricted to PRs targeting `main`; pushes to `fix/**`, `feat/**`, and `chore/**` also run the quality gates. Commit: `140c6877c225f67728ba076152f043d99a8cc1b4`.
+- [x] Fixed stacked-branch CI trigger coverage in `.github/workflows/quality-gates.yml`: pull-request checks remain targeted at `main`, while pushes to `fix/**`, `feat/**`, and `chore/**` run the quality gates for stacked feature branches. This preserves CI on the PR head without launching duplicate PR-event and push-event suites for feature-base PRs. Commits: `140c6877c225f67728ba076152f043d99a8cc1b4`, `8927ec610005a85b907af2b46356cd479751d963`.
 - [x] GitHub Actions now runs for PR #55 despite its feature-branch base. On exact code head `63054fffd742b8d17443d4248f7adcc45b2d3341`, architecture contract tests, application type-check, and contract-test type-check passed.
 - [x] Removed unchecked `any` casts from both jobs listing row renderers by narrowing optional listing metadata fields once per row. Commits: `387fbbe17adb806d7511e6fabafca0813a3c0b58`, `63054fffd742b8d17443d4248f7adcc45b2d3341`. Latest lint run no longer reports findings in these two listing files.
 - [ ] Lint remains failing at 197 errors / 75 warnings on the exact code head above (down from 209 errors / 75 warnings on the prior head). No lint rules were disabled. Treat this as a broad repository baseline; remediate in separate bounded batches rather than expanding this SEO fix indiscriminately.
 - [ ] The roadmap update itself will create a new head and trigger fresh CI; use the resulting exact-head checks for the next checkpoint.
 - [ ] Vercel preview remains blocked by its daily deployment quota. Do not merge or promote until the exact-head READY preview verifies the listing OG/Twitter metadata, sitemap excludes all commission URLs, and the route/sitemap acceptance checklist passes.
+
+
+### Full sitemap audit tooling added — 2026-10-11
+
+- [x] Added `src/scripts/audit-sitemap.ts` and the `npm run audit:sitemap` command. It fetches every sitemap URL with manual redirect handling and checks HTTP 200, same sitemap origin, query/hash absence, noindex directives (including `X-Robots-Tag`), self-canonical metadata, and `JobPosting` JSON-LD on job-detail URLs.
+- [x] Audit supports `--base` for production or a preview host, `--limit` for a small smoke test, `--concurrency` (default 4, maximum 8), and bounded retries for transient 429/5xx/network failures. For previews it fetches each sitemap path from the preview host while comparing canonical metadata with the absolute URL in sitemap XML.
+- [ ] This script has not yet been run against a fresh exact-head preview because Vercel's deployment quota remains blocked. First smoke-test with `npm run audit:sitemap -- --base https://<preview-host> --limit 20`, then run the full sitemap audit and archive its summary/failures before closing the release gate.
+- [ ] The audit checks canonical/indexability and job structured data; hreflang target validation remains a separate acceptance check and should be added if the first full run shows that it is needed.
