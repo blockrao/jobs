@@ -749,7 +749,7 @@ export default function RecruitmentHub({
                             {posts[0].resolvedVacancyCount.toLocaleString('en-IN')} vacancies
                           </span>
                         )}
-                        {posts[0].position?.locationText && (
+                        {posts[0].locationText && (
                           <span className="flex items-center gap-1">
                             <MapPin size={14} className="text-gray-400" />
                             {posts[0].position.locationText}
@@ -777,7 +777,7 @@ export default function RecruitmentHub({
                 {posts.map((post) => {
                   const postVacancies = post.resolvedVacancyCount ?? null;
                   const postName = post.name ?? post.position?.name ?? 'View Post';
-                  const locationText = post.position?.locationText ?? post.locationText ?? null;
+                  const locationText = post.locationText ?? null;
 
                   return (
                     <Link
