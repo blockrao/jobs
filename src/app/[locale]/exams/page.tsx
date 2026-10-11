@@ -3,6 +3,7 @@
 // NEXT_LOCALE cookie. The canonical page for SEO remains /exams; this is noindex.
 import { listCommissionsWithExams, countCurrentPostingsByCommission } from "@/lib/queries";
 import { ExamsHubContent } from "@/components/exams-hub-content";
+import { pageSeo } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -18,8 +19,7 @@ export async function generateMetadata({ params }: Props) {
     description: isHi
       ? "विभिन्न आयोगों की सरकारी नौकरी परीक्षाओं को देखें और अपना अगला अवसर खोजें।"
       : "Discover government job exams by commission: SSC, UPSC, Banking, Railways, State, Teaching, Defence, and more.",
-    robots: { index: false, follow: true },
-    alternates: { canonical: "/exams" },
+    ...pageSeo("/exams", { index: false }),
   };
 }
 
