@@ -35,15 +35,17 @@ function buildMetaDescription(params: {
   totalPosts: number;
   resolvedVacancies: number | null;
   applicationEndDate: Date | string | null | undefined;
+  verificationStatus?: string | null;
 }): string {
-  const { name, totalPosts, resolvedVacancies, applicationEndDate } = params;
+  const { name, totalPosts, resolvedVacancies, applicationEndDate, verificationStatus } = params;
+  const verified = verificationStatus === "VERIFIED";
 
   const vacancyPart = resolvedVacancies
-    ? `${resolvedVacancies.toLocaleString("en-IN")} vacancies`
-    : `${totalPosts} open position${totalPosts !== 1 ? "s" : ""}`;
+    ? `${resolvedVacancies.toLocaleString("en-IN")} ${verified ? "vacancies" : "reported vacancies"}`
+    : `${totalPosts} listed position${totalPosts !== 1 ? "s" : ""}`;
 
   let deadlinePart = "";
-  if (applicationEndDate) {
+  if (verified && applicationEndDate) {
     try {
       const d = new Date(applicationEndDate);
       const ms = d.getTime() - Date.now();
@@ -111,7 +113,7 @@ export async function generateMetadata({
     };
   }
 
-  const { recruitment, totalPosts } = recruitmentData;
+  const { recruitment, posts, totalPosts } = recruitmentData;
 
   // Resolve vacancy count for meta signals — same resolver used by page body.
   const metaVacancies = resolveRecruitmentVacancy({
@@ -123,16 +125,22 @@ export async function generateMetadata({
     totalPosts,
     resolvedVacancies: metaVacancies,
     applicationEndDate: recruitment.applicationEndDate,
+    verificationStatus: recruitment.verificationStatus ?? null,
   });
 
+  const factsVerified = recruitment.verificationStatus === "VERIFIED";
   const ogDescription = metaVacancies
-    ? `${metaVacancies.toLocaleString("en-IN")} vacancies · ${recruitment.name} on JobOye`
+    ? `${metaVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · ${recruitment.name} on JobOye`
     : `${recruitment.name} on JobOye`;
+  const roleSlugs = [...new Set(posts.map((post) => post.position?.slug).filter((slug): slug is string => Boolean(slug)))];
+  // A multi-role recruitment has no single correct role canonical. Keep its
+  // URL self-canonical but non-indexable; single-role hubs point to the role hub.
+  const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : `/jobs/${recruitment.slug}`;
 
   return {
     title: recruitment.name,
     description,
-    ...pageSeo(`/jobs/${recruitment.slug}`),
+    ...pageSeo(canonicalPath, { index: false }),
     openGraph: {
       title: recruitment.name,
       description: ogDescription,
