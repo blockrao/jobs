@@ -12,4 +12,13 @@ describe("Post Leaf official actions", () => {
     expect(source).not.toMatch(/post\.applyPortalUrl/);
     expect(source).not.toMatch(/post\.officialSourceUrl/);
   });
+
+  test("internal Recruitment, Organization and sibling-Post links preserve the locale prefix", () => {
+    const source = stripComments(readSource(POST_LEAF_COMPONENT));
+
+    expect(source).toContain('const localePrefix = locale === "hi" ? "/hi" : "";');
+    expect(source).toContain('href={`${localePrefix}/jobs`}');
+    expect(source).toContain('href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}');
+    expect(source).toContain('href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}');
+  });
 });
