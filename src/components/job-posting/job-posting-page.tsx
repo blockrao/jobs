@@ -153,7 +153,7 @@ export default function JobPostingPage({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  📄 View Official Notification
+                  📄 View Official Recruitment Source
                 </a>
               )}
             </div>
