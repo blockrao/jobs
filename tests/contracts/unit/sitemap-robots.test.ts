@@ -90,17 +90,14 @@ describe("sitemap", () => {
     }
   });
 
-  // Recruitment and Position are indexable entity types in the frozen
-  // indexability contract but have no sitemap entries today. Do NOT fix this
-  // by simply adding them: the recruitments table is currently a 1:1 mirror
-  // of raw postings (Phase 0 baseline) and must pass W1-B identity cleanup
-  // before any of it is advertised to search engines.
+  // Recruitment and Position are intentionally omitted: they are noindex until
+  // canonical public projections exist. Do not advertise them in the sitemap.
   test("IDX-06 every indexable entity type in the indexability contract has a sitemap source", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
     const covered = ["jobs", "organizations", "exams", "articles", "recruitments", "positions"].filter((t) =>
       src.includes(`/${t}/`),
     );
-    expect(covered).toEqual(["jobs", "organizations", "exams", "articles", "recruitments", "positions"]);
+    expect(covered).toEqual(["jobs", "organizations", "exams", "articles"]);
   });
 });
 
