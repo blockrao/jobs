@@ -48,14 +48,21 @@ export async function generateMetadata({
     ? `भारत भर में नवीनतम ${label.toLowerCase()} की सूचनाएं और रिक्तियां।`
     : `Browse the latest ${label.toLowerCase()} notifications and openings across India.`;
 
-  // This URL is a locale-prefixed mirror; canonical is /jobs. Always noindex.
+  // The unprefixed English /jobs route is the canonical listing and is
+  // indexable only when unfiltered. The Hindi mirror, filters, searches, and
+  // later pages stay noindex and canonicalize to the clean /jobs URL.
+  const seo = listingSeo("/jobs", {
+    locale: isHi ? locale : undefined,
+    kind,
+    q,
+    page: parsePage(page) > 1 ? page : undefined,
+    filter,
+  });
+
   return {
     title: label,
     description,
-    robots: { index: false, follow: true },
-    alternates: {
-      canonical: "/jobs",
-    },
+    ...seo,
   };
 }
 
