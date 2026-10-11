@@ -73,10 +73,16 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
         </div>
         {resolvedFacts?.vacancyCount != null && (
           <div style={headerStyles.metaItem}>
-            <span style={headerStyles.metaLabel}>Vacancies:</span>
+            <span style={headerStyles.metaLabel}>{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Vacancies reported:" : "Vacancies:"}</span>
             <span style={headerStyles.metaValue}>
               {resolvedFacts.vacancyCount.toLocaleString("en-IN")}
             </span>
+          </div>
+        )}
+        {post.fjaExtract?.locationRaw && (
+          <div style={headerStyles.metaItem}>
+            <span style={headerStyles.metaLabel}>Location reported:</span>
+            <span style={headerStyles.metaValue}>{post.fjaExtract.locationRaw}</span>
           </div>
         )}
       </div>
