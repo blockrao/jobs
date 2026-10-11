@@ -45,9 +45,25 @@ export async function generateMetadata({
   if (filter === "newly-added") label = `Newly Added ${label}`;
   else if (filter === "open") label = `Open Applications — ${label}`;
 
+  const description = `Browse the latest ${label.toLowerCase()} notifications and openings across India.`;
+
   return {
     title: label,
-    description: `Browse the latest ${label.toLowerCase()} notifications and openings across India.`,
+    description,
+    // Keep social metadata aligned with this page's canonical URL instead of
+    // inheriting the locale layout's generic homepage title and /en URL.
+    openGraph: {
+      title: label,
+      description,
+      url: "https://www.joboye.com/jobs",
+      siteName: "JobOye",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: label,
+      description,
+    },
     // No `languages` alternate here on purpose — this URL never changes by
     // locale (see the file-level comment above), so there's nothing to
     // cross-link.
