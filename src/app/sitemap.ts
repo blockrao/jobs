@@ -134,10 +134,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [
+  // Legacy approved postings and canonical Recruitment hubs can share a /jobs/:slug
+  // path. Include the posting inventory, then let the canonical Recruitment projection
+  // win any duplicate URL. A URL must appear once and represent one entity.
+  const allEntries: MetadataRoute.Sitemap = [
     ...staticEntries,
     ...roleEntries,
     ...stateEntries,
+    ...postingEntries,
     ...recruitmentEntries,
     ...postLeafEntries,
     ...articleEntries,
@@ -146,4 +150,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...examEntries,
     ...commissionEntries,
   ];
+  const uniqueEntries = new Map<string, MetadataRoute.Sitemap[number]>();
+  for (const entry of allEntries) uniqueEntries.set(entry.url, entry);
+  return Array.from(uniqueEntries.values());
 }
