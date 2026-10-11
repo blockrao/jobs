@@ -437,7 +437,7 @@ export default function RecruitmentHub({
                   <div className="text-xl font-bold text-blue-700 leading-none">
                     {displayTotalVacancies.toLocaleString('en-IN')}
                   </div>
-                  <div className="text-xs text-blue-600 mt-0.5">Total Vacancies</div>
+                  <div className="text-xs text-blue-600 mt-0.5">{sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"}</div>
                 </div>
               </div>
             )}
@@ -605,7 +605,7 @@ export default function RecruitmentHub({
               {appEnd && (
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">{sourceFactsUnverified ? "Reported Last Date" : "Last Date"}</dt>
-                  <dd className={`text-sm font-semibold ${closed ? 'text-gray-500' : isClosingSoon ? 'text-orange-700' : 'text-red-700'}`}>
+                  <dd className={`text-sm font-semibold ${closed || sourceFactsUnverified ? 'text-gray-500' : isClosingSoon ? 'text-orange-700' : 'text-red-700'}`}>
                     {appEnd}
                     {!closed && isClosingSoon && daysLeft !== null && (
                       <span className="ml-2 text-xs font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
