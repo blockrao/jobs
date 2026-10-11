@@ -289,7 +289,10 @@ export default function RecruitmentHub({
     ? recruitment.sourceExtract?.applicationEndDate ?? recruitment.applicationEndDate
     : recruitment.applicationEndDate);
   const appEndLabel = sourceFactsUnverified ? "Application deadline reported" : "Application Closes";
-  const closed = isRecruitmentClosed(recruitment.status);
+  const closed = sourceFactsUnverified ? false : isRecruitmentClosed(recruitment.status);
+  const sourceStatusLabel = typeof recruitment.sourceExtract?.sourceStatus === "string"
+    ? recruitment.sourceExtract.sourceStatus.toLowerCase().replace(/^./, (letter) => letter.toUpperCase())
+    : null;
   // Internal pilot/seed notes are operational metadata, not candidate-facing copy.
   const descriptionIsInternal = /seeded from .*sample article|ui\/db validation|sample listing seeded/i.test(
     String(recruitment.description ?? '')
@@ -456,7 +459,11 @@ export default function RecruitmentHub({
 
           {/* Lifecycle and source verification are separate states. */}
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <StatusBadge status={recruitment.status} />
+            {sourceFactsUnverified ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
+                Listing status reported{sourceStatusLabel ? `: ${sourceStatusLabel}` : ""}
+              </span>
+            ) : <StatusBadge status={recruitment.status} />}
             {recruitment.sourceVerificationStatus && recruitment.sourceVerificationStatus !== "VERIFIED" && (
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
                 Official verification pending
