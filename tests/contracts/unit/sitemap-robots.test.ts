@@ -39,6 +39,8 @@ beforeEach(() => {
     { slug: "exam-translated", labelHi: "परीक्षा" },
     { slug: "exam-english-only", labelHi: null },
   ];
+  // The sitemap module captures query imports; reload it after resetting fixtures.
+  vi.resetModules();
 });
 
 async function entries() {
