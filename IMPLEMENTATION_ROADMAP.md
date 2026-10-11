@@ -1,5 +1,33 @@
 # Implementation Roadmap: Graph Model & Canonical Hubs
 
+## Current corrective work — 2026-10-11
+
+This section supersedes older sprint assumptions where they conflict with the frozen canonical model and current route implementation. Do not treat ingestion/scraping as the product core; the public contract is Organization → Recruitment → Post → Position, with one deterministic URL and SEO policy per entity.
+
+### P0 — Canonical hub-to-leaf serving and multilingual route correctness
+
+- [ ] **Post lookup scope:** verify that `/jobs/:recruitmentSlug/:postSlug` resolves a Post only within its canonical Recruitment; old slugs must not attach a leaf to an unrelated Recruitment. PR #48: https://github.com/blockrao/jobs/pull/48
+- [ ] **Recruitment hub metadata:** metadata must resolve the same Recruitment that the page renders. Untranslated `/hi` hubs use the English canonical and `noindex,follow`; English hubs remain indexable. PR #49: https://github.com/blockrao/jobs/pull/49
+- [ ] **Localized Post Leaf:** `/hi/jobs/:recruitmentSlug/:postSlug` must reach the locale route, use the canonical Post→Recruitment relationship for canonical URLs, and not publish Unix epoch placeholders as `datePosted`. PR #50: https://github.com/blockrao/jobs/pull/50
+- [ ] **Central SEO contract and sitemap:** route metadata must use `src/lib/seo`; only genuinely translated entities get Hindi hreflang; sitemap URLs must be absolute, canonical, unique, and include eligible job listings as well as canonical Post Leaves. PR #51: https://github.com/blockrao/jobs/pull/51
+- [ ] **Release gate:** preview-verify English and Hindi hub/leaf routes, unknown-slug 404, canonical/robots/lang, JobPosting JSON-LD, and sitemap uniqueness. No production deploy until these pass and the existing lint baseline is understood.
+
+### P1 — Entity identity and ingestion integrity
+
+- [ ] Recruitment resolution uses official notification identity where available, then organization + exam + year + title similarity; a slug is a URL, not a canonical identity key.
+- [ ] Position resolution uses semantic category/name identity, not a slug lookup.
+- [ ] Keep ingestion as an input pipeline only. Do not make scraping or ingestion refactors a prerequisite for serving-path fixes unless a specific public defect is traced to bad source data.
+- [ ] Keep production schema changes migration-only; no direct production DDL or `drizzle-kit push`.
+
+### CI baseline
+
+- Architecture contract tests are being used as the invariant gate. Failures must be fixed in implementation or in stale tests only when the current behavior is demonstrably correct; never weaken a contract just to turn CI green.
+- The repository lint command has a pre-existing broad failure baseline (hundreds of errors, primarily explicit `any` and React compiler rules). Track and remediate that separately; do not claim the product release is clean while the required lint check remains red.
+- Type-check success is necessary but not sufficient. PRs remain unmerged until route behavior and relevant checks are verified.
+
+---
+
+
 ## Summary
 
 Transitioning from single-entity (postings) to multi-entity graph model with canonical hubs for Position, Exam, Recruitment, and Organization. Postings become data instances linking to normalized graph.
