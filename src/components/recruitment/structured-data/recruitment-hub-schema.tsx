@@ -27,7 +27,7 @@ interface RecruitmentHubSchemaProps {
     organizationName?: string | null;
     applicationEndDate?: Date | string | null;
     notificationDate?: Date | string | null;
-    verificationStatus?: string | null;
+    sourceVerificationStatus?: string | null;
   };
   totalPosts: number;
   resolvedEmployer?: string | null;
@@ -97,7 +97,7 @@ export default function RecruitmentHubStructuredData({
   };
 
   // Enrich WebPage description with vacancy count when resolved — GEO signal.
-  const factsVerified = recruitment.verificationStatus === "VERIFIED";
+  const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
   const vacancySnippet = resolvedTotalVacancies
     ? `${resolvedTotalVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · `
     : "";
