@@ -93,7 +93,7 @@ export async function proxy(request: NextRequest) {
   // path classifier intentionally keeps unprefixed /jobs/:recruitment/:post
   // on the default route. Route explicitly prefixed /hi and legacy /en leaves
   // through next-intl before the generic locale-prefix fallback can strip them.
-  if (/^\\/(en|hi)\\/jobs\\/[^/]+\\/[^/]+\\/?$/.test(pathname)) {
+  if (/^\/(en|hi)\/jobs\/[^/]+\/[^/]+\/?$/.test(pathname)) {
     return intlMiddleware(request);
   }
 
