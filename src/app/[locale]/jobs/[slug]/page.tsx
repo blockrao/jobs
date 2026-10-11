@@ -2,7 +2,7 @@ import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/co
 import { buildCoreFaqs } from "@/lib/content/faq-gate";
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
-import { entitySeo } from "@/lib/seo";
+import { entitySeo, pageSeo } from "@/lib/seo";
 import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -63,11 +63,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
   if (recruitmentData) {
     const { recruitment, totalPosts } = recruitmentData;
+    const seo = pageSeo(`/jobs/${recruitment.slug}`, { index: locale !== "hi" });
     return {
       title: recruitment.name,
       description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-      alternates: { canonical: `/jobs/${recruitment.slug}` },
-      ...(locale === "hi" ? { robots: { index: false, follow: true } } : {}),
+      ...seo,
       openGraph: {
         title: recruitment.name,
         description: `${recruitment.name} recruitment on JobOye`,
