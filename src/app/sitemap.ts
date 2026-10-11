@@ -60,7 +60,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  const postingEntries: MetadataRoute.Sitemap = postingRows.map((row) => ({
+  // /jobs/:slug is also the legacy Recruitment Hub route. Recruitment hubs are
+  // noindex and must not appear in the sitemap; exclude colliding legacy posting
+  // slugs rather than advertising a URL that resolves to the non-indexable hub.
+  const recruitmentSlugSet = new Set(recruitmentRows.map((row) => row.slug));
+  const postingEntries: MetadataRoute.Sitemap = postingRows
+    .filter((row) => !recruitmentSlugSet.has(row.slug))
+    .map((row) => ({
     url: `${SITE_URL}/jobs/${row.slug}`,
     lastModified: pickSitemapLastmod(row.contentChangedAt, row.updatedAt),
     changeFrequency: "daily",
@@ -102,14 +108,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
-  // Recruitment Hub pages — /jobs/{recruitment-slug}
-  const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.map((row) => ({
-    url: `${SITE_URL}/jobs/${row.slug}`,
-    lastModified: row.updatedAt ?? undefined,
-    changeFrequency: row.isLive ? ("daily" as const) : ("weekly" as const),
-    priority: row.isLive ? 0.8 : 0.5,
-  }));
-
   // PQ-006 / PQ-007: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
   //
   // Sitemap policy (Phase 1B):
@@ -134,15 +132,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  // Legacy approved postings and canonical Recruitment hubs can share a /jobs/:slug
-  // path. Include the posting inventory, then let the canonical Recruitment projection
-  // win any duplicate URL. A URL must appear once and represent one entity.
+  // The /jobs/:slug Recruitment Hub is supporting/noindex and excluded. Legacy
+  // posting rows that collide with a Recruitment slug are also excluded above.
   const allEntries: MetadataRoute.Sitemap = [
     ...staticEntries,
     ...roleEntries,
     ...stateEntries,
     ...postingEntries,
-    ...recruitmentEntries,
     ...postLeafEntries,
     ...articleEntries,
     ...categoryEntries,
