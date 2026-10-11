@@ -101,7 +101,10 @@ export default function RecruitmentHubStructuredData({
   const vacancySnippet = resolvedTotalVacancies
     ? `${resolvedTotalVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · `
     : "";
-  const webPageDescription = `${vacancySnippet}${recruitment.name} — ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View important dates and application details.`;
+  const positionsSnippet = factsVerified
+    ? `${totalPosts} open position${totalPosts !== 1 ? "s" : ""}`
+    : `${totalPosts} listed position${totalPosts !== 1 ? "s" : ""}`;
+  const webPageDescription = `${vacancySnippet}${recruitment.name} — ${positionsSnippet}. View available details and official-source status.`;
 
   // WebPage: the hub itself — describes this recruitment as a web document.
   const webPage: Record<string, unknown> = {
