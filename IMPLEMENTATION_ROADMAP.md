@@ -554,3 +554,13 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [x] Source review of `src/proxy.ts` confirms next-intl is configured with `localePrefix: "as-needed"` and handles locale-aware routes; this supports the intended `/en/jobs` canonicalization design. The fetch layer follows/obscures the initial redirect response, so the actual first-hop HTTP status remains unverified.
 - [x] CI configuration finding: `.github/workflows/quality-gates.yml` only runs `pull_request` checks when the PR targets `main`, while PR #55 targets the stacked feature branch `fix/role-page-twitter-metadata`. GitHub reports zero check runs on the latest head. Therefore no test/build success can be claimed for this PR head. The workflow/stacked-PR policy needs a deliberate CI fix or a safe integration branch strategy.
 - [ ] Next: once Vercel deployment quota clears, create one exact-head preview, run the full route/sitemap acceptance checklist, and capture raw redirect headers using a client that does not follow redirects. Keep PR draft until CI and preview gates are green.
+
+
+## CI and bounded lint follow-up — 2026-10-11
+
+- [x] Fixed stacked-branch CI trigger coverage in `.github/workflows/quality-gates.yml`: pull-request checks are no longer restricted to PRs targeting `main`; pushes to `fix/**`, `feat/**`, and `chore/**` also run the quality gates. Commit: `140c6877c225f67728ba076152f043d99a8cc1b4`.
+- [x] GitHub Actions now runs for PR #55 despite its feature-branch base. On exact code head `63054fffd742b8d17443d4248f7adcc45b2d3341`, architecture contract tests, application type-check, and contract-test type-check passed.
+- [x] Removed unchecked `any` casts from both jobs listing row renderers by narrowing optional listing metadata fields once per row. Commits: `387fbbe17adb806d7511e6fabafca0813a3c0b58`, `63054fffd742b8d17443d4248f7adcc45b2d3341`. Latest lint run no longer reports findings in these two listing files.
+- [ ] Lint remains failing at 197 errors / 75 warnings on the exact code head above (down from 209 errors / 75 warnings on the prior head). No lint rules were disabled. Treat this as a broad repository baseline; remediate in separate bounded batches rather than expanding this SEO fix indiscriminately.
+- [ ] The roadmap update itself will create a new head and trigger fresh CI; use the resulting exact-head checks for the next checkpoint.
+- [ ] Vercel preview remains blocked by its daily deployment quota. Do not merge or promote until the exact-head READY preview verifies the listing OG/Twitter metadata, sitemap excludes all commission URLs, and the route/sitemap acceptance checklist passes.
