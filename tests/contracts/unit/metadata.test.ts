@@ -17,8 +17,10 @@ const getExamBySlug = vi.fn();
 vi.mock("@/lib/queries", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getPostingBySlug: (...a: unknown[]) => getPostingBySlug(...a),
+  getPostingBySlugCached: (...a: unknown[]) => getPostingBySlug(...a),
   getArticleBySlug: (...a: unknown[]) => getArticleBySlug(...a),
 }));
+vi.mock("@/db/operations/get-recruitments", () => ({ getRecruitmentWithPostsCached: async () => null }));
 vi.mock("@/db/operations/get-organizations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getOrganizationBySlug: (...a: unknown[]) => getOrganizationBySlug(...a),
