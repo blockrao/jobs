@@ -5,7 +5,7 @@ import { pageSeo } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "FreeJobAlert Pilot Review | JobOye",
   description: "Review the three selected FreeJobAlert source inventory records and post breakdown.",
-  ...pageSeo("/fja-review", { index: false, follow: false, noarchive: true }),
+  ...pageSeo("/fja-review", { index: false, noarchive: true }),
 };
 
 const items = [
