@@ -78,7 +78,11 @@ describe("sitemap", () => {
       ["/exams/exam-translated", true],
       ["/exams/exam-english-only", false],
     ];
-    const actual = expectations.map(([p]) => [p, Boolean(hiAlternate(byPath.get(p)!))]);
+    const actual = expectations.map(([p]) => {
+      const entry = byPath.get(p);
+      expect(entry, "missing sitemap entry " + p).toBeDefined();
+      return [p, Boolean(entry && hiAlternate(entry))];
+    });
     expect(actual).toEqual(expectations);
   });
 
