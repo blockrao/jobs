@@ -22,6 +22,21 @@ describe("extracted source projection", () => {
     expect(source).toContain("fjaExtract: data.fjaInventoryPostId != null");
   });
 
+  test("recruitment hubs project inventory-level fields and source-post rows without writing or re-seeding", () => {
+    const query = stripComments(readSource("src/db/operations/get-recruitments.ts"));
+    const hub = stripComments(readSource(HUB));
+    expect(query).toContain("sourceExtract: sourceInventory");
+    expect(query).toContain("source_application_end_date");
+    expect(query).toContain("source_vacancy_count");
+    expect(query).toContain("FROM fja_post_inventory");
+    expect(query).toContain("other_info_raw->>'canonical_post_id'");
+    expect(query).toContain("fjaExtract: sourcePost");
+    expect(hub).toContain("recruitment.sourceExtract?.vacancyCount");
+    expect(hub).toContain("sourceDetails.location");
+    expect(hub).toContain("sourceDetails.application_mode");
+    expect(hub).toContain("parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)");
+  });
+
   test("types source-extracted fields independently from canonical facts", () => {
     const source = readSource(POST_TYPE);
     expect(source).toContain("fjaExtract?: {");
@@ -51,6 +66,9 @@ describe("extracted source projection", () => {
     expect(dates).toContain("enrichment?.applicationClosingDate ?? null");
     expect(quickFacts).toContain("Application Deadline (reported)");
     expect(quickFacts).toContain("reportedDeadline");
+    expect(quickFacts).toContain("extractedVacancyCount");
+    expect(quickFacts).toContain('label: "Location (reported)"');
+    expect(salary).toContain('sourceFactsUnverified && post.fjaExtract?.salaryRaw');
   });
 
   test("unverified extracted application methods do not become clickable application links", () => {
