@@ -155,7 +155,6 @@ export default async function RecruitmentHubPage({
     notFound();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { recruitment, posts, totalPosts } = recruitmentData!;
 
   // ── Gate 4D resolver contract ──────────────────────────────────────────────
