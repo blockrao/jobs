@@ -13,6 +13,8 @@ Publish a trustworthy job-discovery product where Recruitment hubs describe the 
 
 ## Working execution board (single source of truth; refreshed 2026-10-11)
 
+Local-first verification setup is tracked in [issue #45](https://github.com/blockrao/jobs/issues/45).
+
 Use this board for ordering and hand-offs. Update the status/evidence here and in the linked issue/PR whenever a gate changes. Do not treat a PR being open, merged, or deployed as proof that its acceptance criteria passed.
 
 | Order | Workstream | Current status | Exit evidence / dependency |
