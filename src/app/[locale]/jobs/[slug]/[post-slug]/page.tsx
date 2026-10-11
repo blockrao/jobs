@@ -77,9 +77,9 @@ export default async function LocaleJobPostingPage({ params }: Props) {
   const recruitmentData = await getRecruitmentWithPosts(post.recruitmentSlug);
   const now = new Date();
   const resolvedFacts = {
-    vacancyCount: resolvePostVacancy(post as any),
-    salary: resolveSalary(post as any),
-    deadline: resolveDeadline(post as any, now),
+    vacancyCount: resolvePostVacancy(post),
+    salary: resolveSalary(post),
+    deadline: resolveDeadline(post, now),
   };
   const recruitmentResolvedFacts = recruitmentData?.recruitment
     ? {
