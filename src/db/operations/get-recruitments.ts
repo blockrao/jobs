@@ -278,7 +278,7 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     // Step 3: Fetch ALL vacancies and eligibilities in parallel, not per-post
     // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities
-    const [allVacancies, allEligibilities] = await Promise.all([
+    const [allVacancies, allEligibilities, sourcePostInventoryResult] = await Promise.all([
       db
         .select()
         .from(vacancies)
@@ -287,6 +287,12 @@ export async function getRecruitmentWithPosts(slug: string) {
         .select()
         .from(eligibilities)
         .where(inArray(eligibilities.postId, postIds)),
+      db.execute(sql`
+        SELECT *
+        FROM fja_post_inventory
+        WHERE other_info_raw->>'canonical_post_id' IN (${sql.join(postIds.map((id) => sql`${String(id)}`), sql`,`)})
+        ORDER BY last_seen_at DESC, id DESC
+      `),
     ]);
 
     // Step 4: Group vacancies and eligibilities by post ID (client-side)
@@ -307,16 +313,50 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
     }
 
-    // Keep the public Recruitment Hub projection focused on canonical Post
-    // facts. Source inventory is an internal ingestion/review concern.
-    const enrichedPosts = postsResult.map((row) => ({
-      ...row.post,
-      // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
-      title: row.post.name,
-      position: row.position,
-      vacancies: vacanciesByPostId.get(row.post.id) ?? [],
-      eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
-    }));
+    // Project extracted source facts separately so the hub can show reported
+    // listing values without treating them as canonical/verified Post facts.
+    const sourcePostRows = rowsOf(sourcePostInventoryResult);
+    const sourcePostByCanonicalId = new Map<string, Record<string, unknown>>();
+    for (const sourcePost of sourcePostRows) {
+      const rawInfo = sourcePost.other_info_raw;
+      const info = rawInfo && typeof rawInfo === "object" && !Array.isArray(rawInfo)
+        ? rawInfo as Record<string, unknown>
+        : {};
+      const canonicalPostId = typeof info.canonical_post_id === "string"
+        ? info.canonical_post_id
+        : null;
+      if (canonicalPostId && !sourcePostByCanonicalId.has(canonicalPostId)) {
+        sourcePostByCanonicalId.set(canonicalPostId, sourcePost);
+      }
+    }
+
+    const enrichedPosts = postsResult.map((row) => {
+      const sourcePost = sourcePostByCanonicalId.get(String(row.post.id));
+      const rawInfo = sourcePost?.other_info_raw;
+      const sourceOtherInfo = rawInfo && typeof rawInfo === "object" && !Array.isArray(rawInfo)
+        ? rawInfo as Record<string, unknown>
+        : null;
+      return {
+        ...row.post,
+        // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
+        title: row.post.name,
+        position: row.position,
+        vacancies: vacanciesByPostId.get(row.post.id) ?? [],
+        eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
+        fjaExtract: sourcePost ? {
+          inventoryId: sourcePost.id as number | string,
+          vacancyCountRaw: typeof sourcePost.vacancy_count_raw === "string" ? sourcePost.vacancy_count_raw : null,
+          qualificationRaw: typeof sourcePost.qualification_raw === "string" ? sourcePost.qualification_raw : null,
+          experienceRaw: typeof sourcePost.experience_raw === "string" ? sourcePost.experience_raw : null,
+          salaryRaw: typeof sourcePost.salary_raw === "string" ? sourcePost.salary_raw : null,
+          tenureRaw: typeof sourcePost.tenure_raw === "string" ? sourcePost.tenure_raw : null,
+          locationRaw: typeof sourcePost.location_raw === "string" ? sourcePost.location_raw : null,
+          employmentTypeRaw: typeof sourcePost.employment_type_raw === "string" ? sourcePost.employment_type_raw : null,
+          verificationStatus: typeof sourcePost.official_verification_status === "string" ? sourcePost.official_verification_status : null,
+          otherInfoRaw: sourceOtherInfo,
+        } : null,
+      };
+    });
 
     const [enrichmentResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
       db.execute(sql`
