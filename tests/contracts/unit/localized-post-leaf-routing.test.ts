@@ -30,4 +30,9 @@ describe("localized Post Leaf route contract", () => {
     expect(route).toContain("slug: canonicalSlug");
     expect(route).toContain("hasHindi: false");
   });
+
+  test("does not emit JobPosting structured data on the untranslated Hindi noindex route", () => {
+    const route = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
+    expect(route).toMatch(/\{locale !== "hi" && \(\s*<PostLeafStructuredData[\s\S]*?\)\}/);
+  });
 });
