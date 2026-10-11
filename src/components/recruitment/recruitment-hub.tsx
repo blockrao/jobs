@@ -52,6 +52,18 @@ type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   selectionProcesses?: unknown;
   sourceVerificationStatus?: string | null;
   sourceListingPublishedDate?: Date | string | null;
+  sourceExtract?: {
+    title?: string | null;
+    sourceUrl?: string | null;
+    applicationStartDate?: Date | string | null;
+    applicationEndDate?: Date | string | null;
+    vacancyCount?: number | null;
+    qualification?: string | null;
+    details?: unknown;
+    otherInfoRaw?: unknown;
+    sourceStatus?: string | null;
+    detailStatus?: string | null;
+  } | null;
 };
 
 type RecruitmentHubPost = typeof posts.$inferSelect & {
@@ -59,6 +71,18 @@ type RecruitmentHubPost = typeof posts.$inferSelect & {
   resolvedVacancyCount?: number | null;
   status?: string | null;
   lifecycle_status?: string | null;
+  fjaExtract?: {
+    inventoryId?: number | string;
+    vacancyCountRaw?: string | null;
+    qualificationRaw?: string | null;
+    experienceRaw?: string | null;
+    salaryRaw?: string | null;
+    tenureRaw?: string | null;
+    locationRaw?: string | null;
+    employmentTypeRaw?: string | null;
+    verificationStatus?: string | null;
+    otherInfoRaw?: unknown;
+  } | null;
 };
 import Link from 'next/link';
 import {
@@ -133,6 +157,19 @@ const isRecruitmentActive = (status: string | null | undefined): boolean => {
   if (!status) return false;
   const s = status.toLowerCase();
   return s === 'active' || s === 'open';
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+
+const parseReportedVacancyCount = (value: string | null | undefined): number | null => {
+  if (!value) return null;
+  const normalized = value.replace(/,/g, "").trim();
+  if (!/^\d+$/.test(normalized)) return null;
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 };
 
 const isRecruitmentUpcoming = (status: string | null | undefined): boolean => {
@@ -245,8 +282,12 @@ export default function RecruitmentHub({
     sourceFactsUnverified ? recruitment.sourceListingPublishedDate : recruitment.notificationDate
   );
   const notificationDateLabel = sourceFactsUnverified ? "Source listing published" : "Notification Published";
-  const appStart = formatDate(sourceFactsUnverified ? null : recruitment.applicationStartDate);
-  const appEnd = formatDate(recruitment.applicationEndDate);
+  const appStart = formatDate(sourceFactsUnverified
+    ? recruitment.sourceExtract?.applicationStartDate
+    : recruitment.applicationStartDate);
+  const appEnd = formatDate(sourceFactsUnverified
+    ? recruitment.sourceExtract?.applicationEndDate ?? recruitment.applicationEndDate
+    : recruitment.applicationEndDate);
   const appEndLabel = sourceFactsUnverified ? "Application deadline reported" : "Application Closes";
   const closed = isRecruitmentClosed(recruitment.status);
   // Internal pilot/seed notes are operational metadata, not candidate-facing copy.
@@ -264,13 +305,24 @@ export default function RecruitmentHub({
   // Recruitment-level vacancy total is shown only when explicitly stored; never
   // derive it by summing post-level vacancy records.
   const displayTotalVacancies =
-    resolvedTotalVacancies ?? recruitment.totalVacancies ?? null;
+    resolvedTotalVacancies ?? recruitment.totalVacancies ??
+    (sourceFactsUnverified ? recruitment.sourceExtract?.vacancyCount : null) ?? null;
   // External source/apply links must pass the authoritative URL resolvers.
   // If no verified URL is available, omit the link rather than exposing a discovery source.
   const displayApplicationUrl = resolvedApplicationUrl ?? null;
   const displayOfficialSource = resolvedOfficialSource ?? null;
+  const sourceDetails = asRecord(recruitment.sourceExtract?.details);
+  const sourceOtherInfo = asRecord(recruitment.sourceExtract?.otherInfoRaw);
+  const sourceLocation = typeof sourceDetails?.location === "string" ? sourceDetails.location : null;
+  const sourceApplicationMode = typeof sourceDetails?.application_mode === "string"
+    ? sourceDetails.application_mode
+    : null;
+  const sourceSelectionSummary = typeof sourceOtherInfo?.interview === "string"
+    ? sourceOtherInfo.interview
+    : null;
   const displaySelectionProcess =
-    resolvedSelectionProcess ?? recruitment.selectionProcess ?? null;
+    resolvedSelectionProcess ?? recruitment.selectionProcess ??
+    (sourceFactsUnverified ? sourceSelectionSummary : null);
 
   // Urgency: days remaining for deadline
   const daysLeft = sourceFactsUnverified ? null : daysUntil(recruitment.applicationEndDate);
@@ -569,7 +621,7 @@ export default function RecruitmentHub({
             SECTION 2 — RECRUITMENT OVERVIEW TABLE
             Compact details: org, selection process, official links
             ═══════════════════════════════════════════ */}
-        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart || examName || notificationNumber || hasFeeDetails || selectionDisplayRows.length > 0) && (
+        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart || examName || notificationNumber || hasFeeDetails || selectionDisplayRows.length > 0 || sourceLocation || sourceApplicationMode) && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-3">Recruitment Details</h2>
             <dl className="divide-y divide-gray-100">
@@ -609,6 +661,20 @@ export default function RecruitmentHub({
                 </div>
               )}
 
+              {sourceLocation && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Location{sourceFactsUnverified ? " reported" : ""}</dt>
+                  <dd className="text-sm text-gray-900">{sourceLocation}</dd>
+                </div>
+              )}
+
+              {sourceApplicationMode && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Application method{sourceFactsUnverified ? " reported" : ""}</dt>
+                  <dd className="text-sm text-gray-900">{sourceApplicationMode}</dd>
+                </div>
+              )}
+
               {appEnd && (
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">{sourceFactsUnverified ? "Reported Last Date" : "Last Date"}</dt>
@@ -626,7 +692,7 @@ export default function RecruitmentHub({
 
               {displaySelectionProcess && (
                 <div className="flex gap-4 py-2.5">
-                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Selection</dt>
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">{sourceFactsUnverified && !resolvedSelectionProcess && !recruitment.selectionProcess ? "Selection reported" : "Selection"}</dt>
                   <dd className="text-sm text-gray-900">{displaySelectionProcess}</dd>
                 </div>
               )}
@@ -777,10 +843,11 @@ export default function RecruitmentHub({
                         {posts[0].name ?? posts[0].position?.name}
                       </h3>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                        {posts[0].resolvedVacancyCount != null && (
+                        {(posts[0].resolvedVacancyCount ?? parseReportedVacancyCount(posts[0].fjaExtract?.vacancyCountRaw)) != null && (
                           <span className="flex items-center gap-1 font-semibold text-blue-700">
                             <Users size={14} className="text-blue-500" />
-                            {posts[0].resolvedVacancyCount.toLocaleString('en-IN')} vacancies
+                            {(posts[0].resolvedVacancyCount ?? parseReportedVacancyCount(posts[0].fjaExtract?.vacancyCountRaw))!.toLocaleString('en-IN')}
+                            {posts[0].resolvedVacancyCount == null || posts[0].fjaExtract?.verificationStatus !== "VERIFIED" ? " reported vacancies" : " vacancies"}
                           </span>
                         )}
                         <PostStatusBadge post={posts[0]} appEndDate={sourceFactsUnverified ? null : recruitment.applicationEndDate} />
@@ -803,7 +870,8 @@ export default function RecruitmentHub({
               /* Multi-Post: single-column list with per-row vacancy + status colour */
               <div className="mt-3 space-y-2">
                 {posts.map((post) => {
-                  const postVacancies = post.resolvedVacancyCount ?? null;
+                  const reportedPostVacancies = parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw);
+                  const postVacancies = post.resolvedVacancyCount ?? reportedPostVacancies;
                   const postName = post.name ?? post.position?.name ?? 'View Post';
 
                   return (
@@ -822,7 +890,7 @@ export default function RecruitmentHub({
                           {postVacancies != null && (
                             <span className="flex items-center gap-1 font-medium text-blue-700">
                               <Users size={11} className="text-blue-500" />
-                              {sourceFactsUnverified
+                              {sourceFactsUnverified || post.resolvedVacancyCount == null || post.fjaExtract?.verificationStatus !== "VERIFIED"
                                 ? `${postVacancies.toLocaleString('en-IN')} reported ${postVacancies === 1 ? 'vacancy' : 'vacancies'}`
                                 : `${postVacancies.toLocaleString('en-IN')} ${postVacancies === 1 ? 'vacancy' : 'vacancies'}`}
                             </span>
