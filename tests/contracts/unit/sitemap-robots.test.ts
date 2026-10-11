@@ -5,13 +5,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SITE } from "../helpers/metadata";
 
-const rows = {
+const rows = vi.hoisted(() => ({
   postings: [] as unknown[],
   articles: [] as unknown[],
   categories: [] as unknown[],
   organizations: [] as unknown[],
   exams: [] as unknown[],
-};
+}));
 
 vi.mock("@/lib/queries", async (importOriginal) => ({
   ...(await importOriginal<object>()),
