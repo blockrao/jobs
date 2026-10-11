@@ -12,7 +12,7 @@
 
 import { detectLanguage } from "./language-detector";
 import { classifyQuery } from "./query-classifier";
-import { extractFilters, formatExtractedFilters } from "./filter-extractor";
+import { extractFilters } from "./filter-extractor";
 import {
   extractIntentWithLLM,
   shouldFallbackToRules,
@@ -61,17 +61,17 @@ export async function normalizeQuery(
   };
 
   // Step 1: Language Detection
-  let langStart = Date.now();
+  const langStart = Date.now();
   const languageResult = detectLanguage(input);
   metrics.languageDetectionMs = Date.now() - langStart;
 
   // Step 2: Query Classification
-  let classStart = Date.now();
+  const classStart = Date.now();
   const classificationResult = classifyQuery(input);
   metrics.classificationMs = Date.now() - classStart;
 
   // Step 3: Filter Extraction (Initial)
-  let filterStart = Date.now();
+  const filterStart = Date.now();
   const rulesExtraction = extractFilters(input, languageResult.normalizedText);
   metrics.filterExtractionMs = Date.now() - filterStart;
 
