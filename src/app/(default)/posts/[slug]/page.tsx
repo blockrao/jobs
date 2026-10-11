@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
 import { getRoleBySlug, ROLE_REGISTRY } from "@/lib/roles";
-import { getPostsForRole, getRoleStats } from "@/db/operations/get-roles";
+import { getPostsForRole, getRoleStats, type RolePost, type RoleStats } from "@/db/operations/get-roles";
 import { getPositionBySlug, getPostsForPosition, getPositionStats } from "@/db/operations/get-positions";
 import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
@@ -113,8 +113,8 @@ export default async function PostPage({ params }: Props) {
   // Try position first (database-driven), then fall back to hardcoded role
   const position = await safeQuery(() => getPositionBySlug(slug), null);
 
-  let rolePosts: any[] = [];
-  let stats: any = { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
+  let rolePosts: RolePost[] = [];
+  let stats: RoleStats = { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
   let displayName = "";
   let displayDescription = "";
 
