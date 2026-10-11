@@ -10,6 +10,8 @@ interface LocaleLayoutProps {
   params: Promise<{ locale: string }>;
 }
 
+type IntlMessages = { [key: string]: string | IntlMessages };
+
 // This segment is reserved for actual locale-aware route families only.
 // Legacy root-level exam slugs are handled by the build-generated allowlist
 // in src/proxy.ts and canonical exam pages live under /exams/[slug].
@@ -18,7 +20,6 @@ interface LocaleLayoutProps {
 
 export async function generateMetadata(
   { params }: LocaleLayoutProps,
-  parent: any
 ): Promise<Metadata> {
   const { locale } = await params;
   const canonicalUrl = new URL(SITE_URL);
@@ -73,7 +74,7 @@ export default async function LocaleLayout({
 
   return (
     <RootShell lang={htmlLang(locale)}>
-      <IntlProvider locale={resolvedLocale} messages={messages as Record<string, any>}>
+      <IntlProvider locale={resolvedLocale} messages={messages as IntlMessages}>
         {children}
       </IntlProvider>
     </RootShell>
