@@ -40,8 +40,8 @@ describe("extracted source projection", () => {
     const eligibility = stripComments(readSource(ELIGIBILITY));
     const salary = stripComments(readSource(SALARY));
     const dates = stripComments(readSource(DATES));
-    expect(eligibility).toContain("post.fjaExtract?.qualificationRaw");
-    expect(eligibility).toContain("post.fjaExtract?.experienceRaw");
+    expect(eligibility).toContain("extracted?.qualificationRaw");
+    expect(eligibility).toContain("extracted?.experienceRaw");
     expect(salary).toContain("Pay reported in listing · pending verification");
     expect(salary).toContain("post.fjaExtract?.tenureRaw");
     expect(dates).toContain("Source listing published");
@@ -58,7 +58,7 @@ describe("extracted source projection", () => {
 
   test("verification UI does not claim extraction confidence is official verification", () => {
     const source = stripComments(readSource(VERIFICATION));
-    expect(source).toContain("Extraction confidence is not the same as official verification");
+    expect(source).toContain("This status does not mean the details have been");
     expect(source).toContain("Direct official notice link is not available in this record.");
     expect(source).not.toContain("This data has been carefully verified against the official notification.");
   });
