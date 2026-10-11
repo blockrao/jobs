@@ -10,7 +10,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
-import { validateLegacyExamSlugs } from "../src/lib/legacy-exam-routing.ts";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const output = path.join(dirname, "../src/lib/legacy-exam-slugs.generated.json");
