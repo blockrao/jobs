@@ -322,7 +322,9 @@ export default function RecruitmentHub({
   if (displayTotalVacancies != null) {
     faqItems.push({
       q: 'How many vacancies are available?',
-      a: `A total of ${displayTotalVacancies.toLocaleString('en-IN')} vacancies are available across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`,
+      a: sourceFactsUnverified
+        ? `The source listing reports ${displayTotalVacancies.toLocaleString('en-IN')} vacancies across ${posts.length} listed post${posts.length !== 1 ? 's' : ''}. Confirm each role and vacancy count in the specific official notice.`
+        : `A total of ${displayTotalVacancies.toLocaleString('en-IN')} vacancies are available across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`,
     });
   }
 
