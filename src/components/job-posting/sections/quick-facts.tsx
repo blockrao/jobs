@@ -33,13 +33,22 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
   const deadlineLabel = !officialDeadlineDate && reportedDeadline
     ? "Application Deadline (reported)"
     : "Application Closes";
+  const reportedVacancyCount = post.fjaExtract?.vacancyCountRaw
+    ? Number(post.fjaExtract.vacancyCountRaw.replace(/,/g, "").trim())
+    : null;
+  const extractedVacancyCount = reportedVacancyCount != null &&
+    Number.isSafeInteger(reportedVacancyCount) && reportedVacancyCount >= 0
+    ? reportedVacancyCount
+    : null;
 
   const facts = [
     {
       label: post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Vacancies (reported)" : "Vacancies",
       value: resolvedFacts?.vacancyCount != null
         ? resolvedFacts.vacancyCount.toLocaleString("en-IN")
-        : "See Notification",
+        : extractedVacancyCount != null
+          ? extractedVacancyCount.toLocaleString("en-IN")
+          : "See Notification",
     },
     {
       label: deadlineLabel,
@@ -57,10 +66,14 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
     },
     {
       label: post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Job Type (reported)" : "Job Type",
-      value: post.employmentType
-        ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
+      value: (post.employmentType || post.fjaExtract?.employmentTypeRaw)
+        ? (post.employmentType || post.fjaExtract?.employmentTypeRaw)!.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
         : "See Notification",
     },
+    ...(post.fjaExtract?.locationRaw ? [{
+      label: post.fjaExtract.verificationStatus !== "VERIFIED" ? "Location (reported)" : "Location",
+      value: post.fjaExtract.locationRaw,
+    }] : []),
   ];
 
   return (
