@@ -70,9 +70,9 @@ export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
       )}
 
       <div className={styles.featureBox} style={{ marginTop: "20px" }}>
-        <strong>Note:</strong> Keep scanned copies of all documents ready before
-        starting the application. Ensure documents are clear and in the specified
-        format (usually PDF or JPG). Scans should not be more than 500 KB each.
+        <strong>Note:</strong> Prepare the documents listed in the official notice.
+        Required formats, file-size limits and attestation rules vary by recruitment;
+        confirm the exact requirements before submitting.
       </div>
     </div>
   );
