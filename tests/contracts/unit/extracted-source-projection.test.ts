@@ -63,7 +63,7 @@ describe("extracted source projection", () => {
   test("verification UI does not claim extraction confidence is official verification", () => {
     const source = stripComments(readSource(VERIFICATION));
     expect(source).toContain("This status does not mean the details have been");
-    expect(source).toContain("Direct official notice link is not available in this record.");
+    expect(source).toContain("Official recruitment source link is not available in this record.");
     expect(source).not.toContain("This data has been carefully verified against the official notification.");
   });
 
@@ -76,7 +76,7 @@ describe("extracted source projection", () => {
     expect(source).toContain("sourceFactsUnverified ? null : daysUntil(recruitment.applicationEndDate)");
     expect(source).toContain('sourceFactsUnverified ? "Reported Last Date" : "Last Date"');
     expect(source).toContain("The source listing reports");
-    expect(source).toContain('sourceFactsUnverified ? "Reported vacancies" : "Vacancies"');
+    expect(source).toContain('sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"');
   });
   test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
