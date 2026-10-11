@@ -521,3 +521,16 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [ ] /en/jobs still returns HTTP 200 with noindex, follow and canonical /jobs in the production sample. Capture a raw redirect response on the exact branch preview to decide whether an explicit as-needed locale redirect is needed.
 - [ ] Fresh preview of the exact PR #55 head; verify /jobs indexability, locale redirect behavior, filtered/search/pagination metadata, and sitemap-to-canonical consistency.
 - [ ] Run contract tests and app/test type checks on the exact PR head; do not merge/promote while Vercel preview remains unavailable.
+
+
+## Production deployment verification — 2026-10-11 (after user deployment)
+
+- [x] Live `https://www.joboye.com/jobs` returns HTTP 200, self-canonical `https://www.joboye.com/jobs`, and no robots noindex directive. The canonical All Jobs listing is indexable.
+- [x] Live `/hi/jobs`, `/jobs?filter=open`, `/jobs?q=police`, and `/jobs?page=2` return `noindex, follow` and canonical `/jobs`.
+- [x] Live sitemap returns HTTP 200 with 2,422 unique `<loc>` entries; includes `/jobs`, 1,553 nested job-leaf URLs and 36 `/posts/{role}` URLs; no one-segment legacy Recruitment Hub URLs found. This is structural verification, not a complete per-URL status/canonical/robots reconciliation.
+- [x] Sampled live Recruitment Hub returns `noindex, follow` and canonical to its corresponding role page.
+- [x] Exact current PR #55 preview `13e7a5790e7f2b49c77b25332cc66d628bec9eff` confirms the clean listing is indexable and search/filter/page-2 variants are noindex + canonical `/jobs`; `/hi/jobs` is noindex + canonical `/jobs`.
+- [ ] Listing social metadata defect found in preview and production: OG/Twitter inherited generic homepage copy and locale-root URL (`/en` or `/hi`) instead of the listing title/description and canonical `/jobs`. Fix committed to `fix/jobs-listing-indexability` in `d7b85ad` and `9d7f2f7`; regression assertions committed in `d1c8879`. These commits still need an exact-head READY preview and test results.
+- [ ] `/en/jobs` renders the English listing and carries canonical `/jobs`; the current web-fetch evidence does not expose the initial redirect response headers, so the 301/308/as-needed redirect behavior is NOT yet proven either way. Capture the raw first response before changing routing.
+- [ ] Sitemap reconciliation remains open: check a representative cohort across all URL families for HTTP status, canonical, robots, hreflang, and structured-data policy; then expand automated coverage. Do not infer complete correctness from the sitemap count alone.
+- [ ] No merge/promotion until latest PR #55 exact-head preview, tests, route policy and sitemap gates pass.
