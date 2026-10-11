@@ -200,7 +200,7 @@ export async function resolveRecruitment(
       applicationStartDate: identity.applicationStartDate ?? null,
       applicationEndDate: identity.applicationEndDate ?? null,
     })
-    .onConflictDoNothing({ target: recruitments.slug })
+    .onConflictDoNothing()
     .returning({ id: recruitments.id });
 
   if (created) return { id: created.id, created: true };
