@@ -166,6 +166,10 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
     notFound();
   }
 
+  const sourceVerificationPending = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
+
   // Fetch recruitment data with all posts for context
   const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
 
