@@ -5,6 +5,7 @@
  */
 
 import { Metadata } from "next";
+import { entitySeo } from "@/lib/seo";
 import { getPostBySlug } from "@/db/operations/get-posts";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import JobPostingStructuredData from "@/components/job-posting/structured-data/job-posting-schema";
@@ -12,14 +13,13 @@ import JobPostingStructuredData from "@/components/job-posting/structured-data/j
 interface Props {
   params: Promise<{
     locale: string;
-    "recruitment-slug": string;
+    slug: string;
     "post-slug": string;
   }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, "recruitment-slug": recruitmentSlug, "post-slug": postSlug } = await params;
-
+  const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
   const post = await getPostBySlug(recruitmentSlug, postSlug);
 
   if (!post) {
@@ -33,28 +33,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     post.description?.substring(0, 160) ||
     `Apply for ${post.title} at ${post.organizationName}`;
 
+  // The current JobPostingData contract does not expose verified Hindi content.
+  // Follow SEO-001: untranslated Hindi pages canonicalize to English and are noindex.
+  const seo = entitySeo({
+    base: "/jobs",
+    slug: `${recruitmentSlug}/${postSlug}`,
+    locale,
+    hasHindi: false,
+  });
+
   return {
     title: `${title} - ${post.organizationName}`,
     description,
-    alternates: {
-      canonical: `/jobs/${recruitmentSlug}/${postSlug}`,
-      languages: {
-        en: `/jobs/${recruitmentSlug}/${postSlug}`,
-        hi: `/hi/jobs/${recruitmentSlug}/${postSlug}`,
-      },
-    },
+    alternates: seo.alternates,
+    robots: seo.robots,
     openGraph: {
       title: `${title} | ${post.organizationName}`,
       description,
       type: "website",
-      url: `https://www.joboye.com/jobs/${recruitmentSlug}/${postSlug}`,
+      url: seo.url,
       locale: locale === "hi" ? "hi_IN" : "en_US",
     },
   };
 }
 
 export default async function LocaleJobPostingPage({ params }: Props) {
-  const { locale, "recruitment-slug": recruitmentSlug, "post-slug": postSlug } = await params;
+  const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
 
   const post = await getPostBySlug(recruitmentSlug, postSlug);
 
