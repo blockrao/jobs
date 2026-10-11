@@ -92,6 +92,8 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   return (
     <>
+      {/* SEO-001: the untranslated Hindi route is noindex, so it must not emit JobPosting JSON-LD. */}
+      {locale !== "hi" && (
       <PostLeafStructuredData
         post={{
           id: post.id,
@@ -112,6 +114,7 @@ export default async function LocaleJobPostingPage({ params }: Props) {
         resolvedSalary={resolvedFacts.salary}
         resolvedDeadline={resolvedFacts.deadline}
       />
+      )}
       <JobPostingPage
         post={post}
         recruitment={recruitmentData}
