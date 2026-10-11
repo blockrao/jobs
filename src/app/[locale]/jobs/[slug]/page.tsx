@@ -2,7 +2,7 @@ import { buildNoticeFaqs, buildNoticeTimeline, type NoticeFacts } from "@/lib/co
 import { buildCoreFaqs } from "@/lib/content/faq-gate";
 import { publicLink, stripAggregatorTag } from "@/lib/aggregators";
 import { getStateBySlug } from "@/lib/states/states";
-import { entitySeo } from "@/lib/seo";
+import { entitySeo, pageSeo } from "@/lib/seo";
 import { cutAtWord, composeJobMetaDescription, composeJobMetaTitle } from "@/lib/seo/meta-title";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -57,25 +57,24 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
 
-  // If this slug resolves to a recruitment hub, return hub-specific metadata
-  // so the canonical tag is correct. The page component makes the same check
-  // and renders RecruitmentHub; metadata must match.
-  if (locale !== "hi") {
-    const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
-    if (recruitmentData) {
-      const { recruitment, totalPosts } = recruitmentData;
-      return {
+  // Metadata must resolve the same canonical Recruitment the page renderer serves.
+  // Until genuine Hindi hub content exists, /hi is an English fallback: noindex and
+  // canonicalized to the unprefixed Recruitment URL.
+  const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  if (recruitmentData) {
+    const { recruitment, totalPosts } = recruitmentData;
+    const seo = pageSeo(`/jobs/${recruitment.slug}`, { index: locale !== "hi" });
+    return {
+      title: recruitment.name,
+      description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
+      ...seo,
+      openGraph: {
         title: recruitment.name,
-        description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-        alternates: { canonical: `/jobs/${recruitment.slug}` },
-        openGraph: {
-          title: recruitment.name,
-          description: `${recruitment.name} recruitment on JobOye`,
-          type: "website",
-          url: `https://www.joboye.com/jobs/${recruitment.slug}`,
-        },
-      };
-    }
+        description: `${recruitment.name} recruitment on JobOye`,
+        type: "website",
+        url: `https://www.joboye.com/jobs/${recruitment.slug}`,
+      },
+    };
   }
 
   const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
