@@ -72,7 +72,11 @@ export default function JobPostingPage({
       }
     : post;
 
-  // Preserve the locale prefix for all internal links. Hindi pages are currently\n  // untranslated/noindex, but navigation must remain within the requested route family.\n  const localePrefix = locale === "hi" ? "/hi" : "";\n\n  // Get sibling posts for multi-post recruitments
+  // Preserve the locale prefix for all internal links. Hindi pages are currently
+  // untranslated/noindex, but navigation must remain within the requested route family.
+  const localePrefix = locale === "hi" ? "/hi" : "";
+
+  // Get sibling posts for multi-post recruitments
   const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
 
   return (
