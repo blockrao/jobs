@@ -13,7 +13,7 @@
  * and stays where it is in the writer.
  */
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
@@ -205,15 +205,26 @@ export async function resolveRecruitment(
 
   if (created) return { id: created.id, created: true };
 
-  const existingBySlug = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, finalSlug),
+  // A slug collision is only a concurrency signal, never an entity identity.
+  // Recover the winning insert by the same structured identity used above.
+  // This prevents a URL slug from attaching an observation to an unrelated row.
+  const finalName = truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH);
+  const existingByIdentity = await db.query.recruitments.findFirst({
+    where: and(
+      eq(recruitments.organizationId, identity.organizationId),
+      eq(recruitments.year, finalYear),
+      eq(recruitments.name, finalName),
+      identity.examId === null ? isNull(recruitments.examId) : eq(recruitments.examId, identity.examId),
+      identity.officialNotificationNumber
+        ? eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber)
+        : isNull(recruitments.officialNotificationNumber),
+    ),
   });
-  if (existingBySlug) return { id: existingBySlug.id, created: false };
+  if (existingByIdentity) return { id: existingByIdentity.id, created: false };
 
-  // Insert raced and lost, but the winning row isn't visible yet (unlikely
-  // outside real concurrency) — surface clearly rather than silently
-  // returning a bogus id.
-  throw new Error(`resolveRecruitment: slug "${finalSlug}" conflicted but no row found`);
+  // Insert raced and lost, but no row with the same structured identity is
+  // visible. Surface the conflict rather than returning a bogus entity ID.
+  throw new Error("resolveRecruitment: generated slug conflicted without a matching identity row: " + finalSlug);
 }
 
 export interface PostIdentity {
