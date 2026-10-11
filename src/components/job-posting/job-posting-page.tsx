@@ -214,7 +214,7 @@ export default function JobPostingPage({
           information about this role to help candidates review it more easily.
           Details can be incomplete or change over time. For application-critical
           information, consult the official notification and the responsible
-          organization's website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
+          organization&apos;s website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
           — follow the application method specified in the official recruitment instructions.
         </div>
       </div>
