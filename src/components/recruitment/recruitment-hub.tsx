@@ -57,7 +57,6 @@ type RecruitmentHubPost = typeof posts.$inferSelect & {
   resolvedVacancyCount?: number | null;
   status?: string | null;
   lifecycle_status?: string | null;
-  locationText?: string | null;
 };
 import Link from 'next/link';
 import {
@@ -749,12 +748,6 @@ export default function RecruitmentHub({
                             {posts[0].resolvedVacancyCount.toLocaleString('en-IN')} vacancies
                           </span>
                         )}
-                        {posts[0].locationText && (
-                          <span className="flex items-center gap-1">
-                            <MapPin size={14} className="text-gray-400" />
-                            {posts[0].locationText}
-                          </span>
-                        )}
                         <PostStatusBadge post={posts[0]} appEndDate={recruitment.applicationEndDate} />
                       </div>
                     </div>
@@ -777,7 +770,6 @@ export default function RecruitmentHub({
                 {posts.map((post) => {
                   const postVacancies = post.resolvedVacancyCount ?? null;
                   const postName = post.name ?? post.position?.name ?? 'View Post';
-                  const locationText = post.locationText ?? null;
 
                   return (
                     <Link
