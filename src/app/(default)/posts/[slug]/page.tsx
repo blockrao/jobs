@@ -10,14 +10,11 @@ import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 import { EnrichedPostRow } from "@/components/enriched-post-row";
 
-export const revalidate = 3600;
-export const dynamicParams = true;
+// Role hubs depend on live Recruitment/Post data; resolve at request time so
+// database latency cannot make the production build fail while prerendering roles.
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
-
-export async function generateStaticParams() {
-  return ROLE_REGISTRY.map((role) => ({ slug: role.slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
