@@ -4,6 +4,15 @@
 
 This checkpoint supersedes any assumption that an open PR or READY deployment is release acceptance. Work is ordered by public correctness and data integrity, not by ingestion throughput.
 
+### Latest verified checkpoint — 2026-10-11
+
+- Candidate SHA: `8efa2f4f4bcaee632d2d49e29c930a5a21245e93` on PR #51.
+- [x] Application TypeScript, contract-test TypeScript, and architecture contract tests passed on this SHA.
+- [ ] Lint remains failing: 212 errors / 81 warnings in the latest run. Do not merge until release gates are agreed; do not disable rules or weaken contracts.
+- [x] Recruitment Hub location field now reads from the typed Post projection; previous CI caught and drove correction of stale Position-field references.
+- [x] Fresh read-only production DB audit on 2026-10-11: 3 inventory rows (all OPEN/PARTIAL), 8 Post candidates (all PARTIAL/PENDING official verification), 0 raw captures, 1,553 canonical Posts (19 with non-empty descriptions; 1,453 with vacancy totals), and 0 normalized vacancies. No production writes were made.
+- [ ] Preview verification and exact-SHA deployment checks remain outstanding; this branch is not production-released.
+
 ### P0 — Public candidate experience (in progress; branch changes not yet production)
 
 - [x] Replace the internal `/fja-review` page with `notFound()` and noindex metadata on the SEO-policy branch. Commit: `720ec781c8de51a2a54533f170e67a8e00d512b3`.
@@ -17,7 +26,7 @@ This checkpoint supersedes any assumption that an open PR or READY deployment is
 - [x] Exclude a legacy posting `/jobs/{slug}` entry when its slug collides with a Recruitment Hub; otherwise the sitemap advertises a non-indexable route.
 - [x] Add a sitemap contract regression test for the collision.
 - [x] Architecture contract tests, application type-check, and contract-test type-check passed on commit `a6b7052720bd32c685009be20de9300ad6e37e8f`.
-- [ ] Full CI remains red because repository lint reports 278 errors / 88 warnings, mostly pre-existing `no-explicit-any` violations. Do not suppress rules; establish a measured baseline and remediate in bounded batches.
+- [ ] Full CI remains red because repository lint reports 212 errors / 81 warnings on the latest candidate SHA (down from 278 / 88 on the earlier audited commit). Do not suppress rules; remediate in bounded batches.
 - [ ] Preview/production sitemap XML and HTTP behavior still require verification. This code is not deployed.
 
 ### P0 — Canonical serving and SEO release gate
@@ -34,7 +43,7 @@ This checkpoint supersedes any assumption that an open PR or READY deployment is
 - [ ] Verify material facts against official notification/application sources; record field-level evidence and unresolved discrepancies.
 - [ ] Dry-run deterministic identity matching and reconciliation for Organization, Recruitment, Post, and Position; route ambiguous or multi-role notices to review.
 - [ ] Demonstrate idempotent reruns and before/after counts. Keep inventory candidates staged until validation passes; no direct promotion of partial/unverified inventory into public canonical pages.
-- [ ] Refresh production DB counts before any write/backfill. The earlier snapshot (3 partial inventory records, 8 partial Post candidates, 0 raw captures) is historical evidence, not a current complete inventory count.
+- [x] Refresh production DB counts before any write/backfill. Read-only audit on 2026-10-11 reconfirmed 3 OPEN/PARTIAL inventory rows, 8 PARTIAL/PENDING Post candidates, 0 raw captures, 1,553 canonical Posts (19 non-empty descriptions; 1,453 vacancy totals), and 0 normalized vacancies. This is a current snapshot, not proof of complete source coverage.
 
 ### Execution rule
 
