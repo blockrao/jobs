@@ -1,5 +1,36 @@
 # Implementation Roadmap: Graph Model & Canonical Hubs
 
+## Product architect checkpoint — 2026-10-11 evening
+
+This checkpoint supersedes older status bullets where they conflict with the current verified state.
+
+### Verified on exact preview commit `8aa3ad1b936a2e6db5a880ae812dcd822c14cfdd`
+- [x] Vercel preview reached READY; `/posts` and a role page returned HTTP 200 after the request-rendering change.
+- [x] `/fja-review` returned 404 on the preview.
+- [x] Sampled Hindi Recruitment Hub and Post Leaf returned `lang="hi"`, English canonical, `noindex, follow`, and no `JobPosting` JSON-LD.
+- [x] Sampled Recruitment Hub and Post Leaf HTML did not expose the internal inventory/source-review fields.
+- [x] Sitemap had 2,827 unique URLs and excluded the sampled Recruitment Hub URL.
+- [ ] Sitemap still advertised at least one legacy posting URL whose canonical pointed to a different Recruitment URL; targeted exclusion committed below.
+- [ ] Recruitment Hub metadata was still indexable on that preview; targeted noindex/canonical policy committed below.
+
+### Newer, not-yet-preview-verified commits
+- [x] `0f6ebfe`: sitemap query resolves canonical Recruitment mapping through both direct inferred recruitment and inferred Post relationships.
+- [x] `44229a8`: exclude legacy posting aliases whose resolved canonical Recruitment differs from the posting slug.
+- [x] `edc45f0`: Recruitment Hubs are noindex; single-role hubs canonicalize to `/posts/{role-slug}`; mixed-role hubs do not assert an arbitrary role canonical.
+- [ ] Exact head `edc45f0c5110bdb3633a6f81a3ecb543c9db3d50` has no READY preview. Vercel reports build-rate-limit failure. Do not promote the older preview.
+- [x] CI architecture contract tests, application type-check, and contract-test type-check passed on the PR merge commit associated with `edc45f0`.
+- [ ] Lint remains red: 209 errors / 78 warnings in the latest completed run. The majority are repository-wide `no-explicit-any` and unused-variable findings. No rules or test scope have been weakened.
+
+### Next release gates
+1. Build a preview of the exact current head when Vercel permits it.
+2. Re-run route acceptance for English/Hindi hub and leaf pages, unknown slugs, redirects, canonical/robots/lang, and JobPosting JSON-LD.
+3. Validate sitemap entries against actual canonical responses, not just uniqueness; ensure non-indexable Recruitment Hubs and legacy aliases are absent.
+4. Review lint errors by production-critical file and remediate in bounded batches without broad suppression.
+5. Only after public route acceptance, resume a staged official-source verification and idempotent data-reconciliation pilot. No production writes until a reviewed plan and dry-run evidence exist.
+
+---
+
+
 ## Product architect execution checkpoint — 2026-10-11
 
 This checkpoint supersedes any assumption that an open PR or READY deployment is release acceptance. Work is ordered by public correctness and data integrity, not by ingestion throughput.
