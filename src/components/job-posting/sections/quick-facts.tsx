@@ -5,7 +5,6 @@
 
 import { JobPostingData } from "@/types/job-posting";
 import { ResolvedLeafFacts } from "../job-posting-page";
-import styles from "../job-posting-page.module.css";
 
 interface QuickFactsProps {
   post: JobPostingData;
