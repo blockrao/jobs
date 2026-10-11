@@ -1,14 +1,24 @@
 /**
- * Locale-aware Job Posting Page
- * Supports /jobs/... (English) and /hi/jobs/... (Hindi)
- * Routes through the same data layer as (default) route but with locale context
+ * Locale-aware Post Leaf route.
+ * English is indexable; Hindi remains an English-content fallback until
+ * verified Post translations are part of the canonical Post read contract.
  */
-
-import { Metadata } from "next";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { entitySeo } from "@/lib/seo";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
+import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
-import JobPostingStructuredData from "@/components/job-posting/structured-data/job-posting-schema";
+import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
+import {
+  resolvePostVacancy,
+  resolveSalary,
+  resolveDeadline,
+  resolveRecruitmentOfficialSource,
+  resolveRecruitmentApplicationUrl,
+  resolveRecruitmentEmployer,
+  resolveRecruitmentSelectionProcess,
+} from "@/lib/resolvers/fact-resolvers";
 
 interface Props {
   params: Promise<{
@@ -25,30 +35,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) {
     return {
       title: "Job Posting Not Found",
+      robots: { index: false, follow: true },
     };
   }
 
-  const title = post.title;
-  const description =
-    post.description?.substring(0, 160) ||
-    `Apply for ${post.title} at ${post.organizationName}`;
-
-  // The current JobPostingData contract does not expose verified Hindi content.
-  // Follow SEO-001: untranslated Hindi pages canonicalize to English and are noindex.
+  // Use the canonical relationship returned by the database, not the
+  // potentially historical recruitment slug from the incoming URL.
+  const canonicalSlug = post.recruitmentSlug + "/" + post.slug;
   const seo = entitySeo({
     base: "/jobs",
-    slug: `${recruitmentSlug}/${postSlug}`,
+    slug: canonicalSlug,
     locale,
     hasHindi: false,
   });
 
+  const title = post.title + (post.organizationName ? " - " + post.organizationName : "");
+  const description = post.description?.substring(0, 160) ||
+    ("Apply for " + post.title + (post.organizationName ? " at " + post.organizationName : ""));
+
   return {
-    title: `${title} - ${post.organizationName}`,
+    title,
     description,
     alternates: seo.alternates,
     robots: seo.robots,
     openGraph: {
-      title: `${title} | ${post.organizationName}`,
+      title,
       description,
       type: "website",
       url: seo.url,
@@ -59,26 +70,56 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocaleJobPostingPage({ params }: Props) {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
-
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
-  if (!post) {
-    return (
-      <div style={{ padding: "40px 20px", textAlign: "center" }}>
-        <h1>{locale === "hi" ? "नौकरी नहीं मिली" : "Job Not Found"}</h1>
-        <p>
-          {locale === "hi"
-            ? "क्षमा करें, यह नौकरी पोस्टिंग खोजी नहीं जा सकी।"
-            : "Sorry, this job posting could not be found."}
-        </p>
-      </div>
-    );
-  }
+  if (!post) notFound();
+
+  const recruitmentData = await getRecruitmentWithPosts(post.recruitmentSlug);
+  const now = new Date();
+  const resolvedFacts = {
+    vacancyCount: resolvePostVacancy(post as any),
+    salary: resolveSalary(post as any),
+    deadline: resolveDeadline(post as any, now),
+  };
+  const recruitmentResolvedFacts = recruitmentData?.recruitment
+    ? {
+        officialSource: resolveRecruitmentOfficialSource(recruitmentData.recruitment),
+        applicationUrl: resolveRecruitmentApplicationUrl(recruitmentData.recruitment),
+        employer: resolveRecruitmentEmployer(recruitmentData.recruitment),
+        selectionProcess: resolveRecruitmentSelectionProcess(recruitmentData.recruitment),
+      }
+    : null;
 
   return (
     <>
-      <JobPostingStructuredData post={post} />
-      <JobPostingPage post={post} locale={locale} />
+      <PostLeafStructuredData
+        post={{
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          description: post.description ?? null,
+          organizationName: post.organizationName ?? null,
+          recruitmentSlug: post.recruitmentSlug,
+          recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
+          employmentType: post.employmentType ?? null,
+          locationCity: post.locationCity ?? null,
+          locationState: post.locationState ?? null,
+          notificationPublicationDate: post.notificationPublicationDate ?? null,
+          postedAt: post.postedAt ?? null,
+          updatedAt: post.updatedAt ?? null,
+        }}
+        resolvedVacancy={resolvedFacts.vacancyCount}
+        resolvedSalary={resolvedFacts.salary}
+        resolvedDeadline={resolvedFacts.deadline}
+      />
+      <JobPostingPage
+        post={post}
+        recruitment={recruitmentData}
+        isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
+        locale={locale}
+        resolvedFacts={resolvedFacts}
+        recruitmentResolvedFacts={recruitmentResolvedFacts}
+      />
     </>
   );
 }
