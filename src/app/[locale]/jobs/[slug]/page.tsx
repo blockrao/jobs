@@ -85,17 +85,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // canonicalized to the unprefixed Recruitment URL.
   const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
   if (recruitmentData) {
-    const { recruitment, totalPosts } = recruitmentData;
-    const seo = pageSeo(`/jobs/${recruitment.slug}`, { index: locale !== "hi" });
+    const { recruitment, totalPosts, posts } = recruitmentData;
+    // Recruitment Hubs are supporting navigation, not canonical search landings.
+    // Never index the hub. If all its Posts map to one role, consolidate signals
+    // to that role's canonical /posts page; for mixed-role hubs, no canonical is
+    // asserted because choosing one role would be misleading.
+    const roleSlugs = Array.from(
+      new Set(
+        posts
+          .map((post) => post.position?.slug)
+          .filter((roleSlug): roleSlug is string => Boolean(roleSlug)),
+      ),
+    );
+    const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : null;
+    const seo = pageSeo(canonicalPath ?? `/jobs/${recruitment.slug}`, { index: false });
     return {
       title: recruitment.name,
       description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
       ...seo,
+      ...(canonicalPath ? {} : { alternates: undefined }),
       openGraph: {
         title: recruitment.name,
         description: `${recruitment.name} recruitment on JobOye`,
         type: "website",
-        url: `https://www.joboye.com/jobs/${recruitment.slug}`,
+        url: canonicalPath ? `https://www.joboye.com${canonicalPath}` : `https://www.joboye.com/jobs/${recruitment.slug}`,
       },
     };
   }
