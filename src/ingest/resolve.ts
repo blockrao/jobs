@@ -276,26 +276,13 @@ export async function resolvePost(db: Db, identity: PostIdentity, slug: string):
   // is a coarse classification (e.g. "ENGINEERING"), not the job title —
   // it's fine for several unrelated posts to share one Position, unlike
   // the old bug where *postings themselves* were glued onto one bucket.
-  let position = await db.query.positions.findFirst({
-    where: eq(positions.slug, slugifyPositionCategory(identity.positionCategory)),
-  });
-  if (!position) {
-    const [createdPosition] = await db
-      .insert(positions)
-      .values({
-        name: titleCasePositionCategory(identity.positionCategory),
-        slug: slugifyPositionCategory(identity.positionCategory),
-        category: identity.positionCategory,
-      })
-      .returning();
-    position = createdPosition;
-  }
+  const positionId = await getOrCreatePositionId(db, identity.positionCategory);
 
   const [created] = await db
     .insert(posts)
     .values({
       recruitmentId: identity.recruitmentId,
-      positionId: position.id,
+      positionId,
       name: safeName,
       slug,
     })
@@ -345,12 +332,22 @@ export interface PostLinesResult {
 }
 
 async function getOrCreatePositionId(db: Db, category: PostIdentity["positionCategory"]): Promise<number> {
-  const slug = slugifyPositionCategory(category);
-  const found = await db.query.positions.findFirst({ where: eq(positions.slug, slug) });
-  if (found) return found.id;
+  // Position category is the semantic identity. Slugs are URL presentation only.
+  const foundByCategory = await db.query.positions.findFirst({
+    where: eq(positions.category, category),
+  });
+  if (foundByCategory) return foundByCategory.id;
+
+  // Reuse a legacy row by its canonical display name if category was not backfilled.
+  const canonicalName = titleCasePositionCategory(category);
+  const foundByName = await db.query.positions.findFirst({
+    where: eq(positions.name, canonicalName),
+  });
+  if (foundByName) return foundByName.id;
+
   const [createdPosition] = await db
     .insert(positions)
-    .values({ name: titleCasePositionCategory(category), slug, category })
+    .values({ name: canonicalName, slug: slugifyPositionCategory(category), category })
     .returning();
   return createdPosition.id;
 }
