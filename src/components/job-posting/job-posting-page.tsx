@@ -99,6 +99,32 @@ export default function JobPostingPage({
         {/* Quick Facts */}
         <QuickFacts post={post} resolvedFacts={resolvedFacts} />
 
+        {/* Extracted facts are useful to candidates, but must never be confused
+            with official verification. This provenance notice is shared by all
+            pages backed by the source-inventory projection. */}
+        {post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" && (
+          <aside
+            role="note"
+            aria-label="Verification notice"
+            style={{
+              margin: "0 0 24px",
+              padding: "16px 18px",
+              border: "1px solid #f3d28b",
+              borderRadius: "10px",
+              background: "#fffbeb",
+              color: "#78350f",
+            }}
+          >
+            <strong>Official verification pending</strong>
+            <p style={{ margin: "6px 0 0", lineHeight: 1.55 }}>
+              Some details on this page were transcribed from a secondary listing and have
+              not yet been confirmed against the institution&apos;s official notice. Treat
+              reported dates, eligibility, pay, tenure and application instructions as
+              provisional. Confirm them with the official recruitment source before acting.
+            </p>
+          </aside>
+        )}
+
         {/* Action Buttons
           Recruitment owns application and official-notification URLs. Only
           resolver-approved URLs may be exposed publicly; raw Post columns are
@@ -177,7 +203,7 @@ export default function JobPostingPage({
             <p>
               For recruitment-wide details, timeline, and related information,
               visit the{" "}
-              <Link href={`/jobs/${post.recruitmentSlug}`}>recruitment hub</Link>.
+              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>recruitment hub</Link>.
             </p>
           </section>
         )}
