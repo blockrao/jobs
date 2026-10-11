@@ -139,7 +139,6 @@ const POST_NAME_MAX_LENGTH = 200;
 export async function resolveRecruitment(
   db: Db,
   identity: RecruitmentIdentity,
-  _legacySlug?: string,
 ): Promise<ResolvedRecruitment> {
   // Strong key: organization + official notification number. Enforced
   // unique at the DB level (recruitments_org_notification_idx).
