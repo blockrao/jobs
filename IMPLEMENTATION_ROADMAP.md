@@ -11,6 +11,15 @@ This checkpoint supersedes any assumption that an open PR or READY deployment is
 - [ ] CI and preview verify that `/fja-review` is a real 404; representative hubs/leaf pages expose no internal inventory or source-review fields; official notification/application links remain resolver-approved only.
 - [ ] Confirm no public FreeJobAlert/source-aggregator branding remains in rendered pages, navigation, metadata, structured data, sitemap, or error states. Internal ingestion provenance may remain in restricted/backend tooling.
 
+### Sitemap indexability correction — 2026-10-11
+
+- [x] Exclude Recruitment Hub `/jobs/{recruitment-slug}` URLs from sitemap output because the hub is supporting/noindex.
+- [x] Exclude a legacy posting `/jobs/{slug}` entry when its slug collides with a Recruitment Hub; otherwise the sitemap advertises a non-indexable route.
+- [x] Add a sitemap contract regression test for the collision.
+- [x] Architecture contract tests, application type-check, and contract-test type-check passed on commit `a6b7052720bd32c685009be20de9300ad6e37e8f`.
+- [ ] Full CI remains red because repository lint reports 278 errors / 88 warnings, mostly pre-existing `no-explicit-any` violations. Do not suppress rules; establish a measured baseline and remediate in bounded batches.
+- [ ] Preview/production sitemap XML and HTTP behavior still require verification. This code is not deployed.
+
 ### P0 — Canonical serving and SEO release gate
 
 - [ ] Verify PRs #48 and #51 together: canonical Recruitment-scoped Post Leaf resolution, legacy slug redirects, English/Hindi route parity, page/entity metadata agreement, robots, canonical, JobPosting JSON-LD dates, and sitemap policy.
