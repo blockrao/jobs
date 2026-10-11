@@ -63,15 +63,6 @@ export default function JobPostingPage({
   resolvedFacts,
   recruitmentResolvedFacts,
 }: JobPostingPageProps) {
-  // For single-job recruitments, enrich post data from recruitment context
-  const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
-    ? {
-        ...post,
-        // Recruitment-level context can enhance single-job posting
-        recruitmentContext: recruitment.recruitment,
-      }
-    : post;
-
   // Preserve the locale prefix for all internal links. Hindi pages are currently
   // untranslated/noindex, but navigation must remain within the requested route family.
   const localePrefix = locale === "hi" ? "/hi" : "";
@@ -160,10 +151,10 @@ export default function JobPostingPage({
           <section className={styles.relatedRoles}>
             <h2>Other Roles in This Recruitment</h2>
             <p className={styles.relatedRolesIntro}>
-              This recruitment has {recruitment?.totalPosts} open positions:
+              Explore the other roles available under this recruitment.
             </p>
             <ul className={styles.relatedRolesList}>
-              {recruitment?.posts?.map((p) => (
+              {siblingPosts.map((p) => (
                 <li key={p.id}>
                   <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
                     <span className={styles.roleTitle}>{p.title}</span>
