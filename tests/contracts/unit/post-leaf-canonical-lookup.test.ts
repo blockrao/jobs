@@ -13,7 +13,7 @@ describe("canonical Post leaf lookup", () => {
   test("scopes the Post to its canonical Recruitment while preserving old-slug redirects", () => {
     const sql = source();
     expect(sql.match(/r\.slug = \$\{recruitmentSlug\}/g)).toHaveLength(2);
-    expect(sql.match(/FROM recruitment_slug_redirects/g)).toHaveLength(2);
+    expect(sql.match(/FROM recruitment_slug_redirects\\s+WHERE old_slug = \\$\\{recruitmentSlug\\}/g)).toHaveLength(2);
     expect(sql.match(/WHERE old_slug = \$\{recruitmentSlug\}/g)).toHaveLength(2);
   });
 });
