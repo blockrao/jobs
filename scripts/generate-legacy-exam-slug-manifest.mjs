@@ -35,10 +35,23 @@ async function main() {
       throw new Error("The exams table returned zero rows; refusing to publish an empty legacy redirect manifest");
     }
 
-    const seen = new Set();
+    // Root-level application routes take precedence over legacy exam URLs.
+  // A collision would make an existing product route unreachable, so fail
+  // the build and require an explicit migration decision rather than guessing.
+  const reservedRootPaths = new Set([
+    "admin", "api", "articles", "categories", "commissions", "exams",
+    "jobs", "news", "organizations", "positions", "posts", "recruitments",
+    "results", "search", "en", "hi", "_next", "favicon.ico", "robots.txt",
+    "sitemap.xml",
+  ]);
+
+  const seen = new Set();
     for (const slug of slugs) {
       if (typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
         throw new Error(`Invalid exam slug in manifest: ${String(slug)}`);
+      }
+      if (reservedRootPaths.has(slug)) {
+        throw new Error(`Exam slug collides with a reserved root route: ${slug}`);
       }
       if (seen.has(slug)) {
         throw new Error(`Duplicate exam slug in manifest: ${slug}`);
