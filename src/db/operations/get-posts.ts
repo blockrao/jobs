@@ -1,3 +1,4 @@
+import { cache } from "react";
 /**
  * Post Query Operations
  * Fetches job posting data from database with enrichment
@@ -193,6 +194,9 @@ export async function getPostBySlug(
     return null;
   }
 }
+
+/** Request-scoped memoization so metadata and page rendering share one DB read. */
+export const getPostBySlugCached = cache(getPostBySlug);
 
 /**
  * Fetch multiple posts for a recruitment with pagination

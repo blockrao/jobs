@@ -6,7 +6,7 @@
 
 import { Metadata } from "next";
 import { entitySeo } from "@/lib/seo";
-import { getPostBySlug } from "@/db/operations/get-posts";
+import { getPostBySlugCached } from "@/db/operations/get-posts";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import JobPostingStructuredData from "@/components/job-posting/structured-data/job-posting-schema";
 
@@ -20,7 +20,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
-  const post = await getPostBySlug(recruitmentSlug, postSlug);
+  const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) {
     return {
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function LocaleJobPostingPage({ params }: Props) {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
 
-  const post = await getPostBySlug(recruitmentSlug, postSlug);
+  const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) {
     return (
