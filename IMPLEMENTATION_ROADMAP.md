@@ -587,3 +587,28 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [x] English locale-aware listing now emits `/jobs` for form submissions and generated filters/pagination; Hindi remains `/hi/jobs`. Added render-level regression tests for the generated paths.
 - [x] On code commit `70928041198d0abaaf7e5558653bc9f7a571146b`, application type-check, contract-test type-check, and architecture contract tests passed; lint remains the repository-wide failure. The new render assertions landed after that run and need validation on the next exact-head CI run.
 - [ ] The full sitemap audit remains pending; run `npm run audit:sitemap -- --base https://www.joboye.com --limit 20` first, then the full audit. A fresh preview is still needed to verify the latest branch metadata fix without relying on the older production deployment.
+
+## Final release-readiness pass — 2026-10-11 (latest source head vs production)
+
+### Exact source-head verification
+- [x] Current PR #55 source head is `62673a557c470b8995045510a42774402c494318`.
+- [x] Exact-head GitHub Actions run: architecture contract tests passed; application type-check passed; contract-test type-check passed.
+- [ ] Lint failed on the existing repository-wide backlog. No lint rules were disabled. PR remains draft/unmerged.
+- [ ] Vercel has not produced a READY deployment for this source head. The newest READY production deployment remains `d7b85ad25569ead17bc9ad35c539775277589f99`; do not claim latest-source runtime acceptance until a fresh preview exists.
+
+### Live production listing metadata
+- [x] `/jobs`: HTTP 200, page title `All Jobs | JobOye`, canonical `https://www.joboye.com/jobs`, no robots noindex directive.
+- [x] `/hi/jobs`: HTTP 200, `noindex, follow`, canonical `https://www.joboye.com/jobs`.
+- [x] `/jobs?kind=GOVERNMENT`, `/jobs?q=clerk`, and `/jobs?page=2`: HTTP 200, `noindex, follow`, canonical `https://www.joboye.com/jobs`.
+- [x] English role page and sampled English Post Leaf are self-canonical; sampled leaf includes `JobPosting` JSON-LD. Sampled Hindi leaf is noindex, canonical to English, and has no `JobPosting` JSON-LD.
+- [ ] Production Open Graph/Twitter metadata is still generic on `/jobs`: OG URL is `https://www.joboye.com/en`, and title/description are inherited homepage copy, while the HTML title is page-specific. The current source head defines listing-specific OG/Twitter fields in both listing route implementations; verify on the fresh exact-head preview. The current production response is not acceptable evidence that this fix is live.
+- [ ] `/en/jobs` resolves to the English listing and has canonical `/jobs`, but the current fetch interface follows redirects and does not expose the first-hop status/Location. Keep redirect status unverified; capture it with a non-following HTTP client on the fresh preview.
+
+### Live production sitemap audit
+- [x] `/sitemap.xml` returns HTTP 200 and contains 2,422 URLs.
+- [x] Structural integrity: 0 duplicate URLs, 0 non-`www.joboye.com` origins, 0 query/hash URLs; 1,553 nested job leaves, 36 role URLs, 10 commission URLs, and no `/hi/` URLs.
+- [x] Representative home/listing, commission, role, and job-leaf URLs returned HTTP 200 and self-canonical metadata. The sampled job leaves include `JobPosting` JSON-LD.
+- [x] Confirmed live sitemap defect: all 10 `/commissions/*` URLs are present even though those pages return `noindex, follow`. Latest branch source excludes commission entries; this correction is not yet deployed to production.
+- [ ] Full `npm run audit:sitemap -- --base https://www.joboye.com --limit 20` and then full `npm run audit:sitemap -- --base https://www.joboye.com` have not been executed from the repository runtime. Current results are a structural audit plus representative URL cohort, not a claim that all 2,422 pages were fetched and validated.
+- [ ] After Vercel quota clears, create one preview for the latest PR head; confirm listing OG/Twitter metadata, sitemap count drops by the 10 commission URLs (subject to live data), and smoke/full sitemap audit results. Then validate hreflang and first-hop redirects separately.
+- [ ] Do not merge/promote until exact-head preview and release gates are complete. Once those pass, close PR #55, then continue the broader routing/SEO backlog.
