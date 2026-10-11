@@ -125,10 +125,10 @@ export async function generateMetadata({
     totalPosts,
     resolvedVacancies: metaVacancies,
     applicationEndDate: recruitment.applicationEndDate,
-    verificationStatus: recruitment.verificationStatus ?? null,
+    verificationStatus: recruitment.sourceVerificationStatus ?? null,
   });
 
-  const factsVerified = recruitment.verificationStatus === "VERIFIED";
+  const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
   const ogDescription = metaVacancies
     ? `${metaVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · ${recruitment.name} on JobOye`
     : `${recruitment.name} on JobOye`;
