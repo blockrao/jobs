@@ -104,7 +104,8 @@ async function main() {
     .filter(Boolean);
   const duplicateCount = sitemapUrls.length - new Set(sitemapUrls).size;
   const selected = limit > 0 ? sitemapUrls.slice(0, limit) : sitemapUrls;
-  const origin = new URL(base).origin;
+  const sitemapOrigin = sitemapUrls.length ? new URL(sitemapUrls[0]).origin : new URL(base).origin;
+  const requestOrigin = new URL(base).origin;
   const results: AuditResult[] = [];
   let nextIndex = 0;
 
@@ -117,9 +118,13 @@ async function main() {
       let status: number | null = null;
       try {
         const parsed = new URL(url);
-        if (parsed.origin !== origin) failures.push(`foreign origin ${parsed.origin}`);
+        if (parsed.origin !== sitemapOrigin) failures.push(`mixed sitemap origin ${parsed.origin}; expected ${sitemapOrigin}`);
         if (parsed.search || parsed.hash) failures.push("query/hash in sitemap URL");
-        const page = await fetchText(url);
+        // Preview sitemap locs can intentionally use the production canonical
+        // origin. Fetch the same path on --base, but compare canonical metadata
+        // with the absolute URL advertised in the sitemap.
+        const requestUrl = new URL(`${parsed.pathname}${parsed.search}`, requestOrigin).toString();
+        const page = await fetchText(requestUrl);
         status = page.status;
         if (page.status !== 200) {
           failures.push(`HTTP ${page.status} (canonical sitemap URLs must return 200 without redirects)`);
@@ -133,7 +138,7 @@ async function main() {
             failures.push("missing canonical");
           } else {
             try {
-              if (normalizeUrl(new URL(canonical, url).toString()) !== normalizeUrl(url)) {
+              if (normalizeUrl(new URL(canonical, requestUrl).toString()) !== normalizeUrl(url)) {
                 failures.push(`non-self canonical: ${canonical}`);
               }
             } catch {
@@ -159,6 +164,7 @@ async function main() {
   const failed = results.filter((r) => !r.ok);
   const summary = {
     base,
+    sitemapOrigin,
     sitemapCount: sitemapUrls.length,
     duplicateCount,
     checkedCount: results.length,
