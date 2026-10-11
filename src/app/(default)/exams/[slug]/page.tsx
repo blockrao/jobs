@@ -19,13 +19,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!examData) return {};
 
   const exam = examData.exam;
-  const commission = examData.commission;
   const title = `${exam.label} - Eligibility, Salary & Recruitment`;
   const metaDescription =
     exam.description ||
     `${exam.label}: Eligibility, positions recruited, notification links, and all related government recruitment campaigns.`;
 
-  const seo = entitySeo({ base: "/exams", slug: exam.slug, locale: "en", hasHindi: Boolean((exam as any).labelHi) });
+  const seo = entitySeo({ base: "/exams", slug: exam.slug, locale: "en", hasHindi: Boolean(exam.labelHi) });
 
   return {
     title,
@@ -95,11 +94,11 @@ export default async function ExamPage({ params }: Props) {
 
       <div className="space-y-8">
         {/* Eligibility */}
-        {(exam as any).eligibility && (
+        {exam.eligibility && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4">Eligibility</h2>
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg whitespace-pre-wrap text-sm">
-              {(exam as any).eligibility}
+              {exam.eligibility}
             </div>
           </div>
         )}
@@ -160,7 +159,7 @@ export default async function ExamPage({ params }: Props) {
                           {recruitment.posts.length} position(s):
                         </div>
                         <div className="space-y-1">
-                          {recruitment.posts.map((item: any) => (
+                          {recruitment.posts.map((item) => (
                             <Link
                               key={item.post.id}
                               href={`/positions/${item.position.slug}`}
