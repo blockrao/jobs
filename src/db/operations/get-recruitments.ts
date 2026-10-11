@@ -240,8 +240,8 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
     }
 
-    // Enrich posts with linked FreeJobAlert source inventory for the recruitment hub.
-    // This is read-only and preserves the source's current verification status.
+    // Keep the public Recruitment Hub projection focused on canonical Post
+    // facts. Source inventory is an internal ingestion/review concern.
     const enrichedPosts = postsResult.map((row) => ({
       ...row.post,
       // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
@@ -251,19 +251,12 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
     }));
 
-    const [enrichmentResult, inventoryResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
+    const [enrichmentResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
       db.execute(sql`
         SELECT *
         FROM post_enrichments
         WHERE post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
         ORDER BY post_id
-      `),
-      db.execute(sql`
-      SELECT *
-      FROM fja_post_inventory
-      WHERE source_slug = 'freejobalert'
-        AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
-      ORDER BY id
       `),
       db.execute(sql`
         SELECT v.*, to_jsonb(l) AS location_record
@@ -288,15 +281,6 @@ export async function getRecruitmentWithPosts(slug: string) {
       const postId = Number(item.post_id);
       if (Number.isFinite(postId)) enrichmentByPostId.set(postId, item);
     }
-    const inventoryRows = (
-      (inventoryResult as unknown as { rows?: unknown[] }).rows ?? inventoryResult
-    ) as Array<Record<string, unknown>>;
-    const inventoryByPostId = new Map<number, Record<string, unknown>>();
-    for (const item of inventoryRows) {
-      const otherInfo = item.other_info_raw as Record<string, unknown> | undefined;
-      const postId = Number(otherInfo?.canonical_post_id);
-      if (Number.isFinite(postId)) inventoryByPostId.set(postId, item);
-    }
     const vacancyDetailRows = rowsOf(vacancyDetailResult);
     const vacancyDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
     for (const row of vacancyDetailRows) {
@@ -311,17 +295,16 @@ export async function getRecruitmentWithPosts(slug: string) {
       if (!eligibilityDetailsByPostId.has(postId)) eligibilityDetailsByPostId.set(postId, []);
       eligibilityDetailsByPostId.get(postId)!.push(row);
     }
-    const postsWithInventory = enrichedPosts.map((post) => ({
+    const postsWithDetails = enrichedPosts.map((post) => ({
       ...post,
       vacancies: vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
       eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
-      fjaInventory: inventoryByPostId.get(post.id) ?? null,
       postEnrichment: enrichmentByPostId.get(post.id) ?? null,
     }));
 
     return {
       recruitment,
-      posts: postsWithInventory,
+      posts: postsWithDetails,
       totalPosts: enrichedPosts.length,
       isSingleJobRecruitment: enrichedPosts.length === 1,
     };
