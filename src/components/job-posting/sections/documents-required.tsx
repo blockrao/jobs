@@ -12,15 +12,34 @@ interface DocumentsRequiredProps {
 
 export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
   const docsRequired = post.enrichment?.documentsRequired;
+  const recruitmentOtherInfo = post.fjaExtract?.recruitmentOtherInfoRaw;
+  const extractedDocs = recruitmentOtherInfo && typeof recruitmentOtherInfo === "object" && !Array.isArray(recruitmentOtherInfo)
+    ? (recruitmentOtherInfo as Record<string, unknown>).application_documents
+    : null;
+  const extractedDocumentList = Array.isArray(extractedDocs)
+    ? extractedDocs.filter((doc): doc is string => typeof doc === "string")
+    : [];
 
   const hasRequired = Boolean(docsRequired?.required && docsRequired.required.length > 0);
   const hasCommon = Boolean(docsRequired?.common && docsRequired.common.length > 0);
+  const hasExtracted = extractedDocumentList.length > 0;
 
-  if (!hasRequired && !hasCommon) return null;
+  if (!hasRequired && !hasCommon && !hasExtracted) return null;
 
   return (
     <div className={styles.section}>
       <h2 className={styles.sectionTitle}>📋 Documents Required</h2>
+
+      {!hasRequired && !hasCommon && hasExtracted && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Documents reported in listing · confirm against official notice</div>
+          <ul className={styles.infoList}>
+            {extractedDocumentList.map((doc, index) => (
+              <li key={index} className={styles.infoListItem}>{doc}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Required Documents */}
       {docsRequired?.required && docsRequired.required.length > 0 && (
