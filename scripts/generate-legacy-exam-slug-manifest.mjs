@@ -31,6 +31,23 @@ async function main() {
     const rows = await sql`SELECT slug FROM exams ORDER BY slug`;
     const slugs = rows.map((row) => row.slug);
 
+    // Discover static first-segment routes from the real App Router tree.
+    // Route groups add no URL segment, so inspect their immediate children.
+    // Dynamic segments are excluded; locale roots are reserved explicitly.
+    const appRoot = path.join(dirname, "../src/app");
+    const reservedRootPaths = new Set(["en", "hi", "_next"]);
+    function collectStaticRoutes(directory) {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith("[")) continue;
+        if (entry.name.startsWith("(")) {
+          collectStaticRoutes(path.join(directory, entry.name));
+        } else {
+          reservedRootPaths.add(entry.name);
+        }
+      }
+    }
+    collectStaticRoutes(appRoot);
+
     // Static routes are discovered from the real route tree above; validate
     // every database slug against those routes before emitting the manifest.
     if (slugs.length === 0) throw new Error("Empty exams table; refusing empty manifest");
