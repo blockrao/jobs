@@ -11,6 +11,7 @@ const rows = vi.hoisted(() => ({
   categories: [] as unknown[],
   organizations: [] as unknown[],
   exams: [] as unknown[],
+  recruitments: [] as unknown[],
 }));
 
 vi.mock("@/lib/queries", async (importOriginal) => ({
@@ -20,6 +21,7 @@ vi.mock("@/lib/queries", async (importOriginal) => ({
   getAllCategorySlugsForSitemap: async () => rows.categories,
   getAllOrganizationSlugsForSitemap: async () => rows.organizations,
   getAllExamSlugsForSitemap: async () => rows.exams,
+  getRecruitmentSlugsForSitemap: async () => rows.recruitments,
 }));
 
 const now = new Date("2026-10-01T00:00:00Z");
@@ -28,6 +30,7 @@ beforeEach(() => {
   rows.postings = [
     { slug: "job-translated", updatedAt: now, titleHi: "हिंदी" },
     { slug: "job-english-only", updatedAt: now, titleHi: null },
+    { slug: "recruitment-collision", updatedAt: now, titleHi: null },
   ];
   rows.articles = [{ slug: "guide", updatedAt: now, titleHi: null }];
   rows.categories = [{ slug: "banking" }];
@@ -39,6 +42,7 @@ beforeEach(() => {
     { slug: "exam-translated", labelHi: "परीक्षा" },
     { slug: "exam-english-only", labelHi: null },
   ];
+  rows.recruitments = [{ slug: "recruitment-collision", updatedAt: now, isLive: true }];
   // The sitemap module captures query imports; reload it after resetting fixtures.
   vi.resetModules();
 });
@@ -68,6 +72,11 @@ describe("sitemap", () => {
   test("IDX-04c no URL is listed twice", async () => {
     const urls = (await entries()).map((e) => e.url);
     expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  test("IDX-04d noindex Recruitment hubs and colliding legacy job slugs are excluded", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    expect(paths).not.toContain("/jobs/recruitment-collision");
   });
 
   test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
