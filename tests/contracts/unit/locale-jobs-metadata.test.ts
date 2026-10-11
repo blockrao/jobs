@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 vi.mock("@/lib/queries", () => ({
-  listPostings: vi.fn(),
+  listPostings: vi.fn().mockResolvedValue([]),
 }));
 
 import { renderToStaticMarkup } from "react-dom/server";
