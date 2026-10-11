@@ -32,7 +32,7 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
 
   return (
     <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>📊 Vacancy Details</h2>
+      <h2 className={styles.sectionTitle}>📊 Vacancy Details{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? " (reported)" : ""}</h2>
       <table className={styles.table}>
         <thead>
           <tr>
