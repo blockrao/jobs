@@ -43,6 +43,10 @@ export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 
+type PostingArticleRelation = {
+  article: { id: number; slug: string; title: string; titleHi: string | null };
+};
+
 type LocalePosting = NonNullable<Awaited<ReturnType<typeof getPostingBySlug>>> & {
   titleHi?: string | null;
   descriptionHi?: string | null;
@@ -286,7 +290,7 @@ export default async function LocaleJobPage({ params }: Props) {
   const timeline = [...(posting.updates ?? []), ...derivedTimeline].sort(
     (a, b) => a.eventDate.getTime() - b.eventDate.getTime(),
   );
-  const relatedArticles = (posting.postingArticles ?? []).map((pa) => pa.article);
+  const relatedArticles = (posting.postingArticles ?? []).map((pa: PostingArticleRelation) => pa.article);
   const kindPath = posting.kind === "GOVERNMENT" ? "GOVERNMENT" : "PRIVATE";
   const stageLabels = isHi ? STAGE_LABELS_HI : STAGE_LABELS;
   const kindLabels = isHi ? KIND_LABELS_HI : KIND_LABELS;
