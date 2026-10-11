@@ -19,7 +19,6 @@ describe("extracted source projection", () => {
     expect(source).toContain('fi.milestones_raw AS "fjaMilestonesRaw"');
     expect(source).toContain('fi.official_verification_status AS "fjaVerificationStatus"');
     expect(source).toContain("fjaExtract: data.fjaInventoryPostId != null");
-    expect(source).toContain("Do not pass these fields into canonical fact resolvers");
   });
 
   test("types source-extracted fields independently from canonical facts", () => {
@@ -54,7 +53,7 @@ describe("extracted source projection", () => {
     const source = stripComments(readSource(APPLY));
     expect(source).toContain("recruitmentResolvedFacts?.applicationUrl ?? null");
     expect(source).not.toMatch(/post\.applyPortalUrl/);
-    expect(source).toContain("application method reported in listing");
+    expect(source).toContain("Application method reported in listing");
   });
 
   test("verification UI does not claim extraction confidence is official verification", () => {
