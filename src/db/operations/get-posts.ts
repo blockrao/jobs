@@ -94,7 +94,12 @@ export async function getPostBySlug(
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p.slug = ${postSlug}
         AND (
-          r.slug = ${recruitmentSlug}
+          (r.slug = ${recruitmentSlug}
+          OR r.id IN (
+            SELECT recruitment_id
+            FROM recruitment_slug_redirects
+            WHERE old_slug = ${recruitmentSlug}
+          ))
           OR r.id IN (
             SELECT recruitment_id
             FROM recruitment_slug_redirects
@@ -275,7 +280,12 @@ export async function getPostsByRecruitment(
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
-      WHERE r.slug = ${recruitmentSlug}
+      WHERE (r.slug = ${recruitmentSlug}
+          OR r.id IN (
+            SELECT recruitment_id
+            FROM recruitment_slug_redirects
+            WHERE old_slug = ${recruitmentSlug}
+          ))
         AND p."isLive" = true
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
