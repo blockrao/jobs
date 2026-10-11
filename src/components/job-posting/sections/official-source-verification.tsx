@@ -118,8 +118,9 @@ export default function OfficialSourceVerification({
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Still to confirm</div>
           <ul style={{ paddingLeft: "20px", color: "#4b5563" }}>
-            {!officialSourceUrl && <li>Direct official notice link is not available in this record.</li>}
-            {!applicationUrl && <li>Verified application link or contact address is not available in this record.</li>}
+            <li>The specific official notice and reference number for this role have not yet been confirmed.</li>
+            {!officialSourceUrl && <li>Official recruitment source link is not available in this record.</li>}
+            {!applicationUrl && <li>Verified application link or contact address is not available in this record.</li>
             {post.fjaExtract.ageLimitRaw && /not resolved|unknown|not available/i.test(post.fjaExtract.ageLimitRaw) && <li>Age limit has not been resolved from the extracted listing.</li>}
           </ul>
         </div>
