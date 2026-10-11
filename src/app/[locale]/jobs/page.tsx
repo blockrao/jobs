@@ -62,6 +62,19 @@ export async function generateMetadata({
   return {
     title: label,
     description,
+    openGraph: {
+      title: label,
+      description,
+      url: "https://www.joboye.com/jobs",
+      siteName: "JobOye",
+      locale: isHi ? "hi_IN" : "en_US",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: label,
+      description,
+    },
     ...seo,
   };
 }
