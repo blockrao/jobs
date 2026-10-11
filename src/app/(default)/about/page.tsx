@@ -1,5 +1,6 @@
 import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "About JobOye",
@@ -63,9 +64,9 @@ export default function AboutPage() {
         <p>
           If you spot an error, please use the &ldquo;Report an error&rdquo; link on the
           relevant job page, or{" "}
-          <a href="/contact" className="underline hover:text-neutral-900">
+          <Link href="/contact" className="underline hover:text-neutral-900">
             contact us
-          </a>
+          </Link>
           .
         </p>
 
