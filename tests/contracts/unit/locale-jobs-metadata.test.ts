@@ -31,4 +31,16 @@ describe("localized jobs listing indexability", () => {
     expect(result.alternates?.canonical).toBe("/jobs");
     expect(result.robots).toEqual({ index: false, follow: true });
   });
+
+  test("English search results are noindex and canonicalize to /jobs", async () => {
+    const result = await metadata("en", { q: "police" });
+    expect(result.alternates?.canonical).toBe("/jobs");
+    expect(result.robots).toEqual({ index: false, follow: true });
+  });
+
+  test("later English pagination is noindex and canonicalizes to /jobs", async () => {
+    const result = await metadata("en", { page: "2" });
+    expect(result.alternates?.canonical).toBe("/jobs");
+    expect(result.robots).toEqual({ index: false, follow: true });
+  });
 });
