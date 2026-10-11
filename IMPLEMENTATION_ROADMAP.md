@@ -507,3 +507,17 @@ Preview tested on the isolated role-metadata branch at commit `dca78bcd7aaf1c83b
 - [x] A representative sitemap sample revealed that `/jobs` was listed in the sitemap while the rendered route was served by `/[locale]/jobs` with `noindex, follow`.
 - [ ] Fix the locale-aware jobs metadata so the unfiltered English `/jobs` canonical remains indexable, while `/hi/jobs` and filtered/search/paginated variants remain noindex and canonicalize to `/jobs`.
 - [ ] Add regression coverage for English canonical listing, Hindi mirror, and filtered listing. Keep this as a separate stacked change; do not treat sitemap uniqueness as proof of indexability consistency.
+
+## Jobs listing indexability — follow-up acceptance checkpoint (2026-10-11)
+
+The /jobs metadata correction and focused unit tests are on fix/jobs-listing-indexability in draft PR #55. Search and page-2 variants are now also covered by the regression test file. The branch still has no successful CI or fresh Vercel preview; the commit status reports Vercel build-rate-limit failure, so no branch-level runtime claim is made.
+
+### Current production sample (diagnostic only; not proof of PR behavior)
+
+- [x] /jobs returns HTTP 200 but still emits noindex, follow, despite being included in /sitemap.xml.
+- [x] /hi/jobs, /jobs?filter=open, /jobs?q=police, and /jobs?page=2 return noindex, follow and canonicalize to /jobs.
+- [x] Production sitemap currently contains 3,509 unique URLs, including 1,087 one-segment /jobs/{slug} URLs, 1,553 nested job leaves, and 36 /posts/{role-slug} URLs.
+- [x] A sampled production Recruitment Hub still returns HTTP 200 with a self-canonical and no robots meta tag, while the current branch source contains the noindex/canonical policy and sitemap exclusion. Treat this as production-versus-branch drift until a fresh preview of the exact branch is available; do not infer that the branch implementation failed from the production response alone.
+- [ ] /en/jobs still returns HTTP 200 with noindex, follow and canonical /jobs in the production sample. Capture a raw redirect response on the exact branch preview to decide whether an explicit as-needed locale redirect is needed.
+- [ ] Fresh preview of the exact PR #55 head; verify /jobs indexability, locale redirect behavior, filtered/search/pagination metadata, and sitemap-to-canonical consistency.
+- [ ] Run contract tests and app/test type checks on the exact PR head; do not merge/promote while Vercel preview remains unavailable.
