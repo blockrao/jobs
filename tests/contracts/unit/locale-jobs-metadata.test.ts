@@ -4,7 +4,8 @@ vi.mock("@/lib/queries", () => ({
   listPostings: vi.fn(),
 }));
 
-import { generateMetadata } from "@/app/[locale]/jobs/page";
+import { renderToStaticMarkup } from "react-dom/server";
+import { generateMetadata, default as LocaleJobsListPage } from "@/app/[locale]/jobs/page";
 
 function metadata(locale: "en" | "hi", searchParams: Record<string, string> = {}) {
   return generateMetadata({
@@ -49,4 +50,25 @@ describe("localized jobs listing indexability", () => {
     expect(result.alternates?.canonical).toBe("/jobs");
     expect(result.robots).toEqual({ index: false, follow: true });
   });
+  test("English listing navigation emits canonical unprefixed paths", async () => {
+    const element = await LocaleJobsListPage({
+      params: Promise.resolve({ locale: "en" }),
+      searchParams: Promise.resolve({}),
+    });
+    const markup = renderToStaticMarkup(element);
+    expect(markup).toContain('action="/jobs"');
+    expect(markup).toContain('href="/jobs?kind=GOVERNMENT"');
+    expect(markup).not.toContain('"/en/jobs');
+  });
+
+  test("Hindi listing navigation retains the Hindi locale prefix", async () => {
+    const element = await LocaleJobsListPage({
+      params: Promise.resolve({ locale: "hi" }),
+      searchParams: Promise.resolve({}),
+    });
+    const markup = renderToStaticMarkup(element);
+    expect(markup).toContain('action="/hi/jobs"');
+    expect(markup).toContain('href="/hi/jobs?kind=GOVERNMENT"');
+  });
+
 });
