@@ -19,13 +19,16 @@ export default function OfficialSourceVerification({
   const enrichment = post.enrichment;
   const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
   const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
-  const verificationStatus = enrichment
-    ? enrichment.sourceVerificationStatus
-    : post.fjaExtract?.verificationStatus === "VERIFIED"
+  const verificationStatus =
+    enrichment?.sourceVerificationStatus === "VERIFIED"
       ? "VERIFIED"
-      : post.fjaExtract?.verificationStatus === "NOT_FOUND"
+      : enrichment?.sourceVerificationStatus === "UNVERIFIABLE"
         ? "UNVERIFIABLE"
-        : "PENDING";
+        : !enrichment && post.fjaExtract?.verificationStatus === "VERIFIED"
+          ? "VERIFIED"
+          : !enrichment && post.fjaExtract?.verificationStatus === "NOT_FOUND"
+            ? "UNVERIFIABLE"
+            : "PENDING";
   const verificationDate = enrichment?.sourceVerificationDate;
   const dataGaps = enrichment?.dataGaps || [];
 
