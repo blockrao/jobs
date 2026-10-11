@@ -49,12 +49,16 @@ export interface JobPostingData {
   fjaExtract?: {
     inventoryId: number | string;
     externalId?: string | null;
+    sourcePostCodeRaw?: string | null;
     qualificationRaw?: string | null;
     experienceRaw?: string | null;
     ageLimitRaw?: string | null;
     ageReferenceDateRaw?: string | null;
+    ageRelaxationRulesRaw?: string | null;
     salaryRaw?: string | null;
+    payLevelRaw?: string | null;
     employmentTypeRaw?: string | null;
+    tenureRaw?: string | null;
     locationRaw?: string | null;
     dutiesRaw?: string | null;
     eligibilityRaw?: string | null;
@@ -62,6 +66,11 @@ export interface JobPostingData {
     milestonesRaw?: unknown;
     applicationSelectionRaw?: unknown;
     otherInfoRaw?: unknown;
+    sourcePublishedDate?: Date | string | null;
+    sourceApplicationEndDate?: Date | string | null;
+    recruitmentDetails?: unknown;
+    recruitmentOtherInfoRaw?: unknown;
+    advertisementNumber?: string | null;
     extractionStatus?: string | null;
     verificationStatus?: string | null;
   };
