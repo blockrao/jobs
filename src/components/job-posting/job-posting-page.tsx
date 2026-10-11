@@ -63,14 +63,9 @@ export default function JobPostingPage({
   resolvedFacts,
   recruitmentResolvedFacts,
 }: JobPostingPageProps) {
-  // For single-job recruitments, enrich post data from recruitment context
-  const enrichedPost = isSingleJobRecruitment && recruitment?.recruitment
-    ? {
-        ...post,
-        // Recruitment-level context can enhance single-job posting
-        recruitmentContext: recruitment.recruitment,
-      }
-    : post;
+  // Preserve the locale prefix for all internal links. Hindi pages are currently
+  // untranslated/noindex, but navigation must remain within the requested route family.
+  const localePrefix = locale === "hi" ? "/hi" : "";
 
   // Get sibling posts for multi-post recruitments
   const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
@@ -79,17 +74,17 @@ export default function JobPostingPage({
     <div className={styles.container}>
         {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
         <div className={styles.breadcrumb}>
-          <Link href="/jobs">Jobs</Link>
+          <Link href={`${localePrefix}/jobs`}>Jobs</Link>
           <span>›</span>
           {recruitment?.recruitment?.organizationSlug && post.organizationName && (
             <>
-              <Link href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
+              <Link href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
               <span>›</span>
             </>
           )}
           {post.recruitmentSlug && (
             <>
-              <Link href={`/jobs/${post.recruitmentSlug}`}>
+              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
                 {post.recruitmentName ?? recruitment?.recruitment?.name ?? "Recruitment"}
               </Link>
               <span>›</span>
@@ -105,13 +100,14 @@ export default function JobPostingPage({
         <QuickFacts post={post} resolvedFacts={resolvedFacts} />
 
         {/* Action Buttons
-          CTA priority: use Recruitment-owned resolved URLs when available
-          (canonical entity authority), fall through to raw post columns only
-          as a last resort. Never show a "#" dead link for Apply.
+          Recruitment owns application and official-notification URLs. Only
+          resolver-approved URLs may be exposed publicly; raw Post columns are
+          not a safe fallback because they may contain unverified discovery links.
+          If no approved URL resolves, omit that action rather than mislabel it.
         */}
         {(() => {
-          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
-          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
+          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
           return (
             <div className={styles.actions}>
               {applyUrl && (
@@ -155,12 +151,12 @@ export default function JobPostingPage({
           <section className={styles.relatedRoles}>
             <h2>Other Roles in This Recruitment</h2>
             <p className={styles.relatedRolesIntro}>
-              This recruitment has {recruitment?.totalPosts} open positions:
+              Explore the other roles available under this recruitment.
             </p>
             <ul className={styles.relatedRolesList}>
-              {recruitment?.posts?.map((p) => (
+              {siblingPosts.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
+                  <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
                     <span className={styles.roleTitle}>{p.title}</span>
                     {p.vacancies?.[0]?.count && (
                       <span className={styles.roleVacancies}>
