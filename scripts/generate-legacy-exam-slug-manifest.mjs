@@ -35,17 +35,28 @@ async function main() {
       throw new Error("The exams table returned zero rows; refusing to publish an empty legacy redirect manifest");
     }
 
-    // Root-level application routes take precedence over legacy exam URLs.
-  // A collision would make an existing product route unreachable, so fail
-  // the build and require an explicit migration decision rather than guessing.
-  const reservedRootPaths = new Set([
-    "admin", "api", "articles", "categories", "commissions", "exams",
-    "jobs", "news", "organizations", "positions", "posts", "recruitments",
-    "results", "search", "en", "hi", "_next", "favicon.ico", "robots.txt",
-    "sitemap.xml",
-  ]);
+    // Discover static first-segment routes from the actual App Router tree.
+    // Route groups (for example (default)) do not contribute a URL segment,
+    // so inspect their immediate children too. Dynamic segments are excluded:
+    // this manifest must never compete with a static route.
+    const appRoot = path.join(dirname, "../src/app");
+    const reservedRootPaths = new Set(["en", "hi", "_next"]);
 
-  const seen = new Set();
+    function collectStaticRoutes(directory) {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name.startsWith("[")) continue;
+        if (entry.name.startsWith("(")) {
+          collectStaticRoutes(path.join(directory, entry.name));
+          continue;
+        }
+        reservedRootPaths.add(entry.name);
+      }
+    }
+
+    collectStaticRoutes(appRoot);
+
+    const seen = new Set();
     for (const slug of slugs) {
       if (typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
         throw new Error(`Invalid exam slug in manifest: ${String(slug)}`);
