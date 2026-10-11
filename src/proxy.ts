@@ -3,6 +3,7 @@ import createMiddleware from 'next-intl/middleware';
 import { adminSessionToken } from "@/lib/admin-token";
 import { locales, defaultLocale } from "@/i18n/request";
 import legacyExamSlugs from "@/lib/legacy-exam-slugs.generated.json";
+import { getLegacyExamRedirect } from "@/lib/legacy-exam-routing";
 import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 
 // Import Supabase client for redirect lookups
@@ -48,10 +49,9 @@ export async function proxy(request: NextRequest) {
   // Legacy /{examSlug} URLs are redirected only when the slug appears in the
   // build-generated authoritative manifest. Unknown root paths do no database
   // work and fall through to the app's real 404 handler.
-  const rootSlugMatch = pathname.match(/^\/([^/]+)\/?$/);
-  const rootSlug = rootSlugMatch?.[1];
-  if (rootSlug && legacyExamSlugSet.has(rootSlug)) {
-    return NextResponse.redirect(new URL(`/exams/${rootSlug}`, request.url), 301);
+  const legacyExamTarget = getLegacyExamRedirect(pathname, legacyExamSlugSet);
+  if (legacyExamTarget) {
+    return NextResponse.redirect(new URL(legacyExamTarget, request.url), { status: 301 });
   }
 
   // Handle admin authentication (applies everywhere under /admin)
