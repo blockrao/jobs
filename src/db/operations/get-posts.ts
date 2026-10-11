@@ -100,11 +100,6 @@ export async function getPostBySlug(
             FROM recruitment_slug_redirects
             WHERE old_slug = ${recruitmentSlug}
           ))
-          OR r.id IN (
-            SELECT recruitment_id
-            FROM recruitment_slug_redirects
-            WHERE old_slug = ${recruitmentSlug}
-          )
         )
         AND p."isLive" = true
       LIMIT 1
