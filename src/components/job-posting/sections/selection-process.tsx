@@ -15,9 +15,29 @@ interface SelectionProcessProps {
 export default function SelectionProcess({ post, recruitmentResolvedFacts }: SelectionProcessProps) {
   const selectionProcess = post.enrichment?.selectionProcess || [];
   const recruitmentProcess = recruitmentResolvedFacts?.selectionProcess ?? null;
+  const extractedSelection = Array.isArray(post.fjaExtract?.applicationSelectionRaw)
+    ? post.fjaExtract.applicationSelectionRaw
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+        .map((item) => typeof item.selection === "string" ? item.selection : null)
+        .filter((item): item is string => Boolean(item))
+    : [];
 
-  if (selectionProcess.length === 0 && !recruitmentProcess) {
+  if (selectionProcess.length === 0 && !recruitmentProcess && extractedSelection.length === 0) {
     return null;
+  }
+
+  if (selectionProcess.length === 0 && !recruitmentProcess && extractedSelection.length > 0) {
+    return (
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Selection details reported in listing</div>
+          <ul className={styles.infoList}>
+            {extractedSelection.map((step, index) => <li key={index} className={styles.infoListItem}>{step}</li>)}
+          </ul>
+        </div>
+      </div>
+    );
   }
 
   if (selectionProcess.length === 0 && recruitmentProcess) {
