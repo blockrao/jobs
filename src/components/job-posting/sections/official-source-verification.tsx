@@ -17,9 +17,14 @@ export default function OfficialSourceVerification({
   recruitmentResolvedFacts,
 }: OfficialSourceVerificationProps) {
   const enrichment = post.enrichment;
-  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
-  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
-  const verificationStatus = enrichment?.sourceVerificationStatus || "PENDING";
+  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
+  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+  const verificationStatus =
+    enrichment?.sourceVerificationStatus === "VERIFIED" || post.fjaExtract?.verificationStatus === "VERIFIED"
+      ? "VERIFIED"
+      : enrichment?.sourceVerificationStatus === "UNVERIFIABLE" || post.fjaExtract?.verificationStatus === "NOT_FOUND"
+        ? "UNVERIFIABLE"
+        : "PENDING";
   const verificationDate = enrichment?.sourceVerificationDate;
   const extractionConfidence = enrichment?.extractionConfidence || 0;
   const dataGaps = enrichment?.dataGaps || [];
@@ -112,11 +117,9 @@ export default function OfficialSourceVerification({
                 ? "Medium confidence"
                 : "Low confidence"}
             {" — "}
-            {extractionConfidence >= 80
-              ? "This data has been carefully verified against the official notification."
-              : extractionConfidence >= 60
-                ? "Most fields have been verified, but some details may need confirmation."
-                : "This data requires verification against the official source."}
+            {verificationStatus === "VERIFIED"
+              ? "The displayed canonical facts have been checked against an official source."
+              : "Extraction confidence is not the same as official verification. This record still needs confirmation against an official source."}
           </p>
         </div>
       </div>
@@ -187,10 +190,9 @@ export default function OfficialSourceVerification({
       </div>
 
       <div className={styles.featureBox} style={{ marginTop: "20px" }}>
-        <strong>About This Data:</strong> JobOye carefully extracts and verifies
-        job posting information from official notifications. While we strive for
-        accuracy, always cross-check critical details (dates, fees, eligibility)
-        with the official source before applying. We are not affiliated with{" "}
+        <strong>About This Data:</strong> JobOye organizes available information and tracks its verification state.
+        Until official verification is complete, confirm critical details (dates, fees, eligibility and application
+        instructions) with the responsible organization before applying. We are not affiliated with{" "}
         <strong>{post.organizationName}</strong> and do not handle applications.
       </div>
     </div>
