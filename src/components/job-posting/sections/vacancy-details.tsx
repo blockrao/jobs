@@ -22,7 +22,7 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
     if (resolvedTotal == null) return null;
     return (
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>📊 Vacancy Details</h2>
+        <h2 className={styles.sectionTitle}>📊 Vacancy Details{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? " (reported)" : ""}</h2>
         <p style={{ color: "#4b5563" }}>
           Total Vacancies: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
         </p>
