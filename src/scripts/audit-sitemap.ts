@@ -125,7 +125,7 @@ async function main() {
           failures.push(`HTTP ${page.status} (canonical sitemap URLs must return 200 without redirects)`);
         } else {
           if (hasNoindex(page.body, page.xRobotsTag)) failures.push("noindex page is listed in sitemap");
-          const canonicalTag = [...page.body.matchAll(/<link\\b[^>]*>/gi)]
+          const canonicalTag = [...page.body.matchAll(/<link\b[^>]*>/gi)]
             .map((m) => m[0])
             .find((tag) => /canonical/i.test(attr(tag, "rel") ?? ""));
           const canonical = canonicalTag ? attr(canonicalTag, "href") : null;
