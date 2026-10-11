@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
+import { validateLegacyExamSlugs } from "../src/lib/legacy-exam-routing.ts";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const output = path.join(dirname, "../src/lib/legacy-exam-slugs.generated.json");
@@ -31,47 +32,12 @@ async function main() {
     const rows = await sql`SELECT slug FROM exams ORDER BY slug`;
     const slugs = rows.map((row) => row.slug);
 
-    if (slugs.length === 0) {
-      throw new Error("The exams table returned zero rows; refusing to publish an empty legacy redirect manifest");
-    }
+    // Static routes are discovered from the real route tree above; validate
+    // every database slug against those routes before emitting the manifest.
+    const validatedSlugs = validateLegacyExamSlugs(slugs, reservedRootPaths);
 
-    // Discover static first-segment routes from the actual App Router tree.
-    // Route groups (for example (default)) do not contribute a URL segment,
-    // so inspect their immediate children too. Dynamic segments are excluded:
-    // this manifest must never compete with a static route.
-    const appRoot = path.join(dirname, "../src/app");
-    const reservedRootPaths = new Set(["en", "hi", "_next"]);
-
-    function collectStaticRoutes(directory) {
-      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        if (entry.name.startsWith("[")) continue;
-        if (entry.name.startsWith("(")) {
-          collectStaticRoutes(path.join(directory, entry.name));
-          continue;
-        }
-        reservedRootPaths.add(entry.name);
-      }
-    }
-
-    collectStaticRoutes(appRoot);
-
-    const seen = new Set();
-    for (const slug of slugs) {
-      if (typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-        throw new Error(`Invalid exam slug in manifest: ${String(slug)}`);
-      }
-      if (reservedRootPaths.has(slug)) {
-        throw new Error(`Exam slug collides with a reserved root route: ${slug}`);
-      }
-      if (seen.has(slug)) {
-        throw new Error(`Duplicate exam slug in manifest: ${slug}`);
-      }
-      seen.add(slug);
-    }
-
-    fs.writeFileSync(output, `${JSON.stringify(slugs, null, 2)}\n`, "utf8");
-    process.stdout.write(`Generated legacy exam slug manifest: ${slugs.length} unique slugs\n`);
+    fs.writeFileSync(output, `${JSON.stringify(validatedSlugs, null, 2)}\n`, "utf8");
+    process.stdout.write(`Generated legacy exam slug manifest: ${validatedSlugs.length} unique slugs\n`);
   } finally {
     await sql.end({ timeout: 5 });
   }
