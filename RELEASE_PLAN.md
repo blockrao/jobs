@@ -11,6 +11,32 @@ The detailed field ownership and coverage audit is maintained in [RECRUITMENT_PO
 
 Publish a trustworthy job-discovery product where Recruitment hubs describe the hiring exercise, Post Leaves describe individual roles, and Position hubs support evergreen role discovery. Every public page must present the right facts from the database in a readable way, preserve provenance internally, avoid presenting unverified extraction as official truth, and resolve to the intended canonical URL.
 
+## Working execution board (single source of truth; refreshed 2026-10-11)
+
+Use this board for ordering and hand-offs. Update the status/evidence here and in the linked issue/PR whenever a gate changes. Do not treat a PR being open, merged, or deployed as proof that its acceptance criteria passed.
+
+| Order | Workstream | Current status | Exit evidence / dependency |
+|---|---|---|---|
+| 0 | Local development and repeatable verification | **Start immediately** | Local install/build/typecheck/contracts/lint baseline documented; .env.local configured without committing secrets; safe read-only DB access or local/staging DB available. Local tests must be repeatable without a Vercel deployment. |
+| 1 | Public UI and brand hygiene — [PR #40](https://github.com/blockrao/jobs/pull/40) | Open; latest CI not clean | Recruitment/Post UI no longer exposes internal inventory/review data or aggregator brand copy; repository and rendered-HTML/link audit passes; route remains protected/not-found publicly. |
+| 2 | Recruitment/Post data-to-UI audit — [PR #27](https://github.com/blockrao/jobs/pull/27) and [data audit](./RECRUITMENT_POST_DATA_AUDIT.md) | Needs field-by-field verification | Field-owner matrix and fixtures cover Recruitment, Posts, Position, eligibility, vacancies, dates, fees, selection, salary, documents, and official application sources; empty/conflict states are human-readable and never fabricated. |
+| 3 | Database failure diagnosis — [issue #42](https://github.com/blockrao/jobs/issues/42) | Open / release blocker pending diagnosis | Capture sanitized underlying DB error code/message; reproduce locally; distinguish app query, pool/network, environment, schema and query-latency causes; representative page queries return expected data without fallback. |
+| 4 | Restore trustworthy SEO/architecture contracts — [PR #32](https://github.com/blockrao/jobs/pull/32), [issue #43](https://github.com/blockrao/jobs/issues/43) | Open; baseline failures need triage | Resolve real policy failures; update only tests proven obsolete; deterministic mocks for cached DB reads; canonical/robots/hreflang/sitemap contracts pass. No weakening assertions to force green CI. |
+| 5 | Inventory extractor and bounded pilot — [PR #41](https://github.com/blockrao/jobs/pull/41), [issue #44](https://github.com/blockrao/jobs/issues/44) | Staged inventory incomplete | Pilot has fresh raw captures, stable identity/hash, idempotent upserts, extraction coverage/failure reasons, and repeatable counts. Inventory candidates stay non-public until reconciled. |
+| 6 | Canonical data reconciliation and repair | Blocked on pilot + review | Dry-run diff reviewed; verified values protected; ambiguous entity matches held for review; transaction/batch and rollback plan approved; before/after integrity report available. |
+| 7 | URL/canonical/redirect repair | P0 | All intended Post Leaves resolve; old URLs redirect only to the correct leaf/hub; no loops, wrong-entity redirects or false canonicals; sitemap contains eligible canonical URLs only. |
+| 8 | Release candidate and production verification | Not ready | Exact release SHA passes required checks/build; intended production deployment succeeds; live smoke tests cover homepage, search, Recruitment, Post Leaf, Position, organization/exam, locale, 404, sitemap, robots, metadata and structured data. |
+| 9 | Controlled launch and monitoring | Not ready | Named rollback path, ingestion/error/freshness monitoring, post-deploy crawl, and observation window defined; no P0 errors or trust violations. |
+
+### Required working mode: local-first, deployment only for release evidence
+
+- Use localhost for the rapid edit → test → inspect loop. Run targeted unit/contract tests, type checks, lint on changed files, production build, and browser smoke tests locally before requesting a preview deployment.
+- Keep one reproducible command set in the repository (or document the existing scripts); record baseline failures separately from regressions introduced by the current branch.
+- Configure environment variables in an untracked .env.local; never paste or commit credentials. Prefer local/staging database for writes. If a production connection is needed for diagnosis, use read-only credentials and explicitly avoid mutating production.
+- A local app pointed at the same remote database can still reveal DB/query failures; localhost does not fix remote connectivity, pool exhaustion, slow SQL, or missing production environment variables by itself.
+- Use Vercel previews only after local gates pass, for deployment-specific behavior (runtime env, serverless functions, headers/redirects/cache) and final live verification. This reduces avoidable deployment cycles but does not replace the final production smoke test.
+- For every preview/production test, record commit SHA, URL, tested routes, response status, canonical/robots result, and any DB/runtime errors. A READY deployment alone is not a pass.
+
 ## Non-negotiable release gates
 
 ### Gate 0 — Public trust and branding hygiene (P0)
