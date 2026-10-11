@@ -79,6 +79,11 @@ describe("sitemap", () => {
     expect(paths).not.toContain("/jobs/recruitment-collision");
   });
 
+  test("IDX-04e commission routes that render noindex are excluded from the sitemap", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    expect(paths.some((path) => path.startsWith("/commissions/"))).toBe(false);
+  });
+
   test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
     const byPath = new Map((await entries()).map((e) => [new URL(e.url).pathname, e]));
     const expectations: [string, boolean][] = [
