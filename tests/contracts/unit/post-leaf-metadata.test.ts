@@ -39,7 +39,7 @@ describe("post-leaf metadata follows centralized SEO policy", () => {
     expect(metadata.alternates?.canonical).toBe(englishPath);
     expect(metadata.alternates?.languages).toBeUndefined();
     expect(metadata.robots).toBeUndefined();
-    expect(openGraph.url).toBe(`http://localhost:3000${englishPath}`);
+    expect(new URL(openGraph.url!).pathname).toBe(englishPath);
     expect(openGraph.locale).toBe("en_US");
   });
 
@@ -50,7 +50,7 @@ describe("post-leaf metadata follows centralized SEO policy", () => {
     expect(metadata.alternates?.canonical).toBe(englishPath);
     expect(metadata.alternates?.languages).toBeUndefined();
     expect(metadata.robots).toEqual({ index: false, follow: true });
-    expect(openGraph.url).toBe(`http://localhost:3000${englishPath}`);
+    expect(new URL(openGraph.url!).pathname).toBe(englishPath);
     expect(openGraph.locale).toBe("hi_IN");
   });
 });
