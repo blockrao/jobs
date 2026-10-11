@@ -16,7 +16,13 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
   const vacanciesByCategory = post.enrichment?.vacanciesByCategory || {};
   const hasDetails = Object.keys(vacanciesByCategory).length > 0;
   // Use resolver output — never display raw enrichment vacanciesTotal
-  const resolvedTotal = resolvedFacts?.vacancyCount;
+  const reportedCount = post.fjaExtract?.vacancyCountRaw
+    ? Number(post.fjaExtract.vacancyCountRaw.replace(/,/g, "").trim())
+    : null;
+  const extractedTotal = reportedCount != null && Number.isSafeInteger(reportedCount) && reportedCount >= 0
+    ? reportedCount
+    : null;
+  const resolvedTotal = resolvedFacts?.vacancyCount ?? extractedTotal;
 
   if (!hasDetails) {
     if (resolvedTotal == null) return null;
