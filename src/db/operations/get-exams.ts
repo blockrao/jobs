@@ -95,10 +95,13 @@ export async function getExamRecruitmentDetails(examId: number) {
       });
     }
     if (row.post && row.position) {
-      recruitmentsMap.get(row.recruitment.id).posts.push({
-        post: row.post,
-        position: row.position,
-      });
+      const recruitment = recruitmentsMap.get(row.recruitment.id);
+      if (recruitment) {
+        recruitment.posts.push({
+          post: row.post,
+          position: row.position,
+        });
+      }
     }
   }
 
