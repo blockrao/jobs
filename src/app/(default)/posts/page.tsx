@@ -5,7 +5,9 @@ import { getJobsControlCenter, type JobRow, type DeadlineBucket, type TopOrg, ty
 import { Building2, Calendar, Clock, TrendingUp, Briefcase, MapPin, ChevronRight, AlertTriangle, Users } from "lucide-react";
 import { SeoFooterLinks } from "@/components/seo-footer-links";
 
-export const revalidate = 300; // 5-minute ISR — data is live, not static
+// This page aggregates several live database queries. Render on request rather than
+// prerendering during the build, where provider limits can time out the entire build.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = pageSeo("/posts");
