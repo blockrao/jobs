@@ -38,12 +38,7 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
         <span
           style={{
             ...headerStyles.statusBadge,
-            background:
-              statusColor === "danger"
-                ? "#ef4444"
-                : statusColor === "neutral"
-                  ? "#6b7280"
-                  : "#059669",
+            background: statusColor === "neutral" ? "#6b7280" : "#059669",
           }}
         >
           {statusText}
