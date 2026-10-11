@@ -170,6 +170,18 @@ export async function getRecruitmentWithPosts(slug: string) {
       organizationSlug: recruitmentResult[0].organizationSlug,
       sourceVerificationStatus: null as string | null,
       sourceListingPublishedDate: null as Date | string | null,
+      sourceExtract: null as null | {
+        title: string | null;
+        sourceUrl: string | null;
+        applicationStartDate: Date | string | null;
+        applicationEndDate: Date | string | null;
+        vacancyCount: number | null;
+        qualification: string | null;
+        details: unknown;
+        otherInfoRaw: unknown;
+        sourceStatus: string | null;
+        detailStatus: string | null;
+      },
     };
     const recruitmentId = recruitment.id;
 
@@ -182,7 +194,17 @@ export async function getRecruitmentWithPosts(slug: string) {
       db.execute(sql`
         SELECT
           other_info_raw->>'canonical_verification_status' AS source_verification_status,
-          published_date AS source_listing_published_date
+          published_date AS source_listing_published_date,
+          title AS source_title,
+          source_url,
+          application_start_date AS source_application_start_date,
+          application_end_date AS source_application_end_date,
+          vacancy_count AS source_vacancy_count,
+          qualification AS source_qualification,
+          details AS source_details,
+          other_info_raw AS source_other_info_raw,
+          source_status,
+          detail_status
         FROM fja_job_inventory
         WHERE other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
         ORDER BY id DESC
@@ -207,6 +229,30 @@ export async function getRecruitmentWithPosts(slug: string) {
         sourceInventory?.source_listing_published_date instanceof Date
           ? sourceInventory.source_listing_published_date as Date | string
           : null,
+      sourceExtract: sourceInventory ? {
+        title: typeof sourceInventory.source_title === "string" ? sourceInventory.source_title : null,
+        sourceUrl: typeof sourceInventory.source_url === "string" ? sourceInventory.source_url : null,
+        applicationStartDate:
+          typeof sourceInventory.source_application_start_date === "string" ||
+          sourceInventory.source_application_start_date instanceof Date
+            ? sourceInventory.source_application_start_date as Date | string
+            : null,
+        applicationEndDate:
+          typeof sourceInventory.source_application_end_date === "string" ||
+          sourceInventory.source_application_end_date instanceof Date
+            ? sourceInventory.source_application_end_date as Date | string
+            : null,
+        vacancyCount: typeof sourceInventory.source_vacancy_count === "number"
+          ? sourceInventory.source_vacancy_count
+          : null,
+        qualification: typeof sourceInventory.source_qualification === "string"
+          ? sourceInventory.source_qualification
+          : null,
+        details: sourceInventory.source_details ?? null,
+        otherInfoRaw: sourceInventory.source_other_info_raw ?? null,
+        sourceStatus: typeof sourceInventory.source_status === "string" ? sourceInventory.source_status : null,
+        detailStatus: typeof sourceInventory.detail_status === "string" ? sourceInventory.detail_status : null,
+      } : null,
     });
 
     // Step 2: Get all posts for this recruitment with positions
