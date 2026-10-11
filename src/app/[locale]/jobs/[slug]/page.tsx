@@ -57,25 +57,24 @@ function plainTextSnippet(html: string, repeatOf: string, maxLen = 155): string 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
 
-  // If this slug resolves to a recruitment hub, return hub-specific metadata
-  // so the canonical tag is correct. The page component makes the same check
-  // and renders RecruitmentHub; metadata must match.
-  if (locale !== "hi") {
-    const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
-    if (recruitmentData) {
-      const { recruitment, totalPosts } = recruitmentData;
-      return {
+  // Resolve canonical Recruitment hubs in both locales. Until a genuine Hindi
+  // translation exists, the /hi route is an English fallback: noindex and
+  // canonicalized to the unprefixed Recruitment URL.
+  const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  if (recruitmentData) {
+    const { recruitment, totalPosts } = recruitmentData;
+    return {
+      title: recruitment.name,
+      description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
+      alternates: { canonical: `/jobs/${recruitment.slug}` },
+      ...(locale === "hi" ? { robots: { index: false, follow: true } } : {}),
+      openGraph: {
         title: recruitment.name,
-        description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-        alternates: { canonical: `/jobs/${recruitment.slug}` },
-        openGraph: {
-          title: recruitment.name,
-          description: `${recruitment.name} recruitment on JobOye`,
-          type: "website",
-          url: `https://www.joboye.com/jobs/${recruitment.slug}`,
-        },
-      };
-    }
+        description: `${recruitment.name} recruitment on JobOye`,
+        type: "website",
+        url: `https://www.joboye.com/jobs/${recruitment.slug}`,
+      },
+    };
   }
 
   const posting = await safeQuery(() => getPostingBySlugCached(slug), null);
@@ -172,7 +171,8 @@ export default async function LocaleJobPage({ params }: Props) {
     posting = await safeQuery(() => getPostingBySlugCached(slug), null);
     if (!posting) notFound();
   } else {
-    // Try as recruitment hub first, then fall back to posting
+    // Resolve the canonical Recruitment for both locales. Hindi hubs remain
+    // noindex/English-canonical until genuine Hindi entity content is available.
     recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
     if (recruitmentData) {
       return (
