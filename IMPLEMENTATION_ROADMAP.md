@@ -612,3 +612,15 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [ ] Full `npm run audit:sitemap -- --base https://www.joboye.com --limit 20` and then full `npm run audit:sitemap -- --base https://www.joboye.com` have not been executed from the repository runtime. Current results are a structural audit plus representative URL cohort, not a claim that all 2,422 pages were fetched and validated.
 - [ ] After Vercel quota clears, create one preview for the latest PR head; confirm listing OG/Twitter metadata, sitemap count drops by the 10 commission URLs (subject to live data), and smoke/full sitemap audit results. Then validate hreflang and first-hop redirects separately.
 - [ ] Do not merge/promote until exact-head preview and release gates are complete. Once those pass, close PR #55, then continue the broader routing/SEO backlog.
+
+## Exact-head preview audit — 2026-10-12
+- Tested source SHA: `a924e78d147de4bb48d0bba1dbca11b253a7bdc9`; Vercel deployment `dpl_FPhvbxihVfvtapDUzA3oZuDMEMBZ` is READY for that exact SHA. Reused it; no redundant build triggered.
+- `/jobs/`: HTTP 200, indexable (no robots noindex), canonical /jobs, listing-specific OG title and URL. Direct no-trailing-slash /jobs fetch was blocked by safety checks.
+- `/hi/jobs`: HTTP 200, noindex/follow, canonical /jobs, Hindi document language.
+- Government-filter listing: HTTP 200, noindex/follow, canonical /jobs.
+- Page 2 (encoded query key): HTTP 200, noindex/follow, canonical /jobs.
+- Search and filter=open requests were blocked by safety checks; not marked verified.
+- `/en/jobs/`: final HTTP 200, canonical /jobs, no noindex; fetcher follows redirects, so first-hop status/Location is unverified.
+- Sitemap: HTTP 200, 2,412 URLs; 0 duplicates, foreign origins, query/hash URLs, commission URLs, Hindi URLs, or legacy one-segment recruitment hubs. Counts include 1,553 job leaves, 36 roles, 702 organizations, 69 exams, 35 states, 7 categories and 1 article. Structural plus representative sampling only; full URL-by-URL audit and hreflang validation remain pending.
+- CI run 38158831575: application type-check PASS, architecture contract tests PASS, contract-test type-check PASS, lint FAIL.
+- Keep PR #55 draft/unmerged. Do not promote until clean /jobs and search checks, raw /en/jobs redirect verification, full sitemap audit and lint disposition pass.
