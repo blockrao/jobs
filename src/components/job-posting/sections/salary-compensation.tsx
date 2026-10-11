@@ -20,6 +20,9 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
   if (
     !enrichment?.payScale &&
     !resolvedSalary &&
+    !post.fjaExtract?.salaryRaw &&
+    !post.fjaExtract?.payLevelRaw &&
+    !post.fjaExtract?.tenureRaw &&
     (!enrichment?.benefits || enrichment.benefits.length === 0) &&
     !enrichment?.salaryNote
   ) {
@@ -37,6 +40,26 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
           <div className={styles.infoValue}>
             <strong>{enrichment.payScale}</strong>
           </div>
+        </div>
+      )}
+
+      {/* Source-extracted pay is useful context, but is never promoted to verified salary. */}
+      {!resolvedSalary && post.fjaExtract?.salaryRaw && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Pay reported in listing · pending verification</div>
+          <div className={styles.infoValue}>{post.fjaExtract.salaryRaw}</div>
+        </div>
+      )}
+      {!enrichment?.payScale && post.fjaExtract?.payLevelRaw && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Pay level reported in listing</div>
+          <div className={styles.infoValue}>{post.fjaExtract.payLevelRaw}</div>
+        </div>
+      )}
+      {post.fjaExtract?.tenureRaw && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Project tenure reported in listing</div>
+          <div className={styles.infoValue}>{post.fjaExtract.tenureRaw}</div>
         </div>
       )}
 
