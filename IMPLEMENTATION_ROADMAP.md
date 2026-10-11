@@ -534,3 +534,13 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [ ] `/en/jobs` renders the English listing and carries canonical `/jobs`; the current web-fetch evidence does not expose the initial redirect response headers, so the 301/308/as-needed redirect behavior is NOT yet proven either way. Capture the raw first response before changing routing.
 - [ ] Sitemap reconciliation remains open: check a representative cohort across all URL families for HTTP status, canonical, robots, hreflang, and structured-data policy; then expand automated coverage. Do not infer complete correctness from the sitemap count alone.
 - [ ] No merge/promotion until latest PR #55 exact-head preview, tests, route policy and sitemap gates pass.
+
+
+## Sitemap reconciliation finding — 2026-10-11
+
+- [x] Sampled the live sitemap by route family: 2,422 URLs total; 1,553 job-leaf URLs, 36 role URLs, 702 organization URLs, 69 exam URLs, 35 state URLs, 10 commission URLs, 7 category URLs, one article URL, plus static entries.
+- [x] Representative URLs from the major families returned HTTP 200 and self-canonical metadata. The sampled job leaf had self-canonical metadata and JobPosting JSON-LD; role, organization, exam, category, state, and index pages were self-canonical and indexable in the sample.
+- [x] Found a real sitemap/indexability mismatch: `/commissions/banking` and `/commissions/ssc` render `noindex, follow` but were present in the sitemap (10 commission URLs in total).
+- [x] Removed commission URLs from sitemap generation in commit `2cbd627` and added a contract test that no `/commissions/*` URLs are emitted in commit `5ab8c19`.
+- [ ] The commission sitemap fix and listing social-metadata fix are not yet verified on a READY preview for the exact current PR #55 head. Verify sitemap output drops all 10 commission URLs and preserves canonical/indexable route families.
+- [ ] This was a representative cohort audit, not an exhaustive 2,422-URL live HTTP audit. Expand automated reconciliation to sample or check every URL for status, canonical, robots, hreflang, and structured-data policy before closing the release gate.
