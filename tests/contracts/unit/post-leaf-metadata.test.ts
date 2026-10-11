@@ -11,7 +11,6 @@ import { generateMetadata } from "@/app/[locale]/jobs/[slug]/[post-slug]/page";
 const recruitmentSlug = "sample-recruitment";
 const postSlug = "sample-post";
 const englishPath = `/jobs/${recruitmentSlug}/${postSlug}`;
-const hindiPath = `/hi/jobs/${recruitmentSlug}/${postSlug}`;
 
 function routeParams(locale: "en" | "hi") {
   return {
@@ -32,30 +31,26 @@ beforeEach(() => {
   });
 });
 
-describe("localized post-leaf metadata", () => {
-  test("English leaf uses its own canonical and Open Graph URL", async () => {
+describe("post-leaf metadata follows centralized SEO policy", () => {
+  test("English leaf uses the canonical English URL", async () => {
     const metadata = await generateMetadata(routeParams("en"));
     const openGraph = metadata.openGraph as { url?: string; locale?: string };
 
     expect(metadata.alternates?.canonical).toBe(englishPath);
-    expect(metadata.alternates?.languages).toEqual({
-      en: englishPath,
-      hi: hindiPath,
-    });
-    expect(openGraph.url).toBe(`https://www.joboye.com${englishPath}`);
+    expect(metadata.alternates?.languages).toBeUndefined();
+    expect(metadata.robots).toBeUndefined();
+    expect(openGraph.url).toBe(`http://localhost:3000${englishPath}`);
     expect(openGraph.locale).toBe("en_US");
   });
 
-  test("Hindi leaf uses its own canonical and Open Graph URL", async () => {
+  test("untranslated Hindi leaf canonicalizes to English and is noindex", async () => {
     const metadata = await generateMetadata(routeParams("hi"));
     const openGraph = metadata.openGraph as { url?: string; locale?: string };
 
-    expect(metadata.alternates?.canonical).toBe(hindiPath);
-    expect(metadata.alternates?.languages).toEqual({
-      en: englishPath,
-      hi: hindiPath,
-    });
-    expect(openGraph.url).toBe(`https://www.joboye.com${hindiPath}`);
+    expect(metadata.alternates?.canonical).toBe(englishPath);
+    expect(metadata.alternates?.languages).toBeUndefined();
+    expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(openGraph.url).toBe(`http://localhost:3000${englishPath}`);
     expect(openGraph.locale).toBe("hi_IN");
   });
 });
