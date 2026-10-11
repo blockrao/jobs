@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from 'next-intl/middleware';
 import { adminSessionToken } from "@/lib/admin-token";
-import { locales, defaultLocale, type Locale } from "@/i18n/request";
+import { locales, defaultLocale } from "@/i18n/request";
+import legacyExamSlugs from "@/lib/legacy-exam-slugs.generated.json";
 import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 
 // Import Supabase client for redirect lookups
@@ -10,10 +11,11 @@ import { recruitment_slug_redirects } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const COOKIE_NAME = "admin_session";
+const legacyExamSlugSet = new Set<string>(legacyExamSlugs);
 
 // Create the next-intl middleware
 const intlMiddleware = createMiddleware({
-  locales: locales as any,
+  locales,
   defaultLocale: defaultLocale,
   localePrefix: 'as-needed',
   // SEO-001 (ledger A-052): hreflang is decided per page by src/lib/seo and
@@ -42,6 +44,15 @@ const intlMiddleware = createMiddleware({
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Legacy /{examSlug} URLs are redirected only when the slug appears in the
+  // build-generated authoritative manifest. Unknown root paths do no database
+  // work and fall through to the app's real 404 handler.
+  const rootSlugMatch = pathname.match(/^\/([^/]+)\/?$/);
+  const rootSlug = rootSlugMatch?.[1];
+  if (rootSlug && legacyExamSlugSet.has(rootSlug)) {
+    return NextResponse.redirect(new URL(`/exams/${rootSlug}`, request.url), 301);
+  }
 
   // Handle admin authentication (applies everywhere under /admin)
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
