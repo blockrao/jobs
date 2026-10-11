@@ -14,16 +14,25 @@ interface QuickFactsProps {
 
 export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
   const deadline = resolvedFacts?.deadline;
-  const deadlineDisplay =
-    deadline?.state === "OPEN" && deadline.date
-      ? new Date(deadline.date).toLocaleDateString("en-IN", {
-          month: "short", day: "numeric", year: "numeric",
-        })
-      : deadline?.state === "CLOSED" && deadline.date
-      ? new Date(deadline.date).toLocaleDateString("en-IN", {
+  const reportedDeadline = Array.isArray(post.fjaExtract?.milestonesRaw)
+    ? post.fjaExtract.milestonesRaw
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+        .find((item) => typeof item.event === "string" && /application deadline/i.test(item.event) && typeof item.date === "string")
+    : null;
+  const officialDeadlineDate =
+    deadline?.state === "OPEN" || deadline?.state === "CLOSED" ? deadline.date : null;
+  const deadlineDisplay = officialDeadlineDate
+    ? new Date(officialDeadlineDate).toLocaleDateString("en-IN", {
+        month: "short", day: "numeric", year: "numeric",
+      })
+    : reportedDeadline && typeof reportedDeadline.date === "string"
+      ? new Date(`${reportedDeadline.date}T12:00:00`).toLocaleDateString("en-IN", {
           month: "short", day: "numeric", year: "numeric",
         })
       : "See Notification";
+  const deadlineLabel = !officialDeadlineDate && reportedDeadline
+    ? "Application Deadline (reported)"
+    : "Application Closes";
 
   const facts = [
     {
@@ -33,7 +42,7 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
         : "See Notification",
     },
     {
-      label: "Application Closes",
+      label: deadlineLabel,
       value: deadlineDisplay,
     },
     {
@@ -47,7 +56,7 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
         : "See official notification",
     },
     {
-      label: "Job Type",
+      label: post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Job Type (reported)" : "Job Type",
       value: post.employmentType
         ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
         : "See Notification",
