@@ -1,8 +1,10 @@
 name: JobOye PR Quality Gates
 
 on:
-  # Run the same quality gates for stacked PRs as well as PRs targeting main.
+  # PRs targeting main use pull_request; stacked feature PRs are checked on push
+  # to their head branch so the same suite runs without duplicate executions.
   pull_request:
+    branches: [main]
   push:
     branches:
       - main
