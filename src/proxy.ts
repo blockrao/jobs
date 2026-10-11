@@ -89,6 +89,14 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // The nested Post Leaf has a real [locale] route, but the general locale
+  // path classifier intentionally keeps unprefixed /jobs/:recruitment/:post
+  // on the default route. Route explicitly prefixed /hi and legacy /en leaves
+  // through next-intl before the generic locale-prefix fallback can strip them.
+  if (/^\\/(en|hi)\\/jobs\\/[^/]+\\/[^/]+\\/?$/.test(pathname)) {
+    return intlMiddleware(request);
+  }
+
   // Only run next-intl's routing on paths that actually have a
   // `[locale]` page — everything else passes through untouched.
   if (isLocaleAwarePath(pathname)) {
