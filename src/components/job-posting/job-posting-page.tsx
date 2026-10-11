@@ -215,7 +215,7 @@ export default function JobPostingPage({
           Details can be incomplete or change over time. For application-critical
           information, consult the official notification and the responsible
           organization's website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
-          — all applications must be submitted through the official portal.
+          — follow the application method specified in the official recruitment instructions.
         </div>
       </div>
   );
