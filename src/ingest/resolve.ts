@@ -42,7 +42,7 @@ export interface RecruitmentIdentity {
  */
 export function normalizeAdvertisementNumber(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let v = raw
+  const v = raw
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^(advertisement|advt|notification|notice|ref)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
@@ -139,7 +139,7 @@ const POST_NAME_MAX_LENGTH = 200;
 export async function resolveRecruitment(
   db: Db,
   identity: RecruitmentIdentity,
-  slug: string,
+  _legacySlug?: string,
 ): Promise<ResolvedRecruitment> {
   // Strong key: organization + official notification number. Enforced
   // unique at the DB level (recruitments_org_notification_idx).
