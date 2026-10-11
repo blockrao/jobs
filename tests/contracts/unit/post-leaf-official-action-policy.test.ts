@@ -21,4 +21,12 @@ describe("Post Leaf official actions", () => {
     expect(source).toContain('href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}');
     expect(source).toContain('href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}');
   });
+  test("related-role navigation excludes the current Post Leaf", () => {
+    const source = stripComments(readSource(POST_LEAF_COMPONENT));
+
+    expect(source).toContain("{siblingPosts.map((p) => (");
+    expect(source).not.toContain("{recruitment?.posts?.map((p) => (");
+    expect(source).toContain("Explore the other roles available under this recruitment.");
+  });
+
 });
