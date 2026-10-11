@@ -581,3 +581,9 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [ ] Do not treat the fetch tool's HTTP 200 for `/en/jobs` as proof that the first request does not redirect: the tool follows redirects and returns the final response. The proxy's `localePrefix: "as-needed"` policy and canonical generated links are in place; raw first-hop redirect status still needs a client that does not follow redirects.
 - [ ] Latest CI on `1ee272ac3dfdb390e50632e93d95c7b75efb60f2`: application type-check, architecture contract tests, and contract-test type-check passed; lint failed with the existing repository-wide baseline of 197 errors / 75 warnings. The new canonical-link commit will trigger a new exact-head run.
 - [ ] Full sitemap audit and fresh exact-head preview verification remain open. Do not merge or promote until exact-head checks and the sitemap audit are reviewed.
+
+## Canonical listing navigation follow-up — 2026-10-11
+
+- [x] English locale-aware listing now emits `/jobs` for form submissions and generated filters/pagination; Hindi remains `/hi/jobs`. Added render-level regression tests for the generated paths.
+- [x] On code commit `70928041198d0abaaf7e5558653bc9f7a571146b`, application type-check, contract-test type-check, and architecture contract tests passed; lint remains the repository-wide failure. The new render assertions landed after that run and need validation on the next exact-head CI run.
+- [ ] The full sitemap audit remains pending; run `npm run audit:sitemap -- --base https://www.joboye.com --limit 20` first, then the full audit. A fresh preview is still needed to verify the latest branch metadata fix without relying on the older production deployment.
