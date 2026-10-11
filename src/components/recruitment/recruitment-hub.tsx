@@ -68,7 +68,6 @@ import {
   AlertCircle,
   FileText,
   Globe,
-  MapPin,
   ExternalLink,
   ArrowRight,
   Clock,
@@ -788,12 +787,6 @@ export default function RecruitmentHub({
                             <span className="flex items-center gap-1 font-medium text-blue-700">
                               <Users size={11} className="text-blue-500" />
                               {postVacancies.toLocaleString('en-IN')} vacancies
-                            </span>
-                          )}
-                          {locationText && (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={11} className="text-gray-400" />
-                              {locationText}
                             </span>
                           )}
                           <PostStatusBadge post={post} appEndDate={recruitment.applicationEndDate} />
