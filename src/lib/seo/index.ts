@@ -75,12 +75,12 @@ export function noindexRobots(): Metadata["robots"] {
 /** A single-language page at a fixed path (hub, static page, detail page). */
 export function pageSeo(
   path: string,
-  opts: { index?: boolean; follow?: boolean; noarchive?: boolean } = {},
+  opts: { index?: boolean; noarchive?: boolean } = {},
 ): Seo {
   const robots = opts.index === false
     ? {
         index: false,
-        follow: opts.follow ?? true,
+        follow: true,
         ...(opts.noarchive ? { noarchive: true } : {}),
       }
     : undefined;
