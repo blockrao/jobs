@@ -260,13 +260,20 @@ export default async function LocaleJobsListPage({ params, searchParams }: Props
 
         <ul className="divide-y divide-black/10">
           {results.map((posting) => {
-            const titleHi = (posting as any).titleHi as string | null;
-            const locationCityHi = (posting as any).locationCityHi as
-              | string
-              | null;
-            const orgNameHi = (posting.organization as any).nameHi as
-              | string
-              | null;
+            // Query projections vary across the legacy and normalized listing
+            // paths. Narrow optional localized fields once for this row.
+            const postingWithMetadata = posting as typeof posting & {
+              titleHi?: string | null;
+              locationCityHi?: string | null;
+              examDate?: Date | null;
+              lastVerifiedAt?: Date | null;
+              organization: typeof posting.organization & {
+                nameHi?: string | null;
+              };
+            };
+            const titleHi = postingWithMetadata.titleHi ?? null;
+            const locationCityHi = postingWithMetadata.locationCityHi ?? null;
+            const orgNameHi = postingWithMetadata.organization.nameHi ?? null;
 
             const displayTitle = isHi && titleHi ? titleHi : posting.title;
             const displayOrgName =
@@ -280,8 +287,8 @@ export default async function LocaleJobsListPage({ params, searchParams }: Props
                 ? `/hi/jobs/${posting.slug}`
                 : `/jobs/${posting.slug}`;
 
-            const examDate = (posting as any).examDate as Date | null | undefined;
-            const lastVerifiedAt = (posting as any).lastVerifiedAt as Date | null | undefined;
+            const examDate = postingWithMetadata.examDate;
+            const lastVerifiedAt = postingWithMetadata.lastVerifiedAt;
 
             return (
               <li key={posting.id} className="py-4">
