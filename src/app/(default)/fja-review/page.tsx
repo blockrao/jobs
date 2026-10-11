@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Not Found | JobOye",
-  robots: { index: false, follow: false, noarchive: true },
 };
 
 /**
