@@ -88,10 +88,47 @@ export async function getPostBySlug(
         e."dataGaps",
         e."education",
         e."experience",
-        e."benefits"
+        e."benefits",
+        -- Raw extracted source facts are presented separately from canonical,
+        -- officially verified facts. The JSON mapping is the existing inventory
+        -- contract; do not use these fields as authoritative resolver inputs.
+        fi.id AS "fjaInventoryPostId",
+        fi.external_id AS "fjaExternalId",
+        fi.source_post_code_raw AS "fjaSourcePostCodeRaw",
+        fi.vacancy_count_raw AS "fjaVacancyCountRaw",
+        fi.qualification_raw AS "fjaQualificationRaw",
+        fi.experience_raw AS "fjaExperienceRaw",
+        fi.age_limit_raw AS "fjaAgeLimitRaw",
+        fi.age_reference_date_raw AS "fjaAgeReferenceDateRaw",
+        fi.age_relaxation_rules_raw AS "fjaAgeRelaxationRulesRaw",
+        fi.salary_raw AS "fjaSalaryRaw",
+        fi.pay_level_raw AS "fjaPayLevelRaw",
+        fi.employment_type_raw AS "fjaEmploymentTypeRaw",
+        fi.tenure_raw AS "fjaTenureRaw",
+        fi.location_raw AS "fjaLocationRaw",
+        fi.duties_responsibilities_raw AS "fjaDutiesRaw",
+        fi.eligibility_conditions_raw AS "fjaEligibilityRaw",
+        fi.milestones_raw AS "fjaMilestonesRaw",
+        fi.application_selection_raw AS "fjaApplicationSelectionRaw",
+        fi.other_info_raw AS "fjaOtherInfoRaw",
+        fi.extraction_status AS "fjaExtractionStatus",
+        fi.official_verification_status AS "fjaVerificationStatus",
+        ji.published_date AS "fjaSourcePublishedDate",
+        ji.application_end_date AS "fjaSourceApplicationEndDate",
+        ji.details AS "fjaRecruitmentDetails",
+        ji.other_info_raw AS "fjaRecruitmentOtherInfoRaw",
+        ji.advertisement_number AS "fjaAdvertisementNumber"
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      LEFT JOIN LATERAL (
+        SELECT inventory_post.*
+        FROM fja_post_inventory inventory_post
+        WHERE inventory_post.other_info_raw->>'canonical_post_id' = p.id::text
+        ORDER BY inventory_post.last_seen_at DESC, inventory_post.id DESC
+        LIMIT 1
+      ) fi ON TRUE
+      LEFT JOIN fja_job_inventory ji ON ji.id = fi.recruitment_inventory_id
       WHERE p.slug = ${postSlug}
         AND (
           r.slug = ${recruitmentSlug}
@@ -132,6 +169,36 @@ export async function getPostBySlug(
       updatedAt: new Date(data.updatedAt),
       officialSourceUrl: data.officialSourceUrl,
       applyPortalUrl: data.applyPortalUrl,
+      // Preserve extracted source facts as a distinct, explicitly unverified projection.
+      // Never pass these fields into canonical fact resolvers or official-link CTAs.
+      fjaExtract: data.fjaInventoryPostId != null ? {
+        inventoryId: data.fjaInventoryPostId,
+        externalId: data.fjaExternalId ?? null,
+        sourcePostCodeRaw: data.fjaSourcePostCodeRaw ?? null,
+        vacancyCountRaw: data.fjaVacancyCountRaw ?? null,
+        qualificationRaw: data.fjaQualificationRaw ?? null,
+        experienceRaw: data.fjaExperienceRaw ?? null,
+        ageLimitRaw: data.fjaAgeLimitRaw ?? null,
+        ageReferenceDateRaw: data.fjaAgeReferenceDateRaw ?? null,
+        ageRelaxationRulesRaw: data.fjaAgeRelaxationRulesRaw ?? null,
+        salaryRaw: data.fjaSalaryRaw ?? null,
+        payLevelRaw: data.fjaPayLevelRaw ?? null,
+        employmentTypeRaw: data.fjaEmploymentTypeRaw ?? null,
+        tenureRaw: data.fjaTenureRaw ?? null,
+        locationRaw: data.fjaLocationRaw ?? null,
+        dutiesRaw: data.fjaDutiesRaw ?? null,
+        eligibilityRaw: data.fjaEligibilityRaw ?? null,
+        milestonesRaw: data.fjaMilestonesRaw ?? null,
+        applicationSelectionRaw: data.fjaApplicationSelectionRaw ?? null,
+        otherInfoRaw: data.fjaOtherInfoRaw ?? null,
+        sourcePublishedDate: data.fjaSourcePublishedDate ?? null,
+        sourceApplicationEndDate: data.fjaSourceApplicationEndDate ?? null,
+        recruitmentDetails: data.fjaRecruitmentDetails ?? null,
+        recruitmentOtherInfoRaw: data.fjaRecruitmentOtherInfoRaw ?? null,
+        advertisementNumber: data.fjaAdvertisementNumber ?? null,
+        extractionStatus: data.fjaExtractionStatus ?? null,
+        verificationStatus: data.fjaVerificationStatus ?? null,
+      } : undefined,
       // Old-schema columns for resolver legacy fallback paths (Gate 4D bridge)
       vacancyTotal: data.vacancyTotal ?? null,
       legacySalaryMin: data.legacySalaryMin ?? null,
