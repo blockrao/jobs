@@ -176,44 +176,58 @@ export async function resolveRecruitment(
   // No confident match — create a new recruitment rather than attaching to
   // the nearest existing one.
   //
-  // Generate a sequential slug in the format {org-slug}-{year}-{2-digit-number}
-  // This replaces the old deterministic slug approach for new recruitments,
-  // providing human-readable, professional URLs.
+  // Slugs are URL addresses, not entity identity. Concurrent ingests can
+  // calculate the same next sequence number, so a slug conflict must never
+  // cause us to attach this source record to whichever entity won that race.
+  // Resolve a genuine identity conflict by its strong key; otherwise retry
+  // with a newly calculated sequential slug.
   const finalYear = identity.year ?? new Date().getFullYear();
-  const finalSlug = await generateSequentialSlug(db, identity.organizationId, finalYear);
+  const maxAttempts = 5;
 
-  if (!finalSlug) {
-    throw new Error(
-      `resolveRecruitment: unable to generate slug for organization ${identity.organizationId}`,
-    );
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const finalSlug = await generateSequentialSlug(db, identity.organizationId, finalYear);
+    if (!finalSlug) {
+      throw new Error(
+        `resolveRecruitment: unable to generate slug for organization ${identity.organizationId}`,
+      );
+    }
+
+    const [created] = await db
+      .insert(recruitments)
+      .values({
+        organizationId: identity.organizationId,
+        examId: identity.examId,
+        year: finalYear,
+        name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
+        slug: finalSlug,
+        officialNotificationNumber: identity.officialNotificationNumber,
+        applicationStartDate: identity.applicationStartDate ?? null,
+        applicationEndDate: identity.applicationEndDate ?? null,
+      })
+      .onConflictDoNothing()
+      .returning({ id: recruitments.id });
+
+    if (created) return { id: created.id, created: true };
+
+    // A conflict on the strong identity index means another ingest created
+    // this exact recruitment. Only that identity key can justify reuse.
+    if (identity.officialNotificationNumber) {
+      const existingByIdentity = await db.query.recruitments.findFirst({
+        where: and(
+          eq(recruitments.organizationId, identity.organizationId),
+          eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+        ),
+      });
+      if (existingByIdentity) return { id: existingByIdentity.id, created: false };
+    }
+
+    // Otherwise this was a URL-slug collision (usually a concurrent sequence
+    // allocation). Retry; never query by slug and treat that row as identity.
   }
 
-  const [created] = await db
-    .insert(recruitments)
-    .values({
-      organizationId: identity.organizationId,
-      examId: identity.examId,
-      year: finalYear,
-      name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
-      slug: finalSlug,
-      officialNotificationNumber: identity.officialNotificationNumber,
-      applicationStartDate: identity.applicationStartDate ?? null,
-      applicationEndDate: identity.applicationEndDate ?? null,
-    })
-    .onConflictDoNothing({ target: recruitments.slug })
-    .returning({ id: recruitments.id });
-
-  if (created) return { id: created.id, created: true };
-
-  const existingBySlug = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, finalSlug),
-  });
-  if (existingBySlug) return { id: existingBySlug.id, created: false };
-
-  // Insert raced and lost, but the winning row isn't visible yet (unlikely
-  // outside real concurrency) — surface clearly rather than silently
-  // returning a bogus id.
-  throw new Error(`resolveRecruitment: slug "${finalSlug}" conflicted but no row found`);
+  throw new Error(
+    `resolveRecruitment: unable to create recruitment after ${maxAttempts} slug allocation attempts`,
+  );
 }
 
 export interface PostIdentity {

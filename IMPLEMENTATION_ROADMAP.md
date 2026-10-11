@@ -356,3 +356,36 @@ All sprints complete when:
 - **Weekly**: Monitor orphaned postings; adjust inference confidence thresholds
 - **Monthly**: Update recruitment statuses (ACTIVE → RESULTS); refresh positions data
 - **Quarterly**: Add new exams/organizations; expand position coverage
+
+
+## Release Planning (current)
+
+The current, gated release plan is maintained in [RELEASE_PLAN.md](./RELEASE_PLAN.md). Follow its execution order: public trust/UI hygiene → Recruitment/Post data-to-UI correctness → bounded inventory pilot and reconciliation → canonical URL/redirect repairs → release-candidate CI/build → production smoke tests and operational checks → controlled launch. Do not declare launch readiness from merged code alone; each gate needs evidence on the release commit and deployed production version.
+
+
+Recruitment/Post candidate-facing field ownership, data coverage and reconciliation rules are documented in [RECRUITMENT_POST_DATA_AUDIT.md](./RECRUITMENT_POST_DATA_AUDIT.md). Refresh the audit snapshot before release.
+
+
+## Local-first release workflow (2026-10-11)
+
+The detailed, sequenced release board is in [RELEASE_PLAN.md](./RELEASE_PLAN.md). Local verification setup and a repeatable pre-deploy command sequence are tracked in [issue #45](https://github.com/blockrao/jobs/issues/45). Development and verification should be local-first to reduce unnecessary Vercel preview deployments, with Vercel retained for deployment-specific and final production evidence.
+
+### Operating rules
+- Before each deployment, run targeted tests, architecture/SEO contract tests, application and test type-checks, changed-file lint, and a production build locally where supported.
+- Record the existing main-branch baseline separately from any new failures. Do not weaken canonical/indexability assertions or disable lint rules to get a green result.
+- Use an untracked .env.local; never commit or expose secrets. Prefer local/staging data for write tests; use read-only access when diagnosing production data.
+- Localhost is not a substitute for production smoke tests: it will not prove Vercel environment variables, serverless runtime, deployment aliases, CDN caching, headers, redirects, or production DB connectivity under deployed conditions.
+- Deploy a preview only when local gates pass or when the preview is specifically needed to investigate a deployment-only issue. Record commit SHA, tested URLs, outcomes, and unresolved blockers.
+
+### Release workstreams (do not skip or reorder)
+1. Public UI/brand hygiene and route protection.
+2. Recruitment/Post field-by-field data-to-UI audit.
+3. Diagnose DB query fallbacks and slow Position hub rendering.
+4. Repair canonical/robots/hreflang/sitemap contract failures.
+5. Validate bounded inventory pilot and raw source capture.
+6. Produce a dry-run reconciliation report; review ambiguous matches; safely repair canonical data.
+7. Verify Post Leaf URLs, legacy redirects, sitemap eligibility, and old-URL behavior.
+8. Run exact-SHA CI/build and deployed production smoke tests.
+9. Controlled launch with monitoring and rollback path.
+
+Exit evidence for each stage is tracked in RELEASE_PLAN.md and its linked PRs/issues; do not mark work complete based solely on code being merged or a deployment reaching READY.

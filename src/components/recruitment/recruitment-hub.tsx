@@ -18,7 +18,7 @@
  *
  * Competitor improvements (2026-10-09):
  *   - Vacancy count is a large hero stat, not a table row (YuvaResult pattern)
- *   - "Closing in N days" urgency countdown when deadline ≤ 14 days (FreeJobAlert pattern)
+ *   - "Closing in N days" urgency countdown when deadline ≤ 14 days
  *   - Per-post status colour badges: Open / Closing Soon / Closed (JobOne.in pattern)
  *   - Stats row beneath title: vacancies + deadline + post count as scannable chips
  *
@@ -64,6 +64,8 @@ interface RecruitmentHubProps {
   resolvedSelectionProcess?: string | null;
   /** Org slug for breadcrumb link — from organizations.slug */
   orgSlug?: string | null;
+  /** Preserve locale-prefixed navigation for the supported Hindi route. */
+  locale?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -192,40 +194,6 @@ function PostStatusBadge({ post, appEndDate }: { post: any; appEndDate?: any }) 
   return null;
 }
 
-// Database-complete renderer: every key returned by the loader is represented,
-// including nullable fields and nested JSON/relations.
-function formatRecordValue(value: unknown): string {
-  if (value === null || value === undefined || value === '') return 'Not populated';
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (Array.isArray(value)) return value.length ? JSON.stringify(value, null, 2) : 'Empty array';
-  if (typeof value === 'object') return JSON.stringify(value, null, 2);
-  return String(value);
-}
-
-function RecordFieldGrid({ title, record }: { title: string; record: unknown }) {
-  if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
-  const entries = Object.entries(record as Record<string, unknown>);
-  return (
-    <details className="rounded-xl border border-gray-200 bg-white">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-        {title} <span className="ml-2 text-xs font-normal text-gray-500">{entries.length} fields</span>
-      </summary>
-      <div className="grid grid-cols-1 gap-2 border-t border-gray-100 p-4 md:grid-cols-2">
-        {entries.map(([key, value]) => (
-          <div key={key} className="min-w-0 rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <div className="mb-1 break-words text-xs font-semibold text-gray-500">{key}</div>
-            {typeof value === 'string' && /^https?:\/\//i.test(value) ? (
-              <a href={value} target="_blank" rel="noopener noreferrer" className="break-all text-sm text-blue-700 hover:underline">{value}</a>
-            ) : (
-              <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 font-sans">{formatRecordValue(value)}</pre>
-            )}
-          </div>
-        ))}
-      </div>
-    </details>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
@@ -239,7 +207,9 @@ export default function RecruitmentHub({
   resolvedEmployer,
   resolvedSelectionProcess,
   orgSlug,
+  locale = "en",
 }: RecruitmentHubProps) {
+  const localePrefix = locale === "hi" ? "/hi" : "";
   const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
   const notificationDate = formatDate(recruitment.notificationDate);
   const appStart = formatDate(recruitment.applicationStartDate);
@@ -256,10 +226,10 @@ export default function RecruitmentHub({
   // derive it by summing post-level vacancy records.
   const displayTotalVacancies =
     resolvedTotalVacancies ?? recruitment.totalVacancies ?? null;
-  const displayApplicationUrl =
-    resolvedApplicationUrl ?? recruitment.officialApplicationUrl ?? recruitment.applyUrl ?? null;
-  const displayOfficialSource =
-    resolvedOfficialSource ?? recruitment.officialNotificationUrl ?? null;
+  // External source/apply links must pass the authoritative URL resolvers.
+  // If no verified URL is available, omit the link rather than exposing a discovery source.
+  const displayApplicationUrl = resolvedApplicationUrl ?? null;
+  const displayOfficialSource = resolvedOfficialSource ?? null;
   const displaySelectionProcess =
     resolvedSelectionProcess ?? recruitment.selectionProcess ?? null;
 
@@ -274,6 +244,31 @@ export default function RecruitmentHub({
   // Posts: single-column comparison list
   const hasPosts = posts.length > 0;
   const isSinglePost = posts.length === 1;
+
+  const examName = recruitment.exam?.name ?? recruitment.exam?.title ?? null;
+  const notificationNumber = recruitment.officialNotificationNumber ?? recruitment.official_notification_number
+    ?? recruitment.advertisementNumber ?? recruitment.advertisement_number ?? null;
+  const feeRows = Array.isArray(recruitment.recruitmentFees) ? recruitment.recruitmentFees : [];
+  const feeGeneral = recruitment.feeGeneral ?? recruitment.fee_general;
+  const feeReserved = recruitment.feeReserved ?? recruitment.fee_reserved;
+  const feeNote = recruitment.feeNote ?? recruitment.fee_note ?? null;
+  const hasFeeDetails = feeRows.length > 0 || feeGeneral != null || feeReserved != null || Boolean(feeNote);
+  const selectionRows = Array.isArray(recruitment.selectionProcesses) ? recruitment.selectionProcesses : [];
+  const selectionDisplayRows = selectionRows.map((row: Record<string, unknown>) => {
+    const processName = row.process_type ?? row.processType ?? null;
+    const stages = Array.isArray(row.stages)
+      ? row.stages.map((stage: unknown) => {
+          if (typeof stage === 'string') return stage;
+          if (stage && typeof stage === 'object') {
+            const item = stage as Record<string, unknown>;
+            return item.name ?? item.title ?? item.stage ?? null;
+          }
+          return null;
+        }).filter((stage): stage is string => typeof stage === 'string').join(' → ')
+      : typeof row.stages === 'string' ? row.stages : null;
+    const details = typeof row.details === 'string' ? row.details : null;
+    return { title: typeof processName === 'string' ? processName.replace(/_/g, ' ') : null, detail: stages || details };
+  }).filter((row: { title: string | null; detail: unknown }) => Boolean(row.title || row.detail));
 
   // FAQ: only questions with non-null answers
   const faqItems: { q: string; a: string }[] = [];
@@ -330,14 +325,14 @@ export default function RecruitmentHub({
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-600">
-            <Link href="/jobs" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href={`${localePrefix}/jobs`} className="text-blue-600 hover:text-blue-700 font-medium">
               Jobs
             </Link>
             {displayOrg && (
               <>
                 <ChevronRight size={14} className="text-gray-400" />
                 {orgSlug ? (
-                  <Link href={`/organizations/${orgSlug}`} className="text-blue-600 hover:text-blue-700 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
+                  <Link href={`${localePrefix}/organizations/${orgSlug}`} className="text-blue-600 hover:text-blue-700 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
                     {displayOrg}
                   </Link>
                 ) : (
@@ -457,7 +452,7 @@ export default function RecruitmentHub({
           <div className="flex flex-wrap gap-3">
             {isSinglePost ? (
               <Link
-                href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+                href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
                 className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm"
               >
                 View Post Details
@@ -492,7 +487,7 @@ export default function RecruitmentHub({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm"
               >
-                Official recruitment source
+                Notification / source link
                 <ExternalLink size={15} />
               </a>
             )}
@@ -514,7 +509,7 @@ export default function RecruitmentHub({
             SECTION 2 — RECRUITMENT OVERVIEW TABLE
             Compact details: org, selection process, official links
             ═══════════════════════════════════════════ */}
-        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart) && (
+        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart || examName || notificationNumber || hasFeeDetails || selectionDisplayRows.length > 0) && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-3">Recruitment Details</h2>
             <dl className="divide-y divide-gray-100">
@@ -530,6 +525,20 @@ export default function RecruitmentHub({
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Year</dt>
                   <dd className="text-sm text-gray-900">{recruitment.year}</dd>
+                </div>
+              )}
+
+              {examName && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Exam</dt>
+                  <dd className="text-sm text-gray-900">{examName}</dd>
+                </div>
+              )}
+
+              {notificationNumber && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Notification No.</dt>
+                  <dd className="text-sm text-gray-900">{notificationNumber}</dd>
                 </div>
               )}
 
@@ -559,6 +568,47 @@ export default function RecruitmentHub({
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Selection</dt>
                   <dd className="text-sm text-gray-900">{displaySelectionProcess}</dd>
+                </div>
+              )}
+
+              {!displaySelectionProcess && selectionDisplayRows.length > 0 && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Selection Process</dt>
+                  <dd className="text-sm text-gray-900">
+                    <ul className="space-y-1">
+                      {selectionDisplayRows.map((row: { title: string | null; detail: unknown }, index: number) => (
+                        <li key={index}>
+                          {row.title && <span className="font-medium capitalize">{row.title}</span>}
+                          {Boolean(row.detail) && <span>{row.title ? ': ' : ''}{String(row.detail)}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              )}
+
+              {hasFeeDetails && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Application Fee</dt>
+                  <dd className="text-sm text-gray-900">
+                    {feeRows.length > 0 ? (
+                      <ul className="space-y-1">
+                        {feeRows.map((fee: Record<string, unknown>, index: number) => (
+                          <li key={index}>
+                            <span className="font-medium">{String(fee.category ?? 'Category')}</span>
+                            {fee.amount != null && <span>: {Number(fee.amount) === 0 ? 'No fee' : '₹' + Number(fee.amount).toLocaleString('en-IN')}</span>}
+                            {Boolean(fee.note) && <span> — {String(fee.note)}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <ul className="space-y-1">
+                        {feeGeneral != null && <li>General: {Number(feeGeneral) === 0 ? 'No fee' : '₹' + Number(feeGeneral).toLocaleString('en-IN')}</li>}
+                        {feeReserved != null && <li>Reserved categories: {Number(feeReserved) === 0 ? 'No fee' : '₹' + Number(feeReserved).toLocaleString('en-IN')}</li>}
+                      </ul>
+                    )}
+                    {feeNote && <p className="mt-1 text-gray-600">{String(feeNote)}</p>}
+                  </dd>
                 </div>
               )}
 
@@ -660,7 +710,7 @@ export default function RecruitmentHub({
             {isSinglePost ? (
               /* Single Post: prominent entry point */
               <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-5">
-                <Link href={`/jobs/${recruitment.slug}/${posts[0].slug}`} className="group block">
+                <Link href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`} className="group block">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2">
@@ -687,7 +737,7 @@ export default function RecruitmentHub({
                 </Link>
                 <div className="mt-4 pt-4 border-t border-blue-200">
                   <Link
-                    href={`/jobs/${recruitment.slug}/${posts[0].slug}`}
+                    href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
                     className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                   >
                     View Full Post Details
@@ -706,7 +756,7 @@ export default function RecruitmentHub({
                   return (
                     <Link
                       key={post.id}
-                      href={`/jobs/${recruitment.slug}/${post.slug}`}
+                      href={`${localePrefix}/jobs/${recruitment.slug}/${post.slug}`}
                       className="flex items-center justify-between gap-4 px-4 py-3.5 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all group"
                     >
                       <div className="flex-1 min-w-0">
@@ -780,7 +830,7 @@ export default function RecruitmentHub({
                 <div className="flex items-start gap-3">
                   <FileText size={15} className="text-green-700 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="text-xs text-green-700 font-medium mb-0.5">Recruitment source</div>
+                    <div className="text-xs text-green-700 font-medium mb-0.5">Notification / source link</div>
                     <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer"
                       className="text-sm text-blue-700 hover:text-blue-800 break-all inline-flex items-center gap-1">
                       {displayOfficialSource}
@@ -806,147 +856,12 @@ export default function RecruitmentHub({
           </div>
         )}
 
-        {/* Full source-backed recruitment and post inventory. Source extraction is not official verification. */}
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
-          <div className="mb-4">
-            <h2 className="text-base font-bold text-gray-900">Complete Recruitment Record</h2>
-            <p className="text-sm text-gray-600 mt-1">Recruitment-level fields available in JobOye's database, followed by source-derived post details. Unverified source data is labelled as such.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              ['Recruitment ID', recruitment.id],
-              ['Recruitment name', recruitment.name],
-              ['Slug', recruitment.slug],
-              ['Status', recruitment.status],
-              ['Year', recruitment.year],
-              ['Total vacancies', recruitment.totalVacancies ?? recruitment.total_vacancies ?? resolvedTotalVacancies],
-              ['Application opens', formatDate(recruitment.applicationStartDate ?? recruitment.application_start_date)],
-              ['Application closes', formatDate(recruitment.applicationEndDate ?? recruitment.application_end_date)],
-              ['Notification number', recruitment.officialNotificationNumber ?? recruitment.official_notification_number],
-              ['Verification status', recruitment.officialVerificationStatus ?? recruitment.official_verification_status ?? 'Not recorded'],
-              ['Last verified', formatDate(recruitment.lastVerifiedAt ?? recruitment.last_verified_at)],
-              ['Notification / source URL', recruitment.notificationUrl ?? recruitment.notification_url ?? displayOfficialSource],
-            ].filter((item) => item[1] !== null && item[1] !== undefined && item[1] !== '').map(([label, value]) => (
-              <div key={String(label)} className="rounded-lg border border-gray-100 bg-gray-50 p-3 min-w-0">
-                <div className="text-xs font-medium text-gray-500 mb-1">{label}</div>
-                {String(label).toLowerCase().includes('url') && String(value).startsWith('http') ? (
-                  <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-700 hover:underline break-all">{String(value)}</a>
-                ) : (
-                  <div className="text-sm font-medium text-gray-900 break-words">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</div>
-                )}
-              </div>
-            ))}
-          </div>
-          {(recruitment.description || recruitment.metadata) && (
-            <div className="mt-4 space-y-3">
-              {recruitment.description && <div><h3 className="text-sm font-semibold text-gray-800 mb-1">Recruitment description</h3><p className="text-sm text-gray-700 whitespace-pre-wrap">{recruitment.description}</p></div>}
-              {recruitment.metadata && <details className="rounded-lg border border-gray-200 p-3"><summary className="cursor-pointer text-sm font-semibold text-gray-800">Additional recruitment metadata</summary><pre className="mt-3 text-xs text-gray-700 whitespace-pre-wrap break-words overflow-x-auto">{JSON.stringify(recruitment.metadata, null, 2)}</pre></details>}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 md:p-6 space-y-3">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Database Field Coverage</h2>
-            <p className="mt-1 text-sm text-gray-600">Audit view of every field returned for this recruitment and its related records. Empty values are labelled “Not populated”; nested JSON is shown as readable data. This is separate from candidate-facing summary content.</p>
-          </div>
-          <RecordFieldGrid title="Recruitment — all returned database columns" record={recruitment} />
-          <RecordFieldGrid title="Organization — linked record" record={recruitment.organization ?? recruitment.organizationRecord ?? null} />
-          <RecordFieldGrid title="Recruitment metadata — complete object" record={recruitment.metadata ?? null} />
-          {posts.map((post: Record<string, unknown> & { id: number; fjaInventory?: Record<string, unknown> | null; position?: Record<string, unknown> | null; vacancies?: unknown[]; eligibilities?: unknown[] }) => (
-            <div key={post.id} className="space-y-2 rounded-lg border border-gray-200 bg-white p-3 md:p-4">
-              <h3 className="text-sm font-bold text-gray-900">Post #{post.id}: {String(post.name ?? post.slug ?? 'Untitled post')}</h3>
-              <RecordFieldGrid title="Post — all returned database columns" record={post} />
-              <RecordFieldGrid title="Position — linked record" record={post.position ?? null} />
-              <RecordFieldGrid title="Vacancy rows — all columns" record={{ rows: post.vacancies ?? [] }} />
-              <RecordFieldGrid title="Eligibility rows — all columns" record={{ rows: post.eligibilities ?? [] }} />
-              <RecordFieldGrid title="Post enrichment — all columns" record={post.postEnrichment ?? null} />
-              <RecordFieldGrid title="FreeJobAlert source inventory — all columns" record={post.fjaInventory ?? null} />
-            </div>
-          ))}
-        </section>
-
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
-          <div className="mb-4">
-            <h2 className="text-base font-bold text-gray-900">All Posts — Detailed Comparison</h2>
-            <p className="text-sm text-gray-600 mt-1">Includes normalized JobOye&apos;s post data and linked FreeJobAlert extraction fields where available. Source extraction is not an official confirmation.</p>
-          </div>
-          {posts.length === 0 ? (
-            <p className="text-sm text-gray-600">No posts are linked to this recruitment record yet.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-[1100px] w-full text-left text-sm">
-                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600">
-                  <tr>{['Post / IDs','Vacancies','Location','Pay / salary','Employment','Qualification','Experience','Age','Duties / eligibility','Source status'].map((heading) => <th key={heading} className="px-3 py-3 font-semibold align-top">{heading}</th>)}</tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {posts.map((post: {
-                    id: number;
-                    slug: string;
-                    name?: string | null;
-                    positionId?: number | null;
-                    position_id?: number | null;
-                    resolvedVacancyCount?: number | null;
-                    vacancyCount?: number | null;
-                    vacancy_count?: number | null;
-                    locationText?: string | null;
-                    salary?: unknown;
-                    salaryRange?: unknown;
-                    payLevel?: unknown;
-                    employmentType?: unknown;
-                    employment_type?: unknown;
-                    qualification?: unknown;
-                    qualificationText?: unknown;
-                    experience?: unknown;
-                    experienceText?: unknown;
-                    ageLimit?: unknown;
-                    age_limit?: unknown;
-                    duties?: unknown;
-                    eligibility?: unknown;
-                    eligibilityText?: unknown;
-                    position?: { id?: number; name?: string | null; locationText?: string | null } | null;
-                    fjaInventory?: Record<string, unknown> | null;
-                  }) => {
-                    const inv = post.fjaInventory ?? {};
-                    const show = (...values: unknown[]) => {
-                      const value = values.find((v) => v !== null && v !== undefined && v !== '');
-                      if (value === undefined) return 'Not recorded';
-                      return typeof value === 'object' ? JSON.stringify(value) : String(value);
-                    };
-                    const postTitle = post.name ?? post.position?.name ?? post.slug ?? 'Post';
-                    return (
-                      <tr key={post.id} className="align-top">
-                        <td className="px-3 py-3 min-w-[180px]">
-                          <Link href={`/jobs/${recruitment.slug}/${post.slug}`} className="font-semibold text-blue-700 hover:underline">{postTitle}</Link>
-                          <div className="mt-1 text-xs text-gray-500">Post ID: {post.id}</div>
-                          <div className="text-xs text-gray-500">Position ID: {show(post.positionId, post.position_id, post.position?.id)}</div>
-                        </td>
-                        <td className="px-3 py-3">{show(inv.vacancy_count_raw, post.resolvedVacancyCount, post.vacancyCount, post.vacancy_count)}</td>
-                        <td className="px-3 py-3">{show(inv.location_raw, post.locationText, post.position?.locationText)}</td>
-                        <td className="px-3 py-3">{show(inv.salary_raw, inv.pay_level_raw, post.salary, post.salaryRange, post.payLevel)}</td>
-                        <td className="px-3 py-3">{show(inv.employment_type_raw, post.employmentType, post.employment_type)}</td>
-                        <td className="px-3 py-3 max-w-[230px] whitespace-pre-wrap">{show(inv.qualification_raw, post.qualification, post.qualificationText)}</td>
-                        <td className="px-3 py-3 max-w-[220px] whitespace-pre-wrap">{show(inv.experience_raw, post.experience, post.experienceText)}</td>
-                        <td className="px-3 py-3 max-w-[180px] whitespace-pre-wrap">{show(inv.age_limit_raw, post.ageLimit, post.age_limit)}</td>
-                        <td className="px-3 py-3 max-w-[300px] whitespace-pre-wrap">
-                          <div><span className="font-semibold">Duties: </span>{show(inv.duties_responsibilities_raw, post.duties)}</div>
-                          <div className="mt-2"><span className="font-semibold">Eligibility: </span>{show(inv.eligibility_conditions_raw, post.eligibility, post.eligibilityText)}</div>
-                        </td>
-                        <td className="px-3 py-3 min-w-[170px]">
-                          <div className="text-xs"><span className="font-semibold">Source: </span>{show(inv.source_slug)}</div>
-                          <div className="mt-1 text-xs"><span className="font-semibold">Extraction: </span>{show(inv.extraction_status)}</div>
-                          <div className="mt-1 text-xs"><span className="font-semibold">Official verification: </span>{show(inv.official_verification_status)}</div>
-                          {Boolean(inv.external_id) && <div className="mt-1 text-xs text-gray-500">Source article ID: {String(inv.external_id)}</div>}
-                          {typeof inv.other_info_raw === 'object' && inv.other_info_raw !== null && 'source_article_url' in inv.other_info_raw && typeof (inv.other_info_raw as Record<string, unknown>).source_article_url === 'string' && (inv.other_info_raw as Record<string, unknown>).source_article_url !== '' && <a href={String((inv.other_info_raw as Record<string, unknown>).source_article_url)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-blue-700 hover:underline break-all">Open source article</a>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">Verification note: source-extracted values may be incomplete or unverified. Confirm eligibility, dates, pay and application instructions against the official notification before relying on them.</p>
+        {/* Candidate-facing verification guidance. Internal inventory and raw database diagnostics belong in admin tools, not public pages. */}
+        <section className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 md:px-6">
+          <h2 className="text-sm font-bold text-amber-950">Before you apply</h2>
+          <p className="mt-1 text-sm leading-relaxed text-amber-900">
+            Recruitment details can change. Review the linked notice and confirm the eligibility rules, post-specific vacancies, fees, dates, and application instructions before submitting an application. Unknown or unverified details are not a confirmation of eligibility.
+          </p>
         </section>
 
         <div className="h-4" />

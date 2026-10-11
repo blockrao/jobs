@@ -17,8 +17,9 @@ export default function OfficialSourceVerification({
   recruitmentResolvedFacts,
 }: OfficialSourceVerificationProps) {
   const enrichment = post.enrichment;
-  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
-  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
+  // Only resolver-approved official URLs may be rendered here.
+  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
+  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
   const verificationStatus = enrichment?.sourceVerificationStatus || "PENDING";
   const verificationDate = enrichment?.sourceVerificationDate;
   const extractionConfidence = enrichment?.extractionConfidence || 0;

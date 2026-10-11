@@ -169,14 +169,14 @@ export async function getRecruitmentWithPosts(slug: string) {
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
     };
-    const recruitmentId = recruitment.id;
-
-    // Load complete linked entities for the recruitment hub's database coverage view.
-    const [organizationResult, examResult] = await Promise.all([
-      db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
+    // Load only data used by the public Recruitment hub. Raw source inventory,
+    // every database column, and per-post audit joins belong in internal review tools.
+    const [examResult, recruitmentFeesResult, selectionProcessesResult] = await Promise.all([
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
+      db.execute(sql`SELECT * FROM recruitment_fees WHERE recruitment_id = ${recruitment.id} ORDER BY id`),
+      db.execute(sql`SELECT * FROM selection_processes WHERE recruitment_id = ${recruitment.id} ORDER BY id`),
     ]);
     const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
       const value = result as { rows?: unknown[] };
@@ -184,11 +184,14 @@ export async function getRecruitmentWithPosts(slug: string) {
       return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
     };
     Object.assign(recruitment, {
-      organization: rowsOf(organizationResult)[0] ?? null,
       exam: rowsOf(examResult)[0] ?? null,
+      recruitmentFees: rowsOf(recruitmentFeesResult),
+      selectionProcesses: rowsOf(selectionProcessesResult),
     });
 
-    // Step 2: Get all posts for this recruitment with positions
+    // The public hub needs each Post's canonical identity, Position, and scoped
+    // vacancy resolver input. Detailed eligibility/enrichment/source inventory
+    // is rendered on the canonical Post Leaf or internal review surfaces.
     const postsResult = await db
       .select({
         post: posts,
@@ -196,134 +199,19 @@ export async function getRecruitmentWithPosts(slug: string) {
       })
       .from(posts)
       .innerJoin(positions, eq(posts.positionId, positions.id))
-      .where(eq(posts.recruitmentId, recruitmentId));
+      .where(eq(posts.recruitmentId, recruitment.id));
 
-    if (postsResult.length === 0) {
-      return {
-        recruitment,
-        posts: [],
-        totalPosts: 0,
-        isSingleJobRecruitment: false,
-      };
-    }
-
-    const postIds = postsResult.map((r) => r.post.id);
-
-    // Step 3: Fetch ALL vacancies and eligibilities in parallel, not per-post
-    // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities
-    const [allVacancies, allEligibilities] = await Promise.all([
-      db
-        .select()
-        .from(vacancies)
-        .where(inArray(vacancies.postId, postIds)),
-      db
-        .select()
-        .from(eligibilities)
-        .where(inArray(eligibilities.postId, postIds)),
-    ]);
-
-    // Step 4: Group vacancies and eligibilities by post ID (client-side)
-    const vacanciesByPostId = new Map<number, typeof allVacancies>();
-    const eligibilitiesByPostId = new Map<number, typeof allEligibilities>();
-
-    for (const vacancy of allVacancies) {
-      if (!vacanciesByPostId.has(vacancy.postId)) {
-        vacanciesByPostId.set(vacancy.postId, []);
-      }
-      vacanciesByPostId.get(vacancy.postId)!.push(vacancy);
-    }
-
-    for (const eligibility of allEligibilities) {
-      if (!eligibilitiesByPostId.has(eligibility.postId)) {
-        eligibilitiesByPostId.set(eligibility.postId, []);
-      }
-      eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
-    }
-
-    // Enrich posts with linked FreeJobAlert source inventory for the recruitment hub.
-    // This is read-only and preserves the source's current verification status.
-    const enrichedPosts = postsResult.map((row) => ({
-      ...row.post,
-      // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
-      title: row.post.name,
-      position: row.position,
-      vacancies: vacanciesByPostId.get(row.post.id) ?? [],
-      eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
-    }));
-
-    const [enrichmentResult, inventoryResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
-      db.execute(sql`
-        SELECT *
-        FROM post_enrichments
-        WHERE post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
-        ORDER BY post_id
-      `),
-      db.execute(sql`
-      SELECT *
-      FROM fja_post_inventory
-      WHERE source_slug = 'freejobalert'
-        AND other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
-      ORDER BY id
-      `),
-      db.execute(sql`
-        SELECT v.*, to_jsonb(l) AS location_record
-        FROM vacancies v
-        LEFT JOIN locations l ON l.id = v.location_id
-        WHERE v.post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
-        ORDER BY v.post_id, v.id
-      `),
-      db.execute(sql`
-        SELECT e.*, to_jsonb(q) AS qualification_record
-        FROM eligibilities e
-        LEFT JOIN qualifications q ON q.id = e.qualification_id
-        WHERE e.post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
-        ORDER BY e.post_id, e.id
-      `)
-    ]);
-    const enrichmentRows = (
-      (enrichmentResult as unknown as { rows?: unknown[] }).rows ?? enrichmentResult
-    ) as Array<Record<string, unknown>>;
-    const enrichmentByPostId = new Map<number, Record<string, unknown>>();
-    for (const item of enrichmentRows) {
-      const postId = Number(item.post_id);
-      if (Number.isFinite(postId)) enrichmentByPostId.set(postId, item);
-    }
-    const inventoryRows = (
-      (inventoryResult as unknown as { rows?: unknown[] }).rows ?? inventoryResult
-    ) as Array<Record<string, unknown>>;
-    const inventoryByPostId = new Map<number, Record<string, unknown>>();
-    for (const item of inventoryRows) {
-      const otherInfo = item.other_info_raw as Record<string, unknown> | undefined;
-      const postId = Number(otherInfo?.canonical_post_id);
-      if (Number.isFinite(postId)) inventoryByPostId.set(postId, item);
-    }
-    const vacancyDetailRows = rowsOf(vacancyDetailResult);
-    const vacancyDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
-    for (const row of vacancyDetailRows) {
-      const postId = Number(row.post_id);
-      if (!vacancyDetailsByPostId.has(postId)) vacancyDetailsByPostId.set(postId, []);
-      vacancyDetailsByPostId.get(postId)!.push(row);
-    }
-    const eligibilityDetailRows = rowsOf(eligibilityQualificationResult);
-    const eligibilityDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
-    for (const row of eligibilityDetailRows) {
-      const postId = Number(row.post_id);
-      if (!eligibilityDetailsByPostId.has(postId)) eligibilityDetailsByPostId.set(postId, []);
-      eligibilityDetailsByPostId.get(postId)!.push(row);
-    }
-    const postsWithInventory = enrichedPosts.map((post) => ({
+    const mappedPosts = postsResult.map(({ post, position }) => ({
       ...post,
-      vacancies: vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
-      eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
-      fjaInventory: inventoryByPostId.get(post.id) ?? null,
-      postEnrichment: enrichmentByPostId.get(post.id) ?? null,
+      title: post.name,
+      position,
     }));
 
     return {
       recruitment,
-      posts: postsWithInventory,
-      totalPosts: enrichedPosts.length,
-      isSingleJobRecruitment: enrichedPosts.length === 1,
+      posts: mappedPosts,
+      totalPosts: mappedPosts.length,
+      isSingleJobRecruitment: mappedPosts.length === 1,
     };
   } catch (err) {
     console.error("Error fetching recruitment with posts:", err);

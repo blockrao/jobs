@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import { SITE, canonicalOf, isNoindex, languagesOf, params } from "../helpers/metadata";
 
 const getPostingBySlug = vi.fn();
+const getRecruitmentWithPostsCached = vi.fn();
 const getArticleBySlug = vi.fn();
 const getOrganizationBySlug = vi.fn();
 const getExamBySlug = vi.fn();
@@ -17,7 +18,12 @@ const getExamBySlug = vi.fn();
 vi.mock("@/lib/queries", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getPostingBySlug: (...a: unknown[]) => getPostingBySlug(...a),
+  getPostingBySlugCached: (...a: unknown[]) => getPostingBySlug(...a),
   getArticleBySlug: (...a: unknown[]) => getArticleBySlug(...a),
+}));
+vi.mock("@/db/operations/get-recruitments", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getRecruitmentWithPostsCached: (...a: unknown[]) => getRecruitmentWithPostsCached(...a),
 }));
 vi.mock("@/db/operations/get-organizations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -109,7 +115,10 @@ const ENTITY_TYPES: {
   },
 ];
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  getRecruitmentWithPostsCached.mockResolvedValue(null);
+});
 
 describe.each(ENTITY_TYPES)("$name page metadata", ({ basePath, load }) => {
   const enUrl = `${SITE}${basePath}/sample`;
