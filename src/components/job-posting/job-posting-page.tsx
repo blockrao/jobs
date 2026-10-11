@@ -72,24 +72,24 @@ export default function JobPostingPage({
       }
     : post;
 
-  // Get sibling posts for multi-post recruitments
+  // Preserve the locale prefix for all internal links. Hindi pages are currently\n  // untranslated/noindex, but navigation must remain within the requested route family.\n  const localePrefix = locale === "hi" ? "/hi" : "";\n\n  // Get sibling posts for multi-post recruitments
   const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
 
   return (
     <div className={styles.container}>
         {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
         <div className={styles.breadcrumb}>
-          <Link href="/jobs">Jobs</Link>
+          <Link href={`${localePrefix}/jobs`}>Jobs</Link>
           <span>›</span>
           {recruitment?.recruitment?.organizationSlug && post.organizationName && (
             <>
-              <Link href={`/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
+              <Link href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
               <span>›</span>
             </>
           )}
           {post.recruitmentSlug && (
             <>
-              <Link href={`/jobs/${post.recruitmentSlug}`}>
+              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
                 {post.recruitmentName ?? recruitment?.recruitment?.name ?? "Recruitment"}
               </Link>
               <span>›</span>
@@ -161,7 +161,7 @@ export default function JobPostingPage({
             <ul className={styles.relatedRolesList}>
               {recruitment?.posts?.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/jobs/${post.recruitmentSlug}/${p.slug}`}>
+                  <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
                     <span className={styles.roleTitle}>{p.title}</span>
                     {p.vacancies?.[0]?.count && (
                       <span className={styles.roleVacancies}>
