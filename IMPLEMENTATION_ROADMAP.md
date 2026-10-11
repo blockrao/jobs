@@ -1,5 +1,39 @@
 # Implementation Roadmap: Graph Model & Canonical Hubs
 
+## Product architect execution checkpoint — 2026-10-11
+
+This checkpoint supersedes any assumption that an open PR or READY deployment is release acceptance. Work is ordered by public correctness and data integrity, not by ingestion throughput.
+
+### P0 — Public candidate experience (in progress; branch changes not yet production)
+
+- [x] Replace the internal `/fja-review` page with `notFound()` and noindex metadata on the SEO-policy branch. Commit: `720ec781c8de51a2a54533f170e67a8e00d512b3`.
+- [x] Remove inventory/extraction panels and source-comparison copy from the public Recruitment Hub component on the SEO-policy branch. Commit: `158b19ffe9e9c96d71a44c67a8b56a859ed29e36`.
+- [ ] CI and preview verify that `/fja-review` is a real 404; representative hubs/leaf pages expose no internal inventory or source-review fields; official notification/application links remain resolver-approved only.
+- [ ] Confirm no public FreeJobAlert/source-aggregator branding remains in rendered pages, navigation, metadata, structured data, sitemap, or error states. Internal ingestion provenance may remain in restricted/backend tooling.
+
+### P0 — Canonical serving and SEO release gate
+
+- [ ] Verify PRs #48 and #51 together: canonical Recruitment-scoped Post Leaf resolution, legacy slug redirects, English/Hindi route parity, page/entity metadata agreement, robots, canonical, JobPosting JSON-LD dates, and sitemap policy.
+- [ ] The current production audit observed `/hi/jobs/...` output with `lang="en"` and English canonical metadata, and no Hindi URLs/hreflang alternates in the inspected sitemap. Treat this as an open defect until preview tests demonstrate the intended untranslated-Hindi noindex/follow policy and genuine-translation hreflang policy.
+- [ ] Verify representative live HTML and HTTP status for English/Hindi hubs and leaves, unknown slugs, `/fja-review`, sitemap, and robots. A Vercel READY state alone does not pass this gate.
+- [ ] Keep lint debt transparent; do not disable checks or weaken architecture contracts to manufacture green CI.
+
+### P0 — Data-injection readiness gate (not ready for canonical promotion)
+
+- [ ] Capture raw source material with stable provenance and capture timestamps; the last audited production snapshot had zero rows in `fja_source_captures`.
+- [ ] Complete extraction coverage reporting for recruitment-level and role-level fields, distinguishing “not present in source” from “not extracted”.
+- [ ] Verify material facts against official notification/application sources; record field-level evidence and unresolved discrepancies.
+- [ ] Dry-run deterministic identity matching and reconciliation for Organization, Recruitment, Post, and Position; route ambiguous or multi-role notices to review.
+- [ ] Demonstrate idempotent reruns and before/after counts. Keep inventory candidates staged until validation passes; no direct promotion of partial/unverified inventory into public canonical pages.
+- [ ] Refresh production DB counts before any write/backfill. The earlier snapshot (3 partial inventory records, 8 partial Post candidates, 0 raw captures) is historical evidence, not a current complete inventory count.
+
+### Execution rule
+
+Finish the public UI and canonical serving gates first, then the source-capture/verification/reconciliation pilot, then a bounded data injection. Do not make scraping/ingestion the product centre; it is a supporting input pipeline. Production schema changes remain migration-only, and production writes require an explicit reviewed plan.
+
+---
+
+
 ## Current corrective work — 2026-10-11
 
 This section supersedes older sprint assumptions where they conflict with the frozen canonical model and current route implementation. Do not treat ingestion/scraping as the product core; the public contract is Organization → Recruitment → Post → Position, with one deterministic URL and SEO policy per entity.
