@@ -105,13 +105,14 @@ export default function JobPostingPage({
         <QuickFacts post={post} resolvedFacts={resolvedFacts} />
 
         {/* Action Buttons
-          CTA priority: use Recruitment-owned resolved URLs when available
-          (canonical entity authority), fall through to raw post columns only
-          as a last resort. Never show a "#" dead link for Apply.
+          Recruitment owns application and official-notification URLs. Only
+          resolver-approved URLs may be exposed publicly; raw Post columns are
+          not a safe fallback because they may contain unverified discovery links.
+          If no approved URL resolves, omit that action rather than mislabel it.
         */}
         {(() => {
-          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
-          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
+          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
           return (
             <div className={styles.actions}>
               {applyUrl && (
