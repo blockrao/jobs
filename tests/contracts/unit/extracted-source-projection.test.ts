@@ -67,7 +67,7 @@ describe("extracted source projection", () => {
     expect(quickFacts).toContain("Application Deadline (reported)");
     expect(quickFacts).toContain("reportedDeadline");
     expect(quickFacts).toContain("extractedVacancyCount");
-    expect(quickFacts).toContain('label: "Location (reported)"');
+    expect(quickFacts).toContain('"Location (reported)"');
     expect(salary).toContain('sourceFactsUnverified && post.fjaExtract?.salaryRaw');
   });
 
