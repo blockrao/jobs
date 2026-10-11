@@ -726,14 +726,14 @@ export default function RecruitmentHub({
               {appEnd && (
                 <li className="pl-5 relative">
                   <span className={`absolute -left-[9px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    closed
+                    closed || sourceFactsUnverified
                       ? 'bg-gray-100 border-gray-400'
                       : isClosingSoon
                       ? 'bg-orange-100 border-orange-400'
                       : 'bg-red-100 border-red-400'
                   }`} />
                   <div className={`text-sm font-semibold ${
-                    closed ? 'text-gray-500' : isClosingSoon ? 'text-orange-800' : 'text-red-800'
+                    closed || sourceFactsUnverified ? 'text-gray-500' : isClosingSoon ? 'text-orange-800' : 'text-red-800'
                   }`}>
                     {appEnd}
                     {!closed && isClosingSoon && daysLeft !== null && (
@@ -744,7 +744,7 @@ export default function RecruitmentHub({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">Application Deadline</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{appEndLabel}</div>
                 </li>
               )}
             </ol>
