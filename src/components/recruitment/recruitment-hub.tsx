@@ -50,7 +50,7 @@ type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   feeNote?: string | null;
   fee_note?: string | null;
   selectionProcesses?: unknown;
-  verificationStatus?: string | null;
+  sourceVerificationStatus?: string | null;
 };
 
 type RecruitmentHubPost = typeof posts.$inferSelect & {
@@ -387,14 +387,14 @@ export default function RecruitmentHub({
           {/* Lifecycle and source verification are separate states. */}
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <StatusBadge status={recruitment.status} />
-            {recruitment.verificationStatus && recruitment.verificationStatus !== "VERIFIED" && (
+            {recruitment.sourceVerificationStatus && recruitment.sourceVerificationStatus !== "VERIFIED" && (
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
                 Official verification pending
               </span>
             )}
           </div>
 
-          {recruitment.verificationStatus && recruitment.verificationStatus !== "VERIFIED" && (
+          {recruitment.sourceVerificationStatus && recruitment.sourceVerificationStatus !== "VERIFIED" && (
             <aside
               role="note"
               aria-label="Recruitment verification notice"
