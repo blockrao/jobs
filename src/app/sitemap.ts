@@ -65,7 +65,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // slugs rather than advertising a URL that resolves to the non-indexable hub.
   const recruitmentSlugSet = new Set(recruitmentRows.map((row) => row.slug));
   const postingEntries: MetadataRoute.Sitemap = postingRows
-    .filter((row) => !recruitmentSlugSet.has(row.slug))
+    .filter(
+      (row) =>
+        !recruitmentSlugSet.has(row.slug) &&
+        (!row.canonicalRecruitmentSlug || row.canonicalRecruitmentSlug === row.slug),
+    )
     .map((row) => ({
     url: `${SITE_URL}/jobs/${row.slug}`,
     lastModified: pickSitemapLastmod(row.contentChangedAt, row.updatedAt),
