@@ -208,17 +208,19 @@ export async function resolveRecruitment(
   // Recover the winning insert by the same structured identity used above.
   // This prevents a URL slug from attaching an observation to an unrelated row.
   const finalName = truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH);
-  const existingByIdentity = await db.query.recruitments.findFirst({
-    where: and(
-      eq(recruitments.organizationId, identity.organizationId),
-      eq(recruitments.year, finalYear),
-      eq(recruitments.name, finalName),
-      identity.examId === null ? isNull(recruitments.examId) : eq(recruitments.examId, identity.examId),
-      identity.officialNotificationNumber
-        ? eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber)
-        : isNull(recruitments.officialNotificationNumber),
-    ),
-  });
+  const collisionIdentity = identity.officialNotificationNumber
+    ? and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+      )
+    : and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.year, finalYear),
+        eq(recruitments.name, finalName),
+        identity.examId === null ? isNull(recruitments.examId) : eq(recruitments.examId, identity.examId),
+        isNull(recruitments.officialNotificationNumber),
+      );
+  const existingByIdentity = await db.query.recruitments.findFirst({ where: collisionIdentity });
   if (existingByIdentity) return { id: existingByIdentity.id, created: false };
 
   // Insert raced and lost, but no row with the same structured identity is
