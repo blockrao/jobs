@@ -75,6 +75,8 @@ describe("extracted source projection", () => {
     expect(source).toContain('sourceFactsUnverified ? "Source listing published" : "Notification Published"');
     expect(source).toContain("sourceFactsUnverified ? null : daysUntil(recruitment.applicationEndDate)");
     expect(source).toContain('sourceFactsUnverified ? "Reported Last Date" : "Last Date"');
+    expect(source).toContain("The source listing reports");
+    expect(source).toContain('sourceFactsUnverified ? "Reported vacancies" : "Vacancies"');
   });
   test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
