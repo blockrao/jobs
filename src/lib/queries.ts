@@ -666,6 +666,7 @@ export interface RoleRow {
   occurrenceCount: number;
   totalVacancies: number;
   earliestDeadline: Date | null;
+  closesWithinWeek: boolean;
 }
 
 export async function getJobsControlCenter(): Promise<{
@@ -831,12 +832,16 @@ export async function getJobsControlCenter(): Promise<{
     locationStateCode: r.location_state_code ? String(r.location_state_code) : null,
   }));
 
-  const roles: RoleRow[] = (roleRows as unknown as Record<string, unknown>[]).map((r) => ({
-    name: String(r.name),
-    occurrenceCount: Number(r.occurrence_count),
-    totalVacancies: Number(r.total_vacancies),
-    earliestDeadline: r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null,
-  }));
+  const roles: RoleRow[] = (roleRows as unknown as Record<string, unknown>[]).map((r) => {
+    const earliestDeadline = r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null;
+    return {
+      name: String(r.name),
+      occurrenceCount: Number(r.occurrence_count),
+      totalVacancies: Number(r.total_vacancies),
+      earliestDeadline,
+      closesWithinWeek: earliestDeadline !== null && earliestDeadline.getTime() - Date.now() < 7 * 86_400_000,
+    };
+  });
 
   return { stats, deadlineBuckets, topOrgs, jobs, roles };
 }
