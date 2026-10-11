@@ -143,7 +143,7 @@ describe("NF timeline", () => {
     const rows = buildNoticeTimeline(f({ exam_date: "2026-11-02T00:00:00+05:30" }));
     expect(rows.map((r) => [r.stage, r.title])).toEqual([
       ["NOTIFICATION_OUT", "Notification released"],
-      ["APPLICATION_OPEN", "Last date to apply"],
+      ["APPLICATION_CLOSED", "Last date to apply"],
       ["EXAM_SCHEDULED", "Exam scheduled"],
     ]);
   });
