@@ -63,6 +63,8 @@ interface PostLeafSchemaProps {
   resolvedSalary: ResolvedSalary | null;
   /** Deadline from resolveDeadline — state UNKNOWN means no validThrough. */
   resolvedDeadline: ResolvedDeadline;
+  /** Keep incomplete source-inventory records out of JobPosting rich results. */
+  suppressJobPostingSchema?: boolean;
 }
 
 function toIso(d: Date | null | undefined): string | undefined {
@@ -84,6 +86,7 @@ export default function PostLeafStructuredData({
   resolvedVacancy,
   resolvedSalary,
   resolvedDeadline,
+  suppressJobPostingSchema = false,
 }: PostLeafSchemaProps) {
   const leafUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.slug}`;
   const hubUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
@@ -223,7 +226,7 @@ export default function PostLeafStructuredData({
 
   const graph = {
     "@context": "https://schema.org",
-    "@graph": [breadcrumb, jobPosting],
+    "@graph": suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting],
   };
 
   return (
