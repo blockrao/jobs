@@ -15,25 +15,17 @@ interface JobPostingHeaderProps {
 export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHeaderProps) {
   // Use resolver output — never compute deadline from raw enrichment
   const deadline = resolvedFacts?.deadline;
-  const daysUntilClose = deadline?.state === "OPEN" && deadline.date
-    ? Math.ceil((deadline.date.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
-
   const statusColor =
-    deadline?.state === "UNKNOWN" || deadline?.state === "CLOSED"
-      ? "neutral"
-      : daysUntilClose !== null && daysUntilClose <= 7
-        ? "danger"
-        : "success";
+    deadline?.state === "OPEN"
+      ? "success"
+      : "neutral";
   // UNKNOWN deadline must never be shown as "OPEN"
   const statusText =
-    deadline?.state === "OPEN" && daysUntilClose !== null
-      ? daysUntilClose > 0
-        ? `${daysUntilClose} DAYS LEFT`
-        : "CLOSED"
+    deadline?.state === "OPEN"
+      ? "APPLICATION OPEN"
       : deadline?.state === "CLOSED"
-      ? "CLOSED"
-      : "CHECK NOTIFICATION";
+        ? "CLOSED"
+        : "CHECK NOTIFICATION";
 
   const employmentType = post.employmentType
     ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
