@@ -485,3 +485,19 @@ All sprints complete when:
 - [ ] Confirm Vercel Preview build has the authoritative `DATABASE_URL` and generated manifest before cutover.
 
 **Release policy:** this routing change is not accepted on source inspection alone. Keep PR #51 open until CI and preview HTTP acceptance criteria pass. No production deployment is authorized by this checkpoint.
+
+## Preview acceptance checkpoint — 2026-10-11 (role metadata patch)
+
+Preview tested on the isolated role-metadata branch at commit `dca78bcd7aaf1c83b81cfcf67aedc48e9bb24f7a` (`https://asdf-ezsii59v5-jobing.vercel.app`). This is acceptance evidence for the sampled routes only, not a release approval.
+
+- [x] Preview deployment reached READY.
+- [x] Canonical role page `/posts/junior-research-fellow-jobs` returns HTTP 200, self-canonicalizes, and now emits matching role-specific Open Graph and Twitter titles/descriptions.
+- [x] Sample English Post Leaf returns HTTP 200, self-canonicalizes, and includes `JobPosting` JSON-LD.
+- [x] Sample Hindi Post Leaf returns `lang="hi"`, canonicalizes to its English leaf, is `noindex, follow`, and omits `JobPosting` JSON-LD.
+- [x] Sample Recruitment Hub returns `noindex, follow` and canonicalizes to its single role's `/posts/{role-slug}` page.
+- [x] Sitemap has 2,422 unique URLs in this preview response: 1,553 nested job leaf URLs, 36 role discovery URLs, no legacy two-segment `/jobs/{recruitment}` URLs, and no `/hi/` URLs.
+- [x] Architecture contract tests, application type-check, and contract-test type-check pass on the role-metadata branch.
+- [ ] Lint remains red at 209 errors / 78 warnings; the completed run showed repository-wide lint findings and none in the changed role page or new test.
+- [ ] The final response for `/hi/posts/{role-slug}` resolves to the English canonical page, but the intermediate redirect status was not independently captured; verify redirect status and cache policy.
+- [ ] Sitemap verification is structural so far. Reconcile every sitemap URL against its live status, canonical, robots/indexability policy, and structured-data eligibility before release.
+- [ ] Do not merge or promote until remaining route and sitemap acceptance gates are complete.
