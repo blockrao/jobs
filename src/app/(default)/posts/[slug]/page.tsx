@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
-import { getRoleBySlug, ROLE_REGISTRY } from "@/lib/roles";
+import { getRoleBySlug } from "@/lib/roles";
 import { getPostsForRole, getRoleStats, type RolePost, type RoleStats } from "@/db/operations/get-roles";
 import { getPositionBySlug, getPostsForPosition, getPositionStats } from "@/db/operations/get-positions";
 import { safeQuery } from "@/lib/safe-query";
