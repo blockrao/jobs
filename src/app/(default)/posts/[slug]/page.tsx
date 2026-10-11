@@ -44,6 +44,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         url: absoluteUrl(`/posts/${position.slug}`),
         type: "website",
       },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
     };
   }
 
@@ -68,6 +73,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: absoluteUrl(`/posts/${role.slug}`),
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   };
 }
