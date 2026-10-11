@@ -51,6 +51,7 @@ type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   fee_note?: string | null;
   selectionProcesses?: unknown;
   sourceVerificationStatus?: string | null;
+  sourceListingPublishedDate?: Date | string | null;
 };
 
 type RecruitmentHubPost = typeof posts.$inferSelect & {
@@ -236,9 +237,17 @@ export default function RecruitmentHub({
 }: RecruitmentHubProps) {
   const localePrefix = locale === "hi" ? "/hi" : "";
   const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
-  const notificationDate = formatDate(recruitment.notificationDate);
-  const appStart = formatDate(recruitment.applicationStartDate);
+  const sourceFactsUnverified = Boolean(
+    recruitment.sourceVerificationStatus &&
+    recruitment.sourceVerificationStatus !== "VERIFIED"
+  );
+  const notificationDate = formatDate(
+    sourceFactsUnverified ? recruitment.sourceListingPublishedDate : recruitment.notificationDate
+  );
+  const notificationDateLabel = sourceFactsUnverified ? "Source listing published" : "Notification Published";
+  const appStart = formatDate(sourceFactsUnverified ? null : recruitment.applicationStartDate);
   const appEnd = formatDate(recruitment.applicationEndDate);
+  const appEndLabel = sourceFactsUnverified ? "Application deadline reported" : "Application Closes";
   const closed = isRecruitmentClosed(recruitment.status);
   // Internal pilot/seed notes are operational metadata, not candidate-facing copy.
   const descriptionIsInternal = /seeded from .*sample article|ui\/db validation|sample listing seeded/i.test(
@@ -259,8 +268,8 @@ export default function RecruitmentHub({
     resolvedSelectionProcess ?? recruitment.selectionProcess ?? null;
 
   // Urgency: days remaining for deadline
-  const daysLeft = daysUntil(recruitment.applicationEndDate);
-  const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && !closed;
+  const daysLeft = sourceFactsUnverified ? null : daysUntil(recruitment.applicationEndDate);
+  const isClosingSoon = !sourceFactsUnverified && daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && !closed;
   const isLastDay = daysLeft === 0;
 
   // Determine if the dated timeline has anything to show
@@ -315,7 +324,9 @@ export default function RecruitmentHub({
   if (appEnd) {
     faqItems.push({
       q: 'When does the application close?',
-      a: `The last date to apply is ${appEnd}.`,
+      a: sourceFactsUnverified
+        ? `The source listing reports a deadline of ${appEnd}. Confirm the date in the specific official notice before applying.`
+        : `The last date to apply is ${appEnd}.`,
     });
   }
 
@@ -433,7 +444,7 @@ export default function RecruitmentHub({
 
             {appEnd && (
               <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 border ${
-                closed
+                closed || sourceFactsUnverified
                   ? 'bg-gray-50 border-gray-200'
                   : isLastDay
                   ? 'bg-red-50 border-red-300'
@@ -442,14 +453,14 @@ export default function RecruitmentHub({
                   : 'bg-white border-gray-200'
               }`}>
                 <Clock size={18} className={
-                  closed ? 'text-gray-400' :
+                  closed || sourceFactsUnverified ? 'text-gray-400' :
                   isLastDay ? 'text-red-600' :
                   isClosingSoon ? 'text-orange-600' :
                   'text-gray-500'
                 } />
                 <div>
                   <div className={`text-base font-bold leading-none ${
-                    closed ? 'text-gray-500' :
+                    closed || sourceFactsUnverified ? 'text-gray-500' :
                     isLastDay ? 'text-red-700' :
                     isClosingSoon ? 'text-orange-700' :
                     'text-gray-900'
@@ -468,7 +479,7 @@ export default function RecruitmentHub({
                     isClosingSoon ? 'text-orange-600' :
                     'text-gray-500'
                   }`}>
-                    {closed ? 'Application closed' : isClosingSoon || isLastDay ? `Closes ${appEnd}` : 'Last date'}
+                    {closed ? 'Application closed' : sourceFactsUnverified ? 'Reported deadline · confirm official notice' : isClosingSoon || isLastDay ? `Closes ${appEnd}` : 'Last date'}
                   </div>
                 </div>
               </div>
@@ -593,7 +604,7 @@ export default function RecruitmentHub({
 
               {appEnd && (
                 <div className="flex gap-4 py-2.5">
-                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Last Date</dt>
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">{sourceFactsUnverified ? "Reported Last Date" : "Last Date"}</dt>
                   <dd className={`text-sm font-semibold ${closed ? 'text-gray-500' : isClosingSoon ? 'text-orange-700' : 'text-red-700'}`}>
                     {appEnd}
                     {!closed && isClosingSoon && daysLeft !== null && (
@@ -695,7 +706,7 @@ export default function RecruitmentHub({
                 <li className="pl-5 relative">
                   <span className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-400 flex items-center justify-center" />
                   <div className="text-sm font-semibold text-gray-900">{notificationDate}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Notification Published</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{notificationDateLabel}</div>
                 </li>
               )}
               {appStart && (
@@ -765,7 +776,7 @@ export default function RecruitmentHub({
                             {posts[0].resolvedVacancyCount.toLocaleString('en-IN')} vacancies
                           </span>
                         )}
-                        <PostStatusBadge post={posts[0]} appEndDate={recruitment.applicationEndDate} />
+                        <PostStatusBadge post={posts[0]} appEndDate={sourceFactsUnverified ? null : recruitment.applicationEndDate} />
                       </div>
                     </div>
                     <ArrowRight size={20} className="text-blue-600 flex-shrink-0 mt-1 group-hover:translate-x-1 transition-transform" />
@@ -807,7 +818,7 @@ export default function RecruitmentHub({
                               {postVacancies.toLocaleString('en-IN')} vacancies
                             </span>
                           )}
-                          <PostStatusBadge post={post} appEndDate={recruitment.applicationEndDate} />
+                          <PostStatusBadge post={post} appEndDate={sourceFactsUnverified ? null : recruitment.applicationEndDate} />
                         </div>
                       </div>
                       <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition" />
