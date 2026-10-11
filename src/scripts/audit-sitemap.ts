@@ -74,16 +74,30 @@ function isJobDetail(url: URL): boolean {
 }
 
 async function fetchText(url: string): Promise<{ status: number; body: string; xRobotsTag: string | null }> {
-  const response = await fetch(url, {
-    redirect: "manual",
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: { "user-agent": "JobOye-Sitemap-Audit/1.0", accept: "text/html,application/xml;q=0.9,*/*;q=0.8" },
-  });
-  return {
-    status: response.status,
-    body: await response.text(),
-    xRobotsTag: response.headers.get("x-robots-tag"),
-  };
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(url, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: { "user-agent": "JobOye-Sitemap-Audit/1.0", accept: "text/html,application/xml;q=0.9,*/*;q=0.8" },
+      });
+      if ((response.status === 429 || response.status >= 500) && attempt < 2) {
+        await response.body?.cancel();
+        await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
+        continue;
+      }
+      return {
+        status: response.status,
+        body: await response.text(),
+        xRobotsTag: response.headers.get("x-robots-tag"),
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 async function main() {
@@ -102,6 +116,10 @@ async function main() {
   const sitemapUrls = [...sitemap.body.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)]
     .map((m) => m[1].trim().replace(/&amp;/g, "&"))
     .filter(Boolean);
+  if (sitemapUrls.length === 0) {
+    console.error("Sitemap returned HTTP 200 but contained no <loc> URLs");
+    process.exit(2);
+  }
   const duplicateCount = sitemapUrls.length - new Set(sitemapUrls).size;
   const selected = limit > 0 ? sitemapUrls.slice(0, limit) : sitemapUrls;
   const sitemapOrigin = sitemapUrls.length ? new URL(sitemapUrls[0]).origin : new URL(base).origin;
