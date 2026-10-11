@@ -4,6 +4,7 @@ const getPostBySlug = vi.fn();
 
 vi.mock("@/db/operations/get-posts", () => ({
   getPostBySlug: (...args: unknown[]) => getPostBySlug(...args),
+  getPostBySlugCached: (...args: unknown[]) => getPostBySlug(...args),
 }));
 
 import { generateMetadata } from "@/app/[locale]/jobs/[slug]/[post-slug]/page";
