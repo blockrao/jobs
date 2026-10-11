@@ -822,7 +822,9 @@ export default function RecruitmentHub({
                           {postVacancies != null && (
                             <span className="flex items-center gap-1 font-medium text-blue-700">
                               <Users size={11} className="text-blue-500" />
-                              {postVacancies.toLocaleString('en-IN')} vacancies
+                              {sourceFactsUnverified
+                                ? `${postVacancies.toLocaleString('en-IN')} reported ${postVacancies === 1 ? 'vacancy' : 'vacancies'}`
+                                : `${postVacancies.toLocaleString('en-IN')} ${postVacancies === 1 ? 'vacancy' : 'vacancies'}`}
                             </span>
                           )}
                           <PostStatusBadge post={post} appEndDate={sourceFactsUnverified ? null : recruitment.applicationEndDate} />
