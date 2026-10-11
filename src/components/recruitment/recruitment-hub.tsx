@@ -752,7 +752,7 @@ export default function RecruitmentHub({
                         {posts[0].locationText && (
                           <span className="flex items-center gap-1">
                             <MapPin size={14} className="text-gray-400" />
-                            {posts[0].position.locationText}
+                            {posts[0].locationText}
                           </span>
                         )}
                         <PostStatusBadge post={posts[0]} appEndDate={recruitment.applicationEndDate} />
