@@ -50,6 +50,7 @@ type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   feeNote?: string | null;
   fee_note?: string | null;
   selectionProcesses?: unknown;
+  verificationStatus?: string | null;
 };
 
 type RecruitmentHubPost = typeof posts.$inferSelect & {
@@ -383,10 +384,27 @@ export default function RecruitmentHub({
             ═══════════════════════════════════════════ */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-6 md:px-8 md:py-8">
 
-          {/* Status badge */}
-          <div className="mb-3">
+          {/* Lifecycle and source verification are separate states. */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <StatusBadge status={recruitment.status} />
+            {recruitment.verificationStatus && recruitment.verificationStatus !== "VERIFIED" && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
+                Official verification pending
+              </span>
+            )}
           </div>
+
+          {recruitment.verificationStatus && recruitment.verificationStatus !== "VERIFIED" && (
+            <aside
+              role="note"
+              aria-label="Recruitment verification notice"
+              className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
+            >
+              This recruitment summary includes extracted information that has not yet been confirmed
+              against the institution&apos;s individual official notice(s). Dates, vacancy totals and
+              application instructions should be treated as provisional until verified.
+            </aside>
+          )}
 
           {/* Recruitment name (h1) */}
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
