@@ -7,6 +7,7 @@ const POST_PAGE = "src/components/job-posting/job-posting-page.tsx";
 const ELIGIBILITY = "src/components/job-posting/sections/eligibility-criteria.tsx";
 const SALARY = "src/components/job-posting/sections/salary-compensation.tsx";
 const DATES = "src/components/job-posting/sections/important-dates.tsx";
+const QUICK_FACTS = "src/components/job-posting/sections/quick-facts.tsx";
 const APPLY = "src/components/job-posting/sections/how-to-apply.tsx";
 const VERIFICATION = "src/components/job-posting/sections/official-source-verification.tsx";
 const HUB = "src/components/recruitment/recruitment-hub.tsx";
@@ -40,6 +41,7 @@ describe("extracted source projection", () => {
     const eligibility = stripComments(readSource(ELIGIBILITY));
     const salary = stripComments(readSource(SALARY));
     const dates = stripComments(readSource(DATES));
+    const quickFacts = stripComments(readSource(QUICK_FACTS));
     expect(eligibility).toContain("extracted?.qualificationRaw");
     expect(eligibility).toContain("extracted?.experienceRaw");
     expect(salary).toContain("Pay reported in listing · pending verification");
@@ -47,6 +49,8 @@ describe("extracted source projection", () => {
     expect(dates).toContain("Source listing published");
     expect(dates).toContain("post.fjaExtract?.milestonesRaw");
     expect(dates).toContain("enrichment?.applicationClosingDate ?? null");
+    expect(quickFacts).toContain("Application Deadline (reported)");
+    expect(quickFacts).toContain("reportedDeadline");
   });
 
   test("unverified extracted application methods do not become clickable application links", () => {
