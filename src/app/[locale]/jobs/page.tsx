@@ -112,8 +112,10 @@ export default async function LocaleJobsListPage({ params, searchParams }: Props
   const kindLabels = isHi ? KIND_LABELS_HI : KIND_LABELS;
   const dateLocale = isHi ? "hi-IN" : "en-IN";
 
-  // Base path for all links — keep the locale prefix so language stays
-  const basePath = `/${locale}/jobs`;
+  // Keep generated English listing links on the canonical unprefixed URL.
+  // Only the Hindi mirror uses a locale prefix; this avoids emitting /en/jobs
+  // in forms, filters, and pagination and relying on middleware redirects.
+  const basePath = isHi ? "/hi/jobs" : "/jobs";
 
   const L = {
     allJobs: isHi ? "सभी नौकरियां" : "All Jobs",
