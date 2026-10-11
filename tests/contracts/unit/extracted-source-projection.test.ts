@@ -67,7 +67,7 @@ describe("extracted source projection", () => {
     const source = stripComments(readSource(HUB));
     expect(source).toContain("Official verification pending");
     expect(source).toContain("Recruitment verification notice");
-    expect(source).toContain("recruitment.verificationStatus !== \"VERIFIED\"");
+    expect(source).toContain("recruitment.sourceVerificationStatus !== \"VERIFIED\"");
   });
   test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
