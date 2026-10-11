@@ -76,7 +76,7 @@ describe("extracted source projection", () => {
     expect(route).toContain("const canonicalPath = roleSlugs.length === 1 ?");
     expect(route).toContain("/posts/${roleSlugs[0]}");
     expect(route).toContain("/jobs/${recruitment.slug}");
-    expect(route).toContain("verificationStatus: recruitment.verificationStatus ?? null");
+    expect(route).toContain("verificationStatus: recruitment.sourceVerificationStatus ?? null");
     expect(schema).toContain("factsVerified ? toIso(recruitment.notificationDate) : undefined");
     expect(schema).toContain("factsVerified ? toIso(recruitment.applicationEndDate) : undefined");
   });
