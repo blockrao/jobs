@@ -78,6 +78,15 @@ describe("extracted source projection", () => {
     expect(source).toContain("The source listing reports");
     expect(source).toContain('sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"');
   });
+  test("unverified extracted Post Leaves are noindex and omit JobPosting schema", () => {
+    const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
+    const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
+    expect(route).toContain("index: !sourceVerificationPending");
+    expect(route).toContain("suppressJobPostingSchema={sourceVerificationPending}");
+    expect(route).toContain('"reported vacancies"');
+    expect(schema).toContain("suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting]");
+  });
+
   test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
