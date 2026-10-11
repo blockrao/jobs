@@ -69,4 +69,16 @@ describe("extracted source projection", () => {
     expect(source).toContain("Recruitment verification notice");
     expect(source).toContain("recruitment.verificationStatus !== \"VERIFIED\"");
   });
+  test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
+    const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
+    const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
+    expect(route).toContain("pageSeo(canonicalPath, { index: false })");
+    expect(route).toContain("const canonicalPath = roleSlugs.length === 1 ?");
+    expect(route).toContain("/posts/${roleSlugs[0]}");
+    expect(route).toContain("/jobs/${recruitment.slug}");
+    expect(route).toContain("verificationStatus: recruitment.verificationStatus ?? null");
+    expect(schema).toContain("factsVerified ? toIso(recruitment.notificationDate) : undefined");
+    expect(schema).toContain("factsVerified ? toIso(recruitment.applicationEndDate) : undefined");
+  });
+
 });
