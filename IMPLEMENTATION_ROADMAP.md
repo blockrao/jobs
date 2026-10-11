@@ -427,3 +427,21 @@ All sprints complete when:
 - **Weekly**: Monitor orphaned postings; adjust inference confidence thresholds
 - **Monthly**: Update recruitment statuses (ACTIVE → RESULTS); refresh positions data
 - **Quarterly**: Add new exams/organizations; expand position coverage
+
+
+---
+
+## Routing release gate — legacy root exam URL decoupling (2026-10-11)
+
+**Decision:** the canonical exam URL is `/exams/{slug}`. Legacy root URLs `/{exam-slug}` are compatibility redirects only; they must not share the locale route segment or layout.
+
+- [x] Add a pure, unit-tested decision function for known legacy exam redirects.
+- [x] Generate the redirect allowlist from the authoritative `exams` table before each production build.
+- [x] Fail the build if `DATABASE_URL` is absent, the query fails, the table is empty, or any slug is invalid/duplicated. Never silently publish an empty manifest.
+- [x] Redirect only manifest-listed root exam slugs in proxy; no per-request DB lookup for arbitrary root paths.
+- [x] Remove the overloaded `src/app/[locale]/page.tsx` compatibility route so non-locale root paths are not interpreted as locale params.
+- [ ] CI: application and contract type checks, route contract tests, and lint on the current PR head.
+- [ ] Fresh preview HTTP verification: known legacy slug returns one-hop 301 to `/exams/{slug}`; unknown root path returns 404; `/hi` and `/en` resolve intentionally; locale job leaves, articles, exams, organizations, static assets, sitemap and robots remain correct.
+- [ ] Confirm Vercel Preview build has the authoritative `DATABASE_URL` and generated manifest before cutover.
+
+**Release policy:** this routing change is not accepted on source inspection alone. Keep PR #51 open until CI and preview HTTP acceptance criteria pass. No production deployment is authorized by this checkpoint.
