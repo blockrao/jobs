@@ -11,7 +11,6 @@ import {
   getPostingSlugsPageForSitemap,
   getPostSlugsForSitemap,
   getRecruitmentSlugsForSitemap,
-  listCommissionsWithExams,
 } from "@/lib/queries";
 import { pickSitemapLastmod } from "@/lib/freshness/lastmod";
 import { sitemapAlternates } from "@/lib/seo";
@@ -29,13 +28,12 @@ const MAX_POSTING_URLS = 45000;
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows, postLeafRows, recruitmentRows] = await Promise.all([
+  const [postingRows, articleRows, categoryRows, orgRows, examRows, postLeafRows, recruitmentRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
     getAllCategorySlugsForSitemap().catch(() => []),
     getAllOrganizationSlugsForSitemap().catch(() => []),
     getAllExamSlugsForSitemap().catch(() => []),
-    listCommissionsWithExams().catch(() => []),
     getPostSlugsForSitemap().catch(() => []),
     getRecruitmentSlugsForSitemap().catch(() => []),
   ]);
@@ -106,12 +104,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...sitemapAlternates("/exams", row.slug, Boolean(row.labelHi)),
   }));
 
-  const commissionEntries: MetadataRoute.Sitemap = commissionRows.map((row) => ({
-    url: `${SITE_URL}/commissions/${row.slug}`,
-    changeFrequency: "weekly",
-    priority: 0.4,
-  }));
-
   // PQ-006 / PQ-007: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
   //
   // Sitemap policy (Phase 1B):
@@ -148,7 +140,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryEntries,
     ...orgEntries,
     ...examEntries,
-    ...commissionEntries,
   ];
   const uniqueEntries = new Map<string, MetadataRoute.Sitemap[number]>();
   for (const entry of allEntries) uniqueEntries.set(entry.url, entry);

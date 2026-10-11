@@ -501,3 +501,126 @@ Preview tested on the isolated role-metadata branch at commit `dca78bcd7aaf1c83b
 - [ ] The final response for `/hi/posts/{role-slug}` resolves to the English canonical page, but the intermediate redirect status was not independently captured; verify redirect status and cache policy.
 - [ ] Sitemap verification is structural so far. Reconcile every sitemap URL against its live status, canonical, robots/indexability policy, and structured-data eligibility before release.
 - [ ] Do not merge or promote until remaining route and sitemap acceptance gates are complete.
+
+## Follow-up found during sitemap route sampling — 2026-10-11
+
+- [x] A representative sitemap sample revealed that `/jobs` was listed in the sitemap while the rendered route was served by `/[locale]/jobs` with `noindex, follow`.
+- [ ] Fix the locale-aware jobs metadata so the unfiltered English `/jobs` canonical remains indexable, while `/hi/jobs` and filtered/search/paginated variants remain noindex and canonicalize to `/jobs`.
+- [ ] Add regression coverage for English canonical listing, Hindi mirror, and filtered listing. Keep this as a separate stacked change; do not treat sitemap uniqueness as proof of indexability consistency.
+
+## Jobs listing indexability — follow-up acceptance checkpoint (2026-10-11)
+
+The /jobs metadata correction and focused unit tests are on fix/jobs-listing-indexability in draft PR #55. Search and page-2 variants are now also covered by the regression test file. The branch still has no successful CI or fresh Vercel preview; the commit status reports Vercel build-rate-limit failure, so no branch-level runtime claim is made.
+
+### Current production sample (diagnostic only; not proof of PR behavior)
+
+- [x] /jobs returns HTTP 200 but still emits noindex, follow, despite being included in /sitemap.xml.
+- [x] /hi/jobs, /jobs?filter=open, /jobs?q=police, and /jobs?page=2 return noindex, follow and canonicalize to /jobs.
+- [x] Production sitemap currently contains 3,509 unique URLs, including 1,087 one-segment /jobs/{slug} URLs, 1,553 nested job leaves, and 36 /posts/{role-slug} URLs.
+- [x] A sampled production Recruitment Hub still returns HTTP 200 with a self-canonical and no robots meta tag, while the current branch source contains the noindex/canonical policy and sitemap exclusion. Treat this as production-versus-branch drift until a fresh preview of the exact branch is available; do not infer that the branch implementation failed from the production response alone.
+- [ ] /en/jobs still returns HTTP 200 with noindex, follow and canonical /jobs in the production sample. Capture a raw redirect response on the exact branch preview to decide whether an explicit as-needed locale redirect is needed.
+- [ ] Fresh preview of the exact PR #55 head; verify /jobs indexability, locale redirect behavior, filtered/search/pagination metadata, and sitemap-to-canonical consistency.
+- [ ] Run contract tests and app/test type checks on the exact PR head; do not merge/promote while Vercel preview remains unavailable.
+
+
+## Production deployment verification — 2026-10-11 (after user deployment)
+
+- [x] Live `https://www.joboye.com/jobs` returns HTTP 200, self-canonical `https://www.joboye.com/jobs`, and no robots noindex directive. The canonical All Jobs listing is indexable.
+- [x] Live `/hi/jobs`, `/jobs?filter=open`, `/jobs?q=police`, and `/jobs?page=2` return `noindex, follow` and canonical `/jobs`.
+- [x] Live sitemap returns HTTP 200 with 2,422 unique `<loc>` entries; includes `/jobs`, 1,553 nested job-leaf URLs and 36 `/posts/{role}` URLs; no one-segment legacy Recruitment Hub URLs found. This is structural verification, not a complete per-URL status/canonical/robots reconciliation.
+- [x] Sampled live Recruitment Hub returns `noindex, follow` and canonical to its corresponding role page.
+- [x] Exact current PR #55 preview `13e7a5790e7f2b49c77b25332cc66d628bec9eff` confirms the clean listing is indexable and search/filter/page-2 variants are noindex + canonical `/jobs`; `/hi/jobs` is noindex + canonical `/jobs`.
+- [ ] Listing social metadata defect found in preview and production: OG/Twitter inherited generic homepage copy and locale-root URL (`/en` or `/hi`) instead of the listing title/description and canonical `/jobs`. Fix committed to `fix/jobs-listing-indexability` in `d7b85ad` and `9d7f2f7`; regression assertions committed in `d1c8879`. These commits still need an exact-head READY preview and test results.
+- [ ] `/en/jobs` renders the English listing and carries canonical `/jobs`; the current web-fetch evidence does not expose the initial redirect response headers, so the 301/308/as-needed redirect behavior is NOT yet proven either way. Capture the raw first response before changing routing.
+- [ ] Sitemap reconciliation remains open: check a representative cohort across all URL families for HTTP status, canonical, robots, hreflang, and structured-data policy; then expand automated coverage. Do not infer complete correctness from the sitemap count alone.
+- [ ] No merge/promotion until latest PR #55 exact-head preview, tests, route policy and sitemap gates pass.
+
+
+## Sitemap reconciliation finding — 2026-10-11
+
+- [x] Sampled the live sitemap by route family: 2,422 URLs total; 1,553 job-leaf URLs, 36 role URLs, 702 organization URLs, 69 exam URLs, 35 state URLs, 10 commission URLs, 7 category URLs, one article URL, plus static entries.
+- [x] Representative URLs from the major families returned HTTP 200 and self-canonical metadata. The sampled job leaf had self-canonical metadata and JobPosting JSON-LD; role, organization, exam, category, state, and index pages were self-canonical and indexable in the sample.
+- [x] Found a real sitemap/indexability mismatch: `/commissions/banking` and `/commissions/ssc` render `noindex, follow` but were present in the sitemap (10 commission URLs in total).
+- [x] Removed commission URLs from sitemap generation in commit `2cbd627` and added a contract test that no `/commissions/*` URLs are emitted in commit `5ab8c19`.
+- [ ] The commission sitemap fix and listing social-metadata fix are not yet verified on a READY preview for the exact current PR #55 head. Verify sitemap output drops all 10 commission URLs and preserves canonical/indexable route families.
+- [ ] This was a representative cohort audit, not an exhaustive 2,422-URL live HTTP audit. Expand automated reconciliation to sample or check every URL for status, canonical, robots, hreflang, and structured-data policy before closing the release gate.
+
+
+## Follow-up execution check — 2026-10-11
+
+- [x] Rechecked PR #55: still open, draft, unmerged; latest head remains `a88aed49ea18ef7ee527f2995dbcf1113a491c31`.
+- [x] Rechecked Vercel: latest READY preview remains commit `d7b85ad25569ead17bc9ad35c539775277589f99`; the two metadata/sitemap changes after that are not on the preview. Attempting a fresh deployment returned HTTP 402 `api-deployments-free-per-day`, with retry-after 24 hours. Do not spam build attempts.
+- [x] Confirmed the stale preview still has generic OG/Twitter listing metadata and its sitemap still contains all 10 commission URLs. This is expected for the older deployment and is not evidence the new branch fixes failed.
+- [x] Source review of `src/proxy.ts` confirms next-intl is configured with `localePrefix: "as-needed"` and handles locale-aware routes; this supports the intended `/en/jobs` canonicalization design. The fetch layer follows/obscures the initial redirect response, so the actual first-hop HTTP status remains unverified.
+- [x] CI configuration finding: `.github/workflows/quality-gates.yml` only runs `pull_request` checks when the PR targets `main`, while PR #55 targets the stacked feature branch `fix/role-page-twitter-metadata`. GitHub reports zero check runs on the latest head. Therefore no test/build success can be claimed for this PR head. The workflow/stacked-PR policy needs a deliberate CI fix or a safe integration branch strategy.
+- [ ] Next: once Vercel deployment quota clears, create one exact-head preview, run the full route/sitemap acceptance checklist, and capture raw redirect headers using a client that does not follow redirects. Keep PR draft until CI and preview gates are green.
+
+
+## CI and bounded lint follow-up — 2026-10-11
+
+- [x] Fixed stacked-branch CI trigger coverage in `.github/workflows/quality-gates.yml`: pull-request checks remain targeted at `main`, while pushes to `fix/**`, `feat/**`, and `chore/**` run the quality gates for stacked feature branches. This preserves CI on the PR head without launching duplicate PR-event and push-event suites for feature-base PRs. Commits: `140c6877c225f67728ba076152f043d99a8cc1b4`, `8927ec610005a85b907af2b46356cd479751d963`.
+- [x] GitHub Actions now runs for PR #55 despite its feature-branch base. On exact code head `63054fffd742b8d17443d4248f7adcc45b2d3341`, architecture contract tests, application type-check, and contract-test type-check passed.
+- [x] Removed unchecked `any` casts from both jobs listing row renderers by narrowing optional listing metadata fields once per row. Commits: `387fbbe17adb806d7511e6fabafca0813a3c0b58`, `63054fffd742b8d17443d4248f7adcc45b2d3341`. Latest lint run no longer reports findings in these two listing files.
+- [ ] Lint remains failing at 197 errors / 75 warnings on the exact code head above (down from 209 errors / 75 warnings on the prior head). No lint rules were disabled. Treat this as a broad repository baseline; remediate in separate bounded batches rather than expanding this SEO fix indiscriminately.
+- [ ] The roadmap update itself will create a new head and trigger fresh CI; use the resulting exact-head checks for the next checkpoint.
+- [ ] Vercel preview remains blocked by its daily deployment quota. Do not merge or promote until the exact-head READY preview verifies the listing OG/Twitter metadata, sitemap excludes all commission URLs, and the route/sitemap acceptance checklist passes.
+
+
+### Full sitemap audit tooling added — 2026-10-11
+
+- [x] Added `src/scripts/audit-sitemap.ts` and the `npm run audit:sitemap` command. It fetches every sitemap URL with manual redirect handling and checks HTTP 200, same sitemap origin, query/hash absence, noindex directives (including `X-Robots-Tag`), self-canonical metadata, and `JobPosting` JSON-LD on job-detail URLs.
+- [x] Audit supports `--base` for production or a preview host, `--limit` for a small smoke test, `--concurrency` (default 4, maximum 8), and bounded retries for transient 429/5xx/network failures. For previews it fetches each sitemap path from the preview host while comparing canonical metadata with the absolute URL in sitemap XML.
+- [ ] This script has not yet been run against a fresh exact-head preview because Vercel's deployment quota remains blocked. First smoke-test with `npm run audit:sitemap -- --base https://<preview-host> --limit 20`, then run the full sitemap audit and archive its summary/failures before closing the release gate.
+- [ ] The audit checks canonical/indexability and job structured data; hreflang target validation remains a separate acceptance check and should be added if the first full run shows that it is needed.
+
+## Production promotion follow-up — 2026-10-11
+
+- [x] Rechecked production after the user's promotion: `/jobs` returns HTTP 200, has canonical `https://www.joboye.com/jobs`, and is not marked noindex. `/hi/jobs`, search, filter, and page-2 views are noindex/follow and canonical to `/jobs`.
+- [x] Corrected locale-aware listing navigation so English forms, filters, and pagination generate `/jobs` rather than `/en/jobs`; Hindi continues to use `/hi/jobs`. Commit: `70928041198d0abaaf7e5558653bc9f7a571146b`.
+- [ ] Social metadata remains a production acceptance item: the current production response still shows generic layout-level OG/Twitter metadata and `og:url=https://www.joboye.com/en`, despite the correct canonical. The promoted production deployment is commit `d7b85ad25569ead17bc9ad35c539775277589f99`, which predates the latest branch head; verify page-level metadata on a fresh deployment of the latest branch before closing this item.
+- [ ] Do not treat the fetch tool's HTTP 200 for `/en/jobs` as proof that the first request does not redirect: the tool follows redirects and returns the final response. The proxy's `localePrefix: "as-needed"` policy and canonical generated links are in place; raw first-hop redirect status still needs a client that does not follow redirects.
+- [ ] Latest CI on `1ee272ac3dfdb390e50632e93d95c7b75efb60f2`: application type-check, architecture contract tests, and contract-test type-check passed; lint failed with the existing repository-wide baseline of 197 errors / 75 warnings. The new canonical-link commit will trigger a new exact-head run.
+- [ ] Full sitemap audit and fresh exact-head preview verification remain open. Do not merge or promote until exact-head checks and the sitemap audit are reviewed.
+
+## Canonical listing navigation follow-up — 2026-10-11
+
+- [x] English locale-aware listing now emits `/jobs` for form submissions and generated filters/pagination; Hindi remains `/hi/jobs`. Added render-level regression tests for the generated paths.
+- [x] On code commit `70928041198d0abaaf7e5558653bc9f7a571146b`, application type-check, contract-test type-check, and architecture contract tests passed; lint remains the repository-wide failure. The new render assertions landed after that run and need validation on the next exact-head CI run.
+- [ ] The full sitemap audit remains pending; run `npm run audit:sitemap -- --base https://www.joboye.com --limit 20` first, then the full audit. A fresh preview is still needed to verify the latest branch metadata fix without relying on the older production deployment.
+
+## Final release-readiness pass — 2026-10-11 (latest source head vs production)
+
+### Exact source-head verification
+- [x] Current PR #55 source head is `62673a557c470b8995045510a42774402c494318`.
+- [x] Exact-head GitHub Actions run: architecture contract tests passed; application type-check passed; contract-test type-check passed.
+- [ ] Lint failed on the existing repository-wide backlog. No lint rules were disabled. PR remains draft/unmerged.
+- [ ] Vercel has not produced a READY deployment for this source head. The newest READY production deployment remains `d7b85ad25569ead17bc9ad35c539775277589f99`; do not claim latest-source runtime acceptance until a fresh preview exists.
+
+### Live production listing metadata
+- [x] `/jobs`: HTTP 200, page title `All Jobs | JobOye`, canonical `https://www.joboye.com/jobs`, no robots noindex directive.
+- [x] `/hi/jobs`: HTTP 200, `noindex, follow`, canonical `https://www.joboye.com/jobs`.
+- [x] `/jobs?kind=GOVERNMENT`, `/jobs?q=clerk`, and `/jobs?page=2`: HTTP 200, `noindex, follow`, canonical `https://www.joboye.com/jobs`.
+- [x] English role page and sampled English Post Leaf are self-canonical; sampled leaf includes `JobPosting` JSON-LD. Sampled Hindi leaf is noindex, canonical to English, and has no `JobPosting` JSON-LD.
+- [ ] Production Open Graph/Twitter metadata is still generic on `/jobs`: OG URL is `https://www.joboye.com/en`, and title/description are inherited homepage copy, while the HTML title is page-specific. The current source head defines listing-specific OG/Twitter fields in both listing route implementations; verify on the fresh exact-head preview. The current production response is not acceptable evidence that this fix is live.
+- [ ] `/en/jobs` resolves to the English listing and has canonical `/jobs`, but the current fetch interface follows redirects and does not expose the first-hop status/Location. Keep redirect status unverified; capture it with a non-following HTTP client on the fresh preview.
+
+### Live production sitemap audit
+- [x] `/sitemap.xml` returns HTTP 200 and contains 2,422 URLs.
+- [x] Structural integrity: 0 duplicate URLs, 0 non-`www.joboye.com` origins, 0 query/hash URLs; 1,553 nested job leaves, 36 role URLs, 10 commission URLs, and no `/hi/` URLs.
+- [x] Representative home/listing, commission, role, and job-leaf URLs returned HTTP 200 and self-canonical metadata. The sampled job leaves include `JobPosting` JSON-LD.
+- [x] Confirmed live sitemap defect: all 10 `/commissions/*` URLs are present even though those pages return `noindex, follow`. Latest branch source excludes commission entries; this correction is not yet deployed to production.
+- [ ] Full `npm run audit:sitemap -- --base https://www.joboye.com --limit 20` and then full `npm run audit:sitemap -- --base https://www.joboye.com` have not been executed from the repository runtime. Current results are a structural audit plus representative URL cohort, not a claim that all 2,422 pages were fetched and validated.
+- [ ] After Vercel quota clears, create one preview for the latest PR head; confirm listing OG/Twitter metadata, sitemap count drops by the 10 commission URLs (subject to live data), and smoke/full sitemap audit results. Then validate hreflang and first-hop redirects separately.
+- [ ] Do not merge/promote until exact-head preview and release gates are complete. Once those pass, close PR #55, then continue the broader routing/SEO backlog.
+
+## Exact-head preview audit — 2026-10-12
+- Tested source SHA: `a924e78d147de4bb48d0bba1dbca11b253a7bdc9`; Vercel deployment `dpl_FPhvbxihVfvtapDUzA3oZuDMEMBZ` is READY for that exact SHA. Reused it; no redundant build triggered.
+- `/jobs/`: HTTP 200, indexable (no robots noindex), canonical /jobs, listing-specific OG title and URL. Direct no-trailing-slash /jobs fetch was blocked by safety checks.
+- `/hi/jobs`: HTTP 200, noindex/follow, canonical /jobs, Hindi document language.
+- Government-filter listing: HTTP 200, noindex/follow, canonical /jobs.
+- Page 2 (encoded query key): HTTP 200, noindex/follow, canonical /jobs.
+- Search and filter=open requests were blocked by safety checks; not marked verified.
+- `/en/jobs/`: final HTTP 200, canonical /jobs, no noindex; fetcher follows redirects, so first-hop status/Location is unverified.
+- Sitemap: HTTP 200, 2,412 URLs; 0 duplicates, foreign origins, query/hash URLs, commission URLs, Hindi URLs, or legacy one-segment recruitment hubs. Counts include 1,553 job leaves, 36 roles, 702 organizations, 69 exams, 35 states, 7 categories and 1 article. Structural plus representative sampling only; full URL-by-URL audit and hreflang validation remain pending.
+- CI run 38158831575: application type-check PASS, architecture contract tests PASS, contract-test type-check PASS, lint FAIL.
+- Keep PR #55 draft/unmerged. Do not promote until clean /jobs and search checks, raw /en/jobs redirect verification, full sitemap audit and lint disposition pass.

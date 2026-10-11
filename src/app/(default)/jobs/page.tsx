@@ -45,9 +45,25 @@ export async function generateMetadata({
   if (filter === "newly-added") label = `Newly Added ${label}`;
   else if (filter === "open") label = `Open Applications — ${label}`;
 
+  const description = `Browse the latest ${label.toLowerCase()} notifications and openings across India.`;
+
   return {
     title: label,
-    description: `Browse the latest ${label.toLowerCase()} notifications and openings across India.`,
+    description,
+    // Keep social metadata aligned with this page's canonical URL instead of
+    // inheriting the locale layout's generic homepage title and /en URL.
+    openGraph: {
+      title: label,
+      description,
+      url: "https://www.joboye.com/jobs",
+      siteName: "JobOye",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: label,
+      description,
+    },
     // No `languages` alternate here on purpose — this URL never changes by
     // locale (see the file-level comment above), so there's nothing to
     // cross-link.
@@ -300,13 +316,23 @@ export default async function JobsListPage({ searchParams }: Props) {
       <div className="mt-6">
         <ul className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
           {results.map((posting) => {
-            const titleHi = (posting as any).titleHi as string | null;
-            const locationCityHi = (posting as any).locationCityHi as
-              | string
-              | null;
-            const orgNameHi = (posting.organization as any).nameHi as
-              | string
-              | null;
+            // Query projections vary across the legacy and normalized listing
+            // paths. Narrow the optional display fields once instead of using
+            // unchecked `any` casts throughout the row renderer.
+            const postingWithMetadata = posting as typeof posting & {
+              titleHi?: string | null;
+              locationCityHi?: string | null;
+              examDate?: Date | null;
+              lastVerifiedAt?: Date | null;
+              totalVacancies?: number | null;
+              validThrough?: Date | null;
+              organization: typeof posting.organization & {
+                nameHi?: string | null;
+              };
+            };
+            const titleHi = postingWithMetadata.titleHi ?? null;
+            const locationCityHi = postingWithMetadata.locationCityHi ?? null;
+            const orgNameHi = postingWithMetadata.organization.nameHi ?? null;
 
             const displayTitle = isHi && titleHi ? titleHi : posting.title;
             const displayOrgName =
@@ -322,10 +348,10 @@ export default async function JobsListPage({ searchParams }: Props) {
                 ? `/hi/jobs/${posting.slug}`
                 : `/jobs/${posting.slug}`;
 
-            const examDate = (posting as any).examDate as Date | null | undefined;
-            const lastVerifiedAt = (posting as any).lastVerifiedAt as Date | null | undefined;
-            const totalVacancies = (posting as any).totalVacancies as number | null | undefined;
-            const validThrough = (posting as any).validThrough as Date | null | undefined;
+            const examDate = postingWithMetadata.examDate;
+            const lastVerifiedAt = postingWithMetadata.lastVerifiedAt;
+            const totalVacancies = postingWithMetadata.totalVacancies;
+            const validThrough = postingWithMetadata.validThrough;
 
             // "Closing soon" = last date within 7 days from now (and not already past)
             const daysLeftNum = (() => {

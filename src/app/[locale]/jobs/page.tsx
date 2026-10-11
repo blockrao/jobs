@@ -48,14 +48,34 @@ export async function generateMetadata({
     ? `भारत भर में नवीनतम ${label.toLowerCase()} की सूचनाएं और रिक्तियां।`
     : `Browse the latest ${label.toLowerCase()} notifications and openings across India.`;
 
-  // This URL is a locale-prefixed mirror; canonical is /jobs. Always noindex.
+  // The unprefixed English /jobs route is the canonical listing and is
+  // indexable only when unfiltered. The Hindi mirror, filters, searches, and
+  // later pages stay noindex and canonicalize to the clean /jobs URL.
+  const seo = listingSeo("/jobs", {
+    locale: isHi ? locale : undefined,
+    kind,
+    q,
+    page: parsePage(page) > 1 ? page : undefined,
+    filter,
+  });
+
   return {
     title: label,
     description,
-    robots: { index: false, follow: true },
-    alternates: {
-      canonical: "/jobs",
+    openGraph: {
+      title: label,
+      description,
+      url: "https://www.joboye.com/jobs",
+      siteName: "JobOye",
+      locale: isHi ? "hi_IN" : "en_US",
+      type: "website",
     },
+    twitter: {
+      card: "summary",
+      title: label,
+      description,
+    },
+    ...seo,
   };
 }
 
@@ -92,8 +112,10 @@ export default async function LocaleJobsListPage({ params, searchParams }: Props
   const kindLabels = isHi ? KIND_LABELS_HI : KIND_LABELS;
   const dateLocale = isHi ? "hi-IN" : "en-IN";
 
-  // Base path for all links — keep the locale prefix so language stays
-  const basePath = `/${locale}/jobs`;
+  // Keep generated English listing links on the canonical unprefixed URL.
+  // Only the Hindi mirror uses a locale prefix; this avoids emitting /en/jobs
+  // in forms, filters, and pagination and relying on middleware redirects.
+  const basePath = isHi ? "/hi/jobs" : "/jobs";
 
   const L = {
     allJobs: isHi ? "सभी नौकरियां" : "All Jobs",
@@ -240,13 +262,20 @@ export default async function LocaleJobsListPage({ params, searchParams }: Props
 
         <ul className="divide-y divide-black/10">
           {results.map((posting) => {
-            const titleHi = (posting as any).titleHi as string | null;
-            const locationCityHi = (posting as any).locationCityHi as
-              | string
-              | null;
-            const orgNameHi = (posting.organization as any).nameHi as
-              | string
-              | null;
+            // Query projections vary across the legacy and normalized listing
+            // paths. Narrow optional localized fields once for this row.
+            const postingWithMetadata = posting as typeof posting & {
+              titleHi?: string | null;
+              locationCityHi?: string | null;
+              examDate?: Date | null;
+              lastVerifiedAt?: Date | null;
+              organization: typeof posting.organization & {
+                nameHi?: string | null;
+              };
+            };
+            const titleHi = postingWithMetadata.titleHi ?? null;
+            const locationCityHi = postingWithMetadata.locationCityHi ?? null;
+            const orgNameHi = postingWithMetadata.organization.nameHi ?? null;
 
             const displayTitle = isHi && titleHi ? titleHi : posting.title;
             const displayOrgName =
@@ -260,8 +289,8 @@ export default async function LocaleJobsListPage({ params, searchParams }: Props
                 ? `/hi/jobs/${posting.slug}`
                 : `/jobs/${posting.slug}`;
 
-            const examDate = (posting as any).examDate as Date | null | undefined;
-            const lastVerifiedAt = (posting as any).lastVerifiedAt as Date | null | undefined;
+            const examDate = postingWithMetadata.examDate;
+            const lastVerifiedAt = postingWithMetadata.lastVerifiedAt;
 
             return (
               <li key={posting.id} className="py-4">
