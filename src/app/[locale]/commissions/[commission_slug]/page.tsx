@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props) {
   const isHi = locale === "hi";
   const commission = await safeQuery(() => getCommissionBySlug(commission_slug), null);
   const name = isHi
-    ? (commission as any)?.nameHi || commission?.name || "Commission"
+    ? commission?.nameHi || commission?.name || "Commission"
     : commission?.name || "Commission";
   return {
     title: name,
