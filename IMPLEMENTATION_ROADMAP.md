@@ -368,7 +368,7 @@ Recruitment/Post candidate-facing field ownership, data coverage and reconciliat
 
 ## Local-first release workflow (2026-10-11)
 
-The detailed, sequenced release board is in [RELEASE_PLAN.md](./RELEASE_PLAN.md). Development and verification should be local-first to reduce unnecessary Vercel preview deployments, with Vercel retained for deployment-specific and final production evidence.
+The detailed, sequenced release board is in [RELEASE_PLAN.md](./RELEASE_PLAN.md). Local verification setup and a repeatable pre-deploy command sequence are tracked in [issue #45](https://github.com/blockrao/jobs/issues/45). Development and verification should be local-first to reduce unnecessary Vercel preview deployments, with Vercel retained for deployment-specific and final production evidence.
 
 ### Operating rules
 - Before each deployment, run targeted tests, architecture/SEO contract tests, application and test type-checks, changed-file lint, and a production build locally where supported.
