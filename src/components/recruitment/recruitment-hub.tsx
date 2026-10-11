@@ -33,6 +33,32 @@
  */
 
 import React from 'react';
+import type { recruitments, posts, positions } from '@/db/schema';
+
+type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
+  organizationName?: string | null;
+  exam?: { name?: string | null; title?: string | null } | null;
+  officialNotificationNumber?: string | null;
+  official_notification_number?: string | null;
+  advertisementNumber?: string | null;
+  advertisement_number?: string | null;
+  recruitmentFees?: unknown;
+  feeGeneral?: number | string | null;
+  fee_general?: number | string | null;
+  feeReserved?: number | string | null;
+  fee_reserved?: number | string | null;
+  feeNote?: string | null;
+  fee_note?: string | null;
+  selectionProcesses?: unknown;
+};
+
+type RecruitmentHubPost = typeof posts.$inferSelect & {
+  position?: typeof positions.$inferSelect | null;
+  resolvedVacancyCount?: number | null;
+  status?: string | null;
+  lifecycle_status?: string | null;
+  locationText?: string | null;
+};
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -50,8 +76,8 @@ import {
 } from 'lucide-react';
 
 interface RecruitmentHubProps {
-  recruitment: any;
-  posts: any[];
+  recruitment: RecruitmentHubRecruitment;
+  posts: RecruitmentHubPost[];
   /** Resolved total vacancies from resolveRecruitmentVacancy() — null means unknown */
   resolvedTotalVacancies?: number | null;
   /** Resolved application URL from resolveApplicationUrl() */
@@ -72,7 +98,7 @@ interface RecruitmentHubProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const formatDate = (date: any): string | null => {
+const formatDate = (date: Date | string | null | undefined): string | null => {
   if (!date) return null;
   try {
     return new Date(date).toLocaleDateString('en-IN', {
@@ -86,7 +112,7 @@ const formatDate = (date: any): string | null => {
 };
 
 /** Days remaining until a date. Negative = already past. */
-const daysUntil = (date: any): number | null => {
+const daysUntil = (date: Date | string | null | undefined): number | null => {
   if (!date) return null;
   try {
     const ms = new Date(date).getTime() - Date.now();
@@ -152,7 +178,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
 }
 
 /** Per-post status badge with colour coding (JobOne.in pattern) */
-function PostStatusBadge({ post, appEndDate }: { post: any; appEndDate?: any }) {
+function PostStatusBadge({ post, appEndDate }: { post: RecruitmentHubPost; appEndDate?: Date | string | null }) {
   const status = post.status ?? post.lifecycle_status ?? null;
 
   // If post has explicit closed/expired status
@@ -295,7 +321,7 @@ export default function RecruitmentHub({
   }
 
   if (hasPosts && posts.length > 1) {
-    const postNames = posts.slice(0, 5).map((p: any) => p.name ?? p.position?.name).filter(Boolean);
+    const postNames = posts.slice(0, 5).map((p) => p.name ?? p.position?.name).filter(Boolean);
     if (postNames.length > 0) {
       faqItems.push({
         q: 'Which posts are included in this recruitment?',
@@ -748,7 +774,7 @@ export default function RecruitmentHub({
             ) : (
               /* Multi-Post: single-column list with per-row vacancy + status colour */
               <div className="mt-3 space-y-2">
-                {posts.map((post: any) => {
+                {posts.map((post) => {
                   const postVacancies = post.resolvedVacancyCount ?? null;
                   const postName = post.name ?? post.position?.name ?? 'View Post';
                   const locationText = post.position?.locationText ?? post.locationText ?? null;
