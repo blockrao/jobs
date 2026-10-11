@@ -33,7 +33,17 @@ async function main() {
 
     // Static routes are discovered from the real route tree above; validate
     // every database slug against those routes before emitting the manifest.
-    const validatedSlugs = validateLegacyExamSlugs(slugs, reservedRootPaths);
+    if (slugs.length === 0) throw new Error("Empty exams table; refusing empty manifest");
+    const seen = new Set();
+    const validatedSlugs = slugs.map((slug) => {
+      if (typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+        throw new Error(`Invalid exam slug: ${String(slug)}`);
+      }
+      if (reservedRootPaths.has(slug)) throw new Error(`Exam slug collides with root route: ${slug}`);
+      if (seen.has(slug)) throw new Error(`Duplicate exam slug: ${slug}`);
+      seen.add(slug);
+      return slug;
+    });
 
     fs.writeFileSync(output, `${JSON.stringify(validatedSlugs, null, 2)}\n`, "utf8");
     process.stdout.write(`Generated legacy exam slug manifest: ${validatedSlugs.length} unique slugs\n`);
