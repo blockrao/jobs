@@ -544,3 +544,13 @@ The /jobs metadata correction and focused unit tests are on fix/jobs-listing-ind
 - [x] Removed commission URLs from sitemap generation in commit `2cbd627` and added a contract test that no `/commissions/*` URLs are emitted in commit `5ab8c19`.
 - [ ] The commission sitemap fix and listing social-metadata fix are not yet verified on a READY preview for the exact current PR #55 head. Verify sitemap output drops all 10 commission URLs and preserves canonical/indexable route families.
 - [ ] This was a representative cohort audit, not an exhaustive 2,422-URL live HTTP audit. Expand automated reconciliation to sample or check every URL for status, canonical, robots, hreflang, and structured-data policy before closing the release gate.
+
+
+## Follow-up execution check — 2026-10-11
+
+- [x] Rechecked PR #55: still open, draft, unmerged; latest head remains `a88aed49ea18ef7ee527f2995dbcf1113a491c31`.
+- [x] Rechecked Vercel: latest READY preview remains commit `d7b85ad25569ead17bc9ad35c539775277589f99`; the two metadata/sitemap changes after that are not on the preview. Attempting a fresh deployment returned HTTP 402 `api-deployments-free-per-day`, with retry-after 24 hours. Do not spam build attempts.
+- [x] Confirmed the stale preview still has generic OG/Twitter listing metadata and its sitemap still contains all 10 commission URLs. This is expected for the older deployment and is not evidence the new branch fixes failed.
+- [x] Source review of `src/proxy.ts` confirms next-intl is configured with `localePrefix: "as-needed"` and handles locale-aware routes; this supports the intended `/en/jobs` canonicalization design. The fetch layer follows/obscures the initial redirect response, so the actual first-hop HTTP status remains unverified.
+- [x] CI configuration finding: `.github/workflows/quality-gates.yml` only runs `pull_request` checks when the PR targets `main`, while PR #55 targets the stacked feature branch `fix/role-page-twitter-metadata`. GitHub reports zero check runs on the latest head. Therefore no test/build success can be claimed for this PR head. The workflow/stacked-PR policy needs a deliberate CI fix or a safe integration branch strategy.
+- [ ] Next: once Vercel deployment quota clears, create one exact-head preview, run the full route/sitemap acceptance checklist, and capture raw redirect headers using a client that does not follow redirects. Keep PR draft until CI and preview gates are green.
