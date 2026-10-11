@@ -16,6 +16,9 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
   const enrichment = post.enrichment;
   // Use resolver output for salary range — never raw enrichment salaryMin/Max
   const resolvedSalary = resolvedFacts?.salary ?? null;
+  const sourceFactsUnverified = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
 
   if (
     !enrichment?.payScale &&
@@ -44,7 +47,7 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
       )}
 
       {/* Source-extracted pay is useful context, but is never promoted to verified salary. */}
-      {!resolvedSalary && post.fjaExtract?.salaryRaw && (
+      {sourceFactsUnverified && post.fjaExtract?.salaryRaw && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Pay reported in listing · pending verification</div>
           <div className={styles.infoValue}>{post.fjaExtract.salaryRaw}</div>
@@ -64,9 +67,9 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
       )}
 
       {/* Salary Range — only from resolver, never raw enrichment */}
-      {resolvedSalary && (
+      {resolvedSalary && (!sourceFactsUnverified || !post.fjaExtract?.salaryRaw) && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Salary Range</div>
+          <div className={styles.infoLabel}>{sourceFactsUnverified ? "Salary range reported in current record" : "Salary Range"}</div>
           <div className={styles.infoValue}>
             {resolvedSalary.min && resolvedSalary.max ? (
               <>
