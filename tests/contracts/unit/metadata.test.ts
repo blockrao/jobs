@@ -184,9 +184,13 @@ describe("job page quality gate", () => {
       organization: { name: "Sample Org" },
     });
     const mod = await import("@/app/[locale]/jobs/[slug]/page");
-    // Tier B English pages are now indexed (eligible = indexTier !== 'C')
+    // Tier B English pages are indexed (eligible = indexTier !== 'C').
     expect(isNoindex(await mod.generateMetadata(params({ slug: "thin", locale: "en" })))).toBe(false);
-    // Hindi is still noindex when no Hindi content exists (hasHindi=false)
+    // Exercise the untranslated fallback separately; this fixture initially has Hindi fields.
+    getPostingBySlug.mockResolvedValue({
+      id: 2, slug: "thin", title: "Thin posting", titleHi: null, description: "x",
+      descriptionHi: null, indexTier: "B", organization: { name: "Sample Org" },
+    });
     expect(isNoindex(await mod.generateMetadata(params({ slug: "thin", locale: "hi" })))).toBe(true);
   });
   test("IDX-03c a Tier C job is noindex in both languages", async () => {
