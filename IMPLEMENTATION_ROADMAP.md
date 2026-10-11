@@ -501,3 +501,9 @@ Preview tested on the isolated role-metadata branch at commit `dca78bcd7aaf1c83b
 - [ ] The final response for `/hi/posts/{role-slug}` resolves to the English canonical page, but the intermediate redirect status was not independently captured; verify redirect status and cache policy.
 - [ ] Sitemap verification is structural so far. Reconcile every sitemap URL against its live status, canonical, robots/indexability policy, and structured-data eligibility before release.
 - [ ] Do not merge or promote until remaining route and sitemap acceptance gates are complete.
+
+## Follow-up found during sitemap route sampling — 2026-10-11
+
+- [x] A representative sitemap sample revealed that `/jobs` was listed in the sitemap while the rendered route was served by `/[locale]/jobs` with `noindex, follow`.
+- [ ] Fix the locale-aware jobs metadata so the unfiltered English `/jobs` canonical remains indexable, while `/hi/jobs` and filtered/search/paginated variants remain noindex and canonicalize to `/jobs`.
+- [ ] Add regression coverage for English canonical listing, Hindi mirror, and filtered listing. Keep this as a separate stacked change; do not treat sitemap uniqueness as proof of indexability consistency.
