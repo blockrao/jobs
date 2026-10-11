@@ -30,9 +30,10 @@ export default function HowToApply({ post, recruitmentResolvedFacts }: HowToAppl
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Application method reported in listing</div>
           <div className={styles.infoValue}>
-            {extractedApplicationModes.join(", ")} application was reported, but a verified
-            application address or direct application link is not available in the current record.
-            Confirm the instructions with the official recruitment source.
+            {extractedApplicationModes.join(", ")} application was reported, but a usable address
+            or direct application link was not captured in the current record. The extracted
+            method is shown here; the exact submission instructions can be enriched in the
+            separate official-notification review stage.
           </div>
         </div>
       )}
