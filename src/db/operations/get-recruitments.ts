@@ -168,24 +168,37 @@ export async function getRecruitmentWithPosts(slug: string) {
       ...recruitmentResult[0].recruitment,
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
+      sourceVerificationStatus: null as string | null,
     };
     const recruitmentId = recruitment.id;
 
     // Load complete linked entities for the recruitment hub's database coverage view.
-    const [organizationResult, examResult] = await Promise.all([
+    const [organizationResult, examResult, sourceInventoryResult] = await Promise.all([
       db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
+      db.execute(sql`
+        SELECT other_info_raw->>'canonical_verification_status' AS source_verification_status
+        FROM fja_job_inventory
+        WHERE other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
+        ORDER BY id DESC
+        LIMIT 1
+      `),
     ]);
     const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
       const value = result as { rows?: unknown[] };
       const rows = value?.rows ?? result;
       return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
     };
+    const sourceInventory = rowsOf(sourceInventoryResult)[0] ?? null;
     Object.assign(recruitment, {
       organization: rowsOf(organizationResult)[0] ?? null,
       exam: rowsOf(examResult)[0] ?? null,
+      sourceVerificationStatus:
+        typeof sourceInventory?.source_verification_status === "string"
+          ? sourceInventory.source_verification_status
+          : null,
     });
 
     // Step 2: Get all posts for this recruitment with positions
