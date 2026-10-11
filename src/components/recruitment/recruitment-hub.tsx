@@ -253,6 +253,11 @@ export default function RecruitmentHub({
   const descriptionIsInternal = /seeded from .*sample article|ui\/db validation|sample listing seeded/i.test(
     String(recruitment.description ?? '')
   );
+  const descriptionIsProvisionalGrouping = sourceFactsUnverified &&
+    /provisional|grouped|individual official notices/i.test(String(recruitment.description ?? ""));
+  const displayDescription = descriptionIsProvisionalGrouping
+    ? "This page brings together roles reported in source material. Confirm the exact role, eligibility, vacancy count and deadline in each official notice before applying."
+    : recruitment.description;
 
   // Render values already maintained by the admin/data pipeline. Resolvers may
   // enrich these values, but a missing resolver result must not hide stored data.
@@ -497,8 +502,8 @@ export default function RecruitmentHub({
           </div>
 
           {/* One-sentence description — only from authoritative source */}
-          {recruitment.description && !descriptionIsInternal && (
-            <p className="text-gray-600 mb-5 leading-relaxed text-sm">{recruitment.description}</p>
+          {displayDescription && !descriptionIsInternal && (
+            <p className="text-gray-600 mb-5 leading-relaxed text-sm">{displayDescription}</p>
           )}
 
           {/* CTAs */}
