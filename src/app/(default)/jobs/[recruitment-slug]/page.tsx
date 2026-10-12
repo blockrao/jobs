@@ -198,6 +198,7 @@ export default async function RecruitmentHubPage({
     <>
       <RecruitmentHubStructuredData
         recruitment={recruitment}
+        posts={postsWithResolvedVacancies}
         totalPosts={totalPosts}
         resolvedEmployer={resolvedEmployer}
         resolvedOfficialSource={resolvedOfficialSource}
