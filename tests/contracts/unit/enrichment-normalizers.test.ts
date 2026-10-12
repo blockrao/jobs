@@ -270,7 +270,7 @@ describe("normalizeEducation", () => {
     expect(result!.degree).toBe("MBBS");
     expect(result!.university).toBe("Any recognized medical university");
     expect(result!.notes).toBeUndefined();
-    expect(result!.preferred).toBeUndefined();
+    expect(result!.preferredNote).toBeUndefined();
     expect(result!.options).toBeUndefined();
   });
 
