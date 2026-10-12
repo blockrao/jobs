@@ -277,6 +277,14 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
           // Official advertisement number from source inventory — used as schema.org identifier
           vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
           officialSourceUrl: post.officialSourceUrl ?? null,
+          // Phase 1 eligibility text from source inventory — display-quality, not computed.
+          // fjaExtract.eligibilityRaw is the primary field; qualificationRaw is the fallback.
+          // Per ELIG-001: no computation, just pass what we have.
+          qualificationText:
+            post.fjaExtract?.eligibilityRaw ??
+            post.fjaExtract?.qualificationRaw ??
+            null,
+          experienceText: post.fjaExtract?.experienceRaw ?? null,
         }}
         resolvedVacancy={resolvedFacts.vacancyCount}
         resolvedSalary={resolvedFacts.salary}
