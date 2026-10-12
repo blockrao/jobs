@@ -86,6 +86,9 @@ export function Footer() {
           <Link href="/terms" className="hover:underline">
             {t.terms}
           </Link>
+          <Link href="/reports" className="hover:underline">
+            Reports
+          </Link>
         </div>
       </div>
     </footer>
