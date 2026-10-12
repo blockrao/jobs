@@ -71,6 +71,9 @@ type RecruitmentHubPost = typeof posts.$inferSelect & {
   resolvedVacancyCount?: number | null;
   status?: string | null;
   lifecycle_status?: string | null;
+  // application_email may exist in the DB but not yet in the generated Drizzle schema type
+  application_email?: string | null;
+  applicationEmail?: string | null;
   fjaExtract?: {
     inventoryId?: number | string;
     vacancyCountRaw?: string | null;
@@ -324,6 +327,15 @@ export default function RecruitmentHub({
   const sourceApplicationMode = typeof sourceDetails?.application_mode === "string"
     ? sourceDetails.application_mode
     : null;
+  // pay_range: hub-level salary range from inventory (e.g. "₹15,000-₹37,000 per month")
+  const sourcePayRange = typeof sourceDetails?.pay_range === "string" ? sourceDetails.pay_range : null;
+  // application_email: if all posts share the same email, surface it at hub level
+  const postEmails = Array.from(new Set(posts.map((p: RecruitmentHubPost) => p.application_email ?? p.applicationEmail).filter(Boolean)));
+  const sharedApplicationEmail: string | null = postEmails.length === 1 ? (postEmails[0] as string) : null;
+  // application_documents: checklist from sourceOtherInfo
+  const sourceDocuments: string[] = Array.isArray(sourceOtherInfo?.application_documents)
+    ? (sourceOtherInfo.application_documents as unknown[]).filter((d): d is string => typeof d === "string")
+    : [];
   const sourceSelectionSummary = typeof sourceOtherInfo?.interview === "string"
     ? sourceOtherInfo.interview
     : null;
@@ -616,6 +628,18 @@ export default function RecruitmentHub({
                   <dd className="text-gray-900">{sourceApplicationMode}</dd>
                 </div>
               )}
+              {sourcePayRange && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Pay range{sourceFactsUnverified ? " †" : ""}</dt>
+                  <dd className="text-gray-900 font-medium">{sourcePayRange}</dd>
+                </div>
+              )}
+              {sharedApplicationEmail && (
+                <div className="col-span-2 sm:col-span-3 flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Apply by email</dt>
+                  <dd className="text-gray-900"><a href={`mailto:${sharedApplicationEmail}`} className="text-blue-600 hover:text-blue-700">{sharedApplicationEmail}</a></dd>
+                </div>
+              )}
               {hasFeeDetails && (
                 <div className="flex gap-2 px-3 py-2">
                   <dt className="text-gray-500 w-28 flex-shrink-0">Fee</dt>
@@ -703,7 +727,7 @@ export default function RecruitmentHub({
             SECTION 2 — RECRUITMENT OVERVIEW TABLE
             Compact details: org, selection process, official links
             ═══════════════════════════════════════════ */}
-        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart || examName || notificationNumber || hasFeeDetails || selectionDisplayRows.length > 0 || sourceLocation || sourceApplicationMode) && (
+        {(displayOrg || displaySelectionProcess || displayOfficialSource || displayApplicationUrl || appStart || examName || notificationNumber || hasFeeDetails || selectionDisplayRows.length > 0 || sourceLocation || sourceApplicationMode || sourcePayRange || sharedApplicationEmail || sourceDocuments.length > 0) && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-3">Recruitment Details</h2>
             <dl className="divide-y divide-gray-100">
@@ -754,6 +778,22 @@ export default function RecruitmentHub({
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Application method{sourceFactsUnverified ? " reported" : ""}</dt>
                   <dd className="text-sm text-gray-900">{sourceApplicationMode}</dd>
+                </div>
+              )}
+
+              {sharedApplicationEmail && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Application email</dt>
+                  <dd className="text-sm">
+                    <a href={`mailto:${sharedApplicationEmail}`} className="text-blue-600 hover:text-blue-700">{sharedApplicationEmail}</a>
+                  </dd>
+                </div>
+              )}
+
+              {sourcePayRange && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Pay range{sourceFactsUnverified ? " reported" : ""}</dt>
+                  <dd className="text-sm text-gray-900 font-medium">{sourcePayRange}</dd>
                 </div>
               )}
 
@@ -816,6 +856,19 @@ export default function RecruitmentHub({
                       </ul>
                     )}
                     {feeNote && <p className="mt-1 text-gray-600">{String(feeNote)}</p>}
+                  </dd>
+                </div>
+              )}
+
+              {sourceDocuments.length > 0 && (
+                <div className="flex gap-4 py-2.5">
+                  <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Documents required{sourceFactsUnverified ? " reported" : ""}</dt>
+                  <dd className="text-sm text-gray-900">
+                    <ul className="space-y-1 list-disc list-inside">
+                      {sourceDocuments.map((doc, i) => (
+                        <li key={i}>{doc}</li>
+                      ))}
+                    </ul>
                   </dd>
                 </div>
               )}
@@ -1043,12 +1096,14 @@ export default function RecruitmentHub({
                   </p>
                 </div>
               )}
-              {(displayApplicationUrl || displayOfficialSource) && (
+              {(displayApplicationUrl || displayOfficialSource || sharedApplicationEmail) && (
                 <div id="qa-apply" className="py-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">How to apply</p>
                   <p className="text-sm text-gray-900">
                     {displayApplicationUrl
                       ? <>Apply via the <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">official application portal</a>.</>
+                      : sharedApplicationEmail
+                      ? <>Send your application to <a href={`mailto:${sharedApplicationEmail}`} className="text-blue-600 underline hover:text-blue-700">{sharedApplicationEmail}</a>{sourceApplicationMode ? ` (${sourceApplicationMode.toLowerCase()})` : ''}. Confirm instructions in the official notice.</>
                       : sourceApplicationMode
                       ? `Apply ${sourceApplicationMode.toLowerCase()}. Confirm application instructions in the official notice.`
                       : <>Check the <a href={displayOfficialSource ?? '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">official notification</a> for application instructions.</>}
