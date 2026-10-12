@@ -221,14 +221,21 @@ def extract_selection_process(overview: dict, soup: BeautifulSoup) -> Optional[s
         val = overview.get(key, '')
         if val and len(val) > 5:
             return val[:500]
-    # Search body
-    text = soup.get_text(' ', strip=True)
+    # Search only article/entry content, not full page (avoids nav/toolbar text)
+    article = soup.find('article') or soup.find(class_=re.compile(r'entry.content|post.content|article.content', re.I))
+    search_soup = article if article else soup
+    text = search_soup.get_text(' ', strip=True)
     m = re.search(
-        r'selection\s+(?:process|procedure|criteria)[:\s]+([^\n]{20,400})',
+        r'selection\s+(?:process|procedure|criteria)[:\s]+([^\n]{20,300})',
         text, re.IGNORECASE
     )
     if m:
-        return _norm(m.group(1))[:500]
+        val = _norm(m.group(1))
+        # Reject if it looks like nav text (contains multiple short tool-name words)
+        tool_words = re.findall(r'\b(?:converter|resizer|compressor|tool|login|download|app|pdf|word|image)\b', val, re.I)
+        if len(tool_words) >= 3:
+            return None
+        return val[:500]
     return None
 
 
@@ -315,29 +322,8 @@ def enrich_recruitment(rec: dict, dry_run: bool, client) -> dict:
 
     overview = extract_overview_table(soup)
 
-    # --- Recruitment-level fields ---
-    rec_fields = {}
-
-    if not rec.get('fee_general') and rec.get('fee_general') != 0:
-        fee_gen, fee_res, fee_note = extract_fee(overview, soup)
-        if fee_gen is not None:
-            rec_fields['fee_general'] = fee_gen
-        if fee_res is not None:
-            rec_fields['fee_reserved'] = fee_res
-        if fee_note:
-            rec_fields['fee_note'] = fee_note
-
-    if not rec.get('selection_process'):
-        sp = extract_selection_process(overview, soup)
-        if sp:
-            rec_fields['selection_process'] = sp
-
-    if not rec.get('age_note'):
-        age = extract_age_note(overview, soup)
-        if age:
-            rec_fields['age_note'] = age
-
     # --- Post-level fields (salary, vacancy, description) ---
+    rec_fields = {}  # kept for dry-run summary only; actual writes go to post_enrichments
     salary_min, salary_max, pay_label = extract_salary(overview, soup)
     vacancy = extract_vacancy(overview)
     description = extract_description(soup, rec['name'])
@@ -352,10 +338,39 @@ def enrich_recruitment(rec: dict, dry_run: bool, client) -> dict:
     if description:
         post_fields['description'] = description
 
-    result['recruitment_fields'] = rec_fields
-    result['post_fields'] = post_fields
+    # Build post_enrichments fields from recruitment-level data (fee, selection, age)
+    # These are shared across all posts in the recruitment.
+    enrichment_fields = {}
+    fee_gen, fee_res, fee_note_val = extract_fee(overview, soup)
+    sp = extract_selection_process(overview, soup)
+    age = extract_age_note(overview, soup)
 
-    if not rec_fields and not post_fields:
+    if fee_gen is not None:
+        # feesByCategory is a jsonb object: {"General": 500, "SC/ST": 0}
+        fees = {}
+        if fee_gen == 0:
+            fees['All Categories'] = 'No Fee'
+        else:
+            fees['General/OBC/EWS'] = fee_gen
+            if fee_res is not None:
+                fees['SC/ST/PwD'] = fee_res
+        enrichment_fields['feesByCategory'] = fees
+        if fee_note_val:
+            enrichment_fields['feeNote'] = fee_note_val
+
+    if sp:
+        # selectionProcess is jsonb; store as list of steps
+        steps = [s.strip() for s in re.split(r'[→>]|\bfollowed by\b|\bthen\b', sp, flags=re.IGNORECASE) if s.strip()]
+        enrichment_fields['selectionProcess'] = steps if len(steps) > 1 else [sp]
+
+    if age:
+        enrichment_fields['ageNote'] = age
+
+    result['recruitment_fields'] = rec_fields  # kept for reference in dry-run output
+    result['post_fields'] = post_fields
+    result['enrichment_fields'] = enrichment_fields
+
+    if not rec_fields and not post_fields and not enrichment_fields:
         result['status'] = 'no_data'
         return result
 
@@ -363,26 +378,43 @@ def enrich_recruitment(rec: dict, dry_run: bool, client) -> dict:
         result['status'] = 'dry_run'
         return result
 
-    # --- Write recruitment ---
-    if rec_fields:
-        rec_fields['updated_at'] = datetime.now(timezone.utc).isoformat()
-        client.table('recruitments').update(rec_fields).eq('id', rec['id']).execute()
+    now = datetime.now(timezone.utc).isoformat()
 
-    # --- Write posts ---
+    # --- Write posts table (salary, description, vacancy) ---
     if post_fields:
         for post in rec['posts']:
-            # Don't overwrite salary already set from PDF
             fields_to_write = dict(post_fields)
+            # Don't overwrite salary already set from PDF enrichment
             if post.get('salary_min') is not None and 'salary_min' in fields_to_write:
                 del fields_to_write['salary_min']
                 del fields_to_write['salary_max']
                 fields_to_write.pop('pay_level', None)
             if post.get('description') and 'description' in fields_to_write:
                 del fields_to_write['description']
-            if not fields_to_write:
-                continue
-            fields_to_write['updated_at'] = datetime.now(timezone.utc).isoformat()
-            client.table('posts').update(fields_to_write).eq('id', post['id']).execute()
+            if fields_to_write:
+                fields_to_write['updated_at'] = now
+                client.table('posts').update(fields_to_write).eq('id', post['id']).execute()
+
+    # --- Upsert post_enrichments (fee, selection, age, salary) ---
+    # Build per-post enrichment payload combining salary and recruitment-level fields
+    for post in rec['posts']:
+        pe = dict(enrichment_fields)
+        # Add salary to enrichment if extracted
+        if salary_min is not None and post.get('salary_min') is None:
+            pe['salaryMin'] = salary_min
+            pe['salaryMax'] = salary_max
+            if pay_label:
+                pe['payLevel'] = pay_label
+        if not pe:
+            continue
+        pe['updated_at'] = now
+        # Upsert: if row exists update it, otherwise insert
+        existing = client.table('post_enrichments').select('id').eq('post_id', post['id']).execute()
+        if existing.data:
+            client.table('post_enrichments').update(pe).eq('post_id', post['id']).execute()
+        else:
+            pe['post_id'] = post['id']
+            client.table('post_enrichments').insert(pe).execute()
 
     result['status'] = 'written'
     return result
