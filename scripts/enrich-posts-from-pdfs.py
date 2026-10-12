@@ -11,17 +11,23 @@ per post). We extract a single salary range and apply it to all posts in
 the recruitment. If a post already has salary_min set, it is skipped.
 
 Modes:
-  --dry-run   Fetch PDFs, print what would be written, no DB changes (default)
-  --write     Apply changes to Supabase
-  --limit N   Process only N recruitments (default: all)
+  --dry-run        Fetch PDFs, print what would be written, no DB changes (default)
+  --write          Apply changes to Supabase
+  --limit N        Process only N recruitments (default: all)
   --recruitment-id N  Process a single recruitment by id
+  --multi-post     Also process multi-post recruitments (default: single-post only)
+                   WARNING: multi-post applies recruitment-level salary to ALL posts
+                   in that recruitment — only safe when all posts share the same pay scale.
 
 Usage:
-  # Dry run (default)
+  # Dry run — single-post recruitments only (safe default)
   uv run --with requests --with pdfplumber --with supabase scripts/enrich-posts-from-pdfs.py --dry-run --limit 10
 
-  # Write mode
+  # Write mode — single-post only (501 recruitments, zero attribution risk)
   uv run --with requests --with pdfplumber --with supabase scripts/enrich-posts-from-pdfs.py --write
+
+  # Dry run — include multi-post recruitments (222 more, review output carefully)
+  uv run --with requests --with pdfplumber --with supabase scripts/enrich-posts-from-pdfs.py --dry-run --multi-post
 
 Requires:
   export SUPABASE_URL=https://<ref>.supabase.co
@@ -213,6 +219,7 @@ def enrich_recruitment(
     rec: dict,
     dry_run: bool,
     supabase_client,
+    allow_multi_post: bool = False,
 ) -> dict:
     """
     Process one recruitment row. Returns a result dict:
@@ -235,6 +242,14 @@ def enrich_recruitment(
 
     if not url:
         result['status'] = 'no_url'
+        return result
+
+    # Safety gate: skip multi-post recruitments unless explicitly allowed.
+    # Applying recruitment-level salary to a post in a multi-post recruitment
+    # risks attributing the wrong salary to the wrong role (e.g. UPSC with 4
+    # different pay scales). Single-post recruitments have no ambiguity.
+    if len(post_ids) > 1 and not allow_multi_post:
+        result['status'] = 'skipped_multi'
         return result
 
     text = fetch_pdf_text(url)
@@ -302,9 +317,11 @@ def main():
     parser.add_argument('--write', action='store_true', help='Apply changes to Supabase')
     parser.add_argument('--limit', type=int, default=None, help='Process only N recruitments')
     parser.add_argument('--recruitment-id', type=int, default=None, help='Process a single recruitment')
+    parser.add_argument('--multi-post', action='store_true', help='Also process multi-post recruitments (review output carefully)')
     args = parser.parse_args()
 
     dry_run = not args.write
+    allow_multi_post = args.multi_post
 
     url = os.environ.get('SUPABASE_URL')
     key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -384,24 +401,28 @@ def main():
             recruitments = recruitments[:args.limit]
 
     mode = 'DRY RUN' if dry_run else 'WRITE'
+    scope = 'single + multi-post' if allow_multi_post else 'single-post only'
     print(f'\n{"="*70}')
-    print(f'Posts Enrichment from PDFs — {mode}')
+    print(f'Posts Enrichment from PDFs — {mode} ({scope})')
     print(f'Recruitments to process: {len(recruitments)}')
     total_posts_affected = sum(len(r.get('post_ids', [])) for r in recruitments)
     print(f'Posts (missing salary) covered: {total_posts_affected}')
+    if not allow_multi_post:
+        print(f'NOTE: Multi-post recruitments will be skipped. Use --multi-post to include them.')
     print(f'{"="*70}\n')
 
-    counts = {'written': 0, 'dry_run': 0, 'fetch_failed': 0, 'no_data': 0, 'no_url': 0, 'write_failed': 0}
+    counts = {'written': 0, 'dry_run': 0, 'fetch_failed': 0, 'no_data': 0, 'no_url': 0, 'write_failed': 0, 'skipped_multi': 0}
     total_posts_updated = 0
 
     for i, rec in enumerate(recruitments, 1):
-        result = enrich_recruitment(rec, dry_run, client)
+        result = enrich_recruitment(rec, dry_run, client, allow_multi_post)
         counts[result['status']] = counts.get(result['status'], 0) + 1
         total_posts_updated += result['posts_updated']
 
         status_icon = {
             'written': '✓', 'dry_run': '○', 'fetch_failed': '✗',
-            'no_data': '–', 'no_url': '·', 'write_failed': '✗'
+            'no_data': '–', 'no_url': '·', 'write_failed': '✗',
+            'skipped_multi': '⤷',
         }.get(result['status'], '?')
 
         fields = result['fields']
