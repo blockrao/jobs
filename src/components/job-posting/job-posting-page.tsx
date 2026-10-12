@@ -95,6 +95,33 @@ export default function JobPostingPage({
   const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
   const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
 
+  // ── FJA raw-field fallbacks (display-only, "reported" label) ────────────
+  // Used only when the resolver returns null (no verified enrichment row).
+  // These are transcribed text from the aggregator source, not official facts.
+  const reportedSalaryRaw: string | null =
+    resolvedFacts?.salary == null
+      ? (post.fjaExtract?.salaryRaw ?? null)
+      : null;
+
+  // Reported vacancy from raw FJA field — used to decide whether to render
+  // the Vacancies section even when the resolver returned null.
+  const reportedVacancyCount: number | null = (() => {
+    if (resolvedFacts?.vacancyCount != null) return null; // resolver handled it
+    const raw = post.fjaExtract?.vacancyCountRaw;
+    if (!raw) return null;
+    const n = Number(raw.replace(/,/g, "").trim());
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
+  })();
+
+  // Reported deadline from recruitment end date — used when resolver returns UNKNOWN.
+  const reportedDeadline: Date | null = (() => {
+    if (deadline?.state !== "UNKNOWN") return null;
+    const d = post.fjaExtract?.sourceApplicationEndDate ?? post.recruitmentApplicationEndDate;
+    if (!d) return null;
+    try { return new Date(d as string); } catch { return null; }
+  })();
+  const reportedDeadlineDateStr = reportedDeadline ? fmtDate(reportedDeadline) : null;
+
   // Check if location available
   const location: string | null =
     post.locationCity ??
@@ -116,9 +143,14 @@ export default function JobPostingPage({
   }
   if (vacancyCount != null) {
     factRows.push({ term: "Vacancies", detail: vacancyCount.toLocaleString("en-IN") });
+  } else if (reportedVacancyCount != null) {
+    factRows.push({ term: "Vacancies (reported)", detail: reportedVacancyCount.toLocaleString("en-IN") });
   }
   if (payLevel) {
     factRows.push({ term: "Pay level", detail: payLevel });
+  }
+  if (reportedSalaryRaw) {
+    factRows.push({ term: "Salary (reported)", detail: reportedSalaryRaw });
   }
   if (post.employmentType) {
     factRows.push({
@@ -131,6 +163,8 @@ export default function JobPostingPage({
   }
   if (deadlineDateStr) {
     factRows.push({ term: "Last date", detail: deadlineDateStr });
+  } else if (reportedDeadlineDateStr) {
+    factRows.push({ term: "Last date (reported)", detail: reportedDeadlineDateStr });
   }
 
   // ── Build data-start and data-end for countdown JS ──
@@ -180,6 +214,7 @@ export default function JobPostingPage({
           resolvedFacts={resolvedFacts}
           recruitmentResolvedFacts={recruitmentResolvedFacts}
           localePrefix={localePrefix}
+          reportedDeadline={reportedDeadline}
         />
 
         {/* TOC strip */}
@@ -188,7 +223,7 @@ export default function JobPostingPage({
           <a href="#facts">Post facts</a>
           {(qualText || expText) && <a href="#eligibility">Eligibility</a>}
           <a href="#dates">Dates</a>
-          {vacancyCount != null && <a href="#vacancies">Vacancies</a>}
+          {(vacancyCount != null || reportedVacancyCount != null) && <a href="#vacancies">Vacancies</a>}
           <a href="#selection">Selection</a>
           <a href="#apply">How to apply</a>
           <a href="#documents">Documents</a>
@@ -233,6 +268,12 @@ export default function JobPostingPage({
               <div id="qa-pay">
                 <h3 className={styles.qaQuestion}>What is the pay level?</h3>
                 <p className={styles.qaAnswer}>{payLevel} of the 7th CPC pay matrix.</p>
+              </div>
+            )}
+            {reportedSalaryRaw && (
+              <div id="qa-salary">
+                <h3 className={styles.qaQuestion}>What is the salary?</h3>
+                <p className={styles.qaAnswer}>{reportedSalaryRaw} (reported — confirm with official notification).</p>
               </div>
             )}
             {vacancyCount != null && (
@@ -328,10 +369,10 @@ export default function JobPostingPage({
         </section>
 
         {/* Vacancy Details */}
-        {vacancyCount != null && (
+        {(vacancyCount != null || reportedVacancyCount != null) && (
           <section id="vacancies" className={styles.section} aria-labelledby="vac-h">
             <h2 id="vac-h" className={styles.sectionTitle}>
-              Seats and vacancies
+              Seats and vacancies{reportedVacancyCount != null && vacancyCount == null ? " (reported)" : ""}
             </h2>
             <VacancyDetails post={post} resolvedFacts={resolvedFacts} embedded />
           </section>

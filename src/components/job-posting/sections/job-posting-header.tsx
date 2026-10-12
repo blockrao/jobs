@@ -13,6 +13,7 @@ interface JobPostingHeaderProps {
   resolvedFacts?: ResolvedLeafFacts;
   recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
   localePrefix?: string;
+  reportedDeadline?: Date | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,15 +96,28 @@ export default function JobPostingHeader({
   resolvedFacts,
   recruitmentResolvedFacts,
   localePrefix = "",
+  reportedDeadline,
 }: JobPostingHeaderProps) {
   const deadline = resolvedFacts?.deadline;
   const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
   const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
 
+  // When the resolver returned UNKNOWN, use the reported deadline (from aggregator) for display
+  const isDeadlineUnknown = !deadline || deadline.state === "UNKNOWN";
+  const effectiveDeadlineDate = deadline?.date ?? (isDeadlineUnknown ? (reportedDeadline ?? null) : null);
+  const effectiveDeadlineDateStr = fmtDateLong(effectiveDeadlineDate);
+  // When resolver returned UNKNOWN, derive a provisional open/closed state from the reported date
+  const effectiveState: "OPEN" | "CLOSED" | "UNKNOWN" = deadline?.state !== "UNKNOWN"
+    ? (deadline?.state ?? "UNKNOWN")
+    : effectiveDeadlineDate
+      ? (effectiveDeadlineDate.getTime() > Date.now() ? "OPEN" : "CLOSED")
+      : "UNKNOWN";
+
+  // Pass effective deadline to H1 builder so it can include "Apply by" when resolver returned UNKNOWN
   const richH1 = buildH1(
     post.title,
     post.organizationName,
-    deadline,
+    effectiveDeadlineDate ? { date: effectiveDeadlineDate, state: effectiveState } : deadline,
     post.recruitmentName,
     post.notificationPublicationDate
   );
@@ -135,8 +149,7 @@ export default function JobPostingHeader({
   if (payLevel) leadParts.push(payLevel);
   if (employmentType) leadParts.push(employmentType.toLowerCase());
 
-  const deadlineDateStr = deadline?.date ? fmtDateLong(deadline.date) : null;
-  const deadlineDatetimeStr = deadline?.date ? fmtDatetime(deadline.date) : null;
+  const deadlineDatetimeStr = effectiveDeadlineDate ? fmtDatetime(effectiveDeadlineDate) : null;
 
   // Eligibility summary for lead (Phase 1: display text only — no eligibility engine)
   const qualText: string | null =
@@ -148,10 +161,10 @@ export default function JobPostingHeader({
       {/* Status + category chips */}
       <ul className={styles.chips}>
         <li
-          className={getChipClass(deadline?.state ?? "UNKNOWN")}
+          className={getChipClass(effectiveState)}
           data-status="true"
         >
-          {getChipText(deadline?.state ?? "UNKNOWN")}
+          {getChipText(effectiveState)}{isDeadlineUnknown && effectiveState !== "UNKNOWN" ? " (reported)" : ""}
         </li>
         {employmentType && (
           <li className={styles.chip}>{employmentType}</li>
@@ -168,8 +181,8 @@ export default function JobPostingHeader({
       {leadParts.length > 0 && (
         <p className={styles.lead}>
           {leadParts.join(", ").replace(/^./, (c) => c.toUpperCase())}.
-          {deadlineDateStr && deadline?.state === "OPEN" && (
-            <> Apply by <strong>{deadlineDateStr}</strong>.</>
+          {effectiveDeadlineDateStr && effectiveState === "OPEN" && (
+            <> Apply by <strong>{effectiveDeadlineDateStr}</strong>{isDeadlineUnknown ? " (reported)" : ""}.</>
           )}
           {qualText && (
             <> Requires: {qualText}.</>
@@ -178,25 +191,27 @@ export default function JobPostingHeader({
       )}
 
       {/* Deadline box */}
-      {deadlineDateStr && (
+      {effectiveDeadlineDateStr && (
         <div className={styles.deadline}>
-          <strong className={styles.deadlineLabel}>Last date to apply</strong>
+          <strong className={styles.deadlineLabel}>
+            Last date to apply{isDeadlineUnknown ? " (reported)" : ""}
+          </strong>
           <time
             className={styles.deadlineDate}
             dateTime={deadlineDatetimeStr ?? undefined}
           >
-            {deadlineDateStr}
+            {effectiveDeadlineDateStr}
           </time>
           <span className={styles.deadlineCountdown} data-countdown="true">
-            {deadline?.state === "CLOSED"
+            {effectiveState === "CLOSED"
               ? "Applications are closed."
-              : `Closing ${deadlineDateStr}`}
+              : `Closing ${effectiveDeadlineDateStr}`}
           </span>
         </div>
       )}
 
       {/* Closed notice */}
-      {deadline?.state === "CLOSED" && (
+      {effectiveState === "CLOSED" && (
         <p
           className={styles.closedNote}
           style={{ display: "block" }}
