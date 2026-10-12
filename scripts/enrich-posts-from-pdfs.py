@@ -57,12 +57,18 @@ HEADERS = {
 # Salary extraction  (government pay scales: ₹15,600–39,100 / Level 10 / 7CPC)
 # ---------------------------------------------------------------------------
 
+def _parse_amount(s: str) -> int:
+    """Parse a salary string like '44,900.00' or '1,12,400' to int."""
+    return int(float(s.replace(',', '')))
+
+
 def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optional[str]]:
     """
     Return (salary_min, salary_max, pay_level_label).
     Handles:
       - Pay Band + Grade Pay:  "Pay Band: ₹15,600-39,100 + Grade Pay ₹6,600"
       - Level in Pay Matrix:   "Level-10" / "Level 10 of Pay Matrix"
+      - Basic Pay (table):     "Basic Pay ₹ 44,900.00"
       - Fixed pay / CTC:       "Fixed Pay: ₹56,100"
       - Consolidated:          "Consolidated salary ₹35,000"
       - Plain range:           "₹35,400 to ₹1,12,400"
@@ -76,12 +82,11 @@ def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optio
         text, re.IGNORECASE
     )
     if m:
-        lo = int(m.group(1).replace(',', ''))
-        hi = int(m.group(2).replace(',', ''))
-        # grade pay adds on top — use band as floor, rough ceiling
+        lo = _parse_amount(m.group(1))
+        hi = _parse_amount(m.group(2))
         gp_m = re.search(r'grade\s+pay[:\s]+(?:rs\.?|₹)?\s*([\d,]+)', text[m.start():m.start()+200], re.IGNORECASE)
         if gp_m:
-            gp = int(gp_m.group(1).replace(',', ''))
+            gp = _parse_amount(gp_m.group(1))
             salary_min = lo + gp
             salary_max = hi + gp
             pay_label = f"PB {lo}-{hi} GP {gp}"
@@ -95,7 +100,6 @@ def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optio
         m = re.search(r'level[:\s-]+(\d{1,2})\b(?:\s+of\s+(?:pay\s+matrix|matrix))?', text, re.IGNORECASE)
         if m:
             level = int(m.group(1))
-            # Approximate 7CPC ranges for levels 1–18
             LEVEL_RANGES = {
                 1: (18000, 56900), 2: (19900, 63200), 3: (21700, 69100),
                 4: (25500, 81100), 5: (29200, 92300), 6: (35400, 112400),
@@ -108,6 +112,35 @@ def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optio
                 salary_min, salary_max = LEVEL_RANGES[level]
                 pay_label = f"Level-{level}"
 
+    # --- Basic Pay from table (e.g. IBPS: "Basic Pay ₹ 44,900.00") ---
+    if salary_min is None:
+        m = re.search(
+            r'basic\s+pay\s*[:\*]?\s*(?:rs\.?|₹|inr\.?)?\s*([\d,]+(?:\.\d+)?)',
+            text, re.IGNORECASE
+        )
+        if m:
+            val = _parse_amount(m.group(1))
+            if 5000 <= val <= 500000:
+                salary_min = val
+                # Look for total emolument/CTC on same line or nearby
+                ctc_m = re.search(
+                    r'(?:total\s+emolument|annual\s+ctc|ctc)[*\s]*(?:rs\.?|₹|inr\.?)?\s*([\d,]+(?:\.\d+)?)\s*(?:lakhs?|lacs?)?',
+                    text[max(0, m.start()-50):m.start()+300], re.IGNORECASE
+                )
+                if ctc_m:
+                    ctc_raw = ctc_m.group(1)
+                    ctc_val = _parse_amount(ctc_raw)
+                    # If expressed in lakhs (e.g. 17.39 Lakhs → 1739000, cap at 500000)
+                    if 'lakh' in ctc_m.group(0).lower() or 'lac' in ctc_m.group(0).lower():
+                        ctc_val = int(ctc_val * 100)  # already decimal lakhs → paise? skip
+                    if ctc_val > salary_min and ctc_val <= 500000:
+                        salary_max = ctc_val
+                    else:
+                        salary_max = salary_min
+                else:
+                    salary_max = salary_min
+                pay_label = "Basic"
+
     # --- Fixed / Consolidated salary ---
     if salary_min is None:
         for pattern in [
@@ -116,7 +149,7 @@ def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optio
         ]:
             m = re.search(pattern, text, re.IGNORECASE)
             if m:
-                val = int(m.group(1).replace(',', ''))
+                val = _parse_amount(m.group(1))
                 if 5000 <= val <= 500000:
                     salary_min = salary_max = val
                     pay_label = "Fixed"
@@ -125,13 +158,13 @@ def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optio
     # --- Plain range: ₹X to/- ₹Y  or  Rs.X-Y ---
     if salary_min is None:
         for pattern in [
-            r'(?:rs\.?|₹|inr\.?)\s*([\d,]+)\s*(?:to|-|–)\s*(?:rs\.?|₹|inr\.?)?\s*([\d,]+)',
+            r'(?:rs\.?|₹|inr\.?)\s*([\d,]+(?:\.\d+)?)\s*(?:to|-|–)\s*(?:rs\.?|₹|inr\.?)?\s*([\d,]+(?:\.\d+)?)',
             r'([\d,]+)\s*(?:to|-|–)\s*([\d,]+)\s*(?:per\s+month|p\.?m\.?|per\s+annum|p\.?a\.?)',
         ]:
             m = re.search(pattern, text, re.IGNORECASE)
             if m:
-                lo = int(m.group(1).replace(',', ''))
-                hi = int(m.group(2).replace(',', ''))
+                lo = _parse_amount(m.group(1))
+                hi = _parse_amount(m.group(2))
                 if 5000 <= lo <= 500000 and lo < hi:
                     salary_min = lo
                     salary_max = hi
@@ -167,12 +200,22 @@ def extract_total_vacancies(text: str) -> Optional[int]:
 # Description extraction
 # ---------------------------------------------------------------------------
 
+def _is_garbled(text: str) -> bool:
+    """Detect doubled-character artifacts from scanned PDFs (e.g. 'wwhhoollllyy')."""
+    # Count consecutive repeated characters; if >5% of chars are in runs of 3+, it's garbled
+    runs = re.findall(r'(.)\1{2,}', text)
+    return len(''.join(runs)) > len(text) * 0.05
+
+
 def extract_description(text: str, title: str) -> Optional[str]:
     lines = [l.strip() for l in text.split('\n') if len(l.strip()) > 60]
     skip_starts = ('government of', 'ministry of', 'department of', 'office of',
                    'advertisement no', 'notification no', 'advt no', 'www.',
-                   'phone:', 'fax:', 'email:', 'e-mail:')
-    candidates = [l for l in lines if not l.lower().startswith(skip_starts)]
+                   'phone:', 'fax:', 'email:', 'e-mail:', '(cid:')
+    candidates = [l for l in lines
+                  if not l.lower().startswith(skip_starts)
+                  and not _is_garbled(l)
+                  and '(cid:' not in l]  # CID codes = encoding artifact
     if candidates:
         para = ' '.join(candidates[:3])
         if len(para) > 400:
