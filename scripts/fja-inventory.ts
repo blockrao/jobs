@@ -13,6 +13,11 @@ const MAX_PAGES = Number(process.env.FJA_MAX_PAGES ?? 1200);
 const CONCURRENCY = Number(process.env.FJA_CONCURRENCY ?? 4);
 const RUN_MODE = process.env.FJA_RUN_MODE ?? "pilot";
 const PILOT_URLS = (process.env.FJA_PILOT_URLS ?? "").split(",").map((url) => url.trim()).filter(Boolean);
+// window mode: every recruitment the source listed or updated on/after FJA_START_DATE that is still open.
+const START_DATE = (process.env.FJA_START_DATE ?? "").trim();
+const MAX_LIST_PAGES = Number(process.env.FJA_MAX_LIST_PAGES ?? 150);
+// Dry run: fetch, parse and write the artifacts, but open no database connection and write no rows.
+const DRY_RUN = /^(1|true|yes)$/i.test(process.env.FJA_DRY_RUN ?? "");
 const USER_AGENT = "JobOye-FJA-Inventory/1.0 (+https://joboye.com; inventory contact)";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const collapse = (value: string) => value.replace(/\s+/g, " ").trim();
@@ -540,19 +545,96 @@ async function crawlSitemaps(): Promise<string[]> {
   }
   return [...articleUrls];
 }
+type DiscoveredArticle = {url:string; title:string; externalId:string; updatedOn?:string};
+/** Listing titles that announce something other than a recruitment; these articles are not fetched in window mode. */
+const NON_RECRUITMENT_UPDATE_RE = /\b(?:results?|admit cards?|answer keys?|syllabus|cut.?off|merit list|exam dates?|exam city|hall tickets?|call letters?|score ?cards?|interview (?:schedule|list|date)|dv schedule|counsell?ing|allotment|marks)\b/i;
+const RECRUITMENT_UPDATE_RE = /\b(?:recruitment|vacanc(?:y|ies)|online form|offline form|walk.?in|apply online|application form|rally)\b/i;
+
+/** The source's dated update list: one row per article with the date it was listed or last updated. */
+function parseUpdatesListing(html: string, pageUrl: string): Required<DiscoveredArticle>[] {
+  const $ = cheerio.load(html);
+  const found: Required<DiscoveredArticle>[] = [];
+  $("tr").each((_, tr) => {
+    const cells = $(tr).find("td,th").map((__, cell) => collapse($(cell).text())).get();
+    if (cells.length < 2) return;
+    const updatedOn = parseDate(cells[0]);
+    if (!updatedOn) return;
+    for (const a of $(tr).find("a[href]").toArray()) {
+      const url = normalizeUrl($(a).attr("href") ?? "", pageUrl);
+      const externalId = url?.pathname.match(ARTICLE_RE)?.[1];
+      if (!url || !externalId) continue;
+      found.push({url:url.toString(), title:cells[1] || collapse($(a).text()), externalId, updatedOn});
+      break;
+    }
+  });
+  return found;
+}
+/** Stops rather than crawl a path the source's robots.txt disallows for all agents. */
+async function assertCrawlAllowed(paths: string[]) {
+  const body = await getHtml(`${BASE}/robots.txt`);
+  const disallowed: string[] = [];
+  let agents: string[] = []; let inRules = false;
+  for (const raw of body.split(/\r?\n/)) {
+    const line = raw.split("#")[0].trim();
+    const at = line.indexOf(":"); if (at < 0) continue;
+    const key = line.slice(0, at).trim().toLowerCase(); const value = line.slice(at + 1).trim();
+    if (key === "user-agent") { if (inRules) { agents = []; inRules = false; } agents.push(value.toLowerCase()); }
+    else { inRules = true; if (key === "disallow" && value && agents.includes("*")) disallowed.push(value); }
+  }
+  for (const candidate of paths) {
+    const rule = disallowed.find((entry) => !entry.includes("*") && candidate.startsWith(entry));
+    if (rule) throw new Error(`robots.txt disallows ${candidate} (rule ${rule}); stopping.`);
+  }
+}
+/**
+ * Walks the dated update list from newest to oldest until it passes startDate. The list is ordered by date,
+ * so the first older row ends the walk. Refuses to return a window it could not walk to its start.
+ */
+async function discoverWindow(startDate: string): Promise<{articles:Required<DiscoveredArticle>[]; pagesFetched:number; rowsSeen:number}> {
+  await assertCrawlAllowed(["/new-updates/", "/articles/"]);
+  const byId = new Map<string, Required<DiscoveredArticle>>();
+  let rowsSeen = 0; let pagesFetched = 0; let reachedStart = false;
+  for (let page = 0; page < MAX_LIST_PAGES && !reachedStart; page++) {
+    const url = page === 0 ? `${BASE}/new-updates/` : `${BASE}/new-updates/page/${page}/`;
+    const rows = parseUpdatesListing(await getHtml(url), url);
+    pagesFetched++;
+    if (!rows.length) throw new Error(`No dated rows on ${url}; the update list layout may have changed. Stopping.`);
+    for (const row of rows) {
+      rowsSeen++;
+      if (row.updatedOn < startDate) { reachedStart = true; continue; }
+      // newest first: the first time an article is seen carries its latest update date
+      if (!byId.has(row.externalId)) byId.set(row.externalId, row);
+    }
+    await sleep(600);
+  }
+  if (!reachedStart) throw new Error(`Update list did not reach ${startDate} within ${MAX_LIST_PAGES} pages; refusing to report a partial window as complete.`);
+  return {articles:[...byId.values()], pagesFetched, rowsSeen};
+}
 async function main() {
-  if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
+  if (!DRY_RUN && !process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
   if (RUN_MODE === "pilot" && PILOT_URLS.length === 0) throw new Error("Pilot mode requires FJA_PILOT_URLS; refusing to fall back to broad crawl.");
-  if (RUN_MODE !== "pilot" && RUN_MODE !== "full") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
+  if (RUN_MODE !== "pilot" && RUN_MODE !== "full" && RUN_MODE !== "window") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
+  if (RUN_MODE === "window" && !/^20\d{2}-\d{2}-\d{2}$/.test(START_DATE)) throw new Error("Window mode requires FJA_START_DATE as YYYY-MM-DD.");
   // prepare:false — DATABASE_URL is the pooled (transaction-mode) connection, which does not keep
   // prepared statements between queries. Same setting as src/db/index.ts.
-  const db = postgres(process.env.DATABASE_URL,{max:4,ssl:"require",connect_timeout:20,prepare:false});
+  const db = DRY_RUN ? null : postgres(process.env.DATABASE_URL!,{max:4,ssl:"require",connect_timeout:20,prepare:false});
   const startedAt = new Date().toISOString();
   const listingPages = [`${BASE}/`,`${BASE}/latest-notifications/`,`${BASE}/government-jobs/`];
-  const listings = new Map<string,{url:string;title:string;externalId:string}>();
+  const listings = new Map<string,DiscoveredArticle>();
+  // window mode: articles left out, each with the reason, so the run can be audited
+  const windowSkipped: Array<{url:string; title:string; updatedOn?:string; reason:string; closingDate?:string}> = [];
+  let windowDiscovery: {startDate:string; pagesFetched:number; rowsSeen:number; articlesInWindow:number} | null = null;
   const pageQueue = [...listingPages]; const visitedPages = new Set<string>();
   let sitemapUrls: string[] = [];
-  if (PILOT_URLS.length > 0) {
+  if (RUN_MODE === "window") {
+    const discovered = await discoverWindow(START_DATE);
+    windowDiscovery = {startDate:START_DATE, pagesFetched:discovered.pagesFetched, rowsSeen:discovered.rowsSeen, articlesInWindow:discovered.articles.length};
+    for (const article of discovered.articles) {
+      if (NON_RECRUITMENT_UPDATE_RE.test(article.title) && !RECRUITMENT_UPDATE_RE.test(article.title)) {
+        windowSkipped.push({url:article.url, title:article.title, updatedOn:article.updatedOn, reason:"listing title is not a recruitment (result, admit card, answer key, ...)"});
+      } else listings.set(article.externalId, article);
+    }
+  } else if (PILOT_URLS.length > 0) {
     // Pilot mode deliberately bypasses broad discovery and processes only the supplied article URLs.
     for (const suppliedUrl of PILOT_URLS) {
       const normalized = normalizeUrl(suppliedUrl, BASE);
@@ -589,11 +671,12 @@ async function main() {
     }
   }
   const allItems=[...listings.values()];
-  console.log(JSON.stringify({runId:RUN_ID,listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,uniqueArticles:allItems.length}));
+  console.log(JSON.stringify({runId:RUN_ID,mode:RUN_MODE,dryRun:DRY_RUN,windowDiscovery,listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,uniqueArticles:allItems.length}));
   if(allItems.length===0) throw new Error("No FJA article URLs found; refusing to report an empty successful inventory.");
   const failedDetailUrls: string[] = [];
   let nonRecruitmentPagesSkipped = 0;
   let liveMappedPostRowsPreserved = 0;
+  const postCandidateRows: Array<Record<string, unknown>> = [];
   const resultsWithNulls = await pool(allItems,CONCURRENCY,async(item):Promise<Listing | null>=>{
     try {
       const html=await getHtml(item.url);
@@ -613,9 +696,32 @@ async function main() {
       };
       delete parsed.rawHtml;
       await sleep(300);
-      if (!parsed.listingCategory) { nonRecruitmentPagesSkipped++; return null; }
+      if (!parsed.listingCategory) {
+        nonRecruitmentPagesSkipped++;
+        if (RUN_MODE === "window") windowSkipped.push({url:item.url, title:parsed.title, updatedOn:item.updatedOn, reason:"article is not a recruitment"});
+        return null;
+      }
+      if (item.updatedOn) parsed.details.sourceListing = {updatedOn:item.updatedOn, title:item.title};
+      if (RUN_MODE === "window") {
+        // "Still open" is decided by the closing date the article states. An article with no closing date
+        // cannot be shown to be open, so it is listed for review instead of being saved as open.
+        if (parsed.sourceStatus === "CLOSED") {
+          windowSkipped.push({url:item.url, title:parsed.title, updatedOn:item.updatedOn, reason:"closed", closingDate:parsed.applicationEndDate});
+          return null;
+        }
+        if (!parsed.applicationEndDate) {
+          windowSkipped.push({url:item.url, title:parsed.title, updatedOn:item.updatedOn, reason:"no closing date found on the article"});
+          return null;
+        }
+      }
       // Top-level details keys this crawl is writing; the upsert below records which of them the crawler owns.
       parsed.details.crawlerKeys = Object.keys(parsed.details).filter((key) => parsed.details[key] != null).sort();
+      const postCandidates = extractPostCandidates(parsed);
+      for (const candidate of postCandidates) {
+        const {otherInfoRaw, ...facts} = candidate;
+        postCandidateRows.push({externalId:parsed.externalId, articleTitle:parsed.title, ...facts, scopeNote:otherInfoRaw.scopeNote});
+      }
+      if (!db) return parsed;
       const [inventoryRow] = await db`
         INSERT INTO public.fja_job_inventory AS inv
           (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,official_notification_url,detail_status,source_status,details,other_info_raw,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
@@ -669,7 +775,6 @@ async function main() {
            ${sha(parsed.rawText ?? "")},${rawHtmlContent},${RUN_ID},now())
         ON CONFLICT (source_slug,external_id,html_sha256) DO NOTHING
       `;
-      const postCandidates = extractPostCandidates(parsed);
       for (const candidate of postCandidates) {
         // A row that is mapped to a published canonical post (other_info_raw.canonical_post_id) is read by the
         // live post page. A crawl is unreviewed aggregator evidence, so it never rewrites such a row: the WHERE
@@ -749,6 +854,7 @@ async function main() {
       console.error(`Detail failed: ${item.url}: ${(error as Error).message}`);
       failedDetailUrls.push(item.url);
       if (!classifyListing(item.title, "", {})) { nonRecruitmentPagesSkipped++; return null; }
+      if (!db) return null;
       const failed:Listing={externalId:item.externalId,sourceUrl:item.url,title:item.title || `FJA article ${item.externalId}`,detailStatus:"FAILED",sourceStatus:"UNKNOWN",details:{extractionError:(error as Error).message},contentHash:sha(item.url+RUN_ID)};
       await db`
         INSERT INTO public.fja_job_inventory (source_slug,external_id,source_url,title,detail_status,source_status,details,content_hash,last_crawl_run_id)
@@ -761,8 +867,15 @@ async function main() {
   const results = resultsWithNulls.filter((item): item is Listing => item !== null);
   await mkdir(OUT,{recursive:true});
   await writeFile(path.join(OUT,"fja-inventory.json"),JSON.stringify({runId:RUN_ID,startedAt,finishedAt:new Date().toISOString(),listingPagesVisited:visitedPages.size,listingPageQueueRemaining:pageQueue.length,sitemapArticleUrls:sitemapUrls.length,discoveredArticleUrls:allItems.length,nonRecruitmentPagesSkipped,failedDetailUrls,results},null,2));
+  await writeFile(path.join(OUT,"fja-post-candidates.json"),JSON.stringify({runId:RUN_ID,postCandidates:postCandidateRows},null,2));
+  if (RUN_MODE === "window") await writeFile(path.join(OUT,"fja-window-skipped.json"),JSON.stringify({runId:RUN_ID,windowDiscovery,skipped:windowSkipped},null,2));
+  const skippedByReason = windowSkipped.reduce<Record<string,number>>((counts, row) => { counts[row.reason] = (counts[row.reason] ?? 0) + 1; return counts; }, {});
+  if (!db) {
+    console.log(JSON.stringify({runId:RUN_ID,dryRun:true,processed:results.length,postCandidates:postCandidateRows.length,failed:failedDetailUrls.length,skippedByReason,out:OUT}));
+    return;
+  }
   const summary=await db`select count(*)::int as total, count(*) filter (where detail_status='EXTRACTED')::int as extracted, count(*) filter (where detail_status='PARTIAL')::int as partial, count(*) filter (where detail_status='FAILED')::int as failed from public.fja_job_inventory where source_slug='freejobalert'`;
-  console.log(JSON.stringify({runId:RUN_ID,processed:results.length,liveMappedPostRowsPreserved,summary:summary[0],out:OUT}));
+  console.log(JSON.stringify({runId:RUN_ID,processed:results.length,postCandidates:postCandidateRows.length,failed:failedDetailUrls.length,liveMappedPostRowsPreserved,skippedByReason,summary:summary[0],out:OUT}));
   await db.end();
 }
 main().catch(error=>{console.error(error);process.exit(1);});
