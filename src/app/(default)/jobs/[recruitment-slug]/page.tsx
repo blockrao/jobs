@@ -36,31 +36,40 @@ function buildMetaDescription(params: {
   resolvedVacancies: number | null;
   applicationEndDate: Date | string | null | undefined;
   verificationStatus?: string | null;
+  postTitles?: string[];
 }): string {
-  const { name, totalPosts, resolvedVacancies, applicationEndDate, verificationStatus } = params;
+  const { name, totalPosts, resolvedVacancies, applicationEndDate, verificationStatus, postTitles } = params;
   const verified = verificationStatus === "VERIFIED";
 
   const vacancyPart = resolvedVacancies
     ? `${resolvedVacancies.toLocaleString("en-IN")} ${verified ? "vacancies" : "reported vacancies"}`
     : `${totalPosts} listed position${totalPosts !== 1 ? "s" : ""}`;
 
+  // Deadline: emit for both verified and unverified — unverified gets "(reported)" label
   let deadlinePart = "";
-  if (verified && applicationEndDate) {
+  if (applicationEndDate) {
     try {
       const d = new Date(applicationEndDate);
       const ms = d.getTime() - Date.now();
       const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+      const tag = verified ? "" : " (reported)";
       if (days > 0 && days <= 30) {
-        deadlinePart = ` · Apply in ${days} day${days !== 1 ? "s" : ""}`;
+        deadlinePart = ` · Apply in ${days} day${days !== 1 ? "s" : ""}${tag}`;
       } else if (days > 0) {
-        deadlinePart = ` · Apply by ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+        deadlinePart = ` · Apply by ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}${tag}`;
       } else {
         deadlinePart = " · Applications closed";
       }
     } catch { /* skip */ }
   }
 
-  return `${name} — ${vacancyPart}${deadlinePart}. Check eligibility, important dates, and official notification.`;
+  // Include post titles when there are multiple posts — makes description specific
+  let postsPart = "";
+  if (postTitles && postTitles.length > 1 && postTitles.length <= 4) {
+    postsPart = ` Posts: ${postTitles.join(", ")}.`;
+  }
+
+  return `${name} — ${vacancyPart}${deadlinePart}.${postsPart} Check eligibility, important dates and official notification.`;
 }
 
 // Enable ISR with 300-second revalidation (5 minutes)
@@ -120,12 +129,18 @@ export async function generateMetadata({
     totalVacancies: recruitment.totalVacancies ?? null,
   });
 
+  const metaPostTitles = posts
+    .map((p) => p.title ?? p.name)
+    .filter((t): t is string => Boolean(t))
+    .slice(0, 4);
+
   const description = buildMetaDescription({
     name: recruitment.name,
     totalPosts,
     resolvedVacancies: metaVacancies,
     applicationEndDate: recruitment.applicationEndDate,
     verificationStatus: recruitment.sourceVerificationStatus ?? null,
+    postTitles: metaPostTitles,
   });
 
   const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
@@ -133,9 +148,12 @@ export async function generateMetadata({
     ? `${metaVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · ${recruitment.name} on JobOye`
     : `${recruitment.name} on JobOye`;
   const roleSlugs = [...new Set(posts.map((post) => post.position?.slug).filter((slug): slug is string => Boolean(slug)))];
-  // A multi-role recruitment has no single correct role canonical. Keep its
-  // URL self-canonical but non-indexable; single-role hubs point to the role hub.
-  const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : `/jobs/${recruitment.slug}`;
+  // Single-role hub: canonical authority lives at the role hub (/posts/{slug}).
+  // Hub is a near-duplicate; keep it non-indexable to avoid splitting signals.
+  // Multi-role or no-role hub: this page IS the canonical unit. Index it.
+  const isSingleRoleHub = roleSlugs.length === 1;
+  const canonicalPath = isSingleRoleHub ? `/posts/${roleSlugs[0]}` : `/jobs/${recruitment.slug}`;
+  const hubIndexable = !isSingleRoleHub;
 
   // article:published_time — notificationDate (verified) or sourceListingPublishedDate (unverified)
   const publishedTime = factsVerified
@@ -155,7 +173,7 @@ export async function generateMetadata({
   return {
     title: recruitment.name,
     description,
-    ...pageSeo(canonicalPath, { index: false }),
+    ...pageSeo(canonicalPath, hubIndexable ? undefined : { index: false }),
     openGraph: {
       title: recruitment.name,
       description: ogDescription,
@@ -166,14 +184,23 @@ export async function generateMetadata({
       section: "Central Government Jobs",
       ...(ogTags.length > 0 ? { tags: ogTags } : {}),
     },
-    robots: {
-      index: false,
-      follow: true,
-      googleBot: {
-        "max-image-preview": "large" as const,
-        "max-snippet": -1,
-      },
-    },
+    robots: hubIndexable
+      ? {
+          index: true,
+          follow: true,
+          googleBot: {
+            "max-image-preview": "large" as const,
+            "max-snippet": -1,
+          },
+        }
+      : {
+          index: false,
+          follow: true,
+          googleBot: {
+            "max-image-preview": "large" as const,
+            "max-snippet": -1,
+          },
+        },
   };
 }
 
