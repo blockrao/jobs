@@ -44,7 +44,7 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
             day: "numeric",
             year: "numeric",
           })
-        : "N/A",
+        : "See official notification",
     },
     {
       label: "Job Type",

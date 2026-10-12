@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { pageSeo } from "@/lib/seo";
 import { getJobsControlCenter, type JobRow, type DeadlineBucket, type TopOrg, type RoleRow } from "@/lib/queries";
-import { Building2, Calendar, Clock, TrendingUp, Briefcase, MapPin, ChevronRight, AlertTriangle, Users } from "lucide-react";
+import { Building2, Clock, Briefcase, MapPin, ChevronRight, AlertTriangle, Users } from "lucide-react";
 import { SeoFooterLinks } from "@/components/seo-footer-links";
 
-export const revalidate = 300; // 5-minute ISR — data is live, not static
+// This page aggregates several live database queries. Render on request rather than
+// prerendering during the build, where provider limits can time out the entire build.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = pageSeo("/posts");
@@ -257,8 +259,7 @@ function RoleHeatmap({ roles }: { roles: RoleRow[] }) {
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0">
         {roles.map((role) => {
           const pct = Math.max(4, Math.round((role.totalVacancies / max) * 100));
-          const isUrgent = role.earliestDeadline &&
-            (role.earliestDeadline.getTime() - Date.now()) < 7 * 86_400_000;
+          const isUrgent = role.closesWithinWeek;
           const barColor = isUrgent
             ? "bg-red-400"
             : role.totalVacancies > 2000

@@ -405,7 +405,6 @@ export async function writePostingsToDB(
             applicationStartDate: norm.applicationStartDate ?? null,
             applicationEndDate: norm.validThrough ?? null,
           },
-          norm.slug,
         );
       }
 

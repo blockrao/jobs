@@ -80,7 +80,13 @@ export async function getExamRecruitmentDetails(examId: number) {
     .where(eq(recruitments.examId, examId));
 
   // Group recruitments and their posts
-  const recruitmentsMap = new Map();
+  type RecruitmentWithPosts = typeof recruitments.$inferSelect & {
+    posts: {
+      post: typeof posts.$inferSelect;
+      position: typeof positions.$inferSelect;
+    }[];
+  };
+  const recruitmentsMap = new Map<number, RecruitmentWithPosts>();
   for (const row of result) {
     if (!recruitmentsMap.has(row.recruitment.id)) {
       recruitmentsMap.set(row.recruitment.id, {
@@ -89,10 +95,13 @@ export async function getExamRecruitmentDetails(examId: number) {
       });
     }
     if (row.post && row.position) {
-      recruitmentsMap.get(row.recruitment.id).posts.push({
-        post: row.post,
-        position: row.position,
-      });
+      const recruitment = recruitmentsMap.get(row.recruitment.id);
+      if (recruitment) {
+        recruitment.posts.push({
+          post: row.post,
+          position: row.position,
+        });
+      }
     }
   }
 

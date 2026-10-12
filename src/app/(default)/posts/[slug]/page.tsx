@@ -3,21 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/site";
-import { getRoleBySlug, ROLE_REGISTRY } from "@/lib/roles";
-import { getPostsForRole, getRoleStats } from "@/db/operations/get-roles";
+import { getRoleBySlug } from "@/lib/roles";
+import { getPostsForRole, getRoleStats, type RolePost, type RoleStats } from "@/db/operations/get-roles";
 import { getPositionBySlug, getPostsForPosition, getPositionStats } from "@/db/operations/get-positions";
 import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 import { EnrichedPostRow } from "@/components/enriched-post-row";
 
-export const revalidate = 3600;
-export const dynamicParams = true;
+// Role hubs depend on live Recruitment/Post data; resolve at request time so
+// database latency cannot make the production build fail while prerendering roles.
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
-
-export async function generateStaticParams() {
-  return ROLE_REGISTRY.map((role) => ({ slug: role.slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -44,6 +41,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         url: absoluteUrl(`/posts/${position.slug}`),
         type: "website",
       },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
     };
   }
 
@@ -68,6 +70,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: absoluteUrl(`/posts/${role.slug}`),
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   };
 }
@@ -116,8 +123,8 @@ export default async function PostPage({ params }: Props) {
   // Try position first (database-driven), then fall back to hardcoded role
   const position = await safeQuery(() => getPositionBySlug(slug), null);
 
-  let rolePosts: any[] = [];
-  let stats: any = { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
+  let rolePosts: RolePost[] = [];
+  let stats: RoleStats = { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 };
   let displayName = "";
   let displayDescription = "";
 

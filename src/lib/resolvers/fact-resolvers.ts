@@ -155,7 +155,7 @@ function salaryConsistentWithPayLevel(
  *   3. null — insufficient evidence.
  */
 export function resolvePostVacancy(
-  post: JobPostingData & {
+  post: Pick<JobPostingData, "enrichment"> & {
     vacancyTotal?: number | null; // posts.vacancy_total (old schema)
     recruitmentVacancyTotal?: number | null; // recruitments.total_vacancies, for scope check
   }

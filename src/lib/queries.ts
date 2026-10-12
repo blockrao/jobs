@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/db";
 import {
   articleCategories,
@@ -272,21 +273,26 @@ export async function getPostingSlugsPageForSitemap(
 ) {
   if (!hasDb()) return [];
   const db = getDb();
+  // Legacy posting URLs that resolve to a canonical Recruitment are not
+  // sitemap candidates. Join both supported relationship paths so this
+  // works whether ingestion populated inferred_recruitment_id or only
+  // inferred_post_id.
+  const inferredPostRecruitments = alias(recruitments, "inferred_post_recruitments");
   return db
     .select({
       slug: postings.slug,
       updatedAt: postings.updatedAt,
       contentChangedAt: postings.contentChangedAt,
-      // Carried through so the sitemap can emit a hi alternate only for
-      // postings that actually have translated content — see
-      // src/app/[locale]/jobs/[slug]/page.tsx.
       titleHi: postings.titleHi,
+      canonicalRecruitmentSlug: sql<string | null>`COALESCE(${recruitments.slug}, ${inferredPostRecruitments.slug})`,
     })
     .from(postings)
-    // Sitemap = Tier A and B (all approved, non-expired postings with content).
-    // Tier C (non-job, duplicate, expired) are excluded.
-    // An expired posting leaves the sitemap even if its stored tier hasn't
-    // been recomputed yet (the lifecycle job sets is_expired separately).
+    .leftJoin(recruitments, eq(postings.inferredRecruitmentId, recruitments.id))
+    .leftJoin(posts, eq(postings.inferredPostId, posts.id))
+    .leftJoin(inferredPostRecruitments, eq(posts.recruitmentId, inferredPostRecruitments.id))
+    // Sitemap = Tier A and B (approved, non-expired postings with content).
+    // Tier C (non-job, duplicate, expired) are excluded. Legacy aliases that
+    // canonicalize to Recruitment URLs are excluded by sitemap.ts as well.
     .where(
       and(
         eq(postings.reviewStatus, "APPROVED"),
@@ -299,7 +305,6 @@ export async function getPostingSlugsPageForSitemap(
     .offset(offset)
     .limit(limit);
 }
-
 export async function getAllArticleSlugsForSitemap() {
   if (!hasDb()) return [];
   const db = getDb();
@@ -666,6 +671,7 @@ export interface RoleRow {
   occurrenceCount: number;
   totalVacancies: number;
   earliestDeadline: Date | null;
+  closesWithinWeek: boolean;
 }
 
 export async function getJobsControlCenter(): Promise<{
@@ -831,12 +837,16 @@ export async function getJobsControlCenter(): Promise<{
     locationStateCode: r.location_state_code ? String(r.location_state_code) : null,
   }));
 
-  const roles: RoleRow[] = (roleRows as unknown as Record<string, unknown>[]).map((r) => ({
-    name: String(r.name),
-    occurrenceCount: Number(r.occurrence_count),
-    totalVacancies: Number(r.total_vacancies),
-    earliestDeadline: r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null,
-  }));
+  const roles: RoleRow[] = (roleRows as unknown as Record<string, unknown>[]).map((r) => {
+    const earliestDeadline = r.earliest_deadline ? new Date(String(r.earliest_deadline)) : null;
+    return {
+      name: String(r.name),
+      occurrenceCount: Number(r.occurrence_count),
+      totalVacancies: Number(r.total_vacancies),
+      earliestDeadline,
+      closesWithinWeek: earliestDeadline !== null && earliestDeadline.getTime() - Date.now() < 7 * 86_400_000,
+    };
+  });
 
   return { stats, deadlineBuckets, topOrgs, jobs, roles };
 }

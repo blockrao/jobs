@@ -14,6 +14,7 @@
  */
 
 import { notFound } from "next/navigation";
+import { pageSeo } from "@/lib/seo";
 import { cache } from "react";
 import { Metadata } from "next";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
@@ -118,9 +119,9 @@ export async function generateMetadata({
 
   // Resolve Post-scoped facts for meta signals.
   const now = new Date();
-  const metaVacancy = resolvePostVacancy(post as any);
-  const metaSalary = resolveSalary(post as any);
-  const metaDeadline = resolveDeadline(post as any, now);
+  const metaVacancy = resolvePostVacancy(post);
+  const metaSalary = resolveSalary(post);
+  const metaDeadline = resolveDeadline(post, now);
 
   const description = buildPostMetaDescription({
     title: post.title,
@@ -138,9 +139,7 @@ export async function generateMetadata({
   return {
     title: `${post.title} - ${post.organizationName}`,
     description,
-    alternates: {
-      canonical: `/jobs/${post.recruitmentSlug}/${post.slug}`,
-    },
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`),
     openGraph: {
       title: post.title,
       description: ogDescription,
@@ -169,9 +168,9 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
   // Entity ownership: Post. These facts describe the specific Post.
   const now = new Date();
   const resolvedFacts = {
-    vacancyCount: resolvePostVacancy(post as any),
-    salary: resolveSalary(post as any),
-    deadline: resolveDeadline(post as any, now),
+    vacancyCount: resolvePostVacancy(post),
+    salary: resolveSalary(post),
+    deadline: resolveDeadline(post, now),
   };
 
   // ── Recruitment-owned resolver facts ─────────────────────────────────────

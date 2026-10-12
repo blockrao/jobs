@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/patch-next-build.js",
+    "prebuild": "tsx scripts/generate-legacy-exam-slug-manifest.ts && node scripts/patch-next-build.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -21,6 +21,7 @@
     "i18n:demo": "npx tsx src/scripts/demo-translation-mock.ts",
     "report:completeness": "dotenv -e .env.local -- tsx src/scripts/report-completeness.ts",
     "verify:live": "tsx src/scripts/verify-live.ts",
+    "audit:sitemap": "tsx src/scripts/audit-sitemap.ts",
     "validate:routes": "dotenv -e .env.local -- tsx src/scripts/validate-canonical-routes.ts",
     "test:hindi-search": "dotenv -e .env.local -- tsx src/scripts/test-hindi-search.ts",
     "ingest": "dotenv -e .env.local -- tsx src/ingest/run.ts",

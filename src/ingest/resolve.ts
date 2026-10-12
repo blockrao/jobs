@@ -13,7 +13,7 @@
  * and stays where it is in the writer.
  */
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
@@ -42,7 +42,7 @@ export interface RecruitmentIdentity {
  */
 export function normalizeAdvertisementNumber(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let v = raw
+  const v = raw
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^(advertisement|advt|notification|notice|ref)\.?\s*(no\.?|number|#)?\s*[:\-.]?\s*/i, "")
@@ -139,7 +139,6 @@ const POST_NAME_MAX_LENGTH = 200;
 export async function resolveRecruitment(
   db: Db,
   identity: RecruitmentIdentity,
-  slug: string,
 ): Promise<ResolvedRecruitment> {
   // Strong key: organization + official notification number. Enforced
   // unique at the DB level (recruitments_org_notification_idx).
@@ -200,20 +199,33 @@ export async function resolveRecruitment(
       applicationStartDate: identity.applicationStartDate ?? null,
       applicationEndDate: identity.applicationEndDate ?? null,
     })
-    .onConflictDoNothing({ target: recruitments.slug })
+    .onConflictDoNothing()
     .returning({ id: recruitments.id });
 
   if (created) return { id: created.id, created: true };
 
-  const existingBySlug = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, finalSlug),
-  });
-  if (existingBySlug) return { id: existingBySlug.id, created: false };
+  // A slug collision is only a concurrency signal, never an entity identity.
+  // Recover the winning insert by the same structured identity used above.
+  // This prevents a URL slug from attaching an observation to an unrelated row.
+  const finalName = truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH);
+  const collisionIdentity = identity.officialNotificationNumber
+    ? and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.officialNotificationNumber, identity.officialNotificationNumber),
+      )
+    : and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.year, finalYear),
+        eq(recruitments.name, finalName),
+        identity.examId === null ? isNull(recruitments.examId) : eq(recruitments.examId, identity.examId),
+        isNull(recruitments.officialNotificationNumber),
+      );
+  const existingByIdentity = await db.query.recruitments.findFirst({ where: collisionIdentity });
+  if (existingByIdentity) return { id: existingByIdentity.id, created: false };
 
-  // Insert raced and lost, but the winning row isn't visible yet (unlikely
-  // outside real concurrency) — surface clearly rather than silently
-  // returning a bogus id.
-  throw new Error(`resolveRecruitment: slug "${finalSlug}" conflicted but no row found`);
+  // Insert raced and lost, but no row with the same structured identity is
+  // visible. Surface the conflict rather than returning a bogus entity ID.
+  throw new Error("resolveRecruitment: generated slug conflicted without a matching identity row: " + finalSlug);
 }
 
 export interface PostIdentity {
@@ -265,26 +277,13 @@ export async function resolvePost(db: Db, identity: PostIdentity, slug: string):
   // is a coarse classification (e.g. "ENGINEERING"), not the job title —
   // it's fine for several unrelated posts to share one Position, unlike
   // the old bug where *postings themselves* were glued onto one bucket.
-  let position = await db.query.positions.findFirst({
-    where: eq(positions.slug, slugifyPositionCategory(identity.positionCategory)),
-  });
-  if (!position) {
-    const [createdPosition] = await db
-      .insert(positions)
-      .values({
-        name: titleCasePositionCategory(identity.positionCategory),
-        slug: slugifyPositionCategory(identity.positionCategory),
-        category: identity.positionCategory,
-      })
-      .returning();
-    position = createdPosition;
-  }
+  const positionId = await getOrCreatePositionId(db, identity.positionCategory);
 
   const [created] = await db
     .insert(posts)
     .values({
       recruitmentId: identity.recruitmentId,
-      positionId: position.id,
+      positionId,
       name: safeName,
       slug,
     })
@@ -334,12 +333,22 @@ export interface PostLinesResult {
 }
 
 async function getOrCreatePositionId(db: Db, category: PostIdentity["positionCategory"]): Promise<number> {
-  const slug = slugifyPositionCategory(category);
-  const found = await db.query.positions.findFirst({ where: eq(positions.slug, slug) });
-  if (found) return found.id;
+  // Position category is the semantic identity. Slugs are URL presentation only.
+  const foundByCategory = await db.query.positions.findFirst({
+    where: eq(positions.category, category),
+  });
+  if (foundByCategory) return foundByCategory.id;
+
+  // Reuse a legacy row by its canonical display name if category was not backfilled.
+  const canonicalName = titleCasePositionCategory(category);
+  const foundByName = await db.query.positions.findFirst({
+    where: eq(positions.name, canonicalName),
+  });
+  if (foundByName) return foundByName.id;
+
   const [createdPosition] = await db
     .insert(positions)
-    .values({ name: titleCasePositionCategory(category), slug, category })
+    .values({ name: canonicalName, slug: slugifyPositionCategory(category), category })
     .returning();
   return createdPosition.id;
 }

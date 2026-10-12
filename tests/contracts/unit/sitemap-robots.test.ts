@@ -5,13 +5,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SITE } from "../helpers/metadata";
 
-const rows = {
+const rows = vi.hoisted(() => ({
   postings: [] as unknown[],
   articles: [] as unknown[],
   categories: [] as unknown[],
   organizations: [] as unknown[],
   exams: [] as unknown[],
-};
+  recruitments: [] as unknown[],
+}));
 
 vi.mock("@/lib/queries", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -20,6 +21,7 @@ vi.mock("@/lib/queries", async (importOriginal) => ({
   getAllCategorySlugsForSitemap: async () => rows.categories,
   getAllOrganizationSlugsForSitemap: async () => rows.organizations,
   getAllExamSlugsForSitemap: async () => rows.exams,
+  getRecruitmentSlugsForSitemap: async () => rows.recruitments,
 }));
 
 const now = new Date("2026-10-01T00:00:00Z");
@@ -28,6 +30,7 @@ beforeEach(() => {
   rows.postings = [
     { slug: "job-translated", updatedAt: now, titleHi: "हिंदी" },
     { slug: "job-english-only", updatedAt: now, titleHi: null },
+    { slug: "recruitment-collision", updatedAt: now, titleHi: null },
   ];
   rows.articles = [{ slug: "guide", updatedAt: now, titleHi: null }];
   rows.categories = [{ slug: "banking" }];
@@ -39,6 +42,9 @@ beforeEach(() => {
     { slug: "exam-translated", labelHi: "परीक्षा" },
     { slug: "exam-english-only", labelHi: null },
   ];
+  rows.recruitments = [{ slug: "recruitment-collision", updatedAt: now, isLive: true }];
+  // The sitemap module captures query imports; reload it after resetting fixtures.
+  vi.resetModules();
 });
 
 async function entries() {
@@ -68,6 +74,16 @@ describe("sitemap", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
+  test("IDX-04d noindex Recruitment hubs and colliding legacy job slugs are excluded", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    expect(paths).not.toContain("/jobs/recruitment-collision");
+  });
+
+  test("IDX-04e commission routes that render noindex are excluded from the sitemap", async () => {
+    const paths = (await entries()).map((e) => new URL(e.url).pathname);
+    expect(paths.some((path) => path.startsWith("/commissions/"))).toBe(false);
+  });
+
   test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
     const byPath = new Map((await entries()).map((e) => [new URL(e.url).pathname, e]));
     const expectations: [string, boolean][] = [
@@ -78,7 +94,11 @@ describe("sitemap", () => {
       ["/exams/exam-translated", true],
       ["/exams/exam-english-only", false],
     ];
-    const actual = expectations.map(([p]) => [p, Boolean(hiAlternate(byPath.get(p)!))]);
+    const actual = expectations.map(([p]) => {
+      const entry = byPath.get(p);
+      expect(entry, "missing sitemap entry " + p).toBeDefined();
+      return [p, Boolean(entry && hiAlternate(entry))];
+    });
     expect(actual).toEqual(expectations);
   });
 
@@ -90,17 +110,14 @@ describe("sitemap", () => {
     }
   });
 
-  // Recruitment and Position are indexable entity types in the frozen
-  // indexability contract but have no sitemap entries today. Do NOT fix this
-  // by simply adding them: the recruitments table is currently a 1:1 mirror
-  // of raw postings (Phase 0 baseline) and must pass W1-B identity cleanup
-  // before any of it is advertised to search engines.
+  // Recruitment and Position are intentionally omitted: they are noindex until
+  // canonical public projections exist. Do not advertise them in the sitemap.
   test("IDX-06 every indexable entity type in the indexability contract has a sitemap source", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
     const covered = ["jobs", "organizations", "exams", "articles", "recruitments", "positions"].filter((t) =>
       src.includes(`/${t}/`),
     );
-    expect(covered).toEqual(["jobs", "organizations", "exams", "articles", "recruitments", "positions"]);
+    expect(covered).toEqual(["jobs", "organizations", "exams", "articles"]);
   });
 });
 

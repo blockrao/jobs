@@ -70,6 +70,9 @@ function toIso(d: Date | null | undefined): string | undefined {
   try {
     const ts = new Date(d);
     if (isNaN(ts.getTime())) return undefined;
+    // Some legacy rows carry the Unix epoch as a missing-date sentinel.
+    // Do not publish 1970 as a real job notification date.
+    if (ts.getTime() <= 0) return undefined;
     return ts.toISOString();
   } catch {
     return undefined;

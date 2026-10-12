@@ -27,6 +27,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   getPostBySlug.mockResolvedValue({
     title: "Sample Post",
+    slug: postSlug,
+    recruitmentSlug,
     organizationName: "Sample Organization",
     description: "A sample job posting.",
   });

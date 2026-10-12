@@ -60,12 +60,13 @@ describe("listings and fixed pages", () => {
     const { readSource, stripComments } = await import("../helpers/source");
     for (const f of [
       "src/app/(default)/recruitments/page.tsx",
-      "src/app/(default)/recruitments/[slug]/page.tsx",
       "src/app/(default)/positions/page.tsx",
       "src/app/(default)/positions/[slug]/page.tsx",
     ]) {
       expect(stripComments(readSource(f)), f).toMatch(/pageSeo\([^)]*\{ index: false \}\)/);
     }
+    // This route redirects to the canonical /jobs entity; it should not render a second page.
+    expect(stripComments(readSource("src/app/(default)/recruitments/[slug]/page.tsx"))).toContain("redirect(`/jobs/${slug}`)");
   });
 });
 

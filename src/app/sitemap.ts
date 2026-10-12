@@ -11,7 +11,6 @@ import {
   getPostingSlugsPageForSitemap,
   getPostSlugsForSitemap,
   getRecruitmentSlugsForSitemap,
-  listCommissionsWithExams,
 } from "@/lib/queries";
 import { pickSitemapLastmod } from "@/lib/freshness/lastmod";
 import { sitemapAlternates } from "@/lib/seo";
@@ -29,13 +28,12 @@ const MAX_POSTING_URLS = 45000;
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows, examRows, commissionRows, postLeafRows, recruitmentRows] = await Promise.all([
+  const [postingRows, articleRows, categoryRows, orgRows, examRows, postLeafRows, recruitmentRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
     getAllCategorySlugsForSitemap().catch(() => []),
     getAllOrganizationSlugsForSitemap().catch(() => []),
     getAllExamSlugsForSitemap().catch(() => []),
-    listCommissionsWithExams().catch(() => []),
     getPostSlugsForSitemap().catch(() => []),
     getRecruitmentSlugsForSitemap().catch(() => []),
   ]);
@@ -60,12 +58,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  const postingEntries: MetadataRoute.Sitemap = postingRows.map((row) => ({
+  // /jobs/:slug is also the legacy Recruitment Hub route. Recruitment hubs are
+  // noindex and must not appear in the sitemap; exclude colliding legacy posting
+  // slugs rather than advertising a URL that resolves to the non-indexable hub.
+  const recruitmentSlugSet = new Set(recruitmentRows.map((row) => row.slug));
+  const postingEntries: MetadataRoute.Sitemap = postingRows
+    .filter(
+      (row) =>
+        !recruitmentSlugSet.has(row.slug) &&
+        (!row.canonicalRecruitmentSlug || row.canonicalRecruitmentSlug === row.slug),
+    )
+    .map((row) => ({
     url: `${SITE_URL}/jobs/${row.slug}`,
     lastModified: pickSitemapLastmod(row.contentChangedAt, row.updatedAt),
     changeFrequency: "daily",
     priority: 0.8,
-    ...sitemapAlternates("/jobs", row.slug, Boolean((row as any).titleHi)),
+    ...sitemapAlternates("/jobs", row.slug, Boolean(row.titleHi)),
   }));
 
   const articleEntries: MetadataRoute.Sitemap = articleRows.map((row) => ({
@@ -73,7 +81,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: pickSitemapLastmod(row.updatedAt, undefined),
     changeFrequency: "weekly",
     priority: 0.6,
-    ...sitemapAlternates("/articles", row.slug, Boolean((row as any).titleHi)),
+    ...sitemapAlternates("/articles", row.slug, Boolean(row.titleHi)),
   }));
 
   const categoryEntries: MetadataRoute.Sitemap = categoryRows.map((row) => ({
@@ -86,7 +94,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/organizations/${row.slug}`,
     changeFrequency: "weekly",
     priority: 0.4,
-    ...sitemapAlternates("/organizations", row.slug, Boolean((row as any).nameHi)),
+    ...sitemapAlternates("/organizations", row.slug, Boolean(row.nameHi)),
   }));
 
   const examEntries: MetadataRoute.Sitemap = examRows.map((row) => ({
@@ -94,20 +102,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "weekly",
     priority: 0.5,
     ...sitemapAlternates("/exams", row.slug, Boolean(row.labelHi)),
-  }));
-
-  const commissionEntries: MetadataRoute.Sitemap = commissionRows.map((row) => ({
-    url: `${SITE_URL}/commissions/${row.slug}`,
-    changeFrequency: "weekly",
-    priority: 0.4,
-  }));
-
-  // Recruitment Hub pages — /jobs/{recruitment-slug}
-  const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.map((row) => ({
-    url: `${SITE_URL}/jobs/${row.slug}`,
-    lastModified: row.updatedAt ?? undefined,
-    changeFrequency: row.isLive ? ("daily" as const) : ("weekly" as const),
-    priority: row.isLive ? 0.8 : 0.5,
   }));
 
   // PQ-006 / PQ-007: per-post leaf pages — /jobs/{recruitment-slug}/{post-slug}
@@ -134,16 +128,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [
+  // The /jobs/:slug Recruitment Hub is supporting/noindex and excluded. Legacy
+  // posting rows that collide with a Recruitment slug are also excluded above.
+  const allEntries: MetadataRoute.Sitemap = [
     ...staticEntries,
     ...roleEntries,
     ...stateEntries,
-    ...recruitmentEntries,
+    ...postingEntries,
     ...postLeafEntries,
     ...articleEntries,
     ...categoryEntries,
     ...orgEntries,
     ...examEntries,
-    ...commissionEntries,
   ];
+  const uniqueEntries = new Map<string, MetadataRoute.Sitemap[number]>();
+  for (const entry of allEntries) uniqueEntries.set(entry.url, entry);
+  return Array.from(uniqueEntries.values());
 }

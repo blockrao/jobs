@@ -10,20 +10,16 @@ interface LocaleLayoutProps {
   params: Promise<{ locale: string }>;
 }
 
-// No generateStaticParams here anymore. This layout's dynamic segment
-// ("locale") is shared with two very different kinds of routes now — the
-// real en/hi locale pages (articles/exams/organizations/jobs subtrees)
-// AND the exam leaf page at [locale]/page.tsx, whose "locale" values are
-// actually exam slugs (see that file's comment for why they share a
-// folder name at all). A generateStaticParams here that only returned
-// ['en','hi'] would be actively wrong for the exam page's slugs, and
-// every route under this layout is already server-rendered on demand
-// (ƒ Dynamic, not statically generated — confirmed via `next build`), so
-// this was never achieving build-time prerendering in the first place.
+type IntlMessages = { [key: string]: string | IntlMessages };
+
+// This segment is reserved for actual locale-aware route families only.
+// Legacy root-level exam slugs are handled by the build-generated allowlist
+// in src/proxy.ts and canonical exam pages live under /exams/[slug].
+// Do not add a page directly at [locale]/page.tsx: that would make arbitrary
+// one-segment paths compete with locale semantics again.
 
 export async function generateMetadata(
   { params }: LocaleLayoutProps,
-  parent: any
 ): Promise<Metadata> {
   const { locale } = await params;
   const canonicalUrl = new URL(SITE_URL);
@@ -60,33 +56,11 @@ export async function generateMetadata(
   };
 }
 
-// This is a ROOT layout (SEO-001 step 3): there is no layout above it, and
-// it renders the one page shell through RootShell so that the server sends
-// the correct <html lang> for /hi pages. The unprefixed tree has its own
-// root layout in src/app/(default)/layout.tsx. Each page is wrapped by
-// exactly one shell.
-//
-// History: an earlier version rendered a second shell here while a root
-// layout above it rendered the first, producing two Header/LanguageSwitcher
-// instances per page, /hi/hi/... links and duplicate analytics hits. That
-// cannot recur while no layout sits above this one — do not add an
-// src/app/layout.tsx.
-//
-// The header and footer inside the shell keep the default-locale message
-// context they had before; only the page content below gets this segment's
-// locale, exactly as before the move.
-//
-// This layout also wraps [locale]/page.tsx (the exam detail leaf — see its
-// own file comment for why it lives in this folder), whose "locale" param
-// value is actually an exam slug like "ssc-cgl-2026", never "en" or "hi".
-// It used to notFound() here whenever locale wasn't a recognized value,
-// which would have 404'd every single exam page. Falling back to
-// defaultLocale's messages instead is a no-op for that page (it doesn't
-// use next-intl translations at all) and, for the genuine /en or /hi
-// subtree pages, only changes behavior for a URL with an outright invalid
-// locale segment (e.g. /xx/articles/foo) — that now renders with English
-// text instead of 404ing, which is a strictly more forgiving fallback, not
-// a loss of real functionality.
+// This is a root layout for localized route families. It sets the document
+// language from the URL and provides the matching translation messages.
+// The unprefixed route group has its own root layout; do not add a parent
+// src/app/layout.tsx without reconciling the two root layouts and shell.
+
 export default async function LocaleLayout({
   children,
   params,
@@ -100,7 +74,7 @@ export default async function LocaleLayout({
 
   return (
     <RootShell lang={htmlLang(locale)}>
-      <IntlProvider locale={resolvedLocale} messages={messages as Record<string, any>}>
+      <IntlProvider locale={resolvedLocale} messages={messages as IntlMessages}>
         {children}
       </IntlProvider>
     </RootShell>

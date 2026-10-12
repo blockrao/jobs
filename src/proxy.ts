@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from 'next-intl/middleware';
 import { adminSessionToken } from "@/lib/admin-token";
-import { locales, defaultLocale, type Locale } from "@/i18n/request";
+import { locales, defaultLocale } from "@/i18n/request";
+import legacyExamSlugs from "@/lib/legacy-exam-slugs.generated.json";
+import { getLegacyExamRedirect } from "@/lib/legacy-exam-routing";
 import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 
 // Import Supabase client for redirect lookups
@@ -10,10 +12,11 @@ import { recruitment_slug_redirects } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const COOKIE_NAME = "admin_session";
+const legacyExamSlugSet = new Set<string>(legacyExamSlugs);
 
 // Create the next-intl middleware
 const intlMiddleware = createMiddleware({
-  locales: locales as any,
+  locales,
   defaultLocale: defaultLocale,
   localePrefix: 'as-needed',
   // SEO-001 (ledger A-052): hreflang is decided per page by src/lib/seo and
@@ -42,6 +45,14 @@ const intlMiddleware = createMiddleware({
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Legacy /{examSlug} URLs are redirected only when the slug appears in the
+  // build-generated authoritative manifest. Unknown root paths do no database
+  // work and fall through to the app's real 404 handler.
+  const legacyExamTarget = getLegacyExamRedirect(pathname, legacyExamSlugSet);
+  if (legacyExamTarget) {
+    return NextResponse.redirect(new URL(legacyExamTarget, request.url), { status: 301 });
+  }
 
   // Handle admin authentication (applies everywhere under /admin)
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
@@ -87,6 +98,14 @@ export async function proxy(request: NextRequest) {
         // Continue on error — don't block page access
       }
     }
+  }
+
+  // The nested Post Leaf has a real [locale] route, but the general locale
+  // path classifier intentionally keeps unprefixed /jobs/:recruitment/:post
+  // on the default route. Route explicitly prefixed /hi and legacy /en leaves
+  // through next-intl before the generic locale-prefix fallback can strip them.
+  if (/^\/(en|hi)\/jobs\/[^/]+\/[^/]+\/?$/.test(pathname)) {
+    return intlMiddleware(request);
   }
 
   // Only run next-intl's routing on paths that actually have a

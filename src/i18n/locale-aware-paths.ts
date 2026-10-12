@@ -1,6 +1,7 @@
 // Single source of truth for "which routes actually have a `[locale]`
-// counterpart" — src/app/[locale]/articles|exams|organizations|jobs/[slug]
-// for detail pages, and src/app/[locale]/jobs, /exams, /commissions/[slug],
+// counterpart — src/app/[locale]/articles|exams|organizations/jobs/[slug]
+// and canonical Post Leaf jobs/[slug]/[post-slug] pages, plus the
+// src/app/[locale]/jobs, /exams, /commissions/[slug],
 // /recruitments/[slug], /positions/[slug] for listing and entity pages.
 // Every other route (/news, /categories, /search, the homepage, ...) only
 // exists at its plain, non-prefixed path. Both src/proxy.ts (server-side
@@ -12,11 +13,9 @@
 // matches them, and they're also not the bare-root case proxy.ts separately
 // redirects).
 
-// Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4
-// NOTE: /jobs/ is special — only single-slug paths (/jobs/[slug]) have a
-// [locale] counterpart. Post leaf pages (/jobs/[slug]/[post-slug]) only
-// exist in (default) and must NOT pass through next-intl's middleware.
-// That special case is handled explicitly in isLocaleAwarePath below.
+// Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4. Both the
+// legacy one-segment route (/jobs/[slug]) and canonical Post Leaf route
+// (/jobs/[recruitment-slug]/[post-slug]) have [locale] counterparts.
 export const LOCALE_AWARE_PREFIXES = [
   '/articles/',
   '/exams/',
@@ -53,18 +52,18 @@ export function isLocaleAwarePath(pathname: string): boolean {
     (prefix) => stripped.startsWith(prefix) && stripped.length > prefix.length,
   )) return true;
 
-  // JKSSB's temporary preview hub has a dedicated static route in `(default)`.
+  // JKSSB's temporary preview hub has a dedicated static route in (default).
   // Keep this exact path out of next-intl so it isn't rewritten to the generic
   // locale-aware job detail page, which cannot resolve the preview fixture.
   if (stripped === '/jobs/jkssb-advertisement-08-of-2026') return false;
 
-  // /jobs/[slug] — locale-aware (src/app/[locale]/jobs/[slug]/page.tsx exists)
-  // /jobs/[slug]/[post-slug] — NOT locale-aware (only in (default) tree)
-  // Distinguish by counting segments after /jobs/: exactly one → locale-aware.
+  // Both concrete job detail routes are locale-aware: /jobs/[slug] and
+  // /jobs/[recruitment-slug]/[post-slug]. Do not route deeper unknown paths
+  // through next-intl, and let /jobs/ fall through to the listing check below.
   if (stripped.startsWith('/jobs/')) {
-    const afterPrefix = stripped.slice('/jobs/'.length); // e.g. "bpsc-tre-4" or "bpsc-tre-4/some-post"
-    if (afterPrefix.length > 0 && !afterPrefix.includes('/')) return true;
-    // Two or more segments (post leaf): fall through, not locale-aware.
+    const segments = stripped.slice('/jobs/'.length).split('/').filter(Boolean);
+    if (segments.length === 1 || segments.length === 2) return true;
+    if (segments.length > 2) return false;
   }
 
   // Entity prefixes: require a slug after the prefix (same rule as above).
