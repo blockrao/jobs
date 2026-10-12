@@ -14,6 +14,7 @@ const START_DATE = process.env.START_DATE || "2026-10-02";
 const AS_OF_DATE = process.env.AS_OF_DATE || "2026-10-09";
 const DELAY_MS = Number(process.env.DELAY_MS || 1000);
 const MAX_LIST_PAGES = Number(process.env.MAX_LIST_PAGES || 20);
+const MAX_RECORDS = Math.max(1, Number.parseInt(process.env.MAX_RECORDS || "10", 10) || 10);
 const OUT = process.env.OUT_DIR || "artifacts/freejobalert-full-extraction";
 const UA = "JobOyeResearchSnapshot/1.0 (public listing comparison; contact: research; no production writes)";
 const sleep = (ms:number) => new Promise(r => setTimeout(r, ms));
@@ -118,7 +119,9 @@ async function main(){
     }catch(e){errors.push({url,stage:"listing_fetch",error:String(e)});break;}
     await sleep(DELAY_MS);
   }
-  const unique=[...new Map(listings.map(x=>[x.listing_url,x])).values()];
+  const discoveredUnique=[...new Map(listings.map(x=>[x.listing_url,x])).values()];
+  // A bounded sample by default; increase MAX_RECORDS explicitly for a larger run.
+  const unique=discoveredUnique.slice(0, MAX_RECORDS);
   const records:any[]=[];
   for(let i=0;i<unique.length;i++){
     const l=unique[i];
