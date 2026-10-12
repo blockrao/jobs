@@ -215,9 +215,13 @@ def extract_description(text: str, title: str) -> Optional[str]:
     lines = [l.strip() for l in text.split('\n') if len(l.strip()) > 60]
     skip_starts = ('government of', 'ministry of', 'department of', 'office of',
                    'advertisement no', 'notification no', 'advt no', 'www.',
-                   'phone:', 'fax:', 'email:', 'e-mail:', '(cid:')
+                   'phone:', 'fax:', 'email:', 'e-mail:', '(cid:',
+                   'google link', 'click here', 'download pdf', 'visit website',
+                   'for more details', 'for further details')
+    skip_contains = ('drive.google.com', 'docs.google.com', 'bit.ly', 't.co')
     candidates = [l for l in lines
                   if not l.lower().startswith(skip_starts)
+                  and not any(s in l.lower() for s in skip_contains)
                   and not _is_garbled(l)
                   and '(cid:' not in l]  # CID codes = encoding artifact
     if candidates:
