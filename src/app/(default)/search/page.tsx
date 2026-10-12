@@ -21,17 +21,19 @@ export const metadata: Metadata = {
   ...pageSeo("/search", { index: false }),
 };
 
-export default function SearchPage({
+export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  // In this Next.js version searchParams is a Promise; reading it without
+  // awaiting gives undefined, so /search?q=... never pre-filled the box.
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const initialQuery = Array.isArray(searchParams.q)
-    ? searchParams.q[0]
-    : searchParams.q || "";
+  const params = await searchParams;
+  const initialQuery = (Array.isArray(params.q) ? params.q[0] : params.q) || "";
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    // The layout already provides the page's <main>; a second one here was invalid HTML.
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
       <div className="bg-blue-600 text-white py-12">
         <div className="container mx-auto px-4">
@@ -63,7 +65,7 @@ export default function SearchPage({
             <div className="text-3xl mb-3">🔍</div>
             <h3 className="font-semibold text-gray-900 mb-2">Smart Search</h3>
             <p className="text-gray-600 text-sm">
-              Full-text search across job titles, organizations, positions, and requirements.
+              Search job titles, organizations, post names, eligibility and the full notice text. Partial words work too.
             </p>
           </div>
 
@@ -79,11 +81,11 @@ export default function SearchPage({
             <div className="text-3xl mb-3">🎯</div>
             <h3 className="font-semibold text-gray-900 mb-2">Advanced Filters</h3>
             <p className="text-gray-600 text-sm">
-              Filter by announcement date, closing date, organization, and location.
+              Filter by announcement date and closing date, and sort by relevance, newest or closing soonest.
             </p>
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }

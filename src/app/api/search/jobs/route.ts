@@ -13,7 +13,9 @@
  * P1 #11-12: Search as first-class feature + strong job filters
  *
  * Query Parameters:
- * - q: Full-text search query (searches title, org, position, eligibility, location)
+ * - q: Text query. Matches title, organization, post names, eligibility, location
+ *   and description; partial words match; postings past their last date are
+ *   included after the open ones (SEARCH-002)
  * - announcement: ANNOUNCED_TODAY | ANNOUNCED_THIS_WEEK | ANNOUNCED_THIS_MONTH | OLDER
  * - closing: LAST_DATE_TODAY | CLOSING_TOMORROW | CLOSING_THIS_WEEK | CLOSING_SOON | NO_DEADLINE | EXPIRED
  * - org: Organization ID (numeric)
@@ -135,6 +137,8 @@ export async function GET(request: NextRequest) {
     const response = {
       success: true,
       data: results,
+      // True when no posting matched every word and the closest ones are returned.
+      partial: results.length > 0 && results[0].matchQuality === "partial",
       pagination: {
         limit,
         offset,
@@ -153,12 +157,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
+    // The cause is logged here; the visitor gets a plain message, never the
+    // database error text.
     console.error("Search error:", error);
     return NextResponse.json(
       {
         success: false,
         error: "Search failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: "Search is temporarily unavailable. Please try again in a moment.",
       },
       { status: 500 }
     );
@@ -214,7 +220,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: "Discovery failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: "These sections are temporarily unavailable.",
       },
       { status: 500 }
     );

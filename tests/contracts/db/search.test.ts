@@ -1,7 +1,12 @@
 /**
- * A-068 search contract: the search code must actually run queries, filter
- * parameters must line up in every combination, and a posting past its last
- * date must not be returned (same rule as the listing guard, A-067).
+ * A-068 search contract: the search code must actually run queries and filter
+ * parameters must line up in every combination.
+ *
+ * A-084 (SEARCH-002, owner decision 2026-10-12): a text search matches title,
+ * subject and body, matches partial words, falls back to the closest postings
+ * when nothing matches every word, and finds postings past their last date,
+ * listed after the open ones and flagged closed. Browsing without a text query
+ * still shows open postings only (listing guard, A-067).
  *
  * Opt-in and WRITES; local scratch database only:
  *   WP001_SCRATCH_DATABASE_URL=postgres://postgres:pw@localhost:54329/scratch npm run test:contracts
@@ -66,19 +71,106 @@ d("search (A-068)", () => {
     const only = await searchPostings({ organizationId: orgA } as any);
     expect(only.map((x: any) => x.slug).sort()).toEqual(["clerk-a", "undated"]);
     const both = await searchPostings({ query: "clerk", organizationId: orgA } as any);
-    expect(both.map((x: any) => x.slug)).toEqual(["clerk-a"]);
+    expect(both.map((x: any) => x.slug)).toEqual(["clerk-a", "old-clerk"]);
     const none = await searchPostings({ query: "engineer", organizationId: orgA } as any);
     expect(none).toEqual([]);
   });
 
-  test("S-4 a posting past its last date is not returned even if not flagged expired", async () => {
-    const r = await searchPostings({ query: "senior" } as any);
-    expect(r).toEqual([]);
+  test("S-4 a posting past its last date is found by a text query, flagged closed and listed after open matches", async () => {
+    const only = await searchPostings({ query: "senior" } as any);
+    expect(only.map((x) => [x.slug, x.isClosed, x.urgencyBadge])).toEqual([["old-clerk", true, "Closed"]]);
+    for (const sortBy of ["relevance", "newest", "closing_soonest", "most_urgent"] as const) {
+      const mixed = await searchPostings({ query: "clerk", sortBy });
+      expect(mixed.map((x) => [x.slug, x.isClosed])).toEqual([
+        ["clerk-a", false],
+        ["old-clerk", true],
+      ]);
+    }
   });
 
   test("S-5 location filter lines up with a query", async () => {
     await sql!`update public.postings set location_region='Bihar' where slug='clerk-a'`;
     const r = await searchPostings({ query: "clerk", locationRegion: "Bihar" } as any);
     expect(r.map((x: any) => x.slug)).toEqual(["clerk-a"]);
+  });
+
+  test("S-6 browsing without a text query never returns a closed posting; the Expired filter returns only closed ones", async () => {
+    for (const sortBy of ["relevance", "newest", "closing_soonest", "most_urgent"] as const) {
+      const r = await searchPostings({ sortBy });
+      expect(r.map((x) => x.slug).sort()).toEqual(["clerk-a", "engineer-b", "undated"]);
+      expect(r.every((x) => !x.isClosed)).toBe(true);
+    }
+    const closed = await searchPostings({ closingState: "EXPIRED" });
+    expect(closed.map((x) => x.slug)).toEqual(["old-clerk"]);
+  });
+
+  test("S-7 a partial word matches", async () => {
+    expect((await searchPostings({ query: "engin" })).map((x) => x.slug)).toEqual(["engineer-b"]);
+    expect((await searchPostings({ query: "typi" })).map((x) => x.slug)).toEqual(["undated"]);
+    expect((await searchPostings({ query: "ecruitm" })).map((x) => x.slug).sort()).toEqual([
+      "clerk-a",
+      "engineer-b",
+      "old-clerk",
+      "undated",
+    ]);
+  });
+
+  test("S-8 the body and the post names are searched, and a title match ranks above a body match", async () => {
+    await sql!`update public.postings set description = 'Work covers hydraulics and typist duties' where slug = 'engineer-b'`;
+    await sql!`update public.postings set post_names = '["Stenographer Grade II"]'::jsonb where slug = 'clerk-a'`;
+    await sql!`select * from public.refresh_posting_urgency_states()`;
+    expect((await searchPostings({ query: "hydraulics" })).map((x) => x.slug)).toEqual(["engineer-b"]);
+    expect((await searchPostings({ query: "stenographer" })).map((x) => x.slug)).toEqual(["clerk-a"]);
+    expect((await searchPostings({ query: "typist", sortBy: "relevance" })).map((x) => x.slug)).toEqual([
+      "undated",
+      "engineer-b",
+    ]);
+  });
+
+  test("S-9 every word must match; when nothing matches every word the closest postings are returned as partial", async () => {
+    const full = await searchPostings({ query: "assistant engineer recruitment" });
+    expect(full.map((x) => [x.slug, x.matchQuality])).toEqual([["engineer-b", "full"]]);
+    const closest = await searchPostings({ query: "assistant engineer zzqqxx" });
+    expect(closest.map((x) => [x.slug, x.matchQuality])).toEqual([["engineer-b", "partial"]]);
+    expect(await searchPostings({ query: "zzqqxx" })).toEqual([]);
+  });
+
+  test("S-10 words the text index ignores, punctuation and wildcard characters do not break or widen a query", async () => {
+    expect((await searchPostings({ query: "the junior clerk - for recruitment" })).map((x) => x.slug)).toEqual(["clerk-a"]);
+    expect(await searchPostings({ query: "100%_" })).toEqual([]);
+    expect(await searchPostings({ query: "%%%%" })).toEqual([]);
+    // Query-syntax characters are data, not operators.
+    expect(await searchPostings({ query: "xq:yq & wq | !zq ( ' \\ :*" })).toEqual([]);
+    const operators = await searchPostings({ query: "clerk:* | engineer & !typist" });
+    expect(operators.map((x) => x.slug).sort()).toEqual(["clerk-a", "engineer-b", "old-clerk", "undated"]);
+    expect(operators.every((x) => x.matchQuality === "partial")).toBe(true);
+  });
+
+  test("S-11 rows are returned in the camelCase shape the page reads, with the canonical link", async () => {
+    const [row] = await searchPostings({ query: "junior clerk" });
+    expect(row).toMatchObject({
+      slug: "clerk-a",
+      href: "/jobs/clerk-a",
+      organizationName: "Org A",
+      isClosed: false,
+      matchQuality: "full",
+    });
+    expect(typeof row.daysToClosing).toBe("number");
+    expect(row.daysToClosing).toBeGreaterThan(0);
+    expect(Object.keys(row).some((k) => k.includes("_"))).toBe(false);
+    expect(row.validThrough).toBe("2099-01-01T00:00:00.000Z");
+    expect(row.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    const [undated] = await searchPostings({ query: "typist" });
+    expect(undated.daysToClosing).toBeNull();
+    expect(undated.validThrough).toBeNull();
+  });
+
+  test("S-12 a failing query is an error, not an empty result", async () => {
+    await sql!`alter table public.postings rename column search_text to search_text_tmp`;
+    try {
+      await expect(searchPostings({ query: "clerk" })).rejects.toThrow("Search query failed");
+    } finally {
+      await sql!`alter table public.postings rename column search_text_tmp to search_text`;
+    }
   });
 });

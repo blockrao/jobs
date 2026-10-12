@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { SearchResult } from "@/lib/search-queries";
+import type { SearchResult } from "@/lib/search-types";
 
 interface DiscoverySectionsProps {
   limit?: number;
@@ -195,7 +195,7 @@ function DiscoverySection({
 function DiscoveryCard({ result }: { result: SearchResult }) {
   return (
     <Link
-      href={`/jobs/${result.slug}`}
+      href={result.href}
       className="block p-6 hover:bg-white/50 transition-colors"
     >
       <div className="flex items-start justify-between gap-4">
@@ -203,7 +203,9 @@ function DiscoveryCard({ result }: { result: SearchResult }) {
           <h3 className="font-semibold text-gray-900 hover:text-blue-600 break-words">
             {result.title}
           </h3>
-          <p className="text-sm text-gray-600 mt-1">{result.organizationName}</p>
+          {result.organizationName && (
+            <p className="text-sm text-gray-600 mt-1">{result.organizationName}</p>
+          )}
 
           <div className="flex flex-wrap gap-2 mt-3">
             {result.locationCity && (
@@ -211,12 +213,16 @@ function DiscoveryCard({ result }: { result: SearchResult }) {
                 📍 {result.locationCity}
               </span>
             )}
-            {result.daysToClosing !== null && (
+            {result.daysToClosing !== null && result.daysToClosing >= 0 && (
               <span className="text-xs text-gray-500 bg-white/60 px-2 py-1 rounded">
-                {result.daysToClosing === 0 ? "🔴 Closes today" : `⏱️ ${result.daysToClosing} days`}
+                {result.daysToClosing === 0
+                  ? "🔴 Closes today"
+                  : result.daysToClosing === 1
+                    ? "⏱️ 1 day left"
+                    : `⏱️ ${result.daysToClosing} days left`}
               </span>
             )}
-            {result.totalVacancies && (
+            {result.totalVacancies !== null && result.totalVacancies > 0 && (
               <span className="text-xs text-gray-500 bg-white/60 px-2 py-1 rounded">
                 👥 {result.totalVacancies} {result.totalVacancies === 1 ? "vacancy" : "vacancies"}
               </span>
