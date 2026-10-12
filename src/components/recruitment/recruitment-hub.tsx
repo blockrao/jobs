@@ -274,8 +274,10 @@ export default function RecruitmentHub({
 }: RecruitmentHubProps) {
   const localePrefix = locale === "hi" ? "/hi" : "";
   const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
+  // A linked extracted inventory record is unverified unless it explicitly
+  // carries VERIFIED status. Null/missing status must never imply verification.
   const sourceFactsUnverified = Boolean(
-    recruitment.sourceVerificationStatus &&
+    recruitment.sourceExtract &&
     recruitment.sourceVerificationStatus !== "VERIFIED"
   );
   const notificationDate = formatDate(
@@ -307,9 +309,11 @@ export default function RecruitmentHub({
   // enrich these values, but a missing resolver result must not hide stored data.
   // Recruitment-level vacancy total is shown only when explicitly stored; never
   // derive it by summing post-level vacancy records.
+  const extractedRecruitmentVacancies = sourceFactsUnverified
+    ? recruitment.sourceExtract?.vacancyCount ?? null
+    : null;
   const displayTotalVacancies =
-    resolvedTotalVacancies ?? recruitment.totalVacancies ??
-    (sourceFactsUnverified ? recruitment.sourceExtract?.vacancyCount : null) ?? null;
+    extractedRecruitmentVacancies ?? resolvedTotalVacancies ?? recruitment.totalVacancies ?? null;
   // External source/apply links must pass the authoritative URL resolvers.
   // If no verified URL is available, omit the link rather than exposing a discovery source.
   const displayApplicationUrl = resolvedApplicationUrl ?? null;
