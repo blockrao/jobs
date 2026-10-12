@@ -181,6 +181,9 @@ def extract_fee(overview: dict, soup: BeautifulSoup) -> tuple[Optional[int], Opt
             if fee_general is None and m_any:
                 try: fee_general = _parse_amount(m_any.group(1))
                 except ValueError: pass
+            # Sanity: fees below ₹50 (but not 0) are likely parse errors
+            if fee_general is not None and 0 < fee_general < 50:
+                fee_general = None
             if fee_general is not None:
                 fee_note = val[:200]
                 return fee_general, fee_reserved, fee_note
@@ -204,6 +207,9 @@ def extract_fee(overview: dict, soup: BeautifulSoup) -> tuple[Optional[int], Opt
         if fee_general is None and m_any:
             try: fee_general = _parse_amount(m_any.group(1))
             except ValueError: pass
+        # Sanity: fees below ₹50 (but not 0) are likely parse errors
+        if fee_general is not None and 0 < fee_general < 50:
+            fee_general = None
         if fee_general is not None:
             fee_note = _norm(snippet)[:200]
 
