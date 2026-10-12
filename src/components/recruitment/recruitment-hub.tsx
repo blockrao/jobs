@@ -485,9 +485,15 @@ export default function RecruitmentHub({
               aria-label="Recruitment verification notice"
               className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
             >
-              This recruitment summary includes extracted information that has not yet been confirmed
-              against the institution&apos;s individual official notice(s). Dates, vacancy totals and
-              application instructions should be treated as provisional until verified.
+              Information on this page is sourced from{" "}
+              <a href={typeof recruitment.sourceExtract?.sourceUrl === "string" ? recruitment.sourceExtract.sourceUrl : undefined}
+                 target="_blank" rel="noopener noreferrer"
+                 className="underline text-amber-900 hover:text-amber-700">
+                an aggregator listing
+              </a>
+              {" "}— an independent check against the institution&apos;s official notice is pending.
+              Dates, vacancy counts and application instructions shown here are likely accurate but
+              should be confirmed in the official notice before you apply.
             </aside>
           )}
 
@@ -569,6 +575,67 @@ export default function RecruitmentHub({
               </div>
             )}
           </div>
+
+          {/* ── Facts at a glance (scannable dl, above CTAs) ── */}
+          {/* Reference: discoverability-framework § 3 "Quick answers block" + reference hub template <dl class="facts"> */}
+          {(displayOrg || appStart || appEnd || sourceApplicationMode || hasFeeDetails || displaySelectionProcess || posts.length > 0) && (
+            <dl className="mb-5 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0 text-sm border border-gray-100 rounded-lg overflow-hidden divide-y divide-gray-100">
+              {displayOrg && (
+                <div className="col-span-2 sm:col-span-3 flex gap-2 px-3 py-2 bg-gray-50">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Organisation</dt>
+                  <dd className="text-gray-900 font-medium">{displayOrg}</dd>
+                </div>
+              )}
+              {displayTotalVacancies != null && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Total posts</dt>
+                  <dd className="text-gray-900 font-semibold">
+                    {displayTotalVacancies.toLocaleString('en-IN')}
+                    {sourceFactsUnverified && <span className="ml-1 text-xs text-gray-400 font-normal">reported</span>}
+                  </dd>
+                </div>
+              )}
+              {appStart && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Apply from</dt>
+                  <dd className="text-gray-900">{appStart}</dd>
+                </div>
+              )}
+              {appEnd && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Last date</dt>
+                  <dd className={`font-semibold ${closed || sourceFactsUnverified ? 'text-gray-600' : isClosingSoon ? 'text-orange-700' : 'text-red-700'}`}>
+                    {appEnd}
+                    {sourceFactsUnverified && <span className="ml-1 text-xs text-gray-400 font-normal">reported</span>}
+                  </dd>
+                </div>
+              )}
+              {sourceApplicationMode && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Mode</dt>
+                  <dd className="text-gray-900">{sourceApplicationMode}</dd>
+                </div>
+              )}
+              {hasFeeDetails && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Fee</dt>
+                  <dd className="text-gray-900">
+                    {feeGeneral != null
+                      ? (Number(feeGeneral) === 0 ? 'No fee' : `₹${Number(feeGeneral).toLocaleString('en-IN')} (General)`)
+                      : feeNote ?? 'See details'}
+                  </dd>
+                </div>
+              )}
+              {(displaySelectionProcess || selectionDisplayRows.length > 0) && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Selection</dt>
+                  <dd className="text-gray-900">
+                    {displaySelectionProcess ?? (selectionDisplayRows[0]?.title ? String(selectionDisplayRows[0].title) : null) ?? 'See details'}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
 
           {/* One-sentence description — only from authoritative source */}
           {displayDescription && !descriptionIsInternal && (
@@ -930,24 +997,79 @@ export default function RecruitmentHub({
         )}
 
         {/* ═══════════════════════════════════════════
-            SECTION 5 — FAQ
-            Conditional — only questions with non-null authoritative answers
+            SECTION 5 — QUICK ANSWERS (with stable IDs for AI deep-linking)
+            Each answer gets a stable id so ChatGPT, Perplexity, and Google AI Mode
+            can cite and deep-link to the exact answer. Reference: discoverability-framework § 3.
+            Conditional — only render questions with non-null authoritative answers.
             ═══════════════════════════════════════════ */}
         {faqItems.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
-            <h2 className="text-base font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-            <div className="space-y-2">
-              {faqItems.map((faq, idx) => (
-                <details key={idx} className="group border border-gray-200 rounded-lg overflow-hidden">
-                  <summary className="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-gray-50 transition text-sm font-semibold text-gray-900 list-none">
-                    <span>{faq.q}</span>
-                    <ChevronRight size={15} className="text-gray-400 group-open:rotate-90 transition-transform flex-shrink-0" />
-                  </summary>
-                  <div className="px-4 pb-4 pt-2 text-sm text-gray-700 leading-relaxed border-t border-gray-100">
-                    {faq.a}
-                  </div>
-                </details>
-              ))}
+            <h2 className="text-base font-bold text-gray-900 mb-4">Quick Answers</h2>
+            <div className="space-y-0 divide-y divide-gray-100">
+              {/* Each item has a stable id derived from its question index for AI citability */}
+              {appEnd && (
+                <div id="qa-last-date" className="py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Last date to apply</p>
+                  <p className="text-sm text-gray-900 font-medium">
+                    {sourceFactsUnverified
+                      ? `${appEnd} (reported — confirm in official notice)`
+                      : closed
+                      ? `${appEnd} (applications closed)`
+                      : isClosingSoon
+                      ? `${appEnd} — ${isLastDay ? 'last day today' : `${daysLeft} days remaining`}`
+                      : appEnd}
+                  </p>
+                </div>
+              )}
+              {displayTotalVacancies != null && (
+                <div id="qa-posts" className="py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Vacancies / posts</p>
+                  <p className="text-sm text-gray-900 font-medium">
+                    {sourceFactsUnverified
+                      ? `${displayTotalVacancies.toLocaleString('en-IN')} vacancies reported across ${posts.length} post${posts.length !== 1 ? 's' : ''}. Verify each in the official notice.`
+                      : `${displayTotalVacancies.toLocaleString('en-IN')} ${displayTotalVacancies === 1 ? 'vacancy' : 'vacancies'} across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`}
+                  </p>
+                </div>
+              )}
+              {hasFeeDetails && (
+                <div id="qa-fee" className="py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Application fee</p>
+                  <p className="text-sm text-gray-900 font-medium">
+                    {feeGeneral != null
+                      ? (Number(feeGeneral) === 0
+                          ? 'No application fee.'
+                          : `General category: ₹${Number(feeGeneral).toLocaleString('en-IN')}${feeReserved != null ? `; Reserved: ₹${Number(feeReserved).toLocaleString('en-IN')}` : ''}.`)
+                      : feeNote ?? 'See recruitment details for fee breakdown.'}
+                  </p>
+                </div>
+              )}
+              {(displayApplicationUrl || displayOfficialSource) && (
+                <div id="qa-apply" className="py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">How to apply</p>
+                  <p className="text-sm text-gray-900">
+                    {displayApplicationUrl
+                      ? <>Apply via the <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">official application portal</a>.</>
+                      : sourceApplicationMode
+                      ? `Apply ${sourceApplicationMode.toLowerCase()}. Confirm application instructions in the official notice.`
+                      : <>Check the <a href={displayOfficialSource ?? '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">official notification</a> for application instructions.</>}
+                  </p>
+                </div>
+              )}
+              {displayOrg && (
+                <div id="qa-who" className="py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Recruiting organisation</p>
+                  <p className="text-sm text-gray-900 font-medium">
+                    {displayOrg}{recruitment.year ? ` (${recruitment.year})` : ''}.
+                    {notificationNumber ? ` Advertisement No. ${notificationNumber}.` : ''}
+                  </p>
+                </div>
+              )}
+              {displaySelectionProcess && (
+                <div id="qa-selection" className="py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Selection process</p>
+                  <p className="text-sm text-gray-900">{displaySelectionProcess}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -994,6 +1116,59 @@ export default function RecruitmentHub({
             </div>
           </div>
         )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION 7 — CHANGE LOG
+            Trust signal + Google freshness signal.
+            Logs when the page was first published (from sourceListingPublishedDate or notificationDate)
+            and any subsequent updates. Reference: discoverability-framework § 3 ("visible corrections log").
+            ═══════════════════════════════════════════ */}
+        {(recruitment.sourceListingPublishedDate || recruitment.notificationDate || recruitment.updatedAt) && (() => {
+          // Build a minimal log from available dates. Human-authored change log entries
+          // will be added once an editorial workflow exists (deferred to Step 2).
+          const logEntries: { date: string; note: string }[] = [];
+          const firstSeen = formatDate(
+            recruitment.sourceListingPublishedDate ?? recruitment.notificationDate
+          );
+          if (firstSeen) {
+            logEntries.push({
+              date: firstSeen,
+              note: sourceFactsUnverified
+                ? 'Page first published from aggregator source listing.'
+                : 'Official notification date.',
+            });
+          }
+          const updatedAt = formatDate(recruitment.updatedAt);
+          if (updatedAt && updatedAt !== firstSeen) {
+            logEntries.push({
+              date: updatedAt,
+              note: 'Record last updated.',
+            });
+          }
+          if (logEntries.length === 0) return null;
+          return (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+              <h2 className="text-sm font-bold text-gray-700 mb-3">Page history</h2>
+              <table className="w-full text-xs text-gray-600 border-collapse">
+                <caption className="sr-only">Change history for this recruitment page</caption>
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th scope="col" className="text-left pb-1 pr-4 font-semibold text-gray-500 w-32">Date</th>
+                    <th scope="col" className="text-left pb-1 font-semibold text-gray-500">Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logEntries.map((entry, i) => (
+                    <tr key={i} className="border-b border-gray-50 last:border-0">
+                      <td className="py-1.5 pr-4 align-top whitespace-nowrap">{entry.date}</td>
+                      <td className="py-1.5 align-top">{entry.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
 
         {/* Candidate-facing verification guidance. Internal inventory and raw database diagnostics belong in admin tools, not public pages. */}
         <section className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 md:px-6">
