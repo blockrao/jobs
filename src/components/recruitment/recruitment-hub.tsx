@@ -443,14 +443,14 @@ export default function RecruitmentHub({
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-600">
-            <Link href={`${localePrefix}/jobs`} className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href={`${localePrefix}/jobs`} className="text-slate-700 hover:text-slate-900 font-medium">
               Jobs
             </Link>
             {displayOrg && (
               <>
                 <ChevronRight size={14} className="text-gray-400" />
                 {orgSlug ? (
-                  <Link href={`${localePrefix}/organizations/${orgSlug}`} className="text-blue-600 hover:text-blue-700 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
+                  <Link href={`${localePrefix}/organizations/${orgSlug}`} className="text-slate-700 hover:text-slate-900 truncate max-w-[120px] md:max-w-xs hidden sm:inline">
                     {displayOrg}
                   </Link>
                 ) : (
@@ -523,13 +523,13 @@ export default function RecruitmentHub({
           {/* Vacancy count, deadline, post count as scannable chips */}
           <div className="flex flex-wrap gap-3 mb-6">
             {displayTotalVacancies != null && (
-              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5">
-                <Users size={18} className="text-blue-600 flex-shrink-0" />
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-4 py-2.5">
+                <Users size={18} className="text-amber-700 flex-shrink-0" />
                 <div>
-                  <div className="text-xl font-bold text-blue-700 leading-none">
+                  <div className="text-xl font-bold text-slate-900 leading-none">
                     {displayTotalVacancies.toLocaleString('en-IN')}
                   </div>
-                  <div className="text-xs text-blue-600 mt-0.5">{sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"}</div>
+                  <div className="text-xs text-amber-700 mt-0.5">{sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"}</div>
                 </div>
               </div>
             )}
@@ -637,7 +637,7 @@ export default function RecruitmentHub({
               {sharedApplicationEmail && (
                 <div className="col-span-2 sm:col-span-3 flex gap-2 px-3 py-2">
                   <dt className="text-gray-500 w-28 flex-shrink-0">Apply by email</dt>
-                  <dd className="text-gray-900"><a href={`mailto:${sharedApplicationEmail}`} className="text-blue-600 hover:text-blue-700">{sharedApplicationEmail}</a></dd>
+                  <dd className="text-gray-900"><a href={`mailto:${sharedApplicationEmail}`} className="text-slate-700 hover:text-slate-900 underline">{sharedApplicationEmail}</a></dd>
                 </div>
               )}
               {hasFeeDetails && (
@@ -671,7 +671,7 @@ export default function RecruitmentHub({
             {isSinglePost ? (
               <Link
                 href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
-                className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm"
+                className="inline-flex items-center gap-2 bg-[#0f172a] text-[#ffd60a] font-semibold px-5 py-2.5 rounded-lg hover:bg-slate-800 transition text-sm"
               >
                 View Post Details
                 <ArrowRight size={16} />
@@ -679,7 +679,7 @@ export default function RecruitmentHub({
             ) : hasPosts ? (
               <a
                 href="#posts"
-                className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-700 transition text-sm"
+                className="inline-flex items-center gap-2 bg-[#0f172a] text-[#ffd60a] font-semibold px-5 py-2.5 rounded-lg hover:bg-slate-800 transition text-sm"
               >
                 View All Posts ({posts.length})
                 <ArrowRight size={16} />
@@ -703,7 +703,7 @@ export default function RecruitmentHub({
                 href={displayOfficialSource}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition text-sm"
+                className="inline-flex items-center gap-2 bg-white border-2 border-[#0f172a] text-[#0f172a] font-semibold px-5 py-2.5 rounded-lg hover:bg-slate-50 transition text-sm"
               >
                 Notification / source link
                 <ExternalLink size={15} />
@@ -785,7 +785,7 @@ export default function RecruitmentHub({
                 <div className="flex gap-4 py-2.5">
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Application email</dt>
                   <dd className="text-sm">
-                    <a href={`mailto:${sharedApplicationEmail}`} className="text-blue-600 hover:text-blue-700">{sharedApplicationEmail}</a>
+                    <a href={`mailto:${sharedApplicationEmail}`} className="text-slate-700 hover:text-slate-900 underline">{sharedApplicationEmail}</a>
                   </dd>
                 </div>
               )}
@@ -878,7 +878,7 @@ export default function RecruitmentHub({
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Notification</dt>
                   <dd className="text-sm">
                     <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                      className="text-slate-700 hover:text-slate-900 underline inline-flex items-center gap-1">
                       View official recruitment notices <ExternalLink size={12} />
                     </a>
                   </dd>
@@ -890,7 +890,7 @@ export default function RecruitmentHub({
                   <dt className="text-sm text-gray-500 w-36 flex-shrink-0">Apply Portal</dt>
                   <dd className="text-sm">
                     <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer"
-                      className="text-green-700 hover:text-green-800 font-medium inline-flex items-center gap-1">
+                      className="text-green-700 hover:text-green-800 font-semibold inline-flex items-center gap-1">
                       Official Apply Link <ExternalLink size={12} />
                     </a>
                   </dd>
@@ -906,20 +906,20 @@ export default function RecruitmentHub({
         {hasTimeline && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar size={17} className="text-blue-600" />
+              <Calendar size={17} className="text-amber-500" />
               Important Dates
             </h2>
             <ol className="relative border-l-2 border-gray-100 ml-3 space-y-5">
               {notificationDate && (
                 <li className="pl-5 relative">
-                  <span className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-400 flex items-center justify-center" />
+                  <span className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center" />
                   <div className="text-sm font-semibold text-gray-900">{notificationDate}</div>
                   <div className="text-xs text-gray-500 mt-0.5">{notificationDateLabel}</div>
                 </li>
               )}
               {appStart && (
                 <li className="pl-5 relative">
-                  <span className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-blue-100 border-2 border-blue-400 flex items-center justify-center" />
+                  <span className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center" />
                   <div className="text-sm font-semibold text-gray-900">{appStart}</div>
                   <div className="text-xs text-gray-500 mt-0.5">Application Opens</div>
                 </li>
@@ -966,7 +966,7 @@ export default function RecruitmentHub({
         {hasPosts && (
           <div id="posts" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
             <h2 className="text-base font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <Briefcase size={17} className="text-blue-600" />
+              <Briefcase size={17} className="text-amber-500" />
               {isSinglePost ? 'Available Post' : `Available Posts (${posts.length})`}
             </h2>
             {!isSinglePost && (
@@ -977,17 +977,17 @@ export default function RecruitmentHub({
 
             {isSinglePost ? (
               /* Single Post: prominent entry point */
-              <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-5">
+              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-5">
                 <Link href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`} className="group block">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-slate-700 transition mb-2">
                         {posts[0].name ?? posts[0].position?.name}
                       </h3>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                         {(posts[0].resolvedVacancyCount ?? parseReportedVacancyCount(posts[0].fjaExtract?.vacancyCountRaw)) != null && (
-                          <span className="flex items-center gap-1 font-semibold text-blue-700">
-                            <Users size={14} className="text-blue-500" />
+                          <span className="flex items-center gap-1 font-semibold text-slate-700">
+                            <Users size={14} className="text-amber-600" />
                             {(posts[0].resolvedVacancyCount ?? parseReportedVacancyCount(posts[0].fjaExtract?.vacancyCountRaw))!.toLocaleString('en-IN')}
                             {posts[0].resolvedVacancyCount == null || posts[0].fjaExtract?.verificationStatus !== "VERIFIED" ? " reported vacancies" : " vacancies"}
                           </span>
@@ -998,10 +998,10 @@ export default function RecruitmentHub({
                     <ArrowRight size={20} className="text-blue-600 flex-shrink-0 mt-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </Link>
-                <div className="mt-4 pt-4 border-t border-blue-200">
+                <div className="mt-4 pt-4 border-t border-amber-200">
                   <Link
                     href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
-                    className="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                    className="inline-flex items-center gap-2 bg-[#0f172a] text-[#ffd60a] text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-800 transition"
                   >
                     View Full Post Details
                     <ArrowRight size={15} />
@@ -1020,18 +1020,18 @@ export default function RecruitmentHub({
                     <Link
                       key={post.id}
                       href={`${localePrefix}/jobs/${recruitment.slug}/${post.slug}`}
-                      className="flex items-center justify-between gap-4 px-4 py-3.5 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all group"
+                      className="flex items-center justify-between gap-4 px-4 py-3.5 bg-white border border-gray-200 rounded-lg hover:border-slate-700 hover:shadow-sm transition-all group"
                     >
                       <div className="flex-1 min-w-0">
                         {/* Title */}
-                        <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition text-sm truncate mb-1">
+                        <div className="font-semibold text-gray-900 group-hover:text-slate-700 transition text-sm truncate mb-1">
                           {postName}
                         </div>
                         {/* Metadata row */}
                         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                           {postVacancies != null && (
-                            <span className="flex items-center gap-1 font-medium text-blue-700">
-                              <Users size={11} className="text-blue-500" />
+                            <span className="flex items-center gap-1 font-medium text-slate-700">
+                              <Users size={11} className="text-amber-600" />
                               {sourceFactsUnverified || post.resolvedVacancyCount == null || post.fjaExtract?.verificationStatus !== "VERIFIED"
                                 ? `${postVacancies.toLocaleString('en-IN')} reported ${postVacancies === 1 ? 'vacancy' : 'vacancies'}`
                                 : `${postVacancies.toLocaleString('en-IN')} ${postVacancies === 1 ? 'vacancy' : 'vacancies'}`}
@@ -1040,7 +1040,7 @@ export default function RecruitmentHub({
                           <PostStatusBadge post={post} appEndDate={sourceFactsUnverified ? null : recruitment.applicationEndDate} />
                         </div>
                       </div>
-                      <ChevronRight size={16} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 transition" />
+                      <ChevronRight size={16} className="text-gray-400 group-hover:text-slate-700 flex-shrink-0 transition" />
                     </Link>
                   );
                 })}
@@ -1101,12 +1101,12 @@ export default function RecruitmentHub({
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">How to apply</p>
                   <p className="text-sm text-gray-900">
                     {displayApplicationUrl
-                      ? <>Apply via the <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">official application portal</a>.</>
+                      ? <>Apply via the <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer" className="text-slate-700 underline hover:text-slate-900">official application portal</a>.</>
                       : sharedApplicationEmail
-                      ? <>Send your application to <a href={`mailto:${sharedApplicationEmail}`} className="text-blue-600 underline hover:text-blue-700">{sharedApplicationEmail}</a>{sourceApplicationMode ? ` (${sourceApplicationMode.toLowerCase()})` : ''}. Confirm instructions in the official notice.</>
+                      ? <>Send your application to <a href={`mailto:${sharedApplicationEmail}`} className="text-slate-700 underline hover:text-slate-900">{sharedApplicationEmail}</a>{sourceApplicationMode ? ` (${sourceApplicationMode.toLowerCase()})` : ''}. Confirm instructions in the official notice.</>
                       : sourceApplicationMode
                       ? `Apply ${sourceApplicationMode.toLowerCase()}. Confirm application instructions in the official notice.`
-                      : <>Check the <a href={displayOfficialSource ?? '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-700">official notification</a> for application instructions.</>}
+                      : <>Check the <a href={displayOfficialSource ?? '#'} target="_blank" rel="noopener noreferrer" className="text-slate-700 underline hover:text-slate-900">official notification</a> for application instructions.</>}
                   </p>
                 </div>
               )}
@@ -1148,7 +1148,7 @@ export default function RecruitmentHub({
                   <div>
                     <div className="text-xs text-green-700 font-medium mb-0.5">Notification / source link</div>
                     <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer"
-                      className="text-sm text-blue-700 hover:text-blue-800 break-all inline-flex items-center gap-1">
+                      className="text-sm text-slate-700 hover:text-slate-900 underline break-all inline-flex items-center gap-1">
                       {displayOfficialSource}
                       <ExternalLink size={12} className="flex-shrink-0" />
                     </a>

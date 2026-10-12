@@ -163,8 +163,8 @@ const headerStyles = {
     marginBottom: "20px",
   },
   orgBadge: {
-    background: "#003366",
-    color: "white",
+    background: "#0f172a",
+    color: "#ffd60a",
     padding: "8px 16px",
     borderRadius: "8px",
     fontSize: "13px",
