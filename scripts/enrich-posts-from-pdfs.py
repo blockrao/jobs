@@ -59,7 +59,10 @@ HEADERS = {
 
 def _parse_amount(s: str) -> int:
     """Parse a salary string like '44,900.00' or '1,12,400' to int."""
-    return int(float(s.replace(',', '')))
+    cleaned = s.replace(',', '').strip()
+    if not cleaned:
+        raise ValueError(f"empty salary string: {s!r}")
+    return int(float(cleaned))
 
 
 def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optional[str]]:
@@ -118,7 +121,7 @@ def extract_salary_range(text: str) -> tuple[Optional[int], Optional[int], Optio
             r'basic\s+pay\s*[:\*]?\s*(?:rs\.?|₹|inr\.?)?\s*([\d,]+(?:\.\d+)?)',
             text, re.IGNORECASE
         )
-        if m:
+        if m and m.group(1).strip().replace(',', ''):
             val = _parse_amount(m.group(1))
             if 5000 <= val <= 500000:
                 salary_min = val
