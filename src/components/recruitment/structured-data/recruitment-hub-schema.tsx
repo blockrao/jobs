@@ -2,16 +2,22 @@
  * Recruitment Hub Structured Data
  *
  * Emits a schema.org @graph for a Recruitment Hub page:
+ *   - Organization — site identity node (JobOye)
+ *   - BreadcrumbList — Home → Jobs → [Org] → Recruitment
+ *   - Article — describes this hub as an editorial article about the recruitment
  *   - WebPage — describes this hub page as a web document
- *   - BreadcrumbList — site hierarchy for rich results
  *   - ItemList — structured list of every Post leaf URL, enabling Google
  *     and LLMs to discover all leaf pages from this hub's JSON-LD
  *
  * Design principles (Gate 2 / approved spec, updated 2026-10-12):
  *   - Recruitment Hub is NOT a JobPosting. It is a WebPage that describes
  *     a recruitment event (a set of openings). Do not use JobPosting here.
- *   - BreadcrumbList: Jobs → [Org Name] → Recruitment Name (3 nodes when org is known).
- *   - ItemList: one ListItem per resolved Post, with @id pointing to the leaf URL.
+ *   - BreadcrumbList: Home → Jobs → [Org Name] → Recruitment Name (4 nodes when
+ *     org is known, 3 nodes otherwise). Home must be position 1 per reference spec.
+ *   - Article: editorial content node; isBasedOn = official notification.
+ *     Enables Google to surface rich article results for recruitment coverage.
+ *   - ItemList: one ListItem per resolved Post, with url ONLY for posts that have
+ *     a confirmed post slug. Items without a leaf page omit url entirely.
  *     This is the highest-impact GEO/LLM signal — makes every leaf discoverable
  *     from hub JSON-LD without a crawl hop.
  *   - dateModified: emitted ONLY when a genuine content-modification timestamp
@@ -92,12 +98,28 @@ export default function RecruitmentHubStructuredData({
 
   const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
 
+  // ── Organization site-identity node ──────────────────────────────────────
+  // Identifies JobOye as the publisher. Referenced by Article.publisher.
+  const siteOrg = {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#org`,
+    name: "JobOye",
+    url: SITE_URL,
+  };
+
   // ── BreadcrumbList ────────────────────────────────────────────────────────
-  // Jobs → [Org] → Recruitment (3 nodes when org is known)
+  // Home → Jobs → [Org] → Recruitment (4 nodes when org is known, 3 otherwise)
+  // Home is always position 1 per reference spec requirement.
   const breadcrumbItems: object[] = [
     {
       "@type": "ListItem",
       position: 1,
+      name: "Home",
+      item: SITE_URL,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
       name: "Jobs",
       item: `${SITE_URL}/jobs`,
     },
@@ -106,19 +128,19 @@ export default function RecruitmentHubStructuredData({
   if (orgName) {
     breadcrumbItems.push({
       "@type": "ListItem",
-      position: 2,
+      position: 3,
       name: orgName,
     });
     breadcrumbItems.push({
       "@type": "ListItem",
-      position: 3,
+      position: 4,
       name: recruitment.name,
       item: hubUrl,
     });
   } else {
     breadcrumbItems.push({
       "@type": "ListItem",
-      position: 2,
+      position: 3,
       name: recruitment.name,
       item: hubUrl,
     });
@@ -130,13 +152,84 @@ export default function RecruitmentHubStructuredData({
     itemListElement: breadcrumbItems,
   };
 
+  // ── datePosted — best honest proxy ────────────────────────────────────────
+  // Verified hubs: notificationDate. Unverified: sourceListingPublishedDate.
+  const datePostedIso = factsVerified
+    ? toIso(recruitment.notificationDate)
+    : toIso(recruitment.sourceListingPublishedDate);
+
+  // dateModified — emit only when a genuine update timestamp exists.
+  const dateModifiedIso = toIso(recruitment.updatedAt);
+
+  // ── Article node ──────────────────────────────────────────────────────────
+  // Describes this hub page as an editorial article about a recruitment.
+  // This enables Google to surface article-rich results for recruitment coverage.
+  const article: Record<string, unknown> = {
+    "@type": "Article",
+    "@id": `${hubUrl}#article`,
+    mainEntityOfPage: `${hubUrl}#webpage`,
+    headline: recruitment.name,
+    inLanguage: "en-IN",
+    publisher: { "@id": `${SITE_URL}/#org` },
+    isPartOf: { "@id": `${hubUrl}#webpage` },
+  };
+
+  if (datePostedIso) {
+    article["datePublished"] = datePostedIso;
+  }
+  if (dateModifiedIso && dateModifiedIso !== datePostedIso) {
+    article["dateModified"] = dateModifiedIso;
+  }
+
+  // about — the employer organization
+  if (orgName) {
+    const aboutOrg: Record<string, unknown> = {
+      "@type": "Organization",
+      name: orgName,
+    };
+    if (isAuthoritativeDomain(resolvedOfficialSource)) {
+      aboutOrg["sameAs"] = resolvedOfficialSource;
+    }
+    article["about"] = aboutOrg;
+  }
+
+  // isBasedOn — official notification, when we have an authoritative source URL
+  if (resolvedOfficialSource) {
+    article["isBasedOn"] = {
+      "@type": "CreativeWork",
+      url: resolvedOfficialSource,
+      ...(orgName ? { publisher: { "@type": "Organization", name: orgName } } : {}),
+    };
+  }
+
   // ── ItemList ──────────────────────────────────────────────────────────────
-  // One ListItem per resolved Post slug. This is the primary GEO/LLM discoverability
-  // signal: Google and LLMs can resolve every leaf URL from this hub's JSON-LD
-  // without a crawl hop, dramatically improving leaf indexing.
+  // One ListItem per resolved Post slug. ONLY posts with a confirmed slug get a
+  // url field — posts without a leaf page must not have a url in ItemList.
   const resolvedPosts = posts.filter((p) => Boolean(p.slug));
+  const allPosts = posts; // includes unresolved ones for name-only entries
   let itemList: object | undefined;
-  if (resolvedPosts.length > 0) {
+
+  if (allPosts.length > 0) {
+    itemList = {
+      "@type": "ItemList",
+      "@id": `${hubUrl}#postlist`,
+      name: `${recruitment.name} — Available Posts`,
+      numberOfItems: allPosts.length,
+      itemListElement: allPosts.map((post, i) => {
+        const item: Record<string, unknown> = {
+          "@type": "ListItem",
+          position: i + 1,
+          name: post.name ?? post.slug ?? `Post ${i + 1}`,
+        };
+        // Only add url when the post has a confirmed slug (leaf page exists)
+        if (post.slug) {
+          item["url"] = `${SITE_URL}/jobs/${recruitment.slug}/${post.slug}`;
+        }
+        return item;
+      }),
+    };
+  } else if (resolvedPosts.length > 0) {
+    // Fallback: only resolved posts if allPosts was empty but resolvedPosts is not
     itemList = {
       "@type": "ItemList",
       "@id": `${hubUrl}#postlist`,
@@ -173,22 +266,16 @@ export default function RecruitmentHubStructuredData({
       "@id": `${SITE_URL}#website`,
       url: SITE_URL,
       name: "JobOye",
+      publisher: { "@id": `${SITE_URL}/#org` },
     },
     breadcrumb: { "@id": `${hubUrl}#breadcrumb` },
     ...(itemList ? { mainEntity: { "@id": `${hubUrl}#postlist` } } : {}),
   };
 
-  // datePosted — best honest proxy for when this recruitment was announced.
-  // Verified hubs: notificationDate. Unverified: sourceListingPublishedDate.
-  const datePostedIso = factsVerified
-    ? toIso(recruitment.notificationDate)
-    : toIso(recruitment.sourceListingPublishedDate);
   if (datePostedIso) {
-    webPage["datePosted"] = datePostedIso;
+    webPage["datePublished"] = datePostedIso;
   }
 
-  // dateModified — emit only when a genuine update timestamp exists.
-  const dateModifiedIso = toIso(recruitment.updatedAt);
   if (dateModifiedIso && dateModifiedIso !== datePostedIso) {
     webPage["dateModified"] = dateModifiedIso;
   }
@@ -216,7 +303,7 @@ export default function RecruitmentHubStructuredData({
   }
 
   // ── @graph ────────────────────────────────────────────────────────────────
-  const graphNodes: object[] = [breadcrumb, webPage];
+  const graphNodes: object[] = [siteOrg, breadcrumb, article, webPage];
   if (itemList) graphNodes.push(itemList);
 
   const graph = {

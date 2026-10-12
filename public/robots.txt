@@ -1,0 +1,50 @@
+# robots.txt for www.joboye.com
+# robots.txt is a request, not enforcement. Well-behaved crawlers follow it; some fetchers do not.
+# Enforce at the CDN if you need to block something for real.
+
+User-agent: *
+Allow: /
+# Keep forms and internal search out of the index
+Disallow: /report-a-mistake/
+Disallow: /search/
+
+# ---------------------------------------------------------------
+# AI SEARCH AND ANSWER BOTS: leave allowed.
+# They fetch pages so assistants can cite you. Blocking them removes you from those answers.
+# (Listed explicitly so a CDN or firewall rule does not block them by accident.)
+# ---------------------------------------------------------------
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# ---------------------------------------------------------------
+# AI TRAINING BOTS: a business decision, not an SEO one.
+# Default here: allowed (no rule). To opt out of training but stay citable, uncomment these.
+# Google-Extended is only a control token for Gemini training. It does not affect Google Search or AI Overviews.
+# ---------------------------------------------------------------
+# User-agent: GPTBot
+# Disallow: /
+#
+# User-agent: ClaudeBot
+# Disallow: /
+#
+# User-agent: Google-Extended
+# Disallow: /
+#
+# User-agent: CCBot
+# Disallow: /
+
+# Never block Googlebot or Bingbot. AI Overviews and AI Mode rely on normal Search indexing.
+
+Sitemap: https://www.joboye.com/sitemap.xml

@@ -31,6 +31,10 @@ export interface JobPostingData {
   officialSourceUrl?: string;
   applyPortalUrl?: string;
 
+  // Phase 1 eligibility display text (ELIG-001 freeze — display-only, no computation)
+  qualificationText?: string | null;
+  experienceText?: string | null;
+
   // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
   vacancyTotal?: number | null;
   legacySalaryMin?: number | null;

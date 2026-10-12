@@ -56,6 +56,14 @@ interface PostLeafSchemaProps {
     notificationPublicationDate?: Date | null;
     postedAt?: Date | null;
     updatedAt?: Date | null;
+    /** Phase 1: stored qualification text from official source */
+    qualificationText?: string | null;
+    /** Phase 1: stored experience text from official source */
+    experienceText?: string | null;
+    /** Vacancy/notice number from the official advertisement */
+    vacancyNumber?: string | null;
+    /** URL to the official source for this post */
+    officialSourceUrl?: string | null;
   };
   /** Vacancy count from resolvePostVacancy — null means omit. */
   resolvedVacancy: number | null;
@@ -92,19 +100,26 @@ export default function PostLeafStructuredData({
   const hubUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
 
   // ── BreadcrumbList ─────────────────────────────────────────────────────────
-  // Jobs → Recruitment (hub, linked) → Post title (leaf, linked)
+  // Home → Jobs → Recruitment (hub, linked) → Post title (leaf)
+  // Home is always position 1 per reference spec requirement.
   // Org node intentionally omitted: Google requires `item` URL on every non-terminal
   // node and we have no verified org page URL yet.
   const breadcrumbItems: object[] = [
     {
       "@type": "ListItem",
       position: 1,
+      name: "Home",
+      item: SITE_URL,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
       name: "Jobs",
       item: `${SITE_URL}/jobs`,
     },
   ];
 
-  let position = 2;
+  let position = 3;
 
   // Note: org node omitted — no verified org URL to use as `item`.
   // Google requires every non-terminal breadcrumb node to carry an `item` URL;
@@ -134,6 +149,13 @@ export default function PostLeafStructuredData({
   };
 
   // ── JobPosting ─────────────────────────────────────────────────────────────
+  // identifier: use vacancyNumber (official advertisement number) when available;
+  // fall back to internal post id as a stable synthetic identifier.
+  const identifierValue = post.vacancyNumber ?? String(post.id);
+  const identifierName = post.vacancyNumber
+    ? "vacancy number"
+    : (post.organizationName ?? "JobOye");
+
   const jobPosting: Record<string, unknown> = {
     "@type": "JobPosting",
     "@id": `${leafUrl}#jobposting`,
@@ -142,8 +164,8 @@ export default function PostLeafStructuredData({
     directApply: false,
     identifier: {
       "@type": "PropertyValue",
-      name: post.organizationName ?? "JobOye",
-      value: String(post.id),
+      name: identifierName,
+      value: identifierValue,
     },
   };
 
@@ -222,6 +244,30 @@ export default function PostLeafStructuredData({
   // totalJobOpenings — resolver-gated: only when resolvePostVacancy returned a value
   if (resolvedVacancy != null) {
     jobPosting["totalJobOpenings"] = resolvedVacancy;
+  }
+
+  // qualifications — Phase 1: stored qualification text from official source.
+  // Per ELIG-001 freeze, we only display stored text; no eligibility computation.
+  if (post.qualificationText) {
+    jobPosting["qualifications"] = post.qualificationText;
+  }
+
+  // educationRequirements — generic "bachelor degree" credentialCategory when
+  // qualification text is present. Phase 2 will derive this from qualificationExpr.
+  if (post.qualificationText) {
+    jobPosting["educationRequirements"] = {
+      "@type": "EducationalOccupationalCredential",
+      credentialCategory: "bachelor degree",
+    };
+  }
+
+  // experienceRequirements — Phase 1: stored experience text as plain description.
+  // Per ELIG-001 freeze, months cannot be computed; we emit the text form only.
+  if (post.experienceText) {
+    jobPosting["experienceRequirements"] = {
+      "@type": "OccupationalExperienceRequirements",
+      description: post.experienceText,
+    };
   }
 
   const graph = {

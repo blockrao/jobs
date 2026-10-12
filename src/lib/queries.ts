@@ -555,6 +555,7 @@ export async function getPostSlugsForSitemap() {
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL`)
     .orderBy(posts.id);
   return rows;
 }

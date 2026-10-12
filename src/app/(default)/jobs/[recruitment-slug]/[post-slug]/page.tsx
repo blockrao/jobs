@@ -170,6 +170,21 @@ export async function generateMetadata({
   // and the JobPosting structured-data schema, but not page indexability.
   const isIndexable = Boolean(post.title && post.officialSourceUrl);
 
+  // article:published_time / article:modified_time for OG + SERP enrichment
+  const publishedTime = post.notificationPublicationDate
+    ? new Date(post.notificationPublicationDate).toISOString()
+    : post.postedAt
+    ? new Date(post.postedAt).toISOString()
+    : undefined;
+  const modifiedTime = post.updatedAt ? new Date(post.updatedAt).toISOString() : undefined;
+
+  // OG tags: org + employment type + location as discoverable signals
+  const ogTags = [
+    post.organizationName,
+    post.locationState,
+    post.employmentType,
+  ].filter((t): t is string => Boolean(t));
+
   return {
     title: pageTitle,
     description,
@@ -177,8 +192,20 @@ export async function generateMetadata({
     openGraph: {
       title: post.title,
       description: ogDescription,
-      type: "website",
+      type: "article",
       url: `https://www.joboye.com/jobs/${post.recruitmentSlug}/${post.slug}`,
+      ...(publishedTime ? { publishedTime } : {}),
+      ...(modifiedTime ? { modifiedTime } : {}),
+      section: "Central Government Jobs",
+      ...(ogTags.length > 0 ? { tags: ogTags } : {}),
+    },
+    robots: {
+      index: isIndexable,
+      follow: true,
+      googleBot: {
+        "max-image-preview": "large" as const,
+        "max-snippet": -1,
+      },
     },
   };
 }
@@ -247,6 +274,12 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
           notificationPublicationDate: post.notificationPublicationDate ?? null,
           postedAt: post.postedAt ?? null,
           updatedAt: post.updatedAt ?? null,
+          // Phase 1 eligibility text (ELIG-001 freeze: display-only, no computation)
+          qualificationText: post.qualificationText ?? null,
+          experienceText: post.experienceText ?? null,
+          // Official advertisement number from source inventory — used as schema.org identifier
+          vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
+          officialSourceUrl: post.officialSourceUrl ?? null,
         }}
         resolvedVacancy={resolvedFacts.vacancyCount}
         resolvedSalary={resolvedFacts.salary}

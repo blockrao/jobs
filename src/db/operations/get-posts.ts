@@ -43,6 +43,9 @@ export async function getPostBySlug(
         p."updatedAt",
         p."officialSourceUrl",
         p."applyPortalUrl",
+        -- Phase 1 eligibility display text (ELIG-001 freeze — stored text only)
+        p.qualification_text AS "qualificationText",
+        p.experience_text AS "experienceText",
         -- Old-schema columns required by resolver legacy fallback paths
         p.vacancy_total AS "vacancyTotal",
         p.salary_min AS "legacySalaryMin",
@@ -169,6 +172,9 @@ export async function getPostBySlug(
       updatedAt: new Date(data.updatedAt),
       officialSourceUrl: data.officialSourceUrl,
       applyPortalUrl: data.applyPortalUrl,
+      // Phase 1 eligibility display text (ELIG-001 freeze — stored text only)
+      qualificationText: data.qualificationText ?? null,
+      experienceText: data.experienceText ?? null,
       // Preserve extracted source facts as a distinct, explicitly unverified projection.
       // Never pass these fields into canonical fact resolvers or official-link CTAs.
       fjaExtract: data.fjaInventoryPostId != null ? {
@@ -296,6 +302,9 @@ export async function getPostsByRecruitment(
         p."updatedAt",
         p."officialSourceUrl",
         p."applyPortalUrl",
+        -- Phase 1 eligibility display text (ELIG-001 freeze — stored text only)
+        p.qualification_text AS "qualificationText",
+        p.experience_text AS "experienceText",
         -- Old-schema columns required by resolver legacy fallback paths
         p.vacancy_total AS "vacancyTotal",
         p.salary_min AS "legacySalaryMin",
@@ -377,6 +386,9 @@ export async function getPostsByRecruitment(
         updatedAt: new Date(data.updatedAt),
         officialSourceUrl: data.officialSourceUrl,
         applyPortalUrl: data.applyPortalUrl,
+        // Phase 1 eligibility display text (ELIG-001 freeze — stored text only)
+        qualificationText: data.qualificationText ?? null,
+        experienceText: data.experienceText ?? null,
         // Old-schema columns for resolver legacy fallback paths (Gate 4D bridge)
         vacancyTotal: data.vacancyTotal ?? null,
         legacySalaryMin: data.legacySalaryMin ?? null,

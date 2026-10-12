@@ -137,6 +137,21 @@ export async function generateMetadata({
   // URL self-canonical but non-indexable; single-role hubs point to the role hub.
   const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : `/jobs/${recruitment.slug}`;
 
+  // article:published_time — notificationDate (verified) or sourceListingPublishedDate (unverified)
+  const publishedTime = factsVerified
+    ? (recruitment.notificationDate ? new Date(recruitment.notificationDate).toISOString() : undefined)
+    : (recruitment.sourceListingPublishedDate ? new Date(recruitment.sourceListingPublishedDate).toISOString() : undefined);
+  const modifiedTime = recruitment.updatedAt ? new Date(recruitment.updatedAt).toISOString() : undefined;
+
+  // OG tags: distinct post names (role labels) — GEO/LLM signal
+  const ogTags = [
+    ...(recruitment.organizationName ? [recruitment.organizationName] : []),
+    ...posts
+      .map((p) => p.title ?? p.name)
+      .filter((t): t is string => Boolean(t))
+      .slice(0, 5),
+  ].filter(Boolean);
+
   return {
     title: recruitment.name,
     description,
@@ -144,8 +159,20 @@ export async function generateMetadata({
     openGraph: {
       title: recruitment.name,
       description: ogDescription,
-      type: "website",
+      type: "article",
       url: `https://www.joboye.com/jobs/${recruitment.slug}`,
+      ...(publishedTime ? { publishedTime } : {}),
+      ...(modifiedTime ? { modifiedTime } : {}),
+      section: "Central Government Jobs",
+      ...(ogTags.length > 0 ? { tags: ogTags } : {}),
+    },
+    robots: {
+      index: false,
+      follow: true,
+      googleBot: {
+        "max-image-preview": "large" as const,
+        "max-snippet": -1,
+      },
     },
   };
 }
