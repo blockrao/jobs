@@ -66,6 +66,19 @@ type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   } | null;
 };
 
+type EligibilityRow = {
+  id?: number;
+  postId?: number;
+  qualificationText?: string | null;
+  experienceText?: string | null;
+  ageMin?: number | null;
+  ageMax?: number | null;
+  educationLevel?: string | null;
+  // location_record, qualification_record may be joined in as jsonb
+  qualification_record?: unknown;
+  [key: string]: unknown;
+};
+
 type RecruitmentHubPost = typeof posts.$inferSelect & {
   position?: typeof positions.$inferSelect | null;
   resolvedVacancyCount?: number | null;
@@ -74,6 +87,8 @@ type RecruitmentHubPost = typeof posts.$inferSelect & {
   // application_email may exist in the DB but not yet in the generated Drizzle schema type
   application_email?: string | null;
   applicationEmail?: string | null;
+  // Eligibilities joined in by getRecruitmentWithPosts
+  eligibilities?: EligibilityRow[];
   fjaExtract?: {
     inventoryId?: number | string;
     vacancyCountRaw?: string | null;
@@ -384,6 +399,57 @@ export default function RecruitmentHub({
     return { title: typeof processName === 'string' ? processName.replace(/_/g, ' ') : null, detail: stages || details };
   }).filter((row: { title: string | null; detail: unknown }) => Boolean(row.title || row.detail));
 
+  // Employment type — derive a hub-level label from post data
+  // Show a single value when all posts share the same employment_type; show "Mixed" otherwise.
+  const postEmploymentTypes = posts.map((p) => {
+    // Drizzle-inferred type already has employmentType on the base Post type
+    const et = (p as typeof p & { employmentType?: string | null }).employmentType ?? null;
+    return et;
+  }).filter((et): et is string => Boolean(et));
+  const uniqueEmploymentTypes = Array.from(new Set(postEmploymentTypes));
+  const hubEmploymentType: string | null = uniqueEmploymentTypes.length === 1
+    ? uniqueEmploymentTypes[0]
+    : uniqueEmploymentTypes.length > 1
+    ? "Mixed"
+    : null;
+
+  // Format employment type for display (e.g. "FULL_TIME" → "Full Time")
+  const formatEmploymentType = (et: string | null): string | null => {
+    if (!et) return null;
+    if (et === "Mixed") return "Mixed";
+    return et.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+  const displayEmploymentType = formatEmploymentType(hubEmploymentType);
+
+  // Posts comparison table data — per-post pay and employment type
+  const postsTableRows = posts.map((post) => {
+    const postAny = post as typeof post & { employmentType?: string | null; payLevel?: Record<string, unknown> | null; vacancyTotal?: number | null };
+    const payRaw = typeof postAny.payLevel?.raw === "string" ? postAny.payLevel.raw : null;
+    const salaryFromFja = post.fjaExtract?.salaryRaw ?? null;
+    const payDisplay = payRaw ?? salaryFromFja ?? null;
+    const et = formatEmploymentType(postAny.employmentType ?? null);
+    const vacancies = post.resolvedVacancyCount ?? parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw) ?? postAny.vacancyTotal ?? null;
+    return {
+      id: post.id,
+      name: post.name ?? post.position?.name ?? null,
+      slug: post.slug,
+      vacancies,
+      vacanciesLabel: post.resolvedVacancyCount != null && post.fjaExtract?.verificationStatus === "VERIFIED"
+        ? `${post.resolvedVacancyCount.toLocaleString("en-IN")}`
+        : vacancies != null
+        ? `${vacancies.toLocaleString("en-IN")}*`
+        : null,
+      payDisplay,
+      employmentType: et,
+    };
+  });
+  const hasPostsTable = posts.length > 1 && postsTableRows.some((r) => r.vacanciesLabel || r.payDisplay || r.employmentType);
+
+  // Eligibility at a glance — conditional when any post has eligibility rows
+  // ELIG-001 Phase 1: display stored text only, no computed logic
+  const postsWithEligibility = posts.filter((p) => p.eligibilities && p.eligibilities.length > 0);
+  const hasEligibilityData = postsWithEligibility.length > 0;
+
   // FAQ: only questions with non-null answers
   const faqItems: { q: string; a: string }[] = [];
 
@@ -426,6 +492,13 @@ export default function RecruitmentHub({
     faqItems.push({
       q: 'What is the selection process?',
       a: displaySelectionProcess,
+    });
+  }
+
+  if (examName) {
+    faqItems.push({
+      q: 'Is there an exam or test involved?',
+      a: `Yes — this recruitment is conducted through the ${examName}. Check the selection process section for details on stages.`,
     });
   }
 
@@ -663,6 +736,12 @@ export default function RecruitmentHub({
                   </dd>
                 </div>
               )}
+              {displayEmploymentType && (
+                <div className="flex gap-2 px-3 py-2">
+                  <dt className="text-gray-500 w-28 flex-shrink-0">Employment</dt>
+                  <dd className="text-gray-900">{displayEmploymentType}</dd>
+                </div>
+              )}
             </dl>
           )}
 
@@ -800,6 +879,16 @@ export default function RecruitmentHub({
           {hasPosts && (
             <a href="#posts" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
               Posts
+            </a>
+          )}
+          {hasPostsTable && (
+            <a href="#posts-table" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              Compare Posts
+            </a>
+          )}
+          {hasEligibilityData && (
+            <a href="#eligibility" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              Eligibility
             </a>
           )}
           {(displayOfficialSource || displayApplicationUrl) && (
@@ -1235,6 +1324,144 @@ export default function RecruitmentHub({
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — POSTS COMPARISON TABLE
+            Per-post: name / vacancies / pay / employment type.
+            Only for multi-post recruitments with enrichable data.
+            ═══════════════════════════════════════════ */}
+        {hasPostsTable && (
+          <div id="posts-table" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <Briefcase size={17} className="text-amber-500" />
+              Posts at a glance
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">
+              * Vacancy counts marked with * are reported figures — confirm each in the official notice.
+            </p>
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-sm border-collapse min-w-[480px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Post</th>
+                    <th scope="col" className="text-right py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Vacancies</th>
+                    {postsTableRows.some((r) => r.payDisplay) && (
+                      <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Pay</th>
+                    )}
+                    {postsTableRows.some((r) => r.employmentType) && (
+                      <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {postsTableRows.map((row) => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-3 font-medium text-gray-900">
+                        {row.slug ? (
+                          <Link
+                            href={`${localePrefix}/jobs/${recruitment.slug}/${row.slug}`}
+                            className="text-slate-700 hover:text-slate-900 hover:underline"
+                          >
+                            {row.name ?? 'View Post'}
+                          </Link>
+                        ) : (
+                          row.name ?? '—'
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-semibold text-gray-900">
+                        {row.vacanciesLabel ?? '—'}
+                      </td>
+                      {postsTableRows.some((r) => r.payDisplay) && (
+                        <td className="py-3 px-3 text-gray-700">
+                          {row.payDisplay ?? '—'}
+                        </td>
+                      )}
+                      {postsTableRows.some((r) => r.employmentType) && (
+                        <td className="py-3 px-3 text-gray-600 text-xs">
+                          {row.employmentType ?? '—'}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — ELIGIBILITY AT A GLANCE
+            ELIG-001 Phase 1: display stored qualification_text / experience_text only.
+            No "Can I apply?" logic. Conditional on eligibility rows existing.
+            ═══════════════════════════════════════════ */}
+        {hasEligibilityData && (
+          <div id="eligibility" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-1">Eligibility at a glance</h2>
+            <p className="text-xs text-gray-400 mb-4">
+              Stored eligibility facts — confirm exact criteria in the official notification before applying.
+            </p>
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full text-sm border-collapse min-w-[400px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Post</th>
+                    <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Qualification</th>
+                    {postsWithEligibility.some((p) => p.eligibilities?.some((e) => e.experienceText)) && (
+                      <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Experience</th>
+                    )}
+                    {postsWithEligibility.some((p) => p.eligibilities?.some((e) => e.ageMin != null || e.ageMax != null)) && (
+                      <th scope="col" className="text-left py-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Age</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {postsWithEligibility.map((post) =>
+                    (post.eligibilities ?? []).map((elig, ei) => (
+                      <tr key={`${post.id}-${ei}`} className="hover:bg-gray-50 transition-colors">
+                        {ei === 0 && (
+                          <td
+                            className="py-3 px-3 font-medium text-gray-900 align-top"
+                            rowSpan={(post.eligibilities ?? []).length}
+                          >
+                            {post.slug ? (
+                              <Link
+                                href={`${localePrefix}/jobs/${recruitment.slug}/${post.slug}`}
+                                className="text-slate-700 hover:text-slate-900 hover:underline"
+                              >
+                                {post.name ?? post.position?.name ?? 'Post'}
+                              </Link>
+                            ) : (
+                              post.name ?? post.position?.name ?? 'Post'
+                            )}
+                          </td>
+                        )}
+                        <td className="py-3 px-3 text-gray-700 align-top">
+                          {elig.qualificationText ?? '—'}
+                        </td>
+                        {postsWithEligibility.some((p) => p.eligibilities?.some((e) => e.experienceText)) && (
+                          <td className="py-3 px-3 text-gray-600 align-top text-xs">
+                            {elig.experienceText ?? '—'}
+                          </td>
+                        )}
+                        {postsWithEligibility.some((p) => p.eligibilities?.some((e) => e.ageMin != null || e.ageMax != null)) && (
+                          <td className="py-3 px-3 text-gray-600 align-top text-xs whitespace-nowrap">
+                            {elig.ageMin != null && elig.ageMax != null
+                              ? `${elig.ageMin}–${elig.ageMax} yrs`
+                              : elig.ageMin != null
+                              ? `Min ${elig.ageMin} yrs`
+                              : elig.ageMax != null
+                              ? `Max ${elig.ageMax} yrs`
+                              : '—'}
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
