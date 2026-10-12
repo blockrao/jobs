@@ -489,16 +489,18 @@ def main():
         counts[status] = counts.get(status, 0) + 1
 
         symbol = {'written': '✓', 'dry_run': '○', 'fetch_failed': '✗', 'no_data': '–'}.get(status, '?')
-        rf = result['recruitment_fields']
         pf = result['post_fields']
+        ef = result.get('enrichment_fields', {})
         tags = []
         if pf.get('salary_min'):
             tags.append(f"salary {pf['salary_min']:,}–{pf['salary_max']:,}")
-        if rf.get('fee_general') is not None:
-            tags.append(f"fee ₹{rf['fee_general']}")
-        if rf.get('selection_process'):
+        fees = ef.get('feesByCategory', {})
+        if fees:
+            fee_val = next(iter(fees.values()))
+            tags.append(f"fee ₹{fee_val}" if isinstance(fee_val, int) else "fee ₹0")
+        if ef.get('selectionProcess'):
             tags.append('selection')
-        if rf.get('age_note'):
+        if ef.get('ageNote'):
             tags.append('age')
         if pf.get('description'):
             tags.append('desc')
