@@ -807,6 +807,26 @@ export default function RecruitmentHub({
               Official Sources
             </a>
           )}
+          {(selectionDisplayRows.length > 0 || displaySelectionProcess) && (
+            <a href="#selection" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              Selection
+            </a>
+          )}
+          {(displayApplicationUrl || hasFeeDetails) && !closed && (
+            <a href="#apply" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              How to Apply
+            </a>
+          )}
+          {sourceDocuments.length > 0 && (
+            <a href="#documents" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              Documents
+            </a>
+          )}
+          {(displayApplicationUrl || displayOfficialSource) && (
+            <a href="#links" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              Links
+            </a>
+          )}
         </nav>
 
         {/* ═══════════════════════════════════════════
@@ -1308,6 +1328,203 @@ export default function RecruitmentHub({
             </div>
           );
         })()}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — SELECTION PROCESS
+            Rendered when structured selection data or a summary is available.
+            ═══════════════════════════════════════════ */}
+        {(selectionDisplayRows.length > 0 || displaySelectionProcess) && (
+          <div id="selection" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-3">How you are selected</h2>
+            {selectionDisplayRows.length > 0 ? (
+              <ol className="space-y-3">
+                {selectionDisplayRows.map((row, i) => (
+                  <li key={i} className="flex gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                    <div>
+                      {row.title && <p className="font-semibold text-gray-900">{row.title}</p>}
+                      {row.detail && <p className="text-gray-600 mt-0.5">{row.detail}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-sm text-gray-700">{displaySelectionProcess}</p>
+            )}
+            {sourceFactsUnverified && (
+              <p className="mt-3 text-xs text-gray-400">Selection process as reported by source — confirm in official notice.</p>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — HOW TO APPLY
+            Application steps + fee table.
+            ═══════════════════════════════════════════ */}
+        {(displayApplicationUrl || sharedApplicationEmail || sourceApplicationMode || hasFeeDetails) && !closed && (
+          <div id="apply" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-4">How to apply</h2>
+            <ol className="space-y-3 mb-5">
+              {displayApplicationUrl ? (
+                <>
+                  <li className="flex gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">1</span>
+                    <p className="text-gray-700">Visit the <a href={displayApplicationUrl} target="_blank" rel="noopener noreferrer" className="text-slate-700 underline hover:text-slate-900 font-medium">official application portal</a> and complete your registration.</p>
+                  </li>
+                  <li className="flex gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">2</span>
+                    <p className="text-gray-700">Fill in the application form carefully. Upload required documents as instructed.</p>
+                  </li>
+                  {hasFeeDetails && (
+                    <li className="flex gap-3 text-sm">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">3</span>
+                      <p className="text-gray-700">Pay the application fee if applicable (see fee details below).</p>
+                    </li>
+                  )}
+                  <li className="flex gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">{hasFeeDetails ? '4' : '3'}</span>
+                    <p className="text-gray-700">Submit before <strong>{appEnd ?? 'the stated deadline'}</strong>. Check the official notice for exact time.</p>
+                  </li>
+                </>
+              ) : sharedApplicationEmail ? (
+                <>
+                  <li className="flex gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">1</span>
+                    <p className="text-gray-700">Prepare your application as instructed in the official notice.</p>
+                  </li>
+                  <li className="flex gap-3 text-sm">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">2</span>
+                    <p className="text-gray-700">Email your application to <a href={`mailto:${sharedApplicationEmail}`} className="text-slate-700 underline hover:text-slate-900 font-medium">{sharedApplicationEmail}</a> before the deadline.</p>
+                  </li>
+                </>
+              ) : sourceApplicationMode ? (
+                <li className="flex gap-3 text-sm">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#0f172a] text-[#ffd60a] text-xs font-bold flex items-center justify-center">1</span>
+                  <p className="text-gray-700">Apply {sourceApplicationMode.toLowerCase()} as directed in the official notice.</p>
+                </li>
+              ) : null}
+            </ol>
+
+            {/* Fee table */}
+            {hasFeeDetails && (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Application fee</p>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {feeGeneral != null && (
+                    <div className="flex justify-between px-4 py-2.5 text-sm">
+                      <span className="text-gray-600">General / OBC / EWS</span>
+                      <span className="font-semibold text-gray-900">
+                        {Number(feeGeneral) === 0 ? 'No fee' : `₹${Number(feeGeneral).toLocaleString('en-IN')}`}
+                      </span>
+                    </div>
+                  )}
+                  {feeReserved != null && (
+                    <div className="flex justify-between px-4 py-2.5 text-sm">
+                      <span className="text-gray-600">SC / ST / PwBD / Women</span>
+                      <span className="font-semibold text-gray-900">
+                        {Number(feeReserved) === 0 ? 'No fee' : `₹${Number(feeReserved).toLocaleString('en-IN')}`}
+                      </span>
+                    </div>
+                  )}
+                  {feeNote && (
+                    <div className="px-4 py-2.5 text-xs text-gray-500">{feeNote}</div>
+                  )}
+                  {feeRows.length > 0 && feeGeneral == null && (
+                    <div className="px-4 py-2.5 text-sm text-gray-700">See official notification for fee details.</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {sourceFactsUnverified && (
+              <p className="mt-3 text-xs text-gray-400">Application instructions as reported — confirm in the official notice before applying.</p>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — DOCUMENTS CHECKLIST
+            From sourceDocuments array. Interactive checkboxes saved to localStorage.
+            ═══════════════════════════════════════════ */}
+        {sourceDocuments.length > 0 && (
+          <div id="documents" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-1">Documents to keep ready</h2>
+            <p className="text-xs text-gray-400 mb-4">Tick what you have. Your ticks are saved on this device only.</p>
+            <ul className="space-y-2">
+              {sourceDocuments.map((doc, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    id={`doc-${i}`}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#0f172a] flex-shrink-0"
+                    style={{ accentColor: '#0f172a' }}
+                    defaultChecked={false}
+                    onChange={(e) => {
+                      try {
+                        const key = `hub-docs-${recruitment.id}`;
+                        const saved: Record<string, boolean> = JSON.parse(localStorage.getItem(key) ?? '{}');
+                        saved[`d${i}`] = e.target.checked;
+                        localStorage.setItem(key, JSON.stringify(saved));
+                      } catch { /* storage unavailable */ }
+                    }}
+                    ref={(el) => {
+                      if (!el) return;
+                      try {
+                        const key = `hub-docs-${recruitment.id}`;
+                        const saved: Record<string, boolean> = JSON.parse(localStorage.getItem(key) ?? '{}');
+                        el.checked = Boolean(saved[`d${i}`]);
+                      } catch { /* storage unavailable */ }
+                    }}
+                  />
+                  <label htmlFor={`doc-${i}`} className="text-gray-700 cursor-pointer leading-relaxed">{doc}</label>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-xs text-gray-400">
+              {sourceFactsUnverified ? 'List as reported by source — confirm exact requirements in the official notice.' : 'Confirm exact document requirements in the official notice before applying.'}
+            </p>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — IMPORTANT LINKS
+            Clean link list: apply + official source.
+            ═══════════════════════════════════════════ */}
+        {(displayApplicationUrl || displayOfficialSource) && (
+          <div id="links" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-3">Important links</h2>
+            <ul className="space-y-2">
+              {displayApplicationUrl && (
+                <li>
+                  <a
+                    href={displayApplicationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-900"
+                  >
+                    <ExternalLink size={14} />
+                    {closed ? 'Application portal (closed)' : 'Apply on official website'}
+                  </a>
+                </li>
+              )}
+              {displayOfficialSource && displayOfficialSource !== displayApplicationUrl && (
+                <li>
+                  <a
+                    href={displayOfficialSource}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900"
+                  >
+                    <FileText size={14} />
+                    Official notification / source
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
 
         {/* Candidate-facing verification guidance. Internal inventory and raw database diagnostics belong in admin tools, not public pages. */}
         <section className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 md:px-6">
