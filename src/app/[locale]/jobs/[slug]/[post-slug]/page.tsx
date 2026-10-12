@@ -39,6 +39,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  // Unverified-inventory posts must not be indexed — mirrors (default) route.
+  const sourceVerificationPending = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
+
   // Use the canonical relationship returned by the database, not the
   // potentially historical recruitment slug from the incoming URL.
   const canonicalSlug = post.recruitmentSlug + "/" + post.slug;
@@ -57,7 +62,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: seo.alternates,
-    robots: seo.robots,
+    // When source verification is pending, suppress indexing regardless of locale SEO defaults.
+    robots: sourceVerificationPending ? { index: false, follow: true } : seo.robots,
     openGraph: {
       title,
       description,
@@ -73,6 +79,11 @@ export default async function LocaleJobPostingPage({ params }: Props) {
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) notFound();
+
+  // Mirror (default) route: suppress JobPosting schema when source verification is pending.
+  const sourceVerificationPending = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
 
   const recruitmentData = await getRecruitmentWithPosts(post.recruitmentSlug);
   const now = new Date();
@@ -92,7 +103,11 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   return (
     <>
-      {/* SEO-001: the untranslated Hindi route is noindex, so it must not emit JobPosting JSON-LD. */}
+      {/*
+        SEO-001: the untranslated Hindi route is noindex, so it must not emit JobPosting JSON-LD.
+        Inventory gate: when source verification is pending, suppress JobPosting schema — mirrors
+        the (default) route's suppressJobPostingSchema contract. BreadcrumbList is always emitted.
+      */}
       {locale !== "hi" && (
       <PostLeafStructuredData
         post={{
@@ -113,6 +128,7 @@ export default async function LocaleJobPostingPage({ params }: Props) {
         resolvedVacancy={resolvedFacts.vacancyCount}
         resolvedSalary={resolvedFacts.salary}
         resolvedDeadline={resolvedFacts.deadline}
+        suppressJobPostingSchema={sourceVerificationPending}
       />
       )}
       <JobPostingPage

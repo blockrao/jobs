@@ -107,6 +107,21 @@ describe("extracted source projection", () => {
     expect(schema).toContain("suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting]");
   });
 
+  test("locale Post Leaf route wires the same schema-suppression contract as the default route", () => {
+    // Regression: the locale route previously rendered PostLeafStructuredData without
+    // suppressJobPostingSchema, causing unverified inventory-backed leaves to emit
+    // JobPosting JSON-LD even when source verification was pending.
+    const localeRoute = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
+    // Must derive sourceVerificationPending from fjaExtract — identical condition to (default) route.
+    expect(localeRoute).toContain('post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"');
+    // Must pass it to the structured-data component.
+    expect(localeRoute).toContain("suppressJobPostingSchema={sourceVerificationPending}");
+    // Must suppress indexing in metadata when verification is pending — parallel to (default) route.
+    expect(localeRoute).toContain("index: false");
+    // BreadcrumbList suppression guard must still be the locale check, not the inventory check.
+    expect(localeRoute).toContain('locale !== "hi"');
+  });
+
   test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
