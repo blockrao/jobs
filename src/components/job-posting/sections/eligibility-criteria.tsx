@@ -1,9 +1,24 @@
 /**
  * Eligibility Criteria Section
- * Displays education, experience, and age requirements
+ *
+ * Renders education, experience, age limits, and eligibility pathways.
+ * The enrichment JSONB columns store data in several confirmed shapes;
+ * each field is passed through a typed normalizer before rendering.
+ *
+ * Display rules:
+ *   - No shape may cause blank sections or empty lists to render.
+ *   - No fabricated values: if a field cannot be interpreted, omit it.
+ *   - Provenance metadata (e.g. "xlsx_freejobsalert") is never shown in UI.
+ *   - {source, pathway} stubs display as a simple "Qualification Pathways"
+ *     list — they are names only, not structured qualification details.
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import {
+  normalizeEducation,
+  normalizeExperience,
+  normalizeEligibilityPathways,
+} from "@/lib/enrichment-normalizers";
 import styles from "../job-posting-page.module.css";
 
 interface EligibilityCriteriaProps {
@@ -12,14 +27,30 @@ interface EligibilityCriteriaProps {
 
 export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) {
   const enrichment = post.enrichment;
+
+  // Normalize variable-shape fields upfront
+  const education = enrichment?.education
+    ? normalizeEducation(enrichment.education)
+    : null;
+  const experience = enrichment?.experience
+    ? normalizeExperience(enrichment.experience)
+    : null;
+  const pathways = enrichment?.eligibilityPathways
+    ? normalizeEligibilityPathways(enrichment.eligibilityPathways)
+    : [];
+
+  const hasAgeRules =
+    enrichment?.ageRulesByCategory &&
+    Object.keys(enrichment.ageRulesByCategory).length > 0;
+
   const hasEligibilityContent = Boolean(
-    enrichment?.education ||
-    enrichment?.experience ||
-    (enrichment?.ageRulesByCategory && Object.keys(enrichment.ageRulesByCategory).length > 0) ||
-    enrichment?.ageReferenceDate ||
-    enrichment?.ageNote ||
-    enrichment?.ageRelaxationRules ||
-    (enrichment?.eligibilityPathways && enrichment.eligibilityPathways.length > 0)
+    education ||
+      experience ||
+      hasAgeRules ||
+      enrichment?.ageReferenceDate ||
+      enrichment?.ageNote ||
+      enrichment?.ageRelaxationRules ||
+      pathways.length > 0
   );
 
   if (!hasEligibilityContent) return null;
@@ -29,15 +60,42 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       <h2 className={styles.sectionTitle}>✓ Eligibility Criteria</h2>
 
       {/* Education */}
-      {enrichment?.education && (
+      {education && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Education Required</div>
           <div className={styles.infoValue}>
-            <strong>{enrichment.education.degree}</strong>
-            {enrichment.education.university && (
+            {/* qualification_options shape */}
+            {education.options && education.options.length > 0 ? (
+              <ul className={styles.infoList} style={{ marginTop: "4px" }}>
+                {education.options.map((opt, idx) => (
+                  <li key={idx} className={styles.infoListItem}>
+                    {opt}
+                  </li>
+                ))}
+              </ul>
+            ) : (
               <>
-                <br />
-                University: {enrichment.education.university}
+                {education.degree && <strong>{education.degree}</strong>}
+                {education.university && (
+                  <>
+                    <br />
+                    University: {education.university}
+                  </>
+                )}
+                {education.notes && (
+                  <>
+                    <br />
+                    <span style={{ color: "#4b5563" }}>{education.notes}</span>
+                  </>
+                )}
+                {education.preferred === false && (
+                  <>
+                    <br />
+                    <span style={{ color: "#6b7280", fontSize: "13px" }}>
+                      (preferred, not mandatory)
+                    </span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -45,21 +103,50 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       )}
 
       {/* Experience */}
-      {enrichment?.experience && (
+      {experience && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Experience Required</div>
           <div className={styles.infoValue}>
-            Minimum {enrichment.experience.minYears} year
-            {enrichment.experience.minYears !== 1 ? "s" : ""}{" "}
-            {Array.isArray(enrichment.experience.domains) && enrichment.experience.domains.length > 0 ? (
-              <>in <strong>{enrichment.experience.domains.join(", ")}</strong></>
+            {/* keyed-object shape */}
+            {experience.keyedEntries ? (
+              <ul className={styles.infoList} style={{ marginTop: "4px" }}>
+                {experience.keyedEntries.map((entry, idx) => (
+                  <li key={idx} className={styles.infoListItem}>
+                    <strong>{entry.role}:</strong> {entry.description}
+                  </li>
+                ))}
+              </ul>
             ) : (
-              "of relevant experience"
-            )}
-            {enrichment.experience.countedFrom && (
               <>
-                <br />
-                Counted from: {enrichment.experience.countedFrom}
+                {experience.minYears !== undefined && (
+                  <>
+                    Minimum{" "}
+                    <strong>
+                      {experience.minYears} year
+                      {experience.minYears !== 1 ? "s" : ""}
+                    </strong>{" "}
+                    {experience.domains && experience.domains.length > 0 ? (
+                      <>
+                        in{" "}
+                        <strong>{experience.domains.join(", ")}</strong>
+                      </>
+                    ) : (
+                      "of relevant experience"
+                    )}
+                  </>
+                )}
+                {experience.countedFrom && (
+                  <>
+                    <br />
+                    Counted from: {experience.countedFrom}
+                  </>
+                )}
+                {experience.notes && (
+                  <>
+                    <br />
+                    <span style={{ color: "#4b5563" }}>{experience.notes}</span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -67,7 +154,7 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       )}
 
       {/* Age Limits */}
-      {enrichment?.ageRulesByCategory && Object.keys(enrichment.ageRulesByCategory).length > 0 && (
+      {hasAgeRules && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Age Limits by Category</div>
           <table className={styles.table}>
@@ -79,7 +166,7 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
               </tr>
             </thead>
             <tbody>
-              {Object.entries(enrichment.ageRulesByCategory).map(
+              {Object.entries(enrichment!.ageRulesByCategory).map(
                 ([category, limits]) => (
                   <tr key={category} className={styles.tableRow}>
                     <td className={styles.tableCell}>{category}</td>
@@ -118,43 +205,73 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       {enrichment?.ageRelaxationRules && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Age Relaxation</div>
-          <div className={styles.infoValue}>{enrichment.ageRelaxationRules}</div>
+          <div className={styles.infoValue}>
+            {enrichment.ageRelaxationRules}
+          </div>
         </div>
       )}
 
       {/* Eligibility Pathways */}
-      {enrichment?.eligibilityPathways &&
-        enrichment.eligibilityPathways.length > 0 && (
-          <div className={styles.infoGroup}>
-            <div className={styles.infoLabel}>Eligibility Pathways</div>
-            {enrichment.eligibilityPathways.map((pathway) => (
+      {pathways.length > 0 && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Eligibility Pathways</div>
+
+          {/* Determine if all are stubs (simple name list) or mixed/rich */}
+          {pathways.every((p) => p.kind === "stub") ? (
+            /* Stub shape: simple qualification category list */
+            <ul className={styles.infoList} style={{ marginTop: "4px" }}>
+              {pathways.map((p, idx) => (
+                <li key={idx} className={styles.infoListItem}>
+                  {p.label}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            /* Mixed or rich shapes */
+            pathways.map((p, idx) => (
               <div
-                key={pathway.pathway}
-                style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: "1px solid #e5e7eb" }}
+                key={idx}
+                style={{
+                  marginBottom: "16px",
+                  paddingBottom: "16px",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
               >
-                <strong>Pathway {pathway.pathway}:</strong>
-                <div style={{ marginTop: "8px", color: "#4b5563" }}>
-                  {pathway.description}
-                </div>
-                {pathway.qualifications && pathway.qualifications.length > 0 && (
-                  <ul className={styles.infoList} style={{ marginTop: "8px" }}>
-                    {pathway.qualifications.map((qual, idx) => (
-                      <li key={idx} className={styles.infoListItem}>
+                <strong>{p.label}</strong>
+                {p.description && (
+                  <div style={{ marginTop: "8px", color: "#4b5563" }}>
+                    {p.description}
+                  </div>
+                )}
+                {p.qualifications && p.qualifications.length > 0 && (
+                  <ul
+                    className={styles.infoList}
+                    style={{ marginTop: "8px" }}
+                  >
+                    {p.qualifications.map((qual, qi) => (
+                      <li key={qi} className={styles.infoListItem}>
                         {qual}
                       </li>
                     ))}
                   </ul>
                 )}
-                {pathway.experienceYears && (
-                  <div style={{ marginTop: "8px", fontSize: "14px", color: "#4b5563" }}>
-                    Experience Required: {pathway.experienceYears} year
-                    {pathway.experienceYears !== 1 ? "s" : ""}
+                {p.experienceYears !== undefined && (
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "14px",
+                      color: "#4b5563",
+                    }}
+                  >
+                    Experience Required: {p.experienceYears} year
+                    {p.experienceYears !== 1 ? "s" : ""}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
