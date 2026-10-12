@@ -327,6 +327,10 @@ export default function RecruitmentHub({
   const sourceSelectionSummary = typeof sourceOtherInfo?.interview === "string"
     ? sourceOtherInfo.interview
     : null;
+  const tentativeInterviewDate = sourceFactsUnverified &&
+    typeof sourceDetails?.interview_date_tentative === "string"
+    ? formatDate(sourceDetails.interview_date_tentative)
+    : null;
   const displaySelectionProcess =
     resolvedSelectionProcess ?? recruitment.selectionProcess ??
     (sourceFactsUnverified ? sourceSelectionSummary : null);
@@ -337,7 +341,7 @@ export default function RecruitmentHub({
   const isLastDay = daysLeft === 0;
 
   // Determine if the dated timeline has anything to show
-  const hasTimeline = !!(notificationDate || appStart || appEnd);
+  const hasTimeline = !!(notificationDate || appStart || appEnd || tentativeInterviewDate);
 
   // Posts: single-column comparison list
   const hasPosts = posts.length > 0;
@@ -822,6 +826,13 @@ export default function RecruitmentHub({
                     )}
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">{appEndLabel}</div>
+                </li>
+              )}
+              {tentativeInterviewDate && (
+                <li className="pl-5 relative">
+                  <span className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-gray-100 border-2 border-gray-400" />
+                  <div className="text-sm font-semibold text-gray-600">{tentativeInterviewDate}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Tentative interview (reported; confirm in official notice)</div>
                 </li>
               )}
             </ol>
