@@ -117,11 +117,20 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
       </div>
       <h1 style={headerStyles.jobTitle}>{richH1}</h1>
       <div style={headerStyles.jobMeta}>
-        {post.enrichment?.payLevel && (
+        {(post.enrichment?.payLevel || post.payLevel) && (
           <div style={headerStyles.metaItem}>
             <span style={headerStyles.metaLabel}>Grade:</span>
             <span style={headerStyles.metaValue}>
-              Level {post.enrichment.payLevel}
+              {(() => {
+                const pl = post.enrichment?.payLevel || post.payLevel;
+                if (typeof pl === "string") return `Level ${pl}`;
+                if (pl && typeof pl === "object") {
+                  const level = (pl as any).level;
+                  const scheme = (pl as any).scheme;
+                  return scheme ? `Level ${level} (${scheme})` : `Level ${level}`;
+                }
+                return null;
+              })()}
             </span>
           </div>
         )}

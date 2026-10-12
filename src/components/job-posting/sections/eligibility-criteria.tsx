@@ -62,6 +62,9 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       ? true
       : false;
 
+  // Phase 1 posts table fields: use fjaExtract raw as the eligibility source when
+  // no enrichment canonical field exists. qualificationRaw / eligibilityRaw cover the
+  // "what do you need to apply?" slot; experienceRaw covers the experience slot.
   const hasEligibilityContent = Boolean(
     education ||
       experience ||
@@ -73,7 +76,9 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       extractedEligibility ||
       extractedExperience ||
       extractedAge ||
-      extracted?.ageRelaxationRulesRaw
+      extracted?.ageRelaxationRulesRaw ||
+      // fjaExtract raw fields that weren't already covered above
+      extracted?.otherInfoRaw
   );
 
   if (!hasEligibilityContent) return null;

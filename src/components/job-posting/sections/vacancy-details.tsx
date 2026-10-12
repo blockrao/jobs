@@ -13,7 +13,13 @@ interface VacancyDetailsProps {
 }
 
 export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsProps) {
-  const vacanciesByCategory = post.enrichment?.vacanciesByCategory || {};
+  // Use enrichment vacanciesByCategory when available; fall back to posts.vacancy_details
+  const vacanciesByCategory: Record<string, number> =
+    (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory).length > 0)
+      ? post.enrichment.vacanciesByCategory
+      : (post.vacancyDetails && Object.keys(post.vacancyDetails).length > 0)
+        ? post.vacancyDetails
+        : {};
   const hasDetails = Object.keys(vacanciesByCategory).length > 0;
   // Use resolver output — never display raw enrichment vacanciesTotal
   const reportedCount = post.fjaExtract?.vacancyCountRaw

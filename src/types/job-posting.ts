@@ -21,6 +21,25 @@ export interface JobPostingData {
   employmentType?: string | null;
   locationCity?: string | null;
   locationState?: string | null;
+  locationCountry?: string | null;
+  experienceLevel?: string | null;
+  jobCategoryTags?: string[] | null;
+  postingStatus?: string | null;
+  sourcePostCode?: string | null;
+
+  // Application contact/method fields
+  applicationMethod?: string | null;
+  applicationEmail?: string | null;
+  applicationUrl?: string | null;
+  contactDepartment?: string | null;
+  contactPerson?: string | null;
+
+  // Per-post structured data
+  vacancyDetails?: Record<string, number> | null;    // jsonb: {category: count}
+  payLevel?: { level: string; scheme?: string } | null; // jsonb on posts table
+  keyDates?: Record<string, string> | null;           // jsonb: {key: date_string}
+  requiredSkills?: string[] | null;
+  applicationChecklist?: string[] | null;
 
   // Live Status
   isLive: boolean;
@@ -30,10 +49,6 @@ export interface JobPostingData {
   // Source Links
   officialSourceUrl?: string;
   applyPortalUrl?: string;
-
-  // Phase 1 eligibility display text (ELIG-001 freeze — display-only, no computation)
-  qualificationText?: string | null;
-  experienceText?: string | null;
 
   // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
   vacancyTotal?: number | null;

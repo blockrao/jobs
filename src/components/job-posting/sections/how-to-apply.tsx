@@ -1,6 +1,8 @@
 /**
  * How to Apply Section
- * Displays step-by-step application instructions
+ * Displays step-by-step application instructions.
+ * Uses posts table fields (applicationMethod, applicationChecklist, applicationEmail,
+ * contactDepartment, contactPerson) plus recruitmentResolvedFacts for the apply URL.
  */
 
 import { JobPostingData } from "@/types/job-posting";
@@ -14,36 +16,57 @@ interface HowToApplyProps {
 
 export default function HowToApply({ post, recruitmentResolvedFacts }: HowToApplyProps) {
   const applyPortalUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
-  const hasApplicationUrl = Boolean(applyPortalUrl);
+
+  // Posts table application fields
+  const applicationMethod = post.applicationMethod ?? null;
+  const applicationEmail = post.applicationEmail ?? null;
+  const applicationUrl = post.applicationUrl ?? null;
+  const contactDepartment = post.contactDepartment ?? null;
+  const contactPerson = post.contactPerson ?? null;
+  const applicationChecklist = post.applicationChecklist ?? null;
+
+  // Extracted modes from fjaExtract as last resort
   const extractedApplicationModes = Array.isArray(post.fjaExtract?.applicationSelectionRaw)
-    ? post.fjaExtract.applicationSelectionRaw
+    ? post.fjaExtract!.applicationSelectionRaw
         .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
         .map((item) => typeof item.application_mode === "string" ? item.application_mode : null)
         .filter((item): item is string => Boolean(item))
     : [];
 
+  const hasApplyUrl = Boolean(applyPortalUrl || applicationUrl);
+  const effectiveApplyUrl = applyPortalUrl ?? applicationUrl;
+
   return (
     <div className={styles.section}>
       <h2 className={styles.sectionTitle}>🔗 How to Apply</h2>
 
-      {extractedApplicationModes.length > 0 && !hasApplicationUrl && (
+      {/* Application method */}
+      {applicationMethod && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Application method reported in listing</div>
-          <div className={styles.infoValue}>
-            {extractedApplicationModes.join(", ")} application was reported, but a usable address
-            or direct application link was not captured in the current record. The extracted
-            method is shown here; the exact submission instructions can be enriched in the
-            separate official-notification review stage.
-          </div>
+          <div className={styles.infoLabel}>Application Method</div>
+          <div className={styles.infoValue}>{applicationMethod}</div>
         </div>
       )}
 
+      {/* Application checklist (posts table) */}
+      {applicationChecklist && applicationChecklist.length > 0 && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Steps to Apply</div>
+          <ol style={{ paddingLeft: "20px", color: "#374151", margin: 0 }}>
+            {applicationChecklist.map((step, idx) => (
+              <li key={idx} style={{ marginBottom: "6px" }}>{step}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Application link */}
       <div className={styles.infoGroup}>
         <div className={styles.infoLabel}>Application Portal</div>
         <div className={styles.infoValue}>
-          {applyPortalUrl ? (
+          {effectiveApplyUrl ? (
             <a
-              href={applyPortalUrl}
+              href={effectiveApplyUrl}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -55,23 +78,50 @@ export default function HowToApply({ post, recruitmentResolvedFacts }: HowToAppl
               Click here to apply on official portal →
             </a>
           ) : (
-            "Application link is not available in the current record. Check the official notification for application instructions."
+            "Application link is not available. Check the official notification for instructions."
           )}
         </div>
       </div>
 
-      {hasApplicationUrl && (
-        <p style={{ color: "#4b5563" }}>
-          Follow the application instructions on the linked portal and in the
-          official notification. Requirements, account setup, documents, and
-          payment steps vary by recruitment.
-        </p>
+      {/* Application email */}
+      {applicationEmail && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Application Email</div>
+          <div className={styles.infoValue}>
+            <a
+              href={`mailto:${applicationEmail}`}
+              style={{ color: "#1e40af", textDecoration: "underline" }}
+            >
+              {applicationEmail}
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Contact */}
+      {(contactDepartment || contactPerson) && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Contact</div>
+          <div className={styles.infoValue}>
+            {contactPerson && <div>{contactPerson}</div>}
+            {contactDepartment && <div style={{ color: "#6b7280" }}>{contactDepartment}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Extracted modes fallback — only when no structured data */}
+      {!applicationMethod && extractedApplicationModes.length > 0 && !hasApplyUrl && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Application method (reported)</div>
+          <div className={styles.infoValue}>
+            {extractedApplicationModes.join(", ")} — a usable direct application link was not captured. Check the official notification for submission instructions.
+          </div>
+        </div>
       )}
 
       <div className={styles.featureBox} style={{ marginTop: "20px" }}>
-        <strong>Important:</strong> JobOye does not process applications. Check
-        the linked portal and official notification for the requirements and
-        submission steps that apply to this recruitment.
+        <strong>Important:</strong> JobOye does not process applications. Confirm requirements,
+        account setup, documents, and payment steps with the official notice and portal before applying.
       </div>
     </div>
   );

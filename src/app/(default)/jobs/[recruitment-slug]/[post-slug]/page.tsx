@@ -274,9 +274,6 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
           notificationPublicationDate: post.notificationPublicationDate ?? null,
           postedAt: post.postedAt ?? null,
           updatedAt: post.updatedAt ?? null,
-          // Phase 1 eligibility text (ELIG-001 freeze: display-only, no computation)
-          qualificationText: post.qualificationText ?? null,
-          experienceText: post.experienceText ?? null,
           // Official advertisement number from source inventory — used as schema.org identifier
           vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
           officialSourceUrl: post.officialSourceUrl ?? null,

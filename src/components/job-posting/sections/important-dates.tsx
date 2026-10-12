@@ -10,8 +10,34 @@ interface ImportantDatesProps {
   post: JobPostingData;
 }
 
+// Map keyDates JSON keys to display labels
+const KEY_DATES_LABELS: Record<string, string> = {
+  application_opening_date: "Application Open Date",
+  application_closing_date: "Application Closing Date",
+  last_date_to_apply: "Last Date to Apply",
+  exam_date: "Exam Date",
+  admit_card_date: "Admit Card Date",
+  result_date: "Result Date",
+  interview_date: "Interview Schedule",
+  document_verification_date: "Document Verification",
+  appointment_date: "Appointment Date",
+  notification_date: "Notification Date",
+  source_updated_date: "Listing Updated",
+};
+
 export default function ImportantDates({ post }: ImportantDatesProps) {
   const enrichment = post.enrichment;
+
+  // keyDates from posts table — used when no enrichment dates are available
+  const keyDateEntries: Array<{ label: string; date: string; key: string }> = [];
+  if (post.keyDates && typeof post.keyDates === "object") {
+    for (const [key, val] of Object.entries(post.keyDates)) {
+      if (typeof val === "string" && val.trim()) {
+        const label = KEY_DATES_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        keyDateEntries.push({ label, date: val, key: `keydate-${key}` });
+      }
+    }
+  }
 
   const extractedMilestones = Array.isArray(post.fjaExtract?.milestonesRaw)
     ? post.fjaExtract.milestonesRaw
@@ -50,9 +76,16 @@ export default function ImportantDates({ post }: ImportantDatesProps) {
         { label: "Appointment Date", date: enrichment?.appointmentDate },
       ];
 
+  const enrichmentOrFjaDates = dates.filter((d) => d.date);
+  // Use keyDates from posts table when no other dates are available
+  const keyDateFallbacks = enrichmentOrFjaDates.length === 0 && extractedMilestones.length === 0
+    ? keyDateEntries
+    : [];
+
   const availableDates = [
-    ...dates.filter((d) => d.date).map((d) => ({ ...d, key: d.label })),
+    ...enrichmentOrFjaDates.map((d) => ({ ...d, key: d.label })),
     ...extractedMilestones,
+    ...keyDateFallbacks,
   ];
 
   if (availableDates.length === 0) return null;
