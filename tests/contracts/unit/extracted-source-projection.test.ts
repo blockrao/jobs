@@ -35,6 +35,8 @@ describe("extracted source projection", () => {
     expect(hub).toContain("sourceDetails.location");
     expect(hub).toContain("sourceDetails.application_mode");
     expect(hub).toContain("parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)");
+    expect(hub).toContain("sourceDetails?.interview_date_tentative");
+    expect(hub).toContain("Tentative interview (reported; confirm in official notice)");
   });
 
   test("types source-extracted fields independently from canonical facts", () => {
