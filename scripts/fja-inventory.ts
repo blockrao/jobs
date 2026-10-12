@@ -24,6 +24,8 @@ type Listing = {
   applicationEndDate?: string; advertisementNumber?: string; qualification?: string;
   vacancyCount?: number; detailStatus: "EXTRACTED" | "PARTIAL" | "FAILED";
   sourceStatus: "OPEN" | "CLOSED" | "UNKNOWN"; details: Record<string, unknown>;
+  /** Best official notification/PDF URL found during extraction. Null when none found. */
+  officialNotificationUrl?: string | null;
   rawText?: string; rawHtml?: string; htmlSha256?: string; contentHash: string; firstSeenAt?: string; lastSeenAt?: string;
 };
 
@@ -137,6 +139,44 @@ function extractPostCandidates(item: Listing): FjaPostCandidate[] {
     const names = rawPostNames.split(/\r?\n|\s*\|\s*|\s*;\s*/).map((name)=>name.trim().replace(/^[-•\s]+|[-•\s]+$/g,"")).filter(Boolean);
     candidates = names.map((name)=>({name,fields:{},source:null as unknown as Record<string,unknown>}));
   }
+
+  // List/paragraph enrichment pass — runs after table extraction.
+  // When we have named candidates (from table or postNames) but they're missing salary/qualification,
+  // scan list items for inline per-post facts like:
+  //   "Research Assistant: ₹37,000/- per month"
+  //   "Junior Research Fellow – M.Tech/M.Sc; ₹31,000"
+  // This is the primary format used when FJA publishes paragraph-style articles.
+  if (candidates.length > 0 && candidates[0].name) {
+    const listItems: string[] = [];
+    if (Array.isArray(details.lists)) {
+      for (const list of details.lists as Array<{listType:string; items:string[]}>) {
+        for (const item of list.items) listItems.push(item);
+      }
+    }
+    const salaryPattern = /(?:₹|rs\.?|inr)\s*[\d,]+(?:\s*\/?\s*(?:per|p\.?m\.?|month|year|annum))?/i;
+    const qualPattern = /(?:b\.?sc|m\.?sc|m\.?tech|b\.?tech|ph\.?d|post.?graduate|graduate|degree|diploma|10\+2|intermediate|matriculation|b\.?e\b|m\.?e\b)/i;
+    const expPattern = /\d+\s*(?:year|yr|month)s?\s*(?:of\s+)?(?:experience|exp)/i;
+    for (const candidate of candidates) {
+      // Find list items that mention this candidate's post name
+      const namePattern = new RegExp(candidate.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").split(/\s+/).slice(0,3).join("\\s+"), "i");
+      const matchingItems = listItems.filter((li) => namePattern.test(li));
+      for (const li of matchingItems) {
+        if (!candidate.fields["Salary"] && !candidate.fields["Pay Scale"]) {
+          const salaryMatch = li.match(salaryPattern);
+          if (salaryMatch) candidate.fields["Salary (from list)"] = salaryMatch[0];
+        }
+        if (!candidate.fields["Qualification"] && !candidate.fields["Educational Qualification"]) {
+          const qualMatch = li.match(qualPattern);
+          if (qualMatch) candidate.fields["Qualification (from list)"] = li.slice(Math.max(0, li.indexOf(qualMatch[0]) - 15), li.indexOf(qualMatch[0]) + 80).trim();
+        }
+        if (!candidate.fields["Experience"]) {
+          const expMatch = li.match(expPattern);
+          if (expMatch) candidate.fields["Experience (from list)"] = expMatch[0];
+        }
+      }
+    }
+  }
+
   if (!candidates.length) candidates = [{name:"",fields:{},source:null as unknown as Record<string,unknown>}];
   const multiCandidate = candidates.filter((candidate)=>candidate.name).length > 1;
   return candidates.map((candidate,index) => {
@@ -243,6 +283,38 @@ function detailFields(html: string, listing: {url:string; title:string; external
   const salary = find(/salary|pay scale|pay level|remuneration|emolument/i);
   const location = find(/job location|place of posting|location/i);
   const officialLinks = allLinks.filter((link) => /official|notification|advertisement|apply|registration|application|download|pdf/i.test(link.label));
+
+  // Promote the best official notification URL to a top-level field.
+  // Priority order:
+  //   1. .gov.in or .nic.in PDF link (authoritative government source)
+  //   2. .gov.in or .nic.in non-PDF link
+  //   3. Any PDF link with notification/advertisement in label
+  //   4. Any officialLink with notification/advertisement in label
+  // Never promote freejobalert.com links or vague "apply online" links as the notification URL.
+  function pickOfficialNotificationUrl(links: typeof officialLinks): string | undefined {
+    const isGovDomain = (url: string) => {
+      try { const h = new URL(url).hostname.toLowerCase(); return h.endsWith(".gov.in") || h.endsWith(".nic.in"); } catch { return false; }
+    };
+    const isPdf = (url: string) => /\.pdf(\?|#|$)/i.test(url);
+    const isNotificationLabel = (label: string) => /notification|advertisement|official notice|advt/i.test(label);
+    const isFjaLink = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, "").includes("freejobalert"); } catch { return false; } };
+    const candidates = links.filter((l) => !isFjaLink(l.url));
+    // Tier 1: gov.in/nic.in PDF
+    const govPdf = candidates.find((l) => isGovDomain(l.url) && isPdf(l.url));
+    if (govPdf) return govPdf.url;
+    // Tier 2: gov.in/nic.in non-PDF
+    const govAny = candidates.find((l) => isGovDomain(l.url));
+    if (govAny) return govAny.url;
+    // Tier 3: PDF with notification label
+    const pdfNotification = candidates.find((l) => isPdf(l.url) && isNotificationLabel(l.label));
+    if (pdfNotification) return pdfNotification.url;
+    // Tier 4: any notification-label link
+    const labelMatch = candidates.find((l) => isNotificationLabel(l.label));
+    if (labelMatch) return labelMatch.url;
+    return undefined;
+  }
+  const officialNotificationUrl = pickOfficialNotificationUrl(officialLinks);
+
   const mappedFieldPattern = /recruiting body|organization|department|advertisement|notification|published|updated|application start|start date|starting date|last date|closing date|application end|total vacan|total post|number of vacan|no\.? of post|qualification|eligibility|educational|application fee|exam fee|selection process|selection procedure|salary|pay scale|pay level|remuneration|job location|place of posting|location|name of post|post name|age limit|age criteria|experience|how to apply|application mode|employment type|tenure|duration/i;
   const otherInfoRaw = {
     unmappedTableFields: Object.fromEntries(Object.entries(rows).filter(([label]) => !mappedFieldPattern.test(label))),
@@ -252,6 +324,9 @@ function detailFields(html: string, listing: {url:string; title:string; external
   };
   const details: Record<string, unknown> = {
     tableFields: rows, tables, headings, lists, allLinks, officialLinks,
+    // Top-level promoted field — best official notification/PDF URL found on this page.
+    // This is what the DB write uses for fja_job_inventory.official_notification_url.
+    official_notification_url: officialNotificationUrl ?? null,
     postNames, ageLimit, applicationFee, selectionProcess, salary, location, otherInfoRaw,
   };
   const parsedEndDate = endRaw ? parseDate(endRaw) : undefined;
@@ -276,6 +351,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     advertisementNumber:find(/advertisement number|notification number|advertisement no|notification no/i),
     qualification:find(/qualification|eligibility|educational qualification/i),
     vacancyCount:vacancyMatch ? Number(vacancyMatch[0]) : undefined,
+    officialNotificationUrl: officialNotificationUrl ?? null,
     detailStatus:populated >= 3 ? "EXTRACTED" : populated > 0 ? "PARTIAL" : "FAILED",
     sourceStatus:status, details, rawText:text, rawHtml:html, htmlSha256, contentHash:sha(hashInput),
   };
@@ -382,15 +458,18 @@ async function main() {
       if (!parsed.listingCategory) { nonRecruitmentPagesSkipped++; return null; }
       const [inventoryRow] = await db`
         INSERT INTO public.fja_job_inventory
-          (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,detail_status,source_status,details,other_info_raw,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
+          (source_slug,external_id,source_url,title,organization_name,listing_category,published_date,application_start_date,application_end_date,advertisement_number,qualification,vacancy_count,official_notification_url,detail_status,source_status,details,other_info_raw,raw_text,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
         VALUES
-          ('freejobalert',${parsed.externalId},${parsed.sourceUrl},${parsed.title},${parsed.organizationName ?? null},${parsed.listingCategory ?? null},${parsed.publishedDate ?? null},${parsed.applicationStartDate ?? null},${parsed.applicationEndDate ?? null},${parsed.advertisementNumber ?? null},${parsed.qualification ?? null},${parsed.vacancyCount ?? null},${parsed.detailStatus},${parsed.sourceStatus},${db.json(parsed.details as never)},${db.json((parsed.details.otherInfoRaw ?? {}) as never)},${parsed.rawText ?? null},${parsed.contentHash},${RUN_ID},now(),now(),now())
+          ('freejobalert',${parsed.externalId},${parsed.sourceUrl},${parsed.title},${parsed.organizationName ?? null},${parsed.listingCategory ?? null},${parsed.publishedDate ?? null},${parsed.applicationStartDate ?? null},${parsed.applicationEndDate ?? null},${parsed.advertisementNumber ?? null},${parsed.qualification ?? null},${parsed.vacancyCount ?? null},${parsed.officialNotificationUrl ?? null},${parsed.detailStatus},${parsed.sourceStatus},${db.json(parsed.details as never)},${db.json((parsed.details.otherInfoRaw ?? {}) as never)},${parsed.rawText ?? null},${parsed.contentHash},${RUN_ID},now(),now(),now())
         ON CONFLICT (source_slug,external_id) DO UPDATE SET
           source_url=excluded.source_url,title=excluded.title,organization_name=excluded.organization_name,
           listing_category=excluded.listing_category,published_date=excluded.published_date,
           application_start_date=excluded.application_start_date,application_end_date=excluded.application_end_date,
           advertisement_number=excluded.advertisement_number,qualification=excluded.qualification,
           vacancy_count=excluded.vacancy_count,detail_status=excluded.detail_status,source_status=excluded.source_status,
+          -- Only promote official_notification_url when we found one during this crawl.
+          -- Never overwrite a previously set URL with null (a re-crawl where the link disappeared shouldn't clear it).
+          official_notification_url=COALESCE(excluded.official_notification_url, public.fja_job_inventory.official_notification_url),
           details=excluded.details,other_info_raw=excluded.other_info_raw,raw_text=excluded.raw_text,content_hash=excluded.content_hash,
           last_crawl_run_id=excluded.last_crawl_run_id,last_seen_at=now(),updated_at=now()
         RETURNING id
@@ -420,7 +499,8 @@ async function main() {
              ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${candidate.payLevelRaw},${candidate.employmentTypeRaw},
              ${candidate.tenureRaw},${candidate.locationRaw},${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
              ${db.json(candidate.milestonesRaw as never)},${db.json(candidate.applicationSelectionRaw as never)},${db.json(candidate.otherInfoRaw as never)},
-             ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw as never) : null},${candidate.extractionStatus},'PENDING',
+             ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw as never) : null},${candidate.extractionStatus},
+             ${parsed.officialNotificationUrl ? 'NEEDS_REVIEW' : 'PENDING'},
              ${candidate.contentHash},${RUN_ID},now(),now(),now())
           ON CONFLICT (source_slug,external_id,source_post_key) DO UPDATE SET
             recruitment_inventory_id=excluded.recruitment_inventory_id,
