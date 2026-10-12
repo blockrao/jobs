@@ -45,6 +45,7 @@ function buildH1(
   recruitmentName: string | null | undefined,
   notificationPublicationDate: Date | null | undefined
 ): string {
+  // Extract year: prefer recruitmentName, then deadline, then notification date
   let year: string | null = null;
   const yearMatch = recruitmentName?.match(/\b(20\d{2})\b/);
   if (yearMatch) {
@@ -55,24 +56,17 @@ function buildH1(
     year = String(new Date(notificationPublicationDate).getFullYear());
   }
 
-  const org = organizationName ? `, ${organizationName}` : "";
-  const yearPart = year ? ` (${recruitmentName?.match(/\b(20\d{2})\b/)?.[0] ? recruitmentName : year})` : "";
-  let suffix = "";
-  if (deadline?.state === "OPEN" && deadline.date) {
-    const dateStr = fmtDateLong(deadline.date);
-    suffix = dateStr ? `: Apply by ${dateStr}` : "";
-  } else if (deadline?.state === "CLOSED") {
-    suffix = ": Applications closed";
-  }
+  // Build: "Post Title at Org – Recruitment Year"
+  // - Org: append only when not already present in title
+  // - Year: append as "– Recruitment YYYY" to signal recency without the full recruitment name
+  // - Deadline and full recruitment name are intentionally excluded:
+  //   the deadline has its own dedicated box; the full recruitment name belongs on the hub.
+  const orgPart = organizationName && !title.toLowerCase().includes(organizationName.toLowerCase())
+    ? ` at ${organizationName}`
+    : "";
+  const yearPart = year ? ` – Recruitment ${year}` : "";
 
-  // Build: "Post Title, Org Name (Recruitment Name Year): Apply by Date"
-  // But keep it clean — only add org if different from what's already in title
-  const orgPart = organizationName && !title.includes(organizationName) ? `${org}` : "";
-  const recPart = recruitmentName && !title.includes(recruitmentName)
-    ? ` (${recruitmentName})`
-    : yearPart;
-
-  return `${title}${orgPart}${recPart}${suffix}`;
+  return `${title}${orgPart}${yearPart}`;
 }
 
 // ---------------------------------------------------------------------------
