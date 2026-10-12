@@ -252,14 +252,10 @@ export default function PostLeafStructuredData({
     jobPosting["qualifications"] = post.qualificationText;
   }
 
-  // educationRequirements — generic "bachelor degree" credentialCategory when
-  // qualification text is present. Phase 2 will derive this from qualificationExpr.
-  if (post.qualificationText) {
-    jobPosting["educationRequirements"] = {
-      "@type": "EducationalOccupationalCredential",
-      credentialCategory: "bachelor degree",
-    };
-  }
+  // educationRequirements — intentionally omitted in Phase 1.
+  // Phase 2 will derive the credentialCategory from qualificationExpr.
+  // A hardcoded "bachelor degree" would be a fabricated fact for posts that
+  // require a different level (10th, 12th, diploma, postgraduate, etc.).
 
   // experienceRequirements — Phase 1: stored experience text as plain description.
   // Per ELIG-001 freeze, months cannot be computed; we emit the text form only.

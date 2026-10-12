@@ -125,26 +125,16 @@ export default function RecruitmentHubStructuredData({
     },
   ];
 
-  if (orgName) {
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      position: 3,
-      name: orgName,
-    });
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      position: 4,
-      name: recruitment.name,
-      item: hubUrl,
-    });
-  } else {
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      position: 3,
-      name: recruitment.name,
-      item: hubUrl,
-    });
-  }
+  // Org node intentionally omitted: Google requires `item` URL on every non-terminal
+  // breadcrumb node and we have no verified org page URL yet. Emitting a name-only
+  // node triggers a Rich Results Test validation error. Hub carries the recruitment
+  // name directly at position 3.
+  breadcrumbItems.push({
+    "@type": "ListItem",
+    position: 3,
+    name: recruitment.name,
+    item: hubUrl,
+  });
 
   const breadcrumb = {
     "@type": "BreadcrumbList",
