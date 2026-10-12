@@ -201,10 +201,14 @@ def extract_total_vacancies(text: str) -> Optional[int]:
 # ---------------------------------------------------------------------------
 
 def _is_garbled(text: str) -> bool:
-    """Detect doubled-character artifacts from scanned PDFs (e.g. 'wwhhoollllyy')."""
-    # Count consecutive repeated characters; if >5% of chars are in runs of 3+, it's garbled
-    runs = re.findall(r'(.)\1{2,}', text)
-    return len(''.join(runs)) > len(text) * 0.05
+    """Detect doubled-character artifacts from scanned PDFs (e.g. 'aa wwhhoollllyy').
+
+    Scanned-PDF OCR artifacts double every character ('wholly' → 'wwhhoollllyy').
+    We catch runs of 2+ of the same letter/digit; if they account for >8% of the
+    text the whole string is considered garbled and is dropped.
+    """
+    runs = re.findall(r'([a-zA-Z0-9])\1+', text)
+    return len(''.join(runs)) > len(text) * 0.08
 
 
 def extract_description(text: str, title: str) -> Optional[str]:
