@@ -6,7 +6,8 @@
  *
  * Rules:
  *  - Source text is preserved; never fabricate a value that doesn't exist.
- *  - Unknown shapes fall back to a safe "raw text" form, not to silence.
+ *  - Unknown or uninterpretable shapes are silently dropped (return null/[]),
+ *    so the UI never renders a blank or garbled section from bad data.
  *  - The `source` field (e.g. "xlsx_freejobsalert") is provenance metadata;
  *    it must never appear in user-facing UI.
  *  - Normalization is a display concern only — these adapters change nothing
@@ -204,7 +205,11 @@ export interface NormalizedEducation {
   degree?: string;
   university?: string;
   notes?: string;
-  preferred?: boolean;
+  /**
+   * Additional qualification note (e.g. "Master's degree preferred").
+   * Stored as a free-text string in the DB — not a boolean flag.
+   */
+  preferredNote?: string;
   /** For qualification_options shape: list of accepted qualifications. */
   options?: string[];
 }
@@ -231,7 +236,9 @@ export function normalizeEducation(
       result.university = obj.university.trim();
     if (typeof obj.notes === "string" && obj.notes.trim())
       result.notes = obj.notes.trim();
-    if (typeof obj.preferred === "boolean") result.preferred = obj.preferred;
+    // `preferred` is stored as a free-text string note, not a boolean.
+    if (typeof obj.preferred === "string" && obj.preferred.trim())
+      result.preferredNote = obj.preferred.trim();
     return result;
   }
 

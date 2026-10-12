@@ -275,23 +275,32 @@ describe("normalizeEducation", () => {
   });
 
   // Shape J — {degree, notes?, preferred?}
-  test("Shape J: degree with notes and preferred flag", () => {
+  // Note: the DB stores `preferred` as a free-text string note
+  // (e.g. "Master's degree preferred"), not a boolean.
+  test("Shape J: degree with notes and preferred string note", () => {
     const result = normalizeEducation({
-      degree: "B.Tech / B.E.",
-      notes: "In relevant engineering discipline",
-      preferred: false,
+      degree: "Graduation (Bachelor's degree)",
+      notes: "Degree from a recognized university",
+      preferred: "Master's degree preferred",
     });
-    expect(result!.degree).toBe("B.Tech / B.E.");
-    expect(result!.notes).toBe("In relevant engineering discipline");
-    expect(result!.preferred).toBe(false);
+    expect(result!.degree).toBe("Graduation (Bachelor's degree)");
+    expect(result!.notes).toBe("Degree from a recognized university");
+    expect(result!.preferredNote).toBe("Master's degree preferred");
     expect(result!.university).toBeUndefined();
   });
 
-  test("Shape J: degree only (no notes or preferred) works", () => {
+  test("Shape J: degree only (no notes or preferredNote) works", () => {
     const result = normalizeEducation({ degree: "Graduate" });
     expect(result!.degree).toBe("Graduate");
     expect(result!.notes).toBeUndefined();
-    expect(result!.preferred).toBeUndefined();
+    expect(result!.preferredNote).toBeUndefined();
+  });
+
+  test("Shape J: boolean preferred (wrong type) is ignored — only string note is accepted", () => {
+    // The DB never stores boolean here, but guard against it.
+    const result = normalizeEducation({ degree: "Graduate", preferred: true });
+    expect(result!.degree).toBe("Graduate");
+    expect(result!.preferredNote).toBeUndefined();
   });
 
   // Shape K — {qualification_options: string[]}

@@ -88,11 +88,11 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
                     <span style={{ color: "#4b5563" }}>{education.notes}</span>
                   </>
                 )}
-                {education.preferred === false && (
+                {education.preferredNote && (
                   <>
                     <br />
                     <span style={{ color: "#6b7280", fontSize: "13px" }}>
-                      (preferred, not mandatory)
+                      {education.preferredNote}
                     </span>
                   </>
                 )}

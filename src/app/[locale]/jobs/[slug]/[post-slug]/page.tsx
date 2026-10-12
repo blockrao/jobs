@@ -75,9 +75,15 @@ export default async function LocaleJobPostingPage({ params }: Props) {
     );
   }
 
+  // SEO-001: Hindi mirrors are noindex and must not emit JobPosting structured
+  // data — Google ignores noindex pages for rich results, but emitting schema
+  // on a noindex page is confusing and violates the "one JobPosting per
+  // canonical leaf" rule.  Structured data belongs on the English canonical only.
+  const isCanonical = locale !== "hi";
+
   return (
     <>
-      <JobPostingStructuredData post={post} />
+      {isCanonical && <JobPostingStructuredData post={post} />}
       <JobPostingPage post={post} locale={locale} />
     </>
   );
