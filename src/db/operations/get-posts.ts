@@ -30,7 +30,7 @@ export async function getPostBySlug(
         p."organizationName",
         COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
         p."recruitmentName",
-        COALESCE(p."recruitmentSlug", r.slug) AS "recruitmentSlug",
+        r.slug AS "recruitmentSlug",
         p."examType",
         p."examTypeSlug",
         p.description,
@@ -94,12 +94,12 @@ export async function getPostBySlug(
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p.slug = ${postSlug}
         AND (
-          COALESCE(p."recruitmentSlug", r.slug) = ${recruitmentSlug}
+          (r.slug = ${recruitmentSlug}
           OR r.id IN (
             SELECT recruitment_id
             FROM recruitment_slug_redirects
             WHERE old_slug = ${recruitmentSlug}
-          )
+          ))
         )
         AND p."isLive" = true
       LIMIT 1
@@ -219,7 +219,7 @@ export async function getPostsByRecruitment(
         p."organizationName",
         COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
         p."recruitmentName",
-        COALESCE(p."recruitmentSlug", r.slug) AS "recruitmentSlug",
+        r.slug AS "recruitmentSlug",
         p."examType",
         p."examTypeSlug",
         p.description,
@@ -275,7 +275,12 @@ export async function getPostsByRecruitment(
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
-      WHERE COALESCE(p."recruitmentSlug", r.slug) = ${recruitmentSlug}
+      WHERE (r.slug = ${recruitmentSlug}
+          OR r.id IN (
+            SELECT recruitment_id
+            FROM recruitment_slug_redirects
+            WHERE old_slug = ${recruitmentSlug}
+          ))
         AND p."isLive" = true
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
