@@ -544,7 +544,9 @@ async function main() {
   if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
   if (RUN_MODE === "pilot" && PILOT_URLS.length === 0) throw new Error("Pilot mode requires FJA_PILOT_URLS; refusing to fall back to broad crawl.");
   if (RUN_MODE !== "pilot" && RUN_MODE !== "full") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
-  const db = postgres(process.env.DATABASE_URL,{max:4,ssl:"require",connect_timeout:20});
+  // prepare:false — DATABASE_URL is the pooled (transaction-mode) connection, which does not keep
+  // prepared statements between queries. Same setting as src/db/index.ts.
+  const db = postgres(process.env.DATABASE_URL,{max:4,ssl:"require",connect_timeout:20,prepare:false});
   const startedAt = new Date().toISOString();
   const listingPages = [`${BASE}/`,`${BASE}/latest-notifications/`,`${BASE}/government-jobs/`];
   const listings = new Map<string,{url:string;title:string;externalId:string}>();
