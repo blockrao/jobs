@@ -163,10 +163,17 @@ export async function generateMetadata({
   }
   const pageTitle = `${post.title}${titleOrg}${titleYearPart}${titleSuffix}`;
 
+  // Indexing gate: a post is indexable when it has a canonical title and an official
+  // source URL — regardless of FJA extract verification status. The "reported" labels
+  // rendered on the page are the consumer protection; noindex is not needed.
+  // sourceVerificationPending continues to gate salary/deadline in meta descriptions
+  // and the JobPosting structured-data schema, but not page indexability.
+  const isIndexable = Boolean(post.title && post.officialSourceUrl);
+
   return {
     title: pageTitle,
     description,
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !sourceVerificationPending }),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: isIndexable }),
     openGraph: {
       title: post.title,
       description: ogDescription,
