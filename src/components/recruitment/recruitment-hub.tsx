@@ -827,6 +827,11 @@ export default function RecruitmentHub({
               Links
             </a>
           )}
+          {recruitment.ageNote && (
+            <a href="#conditions" className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border-2 border-[#0f172a] bg-white text-[#0f172a] hover:bg-[#0f172a] hover:text-[#ffd60a] transition whitespace-nowrap">
+              Age &amp; Conditions
+            </a>
+          )}
         </nav>
 
         {/* ═══════════════════════════════════════════
@@ -1484,6 +1489,23 @@ export default function RecruitmentHub({
             </ul>
             <p className="mt-4 text-xs text-gray-400">
               {sourceFactsUnverified ? 'List as reported by source — confirm exact requirements in the official notice.' : 'Confirm exact document requirements in the official notice before applying.'}
+            </p>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            SECTION — IMPORTANT CONDITIONS
+            Age relaxation and general conditions.
+            Only renders when age_note data is available.
+            ELIG-001 (full eligibility engine) is Phase 2 — this only
+            surfaces the stored age_note text field, no inference.
+            ═══════════════════════════════════════════ */}
+        {recruitment.ageNote && (
+          <div id="conditions" className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 md:px-8">
+            <h2 className="text-base font-bold text-gray-900 mb-3">Age &amp; conditions</h2>
+            <p className="text-sm text-gray-700 leading-relaxed">{recruitment.ageNote}</p>
+            <p className="mt-3 text-xs text-gray-400">
+              Age limits and relaxations as per the official notification — confirm exact rules in the notice before applying.
             </p>
           </div>
         )}
