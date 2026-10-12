@@ -484,30 +484,8 @@ export default function RecruitmentHub({
                 Listing status reported{sourceStatusLabel ? `: ${sourceStatusLabel}` : ""}
               </span>
             ) : <StatusBadge status={recruitment.status} />}
-            {recruitment.sourceVerificationStatus && recruitment.sourceVerificationStatus !== "VERIFIED" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
-                Official verification pending
-              </span>
-            )}
           </div>
 
-          {recruitment.sourceVerificationStatus && recruitment.sourceVerificationStatus !== "VERIFIED" && (
-            <aside
-              role="note"
-              aria-label="Recruitment verification notice"
-              className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
-            >
-              Information on this page is sourced from{" "}
-              <a href={typeof recruitment.sourceExtract?.sourceUrl === "string" ? recruitment.sourceExtract.sourceUrl : undefined}
-                 target="_blank" rel="noopener noreferrer"
-                 className="underline text-amber-900 hover:text-amber-700">
-                an aggregator listing
-              </a>
-              {" "}— an independent check against the institution&apos;s official notice is pending.
-              Dates, vacancy counts and application instructions shown here are likely accurate but
-              should be confirmed in the official notice before you apply.
-            </aside>
-          )}
 
           {/* Recruitment name (h1) */}
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">
