@@ -12,9 +12,10 @@ import styles from "../job-posting-page.module.css";
 interface HowToApplyProps {
   post: JobPostingData;
   recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
+  embedded?: boolean;
 }
 
-export default function HowToApply({ post, recruitmentResolvedFacts }: HowToApplyProps) {
+export default function HowToApply({ post, recruitmentResolvedFacts, embedded }: HowToApplyProps) {
   const applyPortalUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
 
   // Posts table application fields
@@ -37,8 +38,8 @@ export default function HowToApply({ post, recruitmentResolvedFacts }: HowToAppl
   const effectiveApplyUrl = applyPortalUrl ?? applicationUrl;
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>🔗 How to Apply</h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && <h2 className={styles.sectionTitle}>How to Apply</h2>}
 
       {/* Application method */}
       {applicationMethod && (

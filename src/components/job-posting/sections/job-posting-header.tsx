@@ -1,46 +1,42 @@
 /**
  * Job Posting Header Section
- * Displays title, organization, status, and meta info
+ * Blue hero card: chips, H1, lead, yellow deadline box, action buttons.
+ * Matches the BhartiDesk post-leaf reference design.
  */
 
 import { JobPostingData } from "@/types/job-posting";
-import { ResolvedLeafFacts } from "../job-posting-page";
+import { ResolvedLeafFacts, ResolvedRecruitmentFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 
 interface JobPostingHeaderProps {
   post: JobPostingData;
   resolvedFacts?: ResolvedLeafFacts;
+  recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
+  localePrefix?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Helpers — date formatting and deadline suffix for the H1
+// Helpers
 // ---------------------------------------------------------------------------
 
-/** Format a Date to "20 Oct 2026" style (en-IN locale). */
-function fmtDate(d: Date | null | undefined): string | null {
+function fmtDateLong(d: Date | null | undefined): string | null {
   if (!d) return null;
   try {
-    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
   } catch {
     return null;
   }
 }
 
-/**
- * Build the display-H1 string for a post leaf page.
- *
- * Pattern (discoverability-framework Task #30):
- *   "[Post Title] – [Org] [Year]: Apply by [Date]"  (open, deadline known)
- *   "[Post Title] – [Org] [Year]"                   (open, no deadline)
- *   "[Post Title] – [Org] [Year]: Applications closed"  (closed)
- *
- * The recruitment year is extracted from:
- *   1. post.recruitmentName (e.g. "IIIT Kota JRF Recruitment 2026" → 2026)
- *   2. deadline.date year
- *   3. notificationPublicationDate year
- * Kept short: org and year are capped; the recruitment name is NOT repeated verbatim
- * to avoid a 36px line that wraps badly on mobile.
- */
+function fmtDatetime(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  try {
+    return d.toISOString().replace(/\.\d{3}Z$/, "+05:30");
+  } catch {
+    return null;
+  }
+}
+
 function buildH1(
   title: string,
   organizationName: string | null | undefined,
@@ -48,7 +44,6 @@ function buildH1(
   recruitmentName: string | null | undefined,
   notificationPublicationDate: Date | null | undefined
 ): string {
-  // Extract year
   let year: string | null = null;
   const yearMatch = recruitmentName?.match(/\b(20\d{2})\b/);
   if (yearMatch) {
@@ -59,41 +54,52 @@ function buildH1(
     year = String(new Date(notificationPublicationDate).getFullYear());
   }
 
-  // Build suffix
-  const org = organizationName ? ` – ${organizationName}` : "";
-  const yearPart = year ? ` ${year}` : "";
+  const org = organizationName ? `, ${organizationName}` : "";
+  const yearPart = year ? ` (${recruitmentName?.match(/\b(20\d{2})\b/)?.[0] ? recruitmentName : year})` : "";
   let suffix = "";
   if (deadline?.state === "OPEN" && deadline.date) {
-    const dateStr = fmtDate(deadline.date);
+    const dateStr = fmtDateLong(deadline.date);
     suffix = dateStr ? `: Apply by ${dateStr}` : "";
   } else if (deadline?.state === "CLOSED") {
     suffix = ": Applications closed";
   }
 
-  return `${title}${org}${yearPart}${suffix}`;
+  // Build: "Post Title, Org Name (Recruitment Name Year): Apply by Date"
+  // But keep it clean — only add org if different from what's already in title
+  const orgPart = organizationName && !title.includes(organizationName) ? `${org}` : "";
+  const recPart = recruitmentName && !title.includes(recruitmentName)
+    ? ` (${recruitmentName})`
+    : yearPart;
+
+  return `${title}${orgPart}${recPart}${suffix}`;
 }
 
-export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHeaderProps) {
-  // Use resolver output — never compute deadline from raw enrichment
+// ---------------------------------------------------------------------------
+// Chip state
+// ---------------------------------------------------------------------------
+
+function getChipClass(state: "OPEN" | "CLOSED" | "UNKNOWN"): string {
+  if (state === "OPEN") return `${styles.chip} ${styles.chipOpen}`;
+  if (state === "CLOSED") return `${styles.chip} ${styles.chipClosed}`;
+  return styles.chip;
+}
+
+function getChipText(state: "OPEN" | "CLOSED" | "UNKNOWN"): string {
+  if (state === "OPEN") return "Open";
+  if (state === "CLOSED") return "Closed";
+  return "Check Notification";
+}
+
+export default function JobPostingHeader({
+  post,
+  resolvedFacts,
+  recruitmentResolvedFacts,
+  localePrefix = "",
+}: JobPostingHeaderProps) {
   const deadline = resolvedFacts?.deadline;
-  const statusColor =
-    deadline?.state === "OPEN"
-      ? "success"
-      : "neutral";
-  // UNKNOWN deadline must never be shown as "OPEN"
-  const statusText =
-    deadline?.state === "OPEN"
-      ? "APPLICATION OPEN"
-      : deadline?.state === "CLOSED"
-        ? "CLOSED"
-        : "CHECK NOTIFICATION";
+  const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+  const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
 
-  const employmentType = post.employmentType
-    ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
-    : "See Notification";
-
-  // Rich H1: "[Post Title] – [Org] [Year]: Apply by [Date]"
-  // Visible H1 is enriched; screen readers and crawlers get the full context inline.
   const richH1 = buildH1(
     post.title,
     post.organizationName,
@@ -102,115 +108,141 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
     post.notificationPublicationDate
   );
 
+  // Lead: show employment type, pay level, vacancy count
+  const employmentType = post.employmentType
+    ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
+
+  const payLevel = (() => {
+    const pl = post.enrichment?.payLevel || post.payLevel;
+    if (!pl) return null;
+    if (typeof pl === "string") return `Pay Level-${pl}`;
+    if (pl && typeof pl === "object") {
+      const level = (pl as any).level;
+      const scheme = (pl as any).scheme;
+      return scheme ? `Pay Level-${level} (${scheme})` : `Pay Level-${level}`;
+    }
+    return null;
+  })();
+
+  const vacancyCount = resolvedFacts?.vacancyCount;
+
+  // Build a compact lead sentence from available facts
+  const leadParts: string[] = [];
+  if (vacancyCount != null) {
+    leadParts.push(`${vacancyCount.toLocaleString("en-IN")} ${vacancyCount === 1 ? "vacancy" : "vacancies"}`);
+  }
+  if (payLevel) leadParts.push(payLevel);
+  if (employmentType) leadParts.push(employmentType.toLowerCase());
+
+  const deadlineDateStr = deadline?.date ? fmtDateLong(deadline.date) : null;
+  const deadlineDatetimeStr = deadline?.date ? fmtDatetime(deadline.date) : null;
+
+  // Eligibility summary for lead (Phase 1: display text only — no eligibility engine)
+  const qualText: string | null =
+    post.fjaExtract?.eligibilityRaw ?? post.fjaExtract?.qualificationRaw ?? null;
+  const expText: string | null = post.fjaExtract?.experienceRaw ?? null;
+
   return (
-    <div style={headerStyles.container}>
-      <div style={headerStyles.headerTop}>
-        <span style={headerStyles.orgBadge}>{post.organizationName}</span>
-        <span
-          style={{
-            ...headerStyles.statusBadge,
-            background: statusColor === "neutral" ? "#6b7280" : "#059669",
-          }}
+    <header className={`${styles.card} ${styles.hero}`}>
+      {/* Status + category chips */}
+      <ul className={styles.chips}>
+        <li
+          className={getChipClass(deadline?.state ?? "UNKNOWN")}
+          data-status="true"
         >
-          {statusText}
-        </span>
-      </div>
-      <h1 style={headerStyles.jobTitle}>{richH1}</h1>
-      <div style={headerStyles.jobMeta}>
-        {(post.enrichment?.payLevel || post.payLevel) && (
-          <div style={headerStyles.metaItem}>
-            <span style={headerStyles.metaLabel}>Grade:</span>
-            <span style={headerStyles.metaValue}>
-              {(() => {
-                const pl = post.enrichment?.payLevel || post.payLevel;
-                if (typeof pl === "string") return `Level ${pl}`;
-                if (pl && typeof pl === "object") {
-                  const level = (pl as any).level;
-                  const scheme = (pl as any).scheme;
-                  return scheme ? `Level ${level} (${scheme})` : `Level ${level}`;
-                }
-                return null;
-              })()}
-            </span>
-          </div>
+          {getChipText(deadline?.state ?? "UNKNOWN")}
+        </li>
+        {employmentType && (
+          <li className={styles.chip}>{employmentType}</li>
         )}
-        <div style={headerStyles.metaItem}>
-          <span style={headerStyles.metaLabel}>Type:</span>
-          <span style={headerStyles.metaValue}>{employmentType}</span>
+        {post.organizationName && (
+          <li className={styles.chip}>{post.organizationName}</li>
+        )}
+      </ul>
+
+      {/* H1 */}
+      <h1 className={styles.jobTitle}>{richH1}</h1>
+
+      {/* Lead paragraph */}
+      {leadParts.length > 0 && (
+        <p className={styles.lead}>
+          {leadParts.join(", ").replace(/^./, (c) => c.toUpperCase())}.
+          {deadlineDateStr && deadline?.state === "OPEN" && (
+            <> Apply by <strong>{deadlineDateStr}</strong>.</>
+          )}
+          {qualText && (
+            <> Requires: {qualText}.</>
+          )}
+        </p>
+      )}
+
+      {/* Deadline box */}
+      {deadlineDateStr && (
+        <div className={styles.deadline}>
+          <strong className={styles.deadlineLabel}>Last date to apply</strong>
+          <time
+            className={styles.deadlineDate}
+            dateTime={deadlineDatetimeStr ?? undefined}
+          >
+            {deadlineDateStr}
+          </time>
+          <span className={styles.deadlineCountdown} data-countdown="true">
+            {deadline?.state === "CLOSED"
+              ? "Applications are closed."
+              : `Closing ${deadlineDateStr}`}
+          </span>
         </div>
-        {resolvedFacts?.vacancyCount != null && (
-          <div style={headerStyles.metaItem}>
-            <span style={headerStyles.metaLabel}>{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Vacancies reported:" : "Vacancies:"}</span>
-            <span style={headerStyles.metaValue}>
-              {resolvedFacts.vacancyCount.toLocaleString("en-IN")}
-            </span>
-          </div>
+      )}
+
+      {/* Closed notice */}
+      {deadline?.state === "CLOSED" && (
+        <p
+          className={styles.closedNote}
+          style={{ display: "block" }}
+        >
+          Applications for this post are closed. This page will be updated when results or next steps are announced.
+        </p>
+      )}
+
+      {/* Action buttons */}
+      <p className={styles.actions}>
+        {applyUrl && deadline?.state !== "CLOSED" && (
+          <a
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            href={applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Apply on official portal
+          </a>
         )}
-        {post.fjaExtract?.locationRaw && (
-          <div style={headerStyles.metaItem}>
-            <span style={headerStyles.metaLabel}>Location reported:</span>
-            <span style={headerStyles.metaValue}>{post.fjaExtract.locationRaw}</span>
-          </div>
+        {sourceUrl && (
+          <a
+            className={styles.btn}
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Official notification
+          </a>
         )}
-      </div>
-    </div>
+        {post.recruitmentSlug && (
+          <a
+            className={styles.btnQuiet}
+            href={`${localePrefix}/jobs/${post.recruitmentSlug}`}
+          >
+            All posts in this recruitment
+          </a>
+        )}
+      </p>
+
+      {/* Verified meta */}
+      {post.fjaExtract?.verificationStatus === "VERIFIED" && (
+        <p className={styles.heroMeta}>
+          Verified against official notification.
+        </p>
+      )}
+    </header>
   );
 }
-
-const headerStyles = {
-  container: {
-    background: "white",
-    borderRadius: "12px",
-    padding: "32px",
-    marginBottom: "32px",
-    border: "1px solid #e5e7eb",
-  },
-  headerTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "20px",
-  },
-  orgBadge: {
-    background: "#0f172a",
-    color: "#ffd60a",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
-  statusBadge: {
-    color: "white",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
-  jobTitle: {
-    fontSize: "36px",
-    fontWeight: 800,
-    lineHeight: 1.2,
-    color: "#111827",
-    marginBottom: "8px",
-    margin: 0,
-  },
-  jobMeta: {
-    fontSize: "16px",
-    color: "#4b5563",
-    display: "flex" as const,
-    gap: "20px",
-    flexWrap: "wrap" as const,
-  },
-  metaItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-  metaLabel: {
-    color: "#4b5563",
-  },
-  metaValue: {
-    fontWeight: 600,
-    color: "#111827",
-  },
-};

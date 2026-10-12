@@ -8,9 +8,10 @@ import styles from "../job-posting-page.module.css";
 
 interface DocumentsRequiredProps {
   post: JobPostingData;
+  embedded?: boolean;
 }
 
-export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
+export default function DocumentsRequired({ post, embedded }: DocumentsRequiredProps) {
   const docsRequired = post.enrichment?.documentsRequired;
   const recruitmentOtherInfo = post.fjaExtract?.recruitmentOtherInfoRaw;
   const extractedDocs = recruitmentOtherInfo && typeof recruitmentOtherInfo === "object" && !Array.isArray(recruitmentOtherInfo)
@@ -27,8 +28,8 @@ export default function DocumentsRequired({ post }: DocumentsRequiredProps) {
   if (!hasRequired && !hasCommon && !hasExtracted) return null;
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>📋 Documents Required</h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && <h2 className={styles.sectionTitle}>Documents Required</h2>}
 
       {!hasRequired && !hasCommon && hasExtracted && (
         <div className={styles.infoGroup}>

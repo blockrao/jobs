@@ -10,11 +10,13 @@ import styles from "../job-posting-page.module.css";
 interface OfficialSourceVerificationProps {
   post: JobPostingData;
   recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
+  embedded?: boolean;
 }
 
 export default function OfficialSourceVerification({
   post,
   recruitmentResolvedFacts,
+  embedded,
 }: OfficialSourceVerificationProps) {
   const enrichment = post.enrichment;
   const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
@@ -47,8 +49,8 @@ export default function OfficialSourceVerification({
         : "✗ Unverifiable";
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>🔍 Data Quality & Verification</h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && <h2 className={styles.sectionTitle}>Data Quality & Verification</h2>}
 
       {/* Verification Badge */}
       <div className={styles.verification}>

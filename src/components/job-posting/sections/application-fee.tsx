@@ -10,9 +10,10 @@ import styles from "../job-posting-page.module.css";
 
 interface ApplicationFeeProps {
   post: JobPostingData;
+  embedded?: boolean;
 }
 
-export default function ApplicationFee({ post }: ApplicationFeeProps) {
+export default function ApplicationFee({ post, embedded }: ApplicationFeeProps) {
   const feesByCategory = post.enrichment?.feesByCategory || {};
   const hasStructuredFees = Object.keys(feesByCategory).length > 0;
 
@@ -49,10 +50,12 @@ export default function ApplicationFee({ post }: ApplicationFeeProps) {
   const isReported = !hasStructuredFees && extractedFeeItems.length > 0;
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>
-        💳 Application Fee{isReported ? " (reported)" : ""}
-      </h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && (
+        <h2 className={styles.sectionTitle}>
+          Application Fee{isReported ? " (reported)" : ""}
+        </h2>
+      )}
 
       <table className={styles.table}>
         <thead>

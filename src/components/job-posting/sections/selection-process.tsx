@@ -24,11 +24,13 @@ import styles from "../job-posting-page.module.css";
 interface SelectionProcessProps {
   post: JobPostingData;
   recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
+  embedded?: boolean;
 }
 
 export default function SelectionProcess({
   post,
   recruitmentResolvedFacts,
+  embedded,
 }: SelectionProcessProps) {
   const raw = post.enrichment?.selectionProcess;
   const stages = normalizeSelectionProcess(raw);
@@ -52,8 +54,8 @@ export default function SelectionProcess({
   // Extracted fallback: listing-reported selection steps
   if (stages.length === 0 && !recruitmentProcess && extractedSelection.length > 0) {
     return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
+      <div className={embedded ? undefined : styles.section}>
+        {!embedded && <h2 className={styles.sectionTitle}>Selection Process</h2>}
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Selection details reported in listing</div>
           <ul className={styles.infoList}>
@@ -69,8 +71,8 @@ export default function SelectionProcess({
   // Fallback: recruitment-level plain text (e.g. resolver returned a text block)
   if (stages.length === 0 && recruitmentProcess) {
     return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
+      <div className={embedded ? undefined : styles.section}>
+        {!embedded && <h2 className={styles.sectionTitle}>Selection Process</h2>}
         <p style={{ color: "#4b5563", whiteSpace: "pre-line" }}>
           {recruitmentProcess}
         </p>
@@ -86,8 +88,8 @@ export default function SelectionProcess({
   const isRichTable = hasStepNumbers || hasMarks || hasDuration;
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && <h2 className={styles.sectionTitle}>Selection Process</h2>}
 
       {isRichTable ? (
         /* Rich structured table — shapes B, C, D */

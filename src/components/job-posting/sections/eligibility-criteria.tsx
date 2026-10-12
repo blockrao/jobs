@@ -25,9 +25,10 @@ import styles from "../job-posting-page.module.css";
 
 interface EligibilityCriteriaProps {
   post: JobPostingData;
+  embedded?: boolean;
 }
 
-export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) {
+export default function EligibilityCriteria({ post, embedded }: EligibilityCriteriaProps) {
   const enrichment = post.enrichment;
   const extracted = post.fjaExtract;
 
@@ -83,9 +84,12 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
 
   if (!hasEligibilityContent) return null;
 
+  const Wrapper = embedded ? "div" : "div";
+  const wrapperClass = embedded ? undefined : styles.section;
+
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>✓ Eligibility Criteria</h2>
+    <div className={wrapperClass}>
+      {!embedded && <h2 className={styles.sectionTitle}>Eligibility Criteria</h2>}
 
       {/* Raw extracted eligibility — shown only when no canonical enrichment field exists */}
       {extractedEligibility && (

@@ -1,24 +1,20 @@
 /**
  * Job Posting Page Component
  *
- * Main component for rendering a complete enriched job posting.
- * Displays all sections with data from posts + post_enrichments.
- * Includes recruitment context for single-job recruitments.
+ * Layout: breadcrumb → blue hero → TOC strip → sections → footer.
+ * Design matches the BhartiDesk post-leaf reference.
  */
 
 import Link from "next/link";
 import { JobPostingData } from "@/types/job-posting";
 import JobPostingHeader from "./sections/job-posting-header";
-import QuickFacts from "./sections/quick-facts";
-import VacancyDetails from "./sections/vacancy-details";
-import EligibilityCriteria from "./sections/eligibility-criteria";
-import SalaryCompensation from "./sections/salary-compensation";
 import ImportantDates from "./sections/important-dates";
+import EligibilityCriteria from "./sections/eligibility-criteria";
+import VacancyDetails from "./sections/vacancy-details";
 import SelectionProcess from "./sections/selection-process";
 import ApplicationFee from "./sections/application-fee";
 import HowToApply from "./sections/how-to-apply";
 import DocumentsRequired from "./sections/documents-required";
-import DutiesResponsibilities from "./sections/duties-responsibilities";
 import OfficialSourceVerification from "./sections/official-source-verification";
 import styles from "./job-posting-page.module.css";
 
@@ -35,10 +31,6 @@ export interface ResolvedLeafFacts {
   deadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN" };
 }
 
-/** Recruitment-owned facts resolved from the canonical Recruitment entity.
- *  Passed to the Leaf so it can display Recruitment-context CTAs without
- *  reading Recruitment columns directly. Entity authority remains with Recruitment.
- */
 export interface ResolvedRecruitmentFacts {
   officialSource: string | null;
   applicationUrl: string | null;
@@ -55,6 +47,16 @@ interface JobPostingPageProps {
   recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
 }
 
+function fmtDate(d: Date | string | null | undefined): string | null {
+  if (!d) return null;
+  try {
+    const date = d instanceof Date ? d : new Date(d);
+    return date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return null;
+  }
+}
+
 export default function JobPostingPage({
   post,
   recruitment,
@@ -63,132 +65,332 @@ export default function JobPostingPage({
   resolvedFacts,
   recruitmentResolvedFacts,
 }: JobPostingPageProps) {
-  // Preserve the locale prefix for all internal links. Hindi pages are currently
-  // untranslated/noindex, but navigation must remain within the requested route family.
   const localePrefix = locale === "hi" ? "/hi" : "";
+  const siblingPosts = recruitment?.posts?.filter((p) => p.id !== post.id) || [];
 
-  // Get sibling posts for multi-post recruitments
-  const siblingPosts = recruitment?.posts?.filter(p => p.id !== post.id) || [];
+  // ── Quick answers (derived from structured data where available) ──
+  // Phase 1: display stored text only — no eligibility engine
+  const qualText: string | null =
+    post.fjaExtract?.eligibilityRaw ??
+    post.fjaExtract?.qualificationRaw ??
+    null;
+  const expText: string | null =
+    post.fjaExtract?.experienceRaw ?? null;
+  const deadline = resolvedFacts?.deadline;
+  const vacancyCount = resolvedFacts?.vacancyCount;
+
+  const payLevel = (() => {
+    const pl = post.enrichment?.payLevel || post.payLevel;
+    if (!pl) return null;
+    if (typeof pl === "string") return `Level-${pl}`;
+    if (pl && typeof pl === "object") {
+      const level = (pl as any).level;
+      const scheme = (pl as any).scheme;
+      return scheme ? `Level-${level} (${scheme})` : `Level-${level}`;
+    }
+    return null;
+  })();
+
+  const deadlineDateStr = deadline?.date ? fmtDate(deadline.date) : null;
+  const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+  const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
+
+  // Check if location available
+  const location: string | null =
+    post.locationCity ??
+    (typeof post.fjaExtract?.locationRaw === "string" ? post.fjaExtract.locationRaw : null) ??
+    null;
+
+  // ── dl.facts rows ──
+  interface FactRow {
+    term: string;
+    detail: React.ReactNode;
+  }
+  const factRows: FactRow[] = [];
+  factRows.push({ term: "Post", detail: post.title });
+  if (post.organizationName) {
+    factRows.push({ term: "Employer", detail: post.organizationName });
+  }
+  if (post.sourcePostCode) {
+    factRows.push({ term: "Vacancy number", detail: post.sourcePostCode });
+  }
+  if (vacancyCount != null) {
+    factRows.push({ term: "Vacancies", detail: vacancyCount.toLocaleString("en-IN") });
+  }
+  if (payLevel) {
+    factRows.push({ term: "Pay level", detail: payLevel });
+  }
+  if (post.employmentType) {
+    factRows.push({
+      term: "Type",
+      detail: post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    });
+  }
+  if (location) {
+    factRows.push({ term: "Location", detail: location });
+  }
+  if (deadlineDateStr) {
+    factRows.push({ term: "Last date", detail: deadlineDateStr });
+  }
+
+  // ── Build data-start and data-end for countdown JS ──
+  const appStart =
+    post.enrichment?.applicationOpenDate ??
+    post.recruitmentApplicationStartDate ??
+    null;
+  const appEnd =
+    post.enrichment?.applicationClosingDate ??
+    post.recruitmentApplicationEndDate ??
+    deadline?.date ??
+    null;
+
+  const dataStart = appStart ? new Date(appStart).toISOString() : null;
+  const dataEnd = appEnd ? new Date(appEnd).toISOString() : null;
 
   return (
     <div className={styles.container}>
-        {/* Breadcrumb: Jobs › Org › Recruitment › Post */}
-        <div className={styles.breadcrumb}>
-          <Link href={`${localePrefix}/jobs`}>Jobs</Link>
-          <span>›</span>
-          {recruitment?.recruitment?.organizationSlug && post.organizationName && (
-            <>
-              <Link href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}>{post.organizationName}</Link>
-              <span>›</span>
-            </>
-          )}
+      {/* Breadcrumb */}
+      <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+        <ol className={styles.breadcrumbList}>
+          <li>
+            <Link href={`${localePrefix}/`}>Home</Link>
+          </li>
+          <li>
+            &nbsp;/&nbsp;<Link href={`${localePrefix}/jobs`}>Jobs</Link>
+          </li>
           {post.recruitmentSlug && (
-            <>
+            <li>
+              &nbsp;/&nbsp;
               <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
                 {post.recruitmentName ?? recruitment?.recruitment?.name ?? "Recruitment"}
               </Link>
-              <span>›</span>
-            </>
+            </li>
           )}
-          <span>{post.title}</span>
-        </div>
+          <li>&nbsp;/&nbsp;{post.title}</li>
+        </ol>
+      </nav>
 
-        {/* Header */}
-        <JobPostingHeader post={post} resolvedFacts={resolvedFacts} />
+      {/* Hero header */}
+      <article
+        {...(dataStart ? { "data-start": dataStart } : {})}
+        {...(dataEnd ? { "data-end": dataEnd } : {})}
+      >
+        <JobPostingHeader
+          post={post}
+          resolvedFacts={resolvedFacts}
+          recruitmentResolvedFacts={recruitmentResolvedFacts}
+          localePrefix={localePrefix}
+        />
 
-        {/* Quick Facts */}
-        <QuickFacts post={post} resolvedFacts={resolvedFacts} />
+        {/* TOC strip */}
+        <nav className={styles.toc} aria-label="On this page">
+          <a href="#quick">Quick answers</a>
+          <a href="#facts">Post facts</a>
+          {(qualText || expText) && <a href="#eligibility">Eligibility</a>}
+          <a href="#dates">Dates</a>
+          {vacancyCount != null && <a href="#vacancies">Vacancies</a>}
+          <a href="#selection">Selection</a>
+          <a href="#apply">How to apply</a>
+          <a href="#documents">Documents</a>
+        </nav>
 
-        {/* Extracted facts are useful to candidates, but must never be confused
-            with official verification. This provenance notice is shared by all
-            pages backed by the source-inventory projection. */}
+        {/* Verification notice */}
         {post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" && (
           <aside
+            className={styles.verificationNotice}
             role="note"
             aria-label="Verification notice"
-            style={{
-              margin: "0 0 24px",
-              padding: "16px 18px",
-              border: "1px solid #f3d28b",
-              borderRadius: "10px",
-              background: "#fffbeb",
-              color: "#78350f",
-            }}
           >
             <strong>Official verification pending</strong>
             <p style={{ margin: "6px 0 0", lineHeight: 1.55 }}>
               Some details on this page were transcribed from a secondary listing and have
               not yet been confirmed against the institution&apos;s official notice. Treat
               reported dates, eligibility, pay, tenure and application instructions as
-              provisional. Confirm them with the official recruitment source before acting.
+              provisional. Confirm with the official recruitment source before acting.
             </p>
           </aside>
         )}
 
-        {/* Action Buttons
-          Recruitment owns application and official-notification URLs. Only
-          resolver-approved URLs may be exposed publicly; raw Post columns are
-          not a safe fallback because they may contain unverified discovery links.
-          If no approved URL resolves, omit that action rather than mislabel it.
-        */}
-        {(() => {
-          const applyUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
-          const sourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
-          return (
-            <div className={styles.actions}>
-              {applyUrl && (
-                <a
-                  href={applyUrl}
-                  className={`${styles.btn} ${styles.btnPrimary}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  ↗ Apply on Official Portal
-                </a>
-              )}
-              {sourceUrl && (
-                <a
-                  href={sourceUrl}
-                  className={`${styles.btn} ${styles.btnSecondary}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  📄 View Official Recruitment Source
-                </a>
-              )}
-            </div>
-          );
-        })()}
+        {/* Quick Answers */}
+        <section id="quick" className={styles.section} aria-labelledby="quick-h">
+          <h2 id="quick-h" className={styles.sectionTitle}>
+            Quick answers about this post
+          </h2>
+          <div className={styles.qa}>
+            {qualText && (
+              <div id="qa-qualify">
+                <h3 className={styles.qaQuestion}>What are the qualifications?</h3>
+                <p className={styles.qaAnswer}>{qualText}</p>
+              </div>
+            )}
+            {expText && (
+              <div id="qa-exp">
+                <h3 className={styles.qaQuestion}>What experience is required?</h3>
+                <p className={styles.qaAnswer}>{expText}</p>
+              </div>
+            )}
+            {payLevel && (
+              <div id="qa-pay">
+                <h3 className={styles.qaQuestion}>What is the pay level?</h3>
+                <p className={styles.qaAnswer}>{payLevel} of the 7th CPC pay matrix.</p>
+              </div>
+            )}
+            {vacancyCount != null && (
+              <div id="qa-vacancies">
+                <h3 className={styles.qaQuestion}>How many vacancies are there?</h3>
+                <p className={styles.qaAnswer}>
+                  {vacancyCount.toLocaleString("en-IN")} {vacancyCount === 1 ? "vacancy" : "vacancies"} in this post.
+                </p>
+              </div>
+            )}
+            {deadlineDateStr && (
+              <div id="qa-deadline">
+                <h3 className={styles.qaQuestion}>What is the last date to apply?</h3>
+                <p className={styles.qaAnswer}>
+                  {deadline?.state === "CLOSED"
+                    ? `The application window has closed (was ${deadlineDateStr}).`
+                    : `${deadlineDateStr}.`}
+                </p>
+              </div>
+            )}
+            {applyUrl && (
+              <div id="qa-how">
+                <h3 className={styles.qaQuestion}>Where do I apply?</h3>
+                <p className={styles.qaAnswer}>
+                  Apply online at{" "}
+                  <a href={applyUrl} target="_blank" rel="noopener noreferrer">
+                    the official application portal
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
 
-        {/* Sections */}
-        <VacancyDetails post={post} resolvedFacts={resolvedFacts} />
-        <EligibilityCriteria post={post} />
-        <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
-        <ImportantDates post={post} />
-        <SelectionProcess post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
-        <ApplicationFee post={post} />
-        <HowToApply post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
-        <DocumentsRequired post={post} />
-        <DutiesResponsibilities post={post} />
-        <OfficialSourceVerification post={post} recruitmentResolvedFacts={recruitmentResolvedFacts} />
+        {/* Post at a glance (dl.facts) */}
+        {factRows.length > 0 && (
+          <section id="facts" className={styles.section} aria-labelledby="facts-h">
+            <h2 id="facts-h" className={styles.sectionTitle}>
+              Post at a glance
+            </h2>
+            <dl className={styles.facts}>
+              {factRows.map((row) => (
+                <div key={row.term} className={styles.factsRow}>
+                  <dt className={styles.factsTerm}>{row.term}</dt>
+                  <dd className={styles.factsDetail}>{row.detail}</dd>
+                </div>
+              ))}
+            </dl>
+            {/* Gate box for eligibility summary */}
+            {qualText && (
+              <p className={styles.gate}>
+                <strong>Who can apply:</strong>{" "}
+                {qualText}
+                {expText ? `. ${expText}` : ""}
+              </p>
+            )}
+          </section>
+        )}
 
-        {/* Related Roles Section - For multi-post recruitments */}
+        {/* Eligibility */}
+        {(qualText || expText) && (
+          <section id="eligibility" className={styles.section} aria-labelledby="elig-h">
+            <h2 id="elig-h" className={styles.sectionTitle}>
+              Eligibility
+            </h2>
+            {qualText && (
+              <>
+                <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "12px 0 8px" }}>
+                  Qualification
+                </h3>
+                <p>{qualText}</p>
+              </>
+            )}
+            {expText && (
+              <>
+                <h3 style={{ fontSize: "20px", fontWeight: 800, margin: "16px 0 8px" }}>
+                  Experience
+                </h3>
+                <p>{expText}</p>
+              </>
+            )}
+            <EligibilityCriteria post={post} embedded />
+          </section>
+        )}
+
+        {/* Important Dates */}
+        <section id="dates" className={styles.section} aria-labelledby="dates-h">
+          <h2 id="dates-h" className={styles.sectionTitle}>
+            Important dates
+          </h2>
+          <ImportantDates post={post} embedded />
+        </section>
+
+        {/* Vacancy Details */}
+        {vacancyCount != null && (
+          <section id="vacancies" className={styles.section} aria-labelledby="vac-h">
+            <h2 id="vac-h" className={styles.sectionTitle}>
+              Seats and vacancies
+            </h2>
+            <VacancyDetails post={post} resolvedFacts={resolvedFacts} embedded />
+          </section>
+        )}
+
+        {/* Selection Process */}
+        <section id="selection" className={styles.section} aria-labelledby="sel-h">
+          <h2 id="sel-h" className={styles.sectionTitle}>
+            How this post is filled
+          </h2>
+          <SelectionProcess
+            post={post}
+            recruitmentResolvedFacts={recruitmentResolvedFacts}
+            embedded
+          />
+        </section>
+
+        {/* Application Fee */}
+        <section id="fee" className={styles.section} aria-labelledby="fee-h">
+          <h2 id="fee-h" className={styles.sectionTitle}>
+            Application fee
+          </h2>
+          <ApplicationFee post={post} embedded />
+        </section>
+
+        {/* How to Apply */}
+        <section id="apply" className={styles.section} aria-labelledby="apply-h">
+          <h2 id="apply-h" className={styles.sectionTitle}>
+            How to apply
+          </h2>
+          <HowToApply
+            post={post}
+            recruitmentResolvedFacts={recruitmentResolvedFacts}
+            embedded
+          />
+        </section>
+
+        {/* Documents */}
+        <section id="documents" className={styles.section} aria-labelledby="docs-h">
+          <h2 id="docs-h" className={styles.sectionTitle}>
+            Documents checklist
+          </h2>
+          <p className={styles.note}>
+            Tick the ones that apply to you. Your progress is saved on this device.
+          </p>
+          <DocumentsRequired post={post} embedded />
+        </section>
+
+        {/* Other posts in this recruitment */}
         {siblingPosts.length > 0 && (
-          <section className={styles.relatedRoles}>
-            <h2>Other Roles in This Recruitment</h2>
-            <p className={styles.relatedRolesIntro}>
-              Explore the other roles available under this recruitment.
-            </p>
-            <ul className={styles.relatedRolesList}>
+          <section id="other" className={styles.section} aria-labelledby="other-h">
+            <h2 id="other-h" className={styles.sectionTitle}>
+              Other posts in this recruitment
+            </h2>
+            <ul className={styles.links}>
               {siblingPosts.map((p) => (
                 <li key={p.id}>
                   <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
-                    <span className={styles.roleTitle}>{p.title}</span>
-                    {p.vacancies?.[0]?.count && (
-                      <span className={styles.roleVacancies}>
-                        {p.vacancies[0].count} position{p.vacancies[0].count !== 1 ? 's' : ''}
-                      </span>
-                    )}
+                    {p.title}
                   </Link>
                 </li>
               ))}
@@ -196,27 +398,88 @@ export default function JobPostingPage({
           </section>
         )}
 
-        {/* Recruitment Hub Link - For single-job recruitments */}
-        {isSingleJobRecruitment && (
-          <section className={styles.recruitmentContext}>
-            <h2>About This Recruitment</h2>
+        {/* Back to hub for single-job recruitments */}
+        {isSingleJobRecruitment && post.recruitmentSlug && (
+          <section className={styles.section}>
             <p>
               For recruitment-wide details, timeline, and related information,
               visit the{" "}
-              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>recruitment hub</Link>.
+              <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
+                recruitment hub page
+              </Link>
+              .
             </p>
           </section>
         )}
 
-        {/* Footer Note */}
-        <div className={styles.footerNote}>
-          <strong>About This Posting:</strong> JobOye organizes available
-          information about this role to help candidates review it more easily.
-          Details can be incomplete or change over time. For application-critical
-          information, consult the official notification and the responsible
-          organization&apos;s website. JobOye is not affiliated with {post.organizationName} and does not handle applications directly
-          — follow the application method specified in the official recruitment instructions.
-        </div>
+        {/* Source and verification */}
+        <section id="source" className={styles.section} aria-labelledby="src-h">
+          <h2 id="src-h" className={styles.sectionTitle}>
+            Where this information comes from
+          </h2>
+          <OfficialSourceVerification
+            post={post}
+            recruitmentResolvedFacts={recruitmentResolvedFacts}
+            embedded
+          />
+        </section>
+
+      </article>
+
+      {/* Footer note */}
+      <div className={styles.footerNote}>
+        JobOye organises available information about this role to help candidates review it.
+        Details can be incomplete or change over time. Always confirm application-critical
+        information with the official notification and the responsible organisation&apos;s website.
+        JobOye is not affiliated with{" "}
+        {post.organizationName ?? "the recruiting organisation"} and does not handle applications
+        directly.
       </div>
+
+      {/* Countdown JS — runs after hydration, safe no-op if data-end is absent */}
+      <CountdownScript postSlug={post.slug} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Client-side countdown — tiny inline script, SSR-safe
+// ---------------------------------------------------------------------------
+function CountdownScript({ postSlug }: { postSlug: string }) {
+  const js = `
+(function () {
+  try {
+    var art = document.querySelector('article[data-end]');
+    if (!art) return;
+    var start = Date.parse(art.getAttribute('data-start'));
+    var end = Date.parse(art.getAttribute('data-end'));
+    var now = Date.now();
+    var day = function (t) { var d = new Date(t + 330 * 60000); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };
+    var days = Math.round((day(end) - day(now)) / 86400000);
+    var state = now > end ? 'closed' : now < start ? 'upcoming' : days <= 3 ? 'closing' : 'open';
+    var names = { open: 'Open', closing: 'Closing soon', closed: 'Closed', upcoming: 'Opens soon' };
+    var text = state === 'closed' ? 'Applications are closed.'
+      : state === 'upcoming' ? 'Applications have not opened yet.'
+      : days === 0 ? 'Last day today.'
+      : days === 1 ? '1 day left.'
+      : days + ' days left.';
+    document.querySelectorAll('[data-status]').forEach(function (n) {
+      n.textContent = names[state];
+    });
+    document.querySelectorAll('[data-countdown]').forEach(function (n) {
+      n.textContent = text;
+    });
+    document.documentElement.setAttribute('data-state', state);
+    if (state === 'closed') {
+      document.querySelectorAll('.apply-only').forEach(function (n) { n.style.display = 'none'; });
+    }
+  } catch (e) {}
+})();
+  `.trim();
+
+  return (
+    <script
+      dangerouslySetInnerHTML={{ __html: js }}
+    />
   );
 }

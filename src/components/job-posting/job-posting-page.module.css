@@ -1,399 +1,650 @@
-/* Job Posting Page Styles */
+/* ============================================================
+   BhartiDesk design system — post leaf page
+   Variables mirror the reference HTML exactly.
+   ============================================================ */
 
 :root {
-  --primary: #0f172a;
-  --primary-light: #1e293b;
-  --accent: #ffd60a;
-  --accent-hover: #f5c800;
-  --secondary: #059669;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --neutral-50: #f9fafb;
-  --neutral-100: #f3f4f6;
-  --neutral-200: #e5e7eb;
-  --neutral-300: #d1d5db;
-  --neutral-600: #4b5563;
-  --neutral-700: #374151;
-  --neutral-900: #111827;
-  --govt-blue: #0f172a;
+  --ink: #0f172a;
+  --ink2: #334155;
+  --blue: #2742ff;
+  --blue-d: #1a2fd0;
+  --yellow: #ffd60a;
+  --coral: #ff5c5c;
+  --mint: #12b886;
+  --violet: #b9a4ff;
+  --paper: #e7edff;
+  --line: #c7d2f5;
 }
 
+/* ── Page container ── */
 .container {
-  max-width: 1000px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 0 20px;
 }
 
-/* BREADCRUMB */
+/* ── Breadcrumb ── */
 .breadcrumb {
-  font-size: 13px;
-  color: var(--neutral-600);
-  margin-bottom: 24px;
+  margin: 16px 0 0;
+  font-size: 15px;
+}
+
+.breadcrumbList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
 }
 
 .breadcrumb a {
-  color: var(--primary);
+  color: var(--blue);
   text-decoration: none;
 }
 
 .breadcrumb a:hover {
-  text-decoration: underline;
+  color: var(--blue-d);
 }
 
-/* ACTION BUTTONS */
+/* ── Card (generic) ── */
+.card {
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 var(--ink);
+  padding: 22px;
+  margin: 22px 0;
+}
+
+/* ── Hero card (blue) ── */
+.hero {
+  background: var(--blue);
+  color: #fff;
+}
+
+.hero a {
+  color: #fff;
+}
+
+/* ── Chips ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.chipOpen {
+  background: var(--mint);
+}
+
+.chipClosing {
+  background: var(--coral);
+}
+
+.chipClosed {
+  background: #cbd5e1;
+}
+
+.chipUpcoming {
+  background: var(--yellow);
+}
+
+/* ── H1 in hero ── */
+.jobTitle {
+  font-size: clamp(28px, 6vw, 38px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: #fff;
+  margin: 0;
+}
+
+/* ── Lead paragraph ── */
+.lead {
+  margin-top: 14px;
+  font-size: 19px;
+  color: #fff;
+}
+
+/* ── Deadline box ── */
+.deadline {
+  margin-top: 18px;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 0 5px 0 var(--ink);
+  padding: 14px 18px;
+}
+
+.deadlineLabel {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.deadlineDate {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.deadlineCountdown {
+  display: block;
+  font-weight: 700;
+}
+
+/* ── Closed notice ── */
+.closedNote {
+  display: none;
+  margin-top: 12px;
+  background: #ffd8d8;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ── Action buttons ── */
 .actions {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
+  margin-top: 18px;
 }
 
 .btn {
-  padding: 14px 28px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: none;
-  border: none;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
+  justify-content: center;
+  min-height: 54px;
+  padding: 6px 20px;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink) !important;
+  font-weight: 800;
+  font-size: 18px;
+  text-decoration: none;
+  text-align: center;
+  box-shadow: 0 5px 0 var(--ink);
 }
 
 .btnPrimary {
-  background: var(--accent);
-  color: var(--primary);
+  background: var(--yellow);
 }
 
-.btnPrimary:hover {
-  background: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(255, 214, 10, 0.4);
+.btnQuiet {
+  box-shadow: none;
+  background: transparent;
+  color: #fff !important;
+  border-color: #fff;
 }
 
-.btnSecondary {
-  background: white;
-  color: var(--primary);
-  border: 2px solid var(--primary);
+/* ── Meta line under hero ── */
+.heroMeta {
+  margin-top: 14px;
+  font-size: 15px;
+  color: #e4e9ff;
 }
 
-.btnSecondary:hover {
-  background: var(--primary);
-  color: var(--accent);
+/* ── TOC strip ── */
+.toc {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  margin: 0;
+  scrollbar-width: thin;
 }
 
-/* SECTION */
+.toc a {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.toc a:hover {
+  background: var(--paper);
+}
+
+/* ── Section ── */
 .section {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 28px;
-  border: 1px solid var(--neutral-200);
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  box-shadow: 0 6px 0 var(--ink);
+  padding: 22px;
+  margin: 22px 0;
 }
 
 .sectionTitle {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
-  color: var(--neutral-900);
-  margin-bottom: 24px;
-  padding-bottom: 12px;
-  border-bottom: 3px solid var(--accent);
+  color: var(--ink);
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+
+/* ── Quick Answers ── */
+.qa > div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.qa > div:first-child {
+  border-top: 3px solid var(--ink);
+}
+
+.qaQuestion {
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.qaAnswer {
+  margin-top: 4px;
+  color: var(--ink2);
+}
+
+/* ── dl.facts ── */
+.facts {
+  margin: 12px 0 0;
+  border-top: 3px solid var(--ink);
+}
+
+.factsRow {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.sectionIcon {
-  font-size: 24px;
-}
-
-/* INFO GROUPS */
-.infoGroup {
-  margin-bottom: 24px;
-}
-
-.infoLabel {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--neutral-600);
-  margin-bottom: 8px;
-}
-
-.infoValue {
+.factsTerm {
+  flex: 0 0 150px;
+  color: var(--ink2);
+  font-weight: 600;
   font-size: 16px;
-  color: var(--neutral-900);
-  line-height: 1.6;
 }
 
-.infoValue strong {
-  color: var(--primary);
+.factsDetail {
+  flex: 1 1 220px;
+  margin: 0;
   font-weight: 700;
+  color: var(--ink);
 }
 
-/* TABLES */
+/* ── Gate box (who can apply) ── */
+.gate {
+  margin-top: 12px;
+  background: #c9f2e3;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ── Tables ── */
+.scrollWrap {
+  overflow-x: auto;
+  margin-top: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #fff;
+}
+
 .table {
-  width: 100%;
   border-collapse: collapse;
-  margin: 16px 0;
+  width: 100%;
+  font-size: 16px;
+}
+
+.table caption {
+  position: absolute;
+  left: -9999px;
 }
 
 .tableHead {
-  background: var(--neutral-100);
-  padding: 12px 16px;
+  background: var(--ink);
+  color: #fff;
   text-align: left;
-  font-weight: 700;
-  color: var(--neutral-900);
-  border-bottom: 2px solid var(--neutral-300);
+  padding: 10px 12px;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .tableCell {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--neutral-200);
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  line-height: 1.45;
+  text-align: left;
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
 }
 
-.tableRow:hover {
-  background: var(--neutral-50);
+.tableRowHeader {
+  font-weight: 800;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  text-align: left;
+  vertical-align: top;
 }
 
-.tableRow:last-child .tableCell {
-  border-bottom: none;
+.tableRow:last-child .tableCell,
+.tableRow:last-child .tableRowHeader {
+  border-bottom: 0;
 }
 
-/* LISTS */
-.infoList {
-  list-style: none;
-  padding-left: 0;
+/* ── Note / source text ── */
+.note {
+  margin-top: 12px;
+  font-size: 16px;
+  color: var(--ink2);
 }
 
-.infoListItem {
-  padding: 10px 0;
-  color: var(--neutral-700);
-  font-size: 15px;
-  display: flex;
-  gap: 10px;
-}
-
-.infoListItem::before {
-  content: "✓";
-  color: var(--secondary);
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-/* FEATURE BOX */
-.featureBox {
-  background: #f0fdf4;
-  border-left: 4px solid var(--secondary);
-  padding: 20px;
-  border-radius: 8px;
-  margin: 20px 0;
-}
-
-.featureBox strong {
-  color: var(--secondary);
-}
-
-/* CHECKLIST */
-.checklist {
-  background: var(--neutral-50);
-  border-radius: 8px;
-  padding: 20px;
-  margin: 16px 0;
-}
-
-.checklistItem {
-  padding: 10px 0;
-  display: flex;
-  gap: 10px;
-  font-size: 15px;
-  color: var(--neutral-700);
-}
-
-.checklistItemRequired::before {
-  content: "● REQUIRED";
-  font-weight: 700;
-  color: var(--danger);
-  flex-shrink: 0;
-}
-
-.checklistItemCommon::before {
-  content: "○ Common";
-  font-weight: 700;
-  color: var(--warning);
-  flex-shrink: 0;
-}
-
-/* VERIFICATION BADGE */
-.verification {
-  background: #dbeafe;
-  border: 1px solid #93c5fd;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.verificationIcon {
-  font-weight: 700;
-  color: var(--primary);
-  font-size: 18px;
-}
-
-.verificationText {
+.srcText {
+  margin-top: 12px;
   font-size: 14px;
-  color: var(--primary);
+  color: var(--ink2);
+}
+
+/* ── Lists ── */
+.list {
+  margin: 12px 0 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── FAQ / details ── */
+.faqItem {
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #fff;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.faqSummary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 54px;
+  padding: 10px 16px;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+}
+
+.faqSummary::-webkit-details-marker {
+  display: none;
+}
+
+.faqBody {
+  border-top: 2px solid var(--ink);
+  padding: 12px 16px;
+  color: var(--ink2);
+}
+
+/* ── Checks / documents ── */
+.checks {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.checksItem {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 11px 0;
+  border-top: 2px solid var(--line);
+  min-height: 52px;
+}
+
+.checksInput {
+  width: 26px;
+  height: 26px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--mint);
+}
+
+.checksLabel {
+  flex: 1;
+  cursor: pointer;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.checksSmall {
+  display: block;
+  font-weight: 400;
+  color: var(--ink2);
+  font-size: 15px;
+}
+
+/* ── Links list ── */
+.links {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.links a {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  padding: 8px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.links a:hover {
+  background: var(--paper);
+}
+
+.linksSpan {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  padding: 8px 16px;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: #fff;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* ── Info groups (label + value pairs inside sections) ── */
+.infoGroup {
+  margin-top: 16px;
+}
+
+.infoGroup:first-child {
+  margin-top: 0;
+}
+
+.infoLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.infoValue {
+  color: var(--ink);
+  font-size: 16px;
   line-height: 1.5;
 }
 
-/* RELATED ROLES SECTION */
-.relatedRoles {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 28px;
-  border: 1px solid var(--neutral-200);
-}
-
-.relatedRoles h2 {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--neutral-900);
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 3px solid var(--accent);
-}
-
-.relatedRolesIntro {
-  font-size: 15px;
-  color: var(--neutral-600);
-  margin-bottom: 20px;
-}
-
-.relatedRolesList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.relatedRolesList li {
-  margin-bottom: 12px;
-}
-
-.relatedRolesList a {
+.infoList {
+  margin: 4px 0 0;
+  padding-left: 22px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: var(--neutral-50);
-  border: 1px solid var(--neutral-200);
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.2s ease;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.relatedRolesList a:hover {
-  background: #e0e7ff;
-  border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.1);
+.infoListItem {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.45;
 }
 
-.roleTitle {
+/* ── Feature / note box ── */
+.featureBox {
+  margin-top: 16px;
+  background: #fffbeb;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  padding: 12px 16px;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ── Documents checklist ── */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.checklistItemRequired,
+.checklistItemCommon {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
   font-size: 16px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--ink);
+  line-height: 1.4;
 }
 
-.roleVacancies {
-  background: var(--primary-light);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  margin-left: 16px;
+.checklistItemCommon {
+  font-weight: 400;
+  color: var(--ink2);
 }
 
-/* RECRUITMENT CONTEXT SECTION */
-.recruitmentContext {
-  background: #eff6ff;
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 28px;
-  border: 2px solid var(--primary-light);
-}
-
-.recruitmentContext h2 {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--primary);
+/* ── Verification badge ── */
+.verification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 16px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 2px solid var(--line);
+  border-radius: 14px;
 }
 
-.recruitmentContext p {
+.verificationIcon {
+  font-size: 28px;
+  line-height: 1;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.verificationText {
+  flex: 1;
+  font-size: 16px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* ── Verification notice ── */
+.verificationNotice {
+  margin: 0 0 24px;
+  padding: 16px 18px;
+  border: 2px solid var(--yellow);
+  border-radius: 14px;
+  background: #fffbeb;
+  color: #78350f;
   font-size: 15px;
-  color: var(--neutral-700);
-  line-height: 1.6;
-  margin: 0;
 }
 
-.recruitmentContext a {
-  color: var(--primary);
-  font-weight: 600;
-  text-decoration: none;
-  border-bottom: 2px solid var(--primary);
-}
-
-.recruitmentContext a:hover {
-  text-decoration: underline;
-}
-
-/* FOOTER */
+/* ── Footer note ── */
 .footerNote {
-  background: var(--neutral-50);
-  border-radius: 8px;
+  background: var(--paper);
+  border-radius: 14px;
   padding: 20px;
   margin-top: 40px;
-  font-size: 13px;
-  color: var(--neutral-600);
-  border: 1px solid var(--neutral-200);
+  font-size: 14px;
+  color: var(--ink2);
+  border: 1px solid var(--line);
 }
 
-.footerNote a {
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.footerNote a:hover {
-  text-decoration: underline;
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  .section {
-    padding: 20px;
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .factsTerm {
+    flex: 0 0 110px;
   }
 
   .sectionTitle {
-    font-size: 18px;
+    font-size: 22px;
   }
 
-  .actions {
-    flex-direction: column;
+  .jobTitle {
+    font-size: 28px;
   }
+}
 
-  .btn {
-    width: 100%;
-    justify-content: center;
+@media (prefers-reduced-motion: reduce) {
+  :global(*) {
+    transition: none !important;
+    animation: none !important;
   }
 }

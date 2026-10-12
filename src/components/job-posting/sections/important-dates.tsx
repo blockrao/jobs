@@ -8,6 +8,7 @@ import styles from "../job-posting-page.module.css";
 
 interface ImportantDatesProps {
   post: JobPostingData;
+  embedded?: boolean;
 }
 
 // Map keyDates JSON keys to display labels
@@ -25,7 +26,7 @@ const KEY_DATES_LABELS: Record<string, string> = {
   source_updated_date: "Listing Updated",
 };
 
-export default function ImportantDates({ post }: ImportantDatesProps) {
+export default function ImportantDates({ post, embedded }: ImportantDatesProps) {
   const enrichment = post.enrichment;
 
   // keyDates from posts table — used when no enrichment dates are available
@@ -91,8 +92,8 @@ export default function ImportantDates({ post }: ImportantDatesProps) {
   if (availableDates.length === 0) return null;
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>📅 Important Dates</h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && <h2 className={styles.sectionTitle}>Important Dates</h2>}
       <table className={styles.table}>
         <thead>
           <tr>

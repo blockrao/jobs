@@ -10,9 +10,10 @@ import styles from "../job-posting-page.module.css";
 interface VacancyDetailsProps {
   post: JobPostingData;
   resolvedFacts?: ResolvedLeafFacts;
+  embedded?: boolean;
 }
 
-export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsProps) {
+export default function VacancyDetails({ post, resolvedFacts, embedded }: VacancyDetailsProps) {
   // Use enrichment vacanciesByCategory when available; fall back to posts.vacancy_details
   const vacanciesByCategory: Record<string, number> =
     (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory).length > 0)
@@ -30,12 +31,14 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
     : null;
   const resolvedTotal = resolvedFacts?.vacancyCount ?? extractedTotal;
 
+  const isReported = post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED";
+
   if (!hasDetails) {
     if (resolvedTotal == null) return null;
     return (
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>📊 Vacancy Details{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? " (reported)" : ""}</h2>
-        <p style={{ color: "#4b5563" }}>
+      <div className={embedded ? undefined : styles.section}>
+        {!embedded && <h2 className={styles.sectionTitle}>Vacancy Details{isReported ? " (reported)" : ""}</h2>}
+        <p style={{ color: "#334155" }}>
           Total Vacancies: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
         </p>
       </div>
@@ -43,8 +46,8 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
   }
 
   return (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>📊 Vacancy Details{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? " (reported)" : ""}</h2>
+    <div className={embedded ? undefined : styles.section}>
+      {!embedded && <h2 className={styles.sectionTitle}>Vacancy Details{isReported ? " (reported)" : ""}</h2>}
       <table className={styles.table}>
         <thead>
           <tr>
