@@ -15,25 +15,17 @@ interface JobPostingHeaderProps {
 export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHeaderProps) {
   // Use resolver output — never compute deadline from raw enrichment
   const deadline = resolvedFacts?.deadline;
-  const daysUntilClose = deadline?.state === "OPEN" && deadline.date
-    ? Math.ceil((deadline.date.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
-
   const statusColor =
-    deadline?.state === "UNKNOWN" || deadline?.state === "CLOSED"
-      ? "neutral"
-      : daysUntilClose !== null && daysUntilClose <= 7
-        ? "danger"
-        : "success";
+    deadline?.state === "OPEN"
+      ? "success"
+      : "neutral";
   // UNKNOWN deadline must never be shown as "OPEN"
   const statusText =
-    deadline?.state === "OPEN" && daysUntilClose !== null
-      ? daysUntilClose > 0
-        ? `${daysUntilClose} DAYS LEFT`
-        : "CLOSED"
+    deadline?.state === "OPEN"
+      ? "APPLICATION OPEN"
       : deadline?.state === "CLOSED"
-      ? "CLOSED"
-      : "CHECK NOTIFICATION";
+        ? "CLOSED"
+        : "CHECK NOTIFICATION";
 
   const employmentType = post.employmentType
     ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
@@ -46,12 +38,7 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
         <span
           style={{
             ...headerStyles.statusBadge,
-            background:
-              statusColor === "danger"
-                ? "#ef4444"
-                : statusColor === "neutral"
-                  ? "#6b7280"
-                  : "#059669",
+            background: statusColor === "neutral" ? "#6b7280" : "#059669",
           }}
         >
           {statusText}
@@ -73,10 +60,16 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
         </div>
         {resolvedFacts?.vacancyCount != null && (
           <div style={headerStyles.metaItem}>
-            <span style={headerStyles.metaLabel}>Vacancies:</span>
+            <span style={headerStyles.metaLabel}>{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Vacancies reported:" : "Vacancies:"}</span>
             <span style={headerStyles.metaValue}>
               {resolvedFacts.vacancyCount.toLocaleString("en-IN")}
             </span>
+          </div>
+        )}
+        {post.fjaExtract?.locationRaw && (
+          <div style={headerStyles.metaItem}>
+            <span style={headerStyles.metaLabel}>Location reported:</span>
+            <span style={headerStyles.metaValue}>{post.fjaExtract.locationRaw}</span>
           </div>
         )}
       </div>

@@ -16,13 +16,19 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
   const vacanciesByCategory = post.enrichment?.vacanciesByCategory || {};
   const hasDetails = Object.keys(vacanciesByCategory).length > 0;
   // Use resolver output — never display raw enrichment vacanciesTotal
-  const resolvedTotal = resolvedFacts?.vacancyCount;
+  const reportedCount = post.fjaExtract?.vacancyCountRaw
+    ? Number(post.fjaExtract.vacancyCountRaw.replace(/,/g, "").trim())
+    : null;
+  const extractedTotal = reportedCount != null && Number.isSafeInteger(reportedCount) && reportedCount >= 0
+    ? reportedCount
+    : null;
+  const resolvedTotal = resolvedFacts?.vacancyCount ?? extractedTotal;
 
   if (!hasDetails) {
     if (resolvedTotal == null) return null;
     return (
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>📊 Vacancy Details</h2>
+        <h2 className={styles.sectionTitle}>📊 Vacancy Details{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? " (reported)" : ""}</h2>
         <p style={{ color: "#4b5563" }}>
           Total Vacancies: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
         </p>
@@ -32,7 +38,7 @@ export default function VacancyDetails({ post, resolvedFacts }: VacancyDetailsPr
 
   return (
     <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>📊 Vacancy Details</h2>
+      <h2 className={styles.sectionTitle}>📊 Vacancy Details{post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? " (reported)" : ""}</h2>
       <table className={styles.table}>
         <thead>
           <tr>

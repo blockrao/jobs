@@ -27,6 +27,7 @@ interface RecruitmentHubSchemaProps {
     organizationName?: string | null;
     applicationEndDate?: Date | string | null;
     notificationDate?: Date | string | null;
+    sourceVerificationStatus?: string | null;
   };
   totalPosts: number;
   resolvedEmployer?: string | null;
@@ -96,10 +97,14 @@ export default function RecruitmentHubStructuredData({
   };
 
   // Enrich WebPage description with vacancy count when resolved — GEO signal.
+  const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
   const vacancySnippet = resolvedTotalVacancies
-    ? `${resolvedTotalVacancies.toLocaleString("en-IN")} vacancies · `
+    ? `${resolvedTotalVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · `
     : "";
-  const webPageDescription = `${vacancySnippet}${recruitment.name} — ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View important dates and application details.`;
+  const positionsSnippet = factsVerified
+    ? `${totalPosts} open position${totalPosts !== 1 ? "s" : ""}`
+    : `${totalPosts} listed position${totalPosts !== 1 ? "s" : ""}`;
+  const webPageDescription = `${vacancySnippet}${recruitment.name} — ${positionsSnippet}. View available details and official-source status.`;
 
   // WebPage: the hub itself — describes this recruitment as a web document.
   const webPage: Record<string, unknown> = {
@@ -121,7 +126,7 @@ export default function RecruitmentHubStructuredData({
   // datePosted: notificationDate is the closest honest proxy for when this
   // recruitment was announced. Schema.org accepts it on WebPage. Helps GEO
   // engines understand content freshness.
-  const datePostedIso = toIso(recruitment.notificationDate);
+  const datePostedIso = factsVerified ? toIso(recruitment.notificationDate) : undefined;
   if (datePostedIso) {
     webPage["datePosted"] = datePostedIso;
   }
@@ -138,7 +143,7 @@ export default function RecruitmentHubStructuredData({
 
   // expires / validThrough: applicationEndDate is a legitimate temporal bound
   // for this page — "this page describes an opportunity that expires on this date."
-  const expiresIso = toIso(recruitment.applicationEndDate);
+  const expiresIso = factsVerified ? toIso(recruitment.applicationEndDate) : undefined;
   if (expiresIso) {
     webPage["expires"] = expiresIso;
     // validThrough is more widely understood by AI/GEO engines for job content.

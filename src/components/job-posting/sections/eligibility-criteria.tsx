@@ -1,9 +1,11 @@
 /**
  * Eligibility Criteria Section
  *
- * Renders education, experience, age limits, and eligibility pathways.
- * The enrichment JSONB columns store data in several confirmed shapes;
- * each field is passed through a typed normalizer before rendering.
+ * Renders education, experience, and age requirements.
+ * Enrichment JSONB fields are passed through typed normalizers.
+ * Extracted source facts (fjaExtract) are shown only when no
+ * canonical enrichment field exists for that slot, and are always
+ * labeled as "reported in listing" — never promoted as verified.
  *
  * Display rules:
  *   - No shape may cause blank sections or empty lists to render.
@@ -27,8 +29,9 @@ interface EligibilityCriteriaProps {
 
 export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) {
   const enrichment = post.enrichment;
+  const extracted = post.fjaExtract;
 
-  // Normalize variable-shape fields upfront
+  // Normalize variable-shape enrichment fields upfront
   const education = enrichment?.education
     ? normalizeEducation(enrichment.education)
     : null;
@@ -43,6 +46,22 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
     enrichment?.ageRulesByCategory &&
     Object.keys(enrichment.ageRulesByCategory).length > 0;
 
+  // Extracted source facts — only used when no enrichment canonical field exists
+  const extractedEligibility = !education
+    ? (extracted?.eligibilityRaw || extracted?.qualificationRaw || null)
+    : null;
+  const extractedExperience = !experience ? (extracted?.experienceRaw || null) : null;
+  const extractedAge = !hasAgeRules &&
+    extracted?.ageLimitRaw &&
+    !/^(not resolved|unknown|not available)$/i.test(extracted.ageLimitRaw.trim())
+      ? extracted.ageLimitRaw
+      : null;
+  const extractedAgeUnresolved = !hasAgeRules &&
+    extracted?.ageLimitRaw &&
+    /^(not resolved|unknown|not available)$/i.test(extracted.ageLimitRaw.trim())
+      ? true
+      : false;
+
   const hasEligibilityContent = Boolean(
     education ||
       experience ||
@@ -50,7 +69,11 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
       enrichment?.ageReferenceDate ||
       enrichment?.ageNote ||
       enrichment?.ageRelaxationRules ||
-      pathways.length > 0
+      pathways.length > 0 ||
+      extractedEligibility ||
+      extractedExperience ||
+      extractedAge ||
+      extracted?.ageRelaxationRulesRaw
   );
 
   if (!hasEligibilityContent) return null;
@@ -58,6 +81,38 @@ export default function EligibilityCriteria({ post }: EligibilityCriteriaProps) 
   return (
     <div className={styles.section}>
       <h2 className={styles.sectionTitle}>✓ Eligibility Criteria</h2>
+
+      {/* Raw extracted eligibility — shown only when no canonical enrichment field exists */}
+      {extractedEligibility && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Qualification reported in listing</div>
+          <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedEligibility}</div>
+        </div>
+      )}
+      {extractedExperience && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Experience reported in listing</div>
+          <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedExperience}</div>
+        </div>
+      )}
+      {extractedAgeUnresolved && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Age limit</div>
+          <div className={styles.infoValue}>Not resolved from the extracted listing. Check the official notice.</div>
+        </div>
+      )}
+      {extractedAge && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Age limit reported in listing</div>
+          <div className={styles.infoValue}>{extractedAge}</div>
+        </div>
+      )}
+      {!enrichment?.ageRelaxationRules && extracted?.ageRelaxationRulesRaw && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Age relaxation reported in listing</div>
+          <div className={styles.infoValue}>{extracted.ageRelaxationRulesRaw}</div>
+        </div>
+      )}
 
       {/* Education */}
       {education && (

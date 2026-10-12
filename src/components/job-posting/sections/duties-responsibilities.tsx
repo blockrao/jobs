@@ -15,14 +15,22 @@ export default function DutiesResponsibilities({
 }: DutiesResponsibilitiesProps) {
   const duties = post.enrichment?.duties || [];
   const responsibilities = post.enrichment?.responsibilities || [];
+  const extractedDuties = post.fjaExtract?.dutiesRaw || null;
 
-  if (duties.length === 0 && responsibilities.length === 0) {
+  if (duties.length === 0 && responsibilities.length === 0 && !extractedDuties) {
     return null;
   }
 
   return (
     <div className={styles.section}>
       <h2 className={styles.sectionTitle}>📝 Duties & Responsibilities</h2>
+
+      {!duties.length && !responsibilities.length && extractedDuties && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Role duties reported in listing</div>
+          <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedDuties}</div>
+        </div>
+      )}
 
       {/* Duties */}
       {duties.length > 0 && (

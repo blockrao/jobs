@@ -1,0 +1,122 @@
+import { describe, expect, test } from "vitest";
+import { readSource, stripComments } from "../helpers/source";
+
+const POST_QUERY = "src/db/operations/get-posts.ts";
+const POST_TYPE = "src/types/job-posting.ts";
+const POST_PAGE = "src/components/job-posting/job-posting-page.tsx";
+const ELIGIBILITY = "src/components/job-posting/sections/eligibility-criteria.tsx";
+const SALARY = "src/components/job-posting/sections/salary-compensation.tsx";
+const DATES = "src/components/job-posting/sections/important-dates.tsx";
+const QUICK_FACTS = "src/components/job-posting/sections/quick-facts.tsx";
+const APPLY = "src/components/job-posting/sections/how-to-apply.tsx";
+const VERIFICATION = "src/components/job-posting/sections/official-source-verification.tsx";
+const HUB = "src/components/recruitment/recruitment-hub.tsx";
+
+describe("extracted source projection", () => {
+  test("maps inventory by its existing canonical Post mapping and keeps it separate from enrichment", () => {
+    const source = stripComments(readSource(POST_QUERY));
+    expect(source).toContain("inventory_post.other_info_raw->>'canonical_post_id' = p.id::text");
+    expect(source).toContain('fi.qualification_raw AS "fjaQualificationRaw"');
+    expect(source).toContain('fi.milestones_raw AS "fjaMilestonesRaw"');
+    expect(source).toContain('fi.official_verification_status AS "fjaVerificationStatus"');
+    expect(source).toContain("fjaExtract: data.fjaInventoryPostId != null");
+  });
+
+  test("recruitment hubs project inventory-level fields and source-post rows without writing or re-seeding", () => {
+    const query = stripComments(readSource("src/db/operations/get-recruitments.ts"));
+    const hub = stripComments(readSource(HUB));
+    expect(query).toContain("sourceExtract: sourceInventory");
+    expect(query).toContain("source_application_end_date");
+    expect(query).toContain("source_vacancy_count");
+    expect(query).toContain("FROM fja_post_inventory");
+    expect(query).toContain("other_info_raw->>'canonical_post_id'");
+    expect(query).toContain("fjaExtract: sourcePost");
+    expect(hub).toContain("recruitment.sourceExtract?.vacancyCount");
+    expect(hub).toContain("sourceDetails.location");
+    expect(hub).toContain("sourceDetails.application_mode");
+    expect(hub).toContain("parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)");
+    expect(hub).toContain("sourceDetails?.interview_date_tentative");
+    expect(hub).toContain("Tentative interview (reported; confirm in official notice)");
+  });
+
+  test("types source-extracted fields independently from canonical facts", () => {
+    const source = readSource(POST_TYPE);
+    expect(source).toContain("fjaExtract?: {");
+    expect(source).toContain("verificationStatus?: string | null");
+    expect(source).toContain("sourcePublishedDate?: Date | string | null");
+    expect(source).toContain("recruitmentOtherInfoRaw?: unknown");
+  });
+
+  test("post leaf visibly distinguishes extracted claims from official verification", () => {
+    const source = stripComments(readSource(POST_PAGE));
+    expect(source).toContain("Official verification pending");
+    expect(source).toContain("secondary listing");
+    expect(source).toContain("post.fjaExtract.verificationStatus !== \"VERIFIED\"");
+  });
+
+  test("eligibility, salary and dates can display extracted details without relabelling listing dates as official notification dates", () => {
+    const eligibility = stripComments(readSource(ELIGIBILITY));
+    const salary = stripComments(readSource(SALARY));
+    const dates = stripComments(readSource(DATES));
+    const quickFacts = stripComments(readSource(QUICK_FACTS));
+    expect(eligibility).toContain("extracted?.qualificationRaw");
+    expect(eligibility).toContain("extracted?.experienceRaw");
+    expect(salary).toContain("Pay reported in listing · pending verification");
+    expect(salary).toContain("post.fjaExtract?.tenureRaw");
+    expect(dates).toContain("Source listing published");
+    expect(dates).toContain("post.fjaExtract?.milestonesRaw");
+    expect(dates).toContain("enrichment?.applicationClosingDate ?? null");
+    expect(quickFacts).toContain("Application Deadline (reported)");
+    expect(quickFacts).toContain("reportedDeadline");
+    expect(quickFacts).toContain("extractedVacancyCount");
+    expect(quickFacts).toContain('"Location (reported)"');
+    expect(salary).toContain('sourceFactsUnverified && post.fjaExtract?.salaryRaw');
+  });
+
+  test("unverified extracted application methods do not become clickable application links", () => {
+    const source = stripComments(readSource(APPLY));
+    expect(source).toContain("recruitmentResolvedFacts?.applicationUrl ?? null");
+    expect(source).not.toMatch(/post\.applyPortalUrl/);
+    expect(source).toContain("Application method reported in listing");
+  });
+
+  test("verification UI does not claim extraction confidence is official verification", () => {
+    const source = stripComments(readSource(VERIFICATION));
+    expect(source).toContain("This status does not mean the details have been");
+    expect(source).toContain("Official recruitment source link is not available in this record.");
+    expect(source).not.toContain("This data has been carefully verified against the official notification.");
+  });
+
+  test("recruitment hub separates lifecycle status from source-verification status", () => {
+    const source = stripComments(readSource(HUB));
+    expect(source).toContain("Official verification pending");
+    expect(source).toContain("Recruitment verification notice");
+    expect(source).toContain("recruitment.sourceVerificationStatus !== \"VERIFIED\"");
+    expect(source).toContain('sourceFactsUnverified ? "Source listing published" : "Notification Published"');
+    expect(source).toContain("sourceFactsUnverified ? null : daysUntil(recruitment.applicationEndDate)");
+    expect(source).toContain('sourceFactsUnverified ? "Reported Last Date" : "Last Date"');
+    expect(source).toContain("The source listing reports");
+    expect(source).toContain('sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"');
+  });
+  test("unverified extracted Post Leaves are noindex and omit JobPosting schema", () => {
+    const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
+    const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
+    expect(route).toContain("index: !sourceVerificationPending");
+    expect(route).toContain("suppressJobPostingSchema={sourceVerificationPending}");
+    expect(route).toContain('"reported vacancies"');
+    expect(schema).toContain("suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting]");
+  });
+
+  test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
+    const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
+    const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
+    expect(route).toContain("pageSeo(canonicalPath, { index: false })");
+    expect(route).toContain("const canonicalPath = roleSlugs.length === 1 ?");
+    expect(route).toContain("/posts/${roleSlugs[0]}");
+    expect(route).toContain("/jobs/${recruitment.slug}");
+    expect(route).toContain("verificationStatus: recruitment.sourceVerificationStatus ?? null");
+    expect(schema).toContain("factsVerified ? toIso(recruitment.notificationDate) : undefined");
+    expect(schema).toContain("factsVerified ? toIso(recruitment.applicationEndDate) : undefined");
+  });
+
+});

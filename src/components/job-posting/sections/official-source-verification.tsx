@@ -17,11 +17,19 @@ export default function OfficialSourceVerification({
   recruitmentResolvedFacts,
 }: OfficialSourceVerificationProps) {
   const enrichment = post.enrichment;
-  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? post.officialSourceUrl ?? null;
-  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? post.applyPortalUrl ?? null;
-  const verificationStatus = enrichment?.sourceVerificationStatus || "PENDING";
+  const officialSourceUrl = recruitmentResolvedFacts?.officialSource ?? null;
+  const applicationUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
+  const verificationStatus =
+    enrichment?.sourceVerificationStatus === "VERIFIED"
+      ? "VERIFIED"
+      : enrichment?.sourceVerificationStatus === "UNVERIFIABLE"
+        ? "UNVERIFIABLE"
+        : !enrichment && post.fjaExtract?.verificationStatus === "VERIFIED"
+          ? "VERIFIED"
+          : !enrichment && post.fjaExtract?.verificationStatus === "NOT_FOUND"
+            ? "UNVERIFIABLE"
+            : "PENDING";
   const verificationDate = enrichment?.sourceVerificationDate;
-  const extractionConfidence = enrichment?.extractionConfidence || 0;
   const dataGaps = enrichment?.dataGaps || [];
 
   const statusColor =
@@ -70,56 +78,27 @@ export default function OfficialSourceVerification({
         </div>
       </div>
 
-      {/* Extraction Confidence */}
-      <div className={styles.infoGroup}>
-        <div className={styles.infoLabel}>Data Extraction Confidence</div>
-        <div style={{ marginTop: "8px" }}>
-          <div
-            style={{
-              width: "100%",
-              height: "24px",
-              background: "#e5e7eb",
-              borderRadius: "8px",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                width: `${extractionConfidence}%`,
-                height: "100%",
-                background:
-                  extractionConfidence >= 80
-                    ? "#059669"
-                    : extractionConfidence >= 60
-                      ? "#f59e0b"
-                      : "#ef4444",
-                transition: "width 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "12px",
-                fontWeight: 700,
-              }}
-            >
-              {extractionConfidence >= 30 && `${extractionConfidence}%`}
-            </div>
-          </div>
+      {/* Extraction completeness is separate from official verification. */}
+      {enrichment?.extractionConfidence != null ? (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Extraction Confidence</div>
           <p style={{ fontSize: "13px", color: "#4b5563", marginTop: "8px" }}>
-            {extractionConfidence >= 80
-              ? "High confidence"
-              : extractionConfidence >= 60
-                ? "Medium confidence"
-                : "Low confidence"}
-            {" — "}
-            {extractionConfidence >= 80
-              ? "This data has been carefully verified against the official notification."
-              : extractionConfidence >= 60
-                ? "Most fields have been verified, but some details may need confirmation."
-                : "This data requires verification against the official source."}
+            {enrichment.extractionConfidence}% extraction confidence. This measures extraction quality only;
+            official verification is tracked separately above.
           </p>
         </div>
-      </div>
+      ) : post.fjaExtract?.extractionStatus ? (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Extraction Completeness</div>
+          <div className={styles.infoValue}>
+            {post.fjaExtract.extractionStatus.replace(/_/g, " ").toLowerCase()}
+          </div>
+          <p style={{ fontSize: "13px", color: "#4b5563", marginTop: "8px" }}>
+            Some listing details have been extracted. This status does not mean the details have been
+            checked against the official notice.
+          </p>
+        </div>
+      ) : null}
 
       {/* Data Gaps */}
       {dataGaps.length > 0 && (
@@ -131,6 +110,18 @@ export default function OfficialSourceVerification({
                 {gap}
               </li>
             ))}
+          </ul>
+        </div>
+      )}
+
+      {post.fjaExtract && verificationStatus !== "VERIFIED" && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Still to confirm</div>
+          <ul style={{ paddingLeft: "20px", color: "#4b5563" }}>
+            <li>The specific official notice and reference number for this role have not yet been confirmed.</li>
+            {!officialSourceUrl && <li>Official recruitment source link is not available in this record.</li>}
+            {!applicationUrl && <li>Verified application link or contact address is not available in this record.</li>}
+            {post.fjaExtract.ageLimitRaw && /not resolved|unknown|not available/i.test(post.fjaExtract.ageLimitRaw) && <li>Age limit has not been resolved from the extracted listing.</li>}
           </ul>
         </div>
       )}
@@ -158,7 +149,7 @@ export default function OfficialSourceVerification({
                 fontSize: "14px",
               }}
             >
-              📄 Official Notification
+              📄 Official Recruitment Source
             </a>
           )}
           {applicationUrl && (
@@ -187,10 +178,9 @@ export default function OfficialSourceVerification({
       </div>
 
       <div className={styles.featureBox} style={{ marginTop: "20px" }}>
-        <strong>About This Data:</strong> JobOye carefully extracts and verifies
-        job posting information from official notifications. While we strive for
-        accuracy, always cross-check critical details (dates, fees, eligibility)
-        with the official source before applying. We are not affiliated with{" "}
+        <strong>About This Data:</strong> JobOye organizes available information and tracks its verification state.
+        Until official verification is complete, confirm critical details (dates, fees, eligibility and application
+        instructions) with the responsible organization before applying. We are not affiliated with{" "}
         <strong>{post.organizationName}</strong> and do not handle applications.
       </div>
     </div>

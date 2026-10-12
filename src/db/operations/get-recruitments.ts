@@ -168,24 +168,91 @@ export async function getRecruitmentWithPosts(slug: string) {
       ...recruitmentResult[0].recruitment,
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
+      sourceVerificationStatus: null as string | null,
+      sourceListingPublishedDate: null as Date | string | null,
+      sourceExtract: null as null | {
+        title: string | null;
+        sourceUrl: string | null;
+        applicationStartDate: Date | string | null;
+        applicationEndDate: Date | string | null;
+        vacancyCount: number | null;
+        qualification: string | null;
+        details: unknown;
+        otherInfoRaw: unknown;
+        sourceStatus: string | null;
+        detailStatus: string | null;
+      },
     };
     const recruitmentId = recruitment.id;
 
     // Load complete linked entities for the recruitment hub's database coverage view.
-    const [organizationResult, examResult] = await Promise.all([
+    const [organizationResult, examResult, sourceInventoryResult] = await Promise.all([
       db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
+      db.execute(sql`
+        SELECT
+          other_info_raw->>'canonical_verification_status' AS source_verification_status,
+          published_date AS source_listing_published_date,
+          title AS source_title,
+          source_url,
+          application_start_date AS source_application_start_date,
+          application_end_date AS source_application_end_date,
+          vacancy_count AS source_vacancy_count,
+          qualification AS source_qualification,
+          details AS source_details,
+          other_info_raw AS source_other_info_raw,
+          source_status,
+          detail_status
+        FROM fja_job_inventory
+        WHERE other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
+        ORDER BY id DESC
+        LIMIT 1
+      `),
     ]);
     const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
       const value = result as { rows?: unknown[] };
       const rows = value?.rows ?? result;
       return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
     };
+    const sourceInventory = rowsOf(sourceInventoryResult)[0] ?? null;
     Object.assign(recruitment, {
       organization: rowsOf(organizationResult)[0] ?? null,
       exam: rowsOf(examResult)[0] ?? null,
+      sourceVerificationStatus:
+        typeof sourceInventory?.source_verification_status === "string"
+          ? sourceInventory.source_verification_status
+          : null,
+      sourceListingPublishedDate:
+        typeof sourceInventory?.source_listing_published_date === "string" ||
+        sourceInventory?.source_listing_published_date instanceof Date
+          ? sourceInventory.source_listing_published_date as Date | string
+          : null,
+      sourceExtract: sourceInventory ? {
+        title: typeof sourceInventory.source_title === "string" ? sourceInventory.source_title : null,
+        sourceUrl: typeof sourceInventory.source_url === "string" ? sourceInventory.source_url : null,
+        applicationStartDate:
+          typeof sourceInventory.source_application_start_date === "string" ||
+          sourceInventory.source_application_start_date instanceof Date
+            ? sourceInventory.source_application_start_date as Date | string
+            : null,
+        applicationEndDate:
+          typeof sourceInventory.source_application_end_date === "string" ||
+          sourceInventory.source_application_end_date instanceof Date
+            ? sourceInventory.source_application_end_date as Date | string
+            : null,
+        vacancyCount: typeof sourceInventory.source_vacancy_count === "number"
+          ? sourceInventory.source_vacancy_count
+          : null,
+        qualification: typeof sourceInventory.source_qualification === "string"
+          ? sourceInventory.source_qualification
+          : null,
+        details: sourceInventory.source_details ?? null,
+        otherInfoRaw: sourceInventory.source_other_info_raw ?? null,
+        sourceStatus: typeof sourceInventory.source_status === "string" ? sourceInventory.source_status : null,
+        detailStatus: typeof sourceInventory.detail_status === "string" ? sourceInventory.detail_status : null,
+      } : null,
     });
 
     // Step 2: Get all posts for this recruitment with positions
@@ -211,7 +278,7 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     // Step 3: Fetch ALL vacancies and eligibilities in parallel, not per-post
     // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities
-    const [allVacancies, allEligibilities] = await Promise.all([
+    const [allVacancies, allEligibilities, sourcePostInventoryResult] = await Promise.all([
       db
         .select()
         .from(vacancies)
@@ -220,6 +287,12 @@ export async function getRecruitmentWithPosts(slug: string) {
         .select()
         .from(eligibilities)
         .where(inArray(eligibilities.postId, postIds)),
+      db.execute(sql`
+        SELECT *
+        FROM fja_post_inventory
+        WHERE other_info_raw->>'canonical_post_id' IN (${sql.join(postIds.map((id) => sql`${String(id)}`), sql`,`)})
+        ORDER BY last_seen_at DESC, id DESC
+      `),
     ]);
 
     // Step 4: Group vacancies and eligibilities by post ID (client-side)
@@ -240,16 +313,50 @@ export async function getRecruitmentWithPosts(slug: string) {
       eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
     }
 
-    // Keep the public Recruitment Hub projection focused on canonical Post
-    // facts. Source inventory is an internal ingestion/review concern.
-    const enrichedPosts = postsResult.map((row) => ({
-      ...row.post,
-      // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
-      title: row.post.name,
-      position: row.position,
-      vacancies: vacanciesByPostId.get(row.post.id) ?? [],
-      eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
-    }));
+    // Project extracted source facts separately so the hub can show reported
+    // listing values without treating them as canonical/verified Post facts.
+    const sourcePostRows = rowsOf(sourcePostInventoryResult);
+    const sourcePostByCanonicalId = new Map<string, Record<string, unknown>>();
+    for (const sourcePost of sourcePostRows) {
+      const rawInfo = sourcePost.other_info_raw;
+      const info = rawInfo && typeof rawInfo === "object" && !Array.isArray(rawInfo)
+        ? rawInfo as Record<string, unknown>
+        : {};
+      const canonicalPostId = typeof info.canonical_post_id === "string"
+        ? info.canonical_post_id
+        : null;
+      if (canonicalPostId && !sourcePostByCanonicalId.has(canonicalPostId)) {
+        sourcePostByCanonicalId.set(canonicalPostId, sourcePost);
+      }
+    }
+
+    const enrichedPosts = postsResult.map((row) => {
+      const sourcePost = sourcePostByCanonicalId.get(String(row.post.id));
+      const rawInfo = sourcePost?.other_info_raw;
+      const sourceOtherInfo = rawInfo && typeof rawInfo === "object" && !Array.isArray(rawInfo)
+        ? rawInfo as Record<string, unknown>
+        : null;
+      return {
+        ...row.post,
+        // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
+        title: row.post.name,
+        position: row.position,
+        vacancies: vacanciesByPostId.get(row.post.id) ?? [],
+        eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
+        fjaExtract: sourcePost ? {
+          inventoryId: sourcePost.id as number | string,
+          vacancyCountRaw: typeof sourcePost.vacancy_count_raw === "string" ? sourcePost.vacancy_count_raw : null,
+          qualificationRaw: typeof sourcePost.qualification_raw === "string" ? sourcePost.qualification_raw : null,
+          experienceRaw: typeof sourcePost.experience_raw === "string" ? sourcePost.experience_raw : null,
+          salaryRaw: typeof sourcePost.salary_raw === "string" ? sourcePost.salary_raw : null,
+          tenureRaw: typeof sourcePost.tenure_raw === "string" ? sourcePost.tenure_raw : null,
+          locationRaw: typeof sourcePost.location_raw === "string" ? sourcePost.location_raw : null,
+          employmentTypeRaw: typeof sourcePost.employment_type_raw === "string" ? sourcePost.employment_type_raw : null,
+          verificationStatus: typeof sourcePost.official_verification_status === "string" ? sourcePost.official_verification_status : null,
+          otherInfoRaw: sourceOtherInfo,
+        } : null,
+      };
+    });
 
     const [enrichmentResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
       db.execute(sql`

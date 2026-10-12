@@ -16,10 +16,16 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
   const enrichment = post.enrichment;
   // Use resolver output for salary range — never raw enrichment salaryMin/Max
   const resolvedSalary = resolvedFacts?.salary ?? null;
+  const sourceFactsUnverified = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
 
   if (
     !enrichment?.payScale &&
     !resolvedSalary &&
+    !post.fjaExtract?.salaryRaw &&
+    !post.fjaExtract?.payLevelRaw &&
+    !post.fjaExtract?.tenureRaw &&
     (!enrichment?.benefits || enrichment.benefits.length === 0) &&
     !enrichment?.salaryNote
   ) {
@@ -40,10 +46,30 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
         </div>
       )}
 
-      {/* Salary Range — only from resolver, never raw enrichment */}
-      {resolvedSalary && (
+      {/* Source-extracted pay is useful context, but is never promoted to verified salary. */}
+      {sourceFactsUnverified && post.fjaExtract?.salaryRaw && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Salary Range</div>
+          <div className={styles.infoLabel}>Pay reported in listing · pending verification</div>
+          <div className={styles.infoValue}>{post.fjaExtract.salaryRaw}</div>
+        </div>
+      )}
+      {!enrichment?.payScale && post.fjaExtract?.payLevelRaw && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Pay level reported in listing</div>
+          <div className={styles.infoValue}>{post.fjaExtract.payLevelRaw}</div>
+        </div>
+      )}
+      {post.fjaExtract?.tenureRaw && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Project tenure reported in listing</div>
+          <div className={styles.infoValue}>{post.fjaExtract.tenureRaw}</div>
+        </div>
+      )}
+
+      {/* Salary Range — only from resolver, never raw enrichment */}
+      {resolvedSalary && (!sourceFactsUnverified || !post.fjaExtract?.salaryRaw) && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>{sourceFactsUnverified ? "Salary range reported in current record" : "Salary Range"}</div>
           <div className={styles.infoValue}>
             {resolvedSalary.min && resolvedSalary.max ? (
               <>

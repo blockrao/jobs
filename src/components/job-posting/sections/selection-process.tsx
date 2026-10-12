@@ -5,6 +5,10 @@
  * column stores data in four confirmed shapes (see enrichment-normalizers.ts);
  * we normalize all shapes before rendering so no real data is silently dropped.
  *
+ * Extracted source facts (fjaExtract.applicationSelectionRaw) are shown only
+ * when no canonical enrichment or resolver selection process exists, and are
+ * always labeled as "reported in listing".
+ *
  * Display rules:
  *   - String-array shape (most common, 41 rows): each string becomes a named row.
  *   - Structured shapes ({step, name/label, …}): table with step number and details.
@@ -30,8 +34,37 @@ export default function SelectionProcess({
   const stages = normalizeSelectionProcess(raw);
   const recruitmentProcess = recruitmentResolvedFacts?.selectionProcess ?? null;
 
+  // Extracted source selection — only shown when no canonical field exists
+  const extractedSelection = stages.length === 0 && !recruitmentProcess
+    ? (Array.isArray(post.fjaExtract?.applicationSelectionRaw)
+        ? (post.fjaExtract!.applicationSelectionRaw as unknown[])
+            .filter((item): item is Record<string, unknown> =>
+              Boolean(item) && typeof item === "object" && !Array.isArray(item)
+            )
+            .map((item) => typeof item.selection === "string" ? item.selection : null)
+            .filter((item): item is string => Boolean(item))
+        : [])
+    : [];
+
   // Nothing to show
-  if (stages.length === 0 && !recruitmentProcess) return null;
+  if (stages.length === 0 && !recruitmentProcess && extractedSelection.length === 0) return null;
+
+  // Extracted fallback: listing-reported selection steps
+  if (stages.length === 0 && !recruitmentProcess && extractedSelection.length > 0) {
+    return (
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>🎯 Selection Process</h2>
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Selection details reported in listing</div>
+          <ul className={styles.infoList}>
+            {extractedSelection.map((step, index) => (
+              <li key={index} className={styles.infoListItem}>{step}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
 
   // Fallback: recruitment-level plain text (e.g. resolver returned a text block)
   if (stages.length === 0 && recruitmentProcess) {

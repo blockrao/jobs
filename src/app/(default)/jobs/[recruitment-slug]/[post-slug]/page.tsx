@@ -45,8 +45,9 @@ function buildPostMetaDescription(params: {
   resolvedVacancy: number | null;
   resolvedDeadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN" };
   resolvedSalary: { min: number; max: number; currency: string; period: string } | null;
+  sourceVerificationPending?: boolean;
 }): string {
-  const { title, organizationName, resolvedVacancy, resolvedDeadline, resolvedSalary } = params;
+  const { title, organizationName, resolvedVacancy, resolvedDeadline, resolvedSalary, sourceVerificationPending } = params;
 
   const parts: string[] = [];
 
@@ -56,17 +57,17 @@ function buildPostMetaDescription(params: {
 
   // Vacancy: only when resolved
   if (resolvedVacancy != null) {
-    parts.push(`${resolvedVacancy.toLocaleString("en-IN")} vacancies`);
+    parts.push(`${resolvedVacancy.toLocaleString("en-IN")} ${sourceVerificationPending ? "reported vacancies" : "vacancies"}`);
   }
 
-  // Salary: only when resolved
-  if (resolvedSalary) {
+  // Do not promote extracted pay into search snippets while source verification is pending.
+  if (resolvedSalary && !sourceVerificationPending) {
     const salaryStr = `₹${resolvedSalary.min.toLocaleString("en-IN")}–₹${resolvedSalary.max.toLocaleString("en-IN")} / ${resolvedSalary.period}`;
     parts.push(salaryStr);
   }
 
   // Deadline: only when state is known
-  if (resolvedDeadline.state === "OPEN" && resolvedDeadline.date) {
+  if (!sourceVerificationPending && resolvedDeadline.state === "OPEN" && resolvedDeadline.date) {
     try {
       const ms = resolvedDeadline.date.getTime() - Date.now();
       const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
@@ -76,12 +77,12 @@ function buildPostMetaDescription(params: {
         parts.push(`Apply by ${resolvedDeadline.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
       }
     } catch { /* skip */ }
-  } else if (resolvedDeadline.state === "CLOSED") {
+  } else if (!sourceVerificationPending && resolvedDeadline.state === "CLOSED") {
     parts.push("Applications closed");
   }
 
   // Tail CTA
-  parts.push("Check eligibility and apply on JobOye.");
+  parts.push(sourceVerificationPending ? "Confirm the official notice before applying." : "Check eligibility and apply on JobOye.");
 
   // Join: first part is the sentence opener, rest are fragments joined with " · "
   const [head, ...rest] = parts;
@@ -123,23 +124,27 @@ export async function generateMetadata({
   const metaSalary = resolveSalary(post);
   const metaDeadline = resolveDeadline(post, now);
 
+  const sourceVerificationPending = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
   const description = buildPostMetaDescription({
     title: post.title,
     organizationName: post.organizationName,
     resolvedVacancy: metaVacancy,
     resolvedDeadline: metaDeadline,
     resolvedSalary: metaSalary,
+    sourceVerificationPending,
   });
 
   // OG description: concise — vacancy + title
   const ogDescription = metaVacancy
-    ? `${metaVacancy.toLocaleString("en-IN")} vacancies · ${post.title}${post.organizationName ? ` at ${post.organizationName}` : ""}`
+    ? `${metaVacancy.toLocaleString("en-IN")} ${sourceVerificationPending ? "reported vacancies" : "vacancies"} · ${post.title}${post.organizationName ? ` at ${post.organizationName}` : ""}`
     : `${post.title}${post.organizationName ? ` at ${post.organizationName}` : ""} on JobOye`;
 
   return {
     title: `${post.title} - ${post.organizationName}`,
     description,
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !sourceVerificationPending }),
     openGraph: {
       title: post.title,
       description: ogDescription,
@@ -160,6 +165,10 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
   if (!post) {
     notFound();
   }
+
+  const sourceVerificationPending = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
 
   // Fetch recruitment data with all posts for context
   const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
@@ -209,6 +218,7 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
         resolvedVacancy={resolvedFacts.vacancyCount}
         resolvedSalary={resolvedFacts.salary}
         resolvedDeadline={resolvedFacts.deadline}
+        suppressJobPostingSchema={sourceVerificationPending}
       />
       <JobPostingPage
         post={post}
