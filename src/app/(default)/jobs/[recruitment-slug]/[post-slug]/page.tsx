@@ -166,6 +166,10 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
     notFound();
   }
 
+  // fjaExtract is null only for posts with no fja_post_inventory link — canonical
+  // write-path posts, not aggregator-scraped ones. Those are safe to index.
+  // Inventory-linked posts are always joined (LEFT JOIN LATERAL ON TRUE), so
+  // fjaExtract non-null reliably means an inventory record exists.
   const sourceVerificationPending = Boolean(
     post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
   );

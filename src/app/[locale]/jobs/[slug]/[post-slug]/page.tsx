@@ -81,6 +81,10 @@ export default async function LocaleJobPostingPage({ params }: Props) {
   if (!post) notFound();
 
   // Mirror (default) route: suppress JobPosting schema when source verification is pending.
+  // fjaExtract is null only for posts that have no fja_post_inventory link — i.e. posts
+  // created through the canonical write path, not scraped from aggregators. Those posts
+  // are safe to index. Inventory-linked posts are always joined (LEFT JOIN LATERAL ON TRUE),
+  // so fjaExtract being non-null is the reliable signal that an inventory record exists.
   const sourceVerificationPending = Boolean(
     post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
   );

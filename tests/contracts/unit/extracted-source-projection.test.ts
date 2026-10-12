@@ -122,6 +122,21 @@ describe("extracted source projection", () => {
     expect(localeRoute).toContain('locale !== "hi"');
   });
 
+  test("null fjaExtract does not suppress schema — absence of inventory link is not unverified", () => {
+    // Invariant: fjaExtract is null for posts with no fja_post_inventory canonical_post_id link.
+    // These are canonical write-path posts (not aggregator-scraped) and are safe to index.
+    // The suppression condition must be: fjaExtract present AND verificationStatus !== VERIFIED.
+    // It must NOT be: !fjaExtract (which would suppress all non-inventory posts).
+    const defaultRoute = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
+    const localeRoute = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
+    // Both routes must gate on fjaExtract presence first, then check status — not just status alone.
+    expect(defaultRoute).toContain("post.fjaExtract && post.fjaExtract.verificationStatus");
+    expect(localeRoute).toContain("post.fjaExtract && post.fjaExtract.verificationStatus");
+    // Neither route may suppress schema when fjaExtract is absent (null-guard must be the && clause).
+    expect(defaultRoute).not.toMatch(/!post\.fjaExtract.*suppressJobPostingSchema/);
+    expect(localeRoute).not.toMatch(/!post\.fjaExtract.*suppressJobPostingSchema/);
+  });
+
   test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
