@@ -12,6 +12,67 @@ interface JobPostingHeaderProps {
   resolvedFacts?: ResolvedLeafFacts;
 }
 
+// ---------------------------------------------------------------------------
+// Helpers — date formatting and deadline suffix for the H1
+// ---------------------------------------------------------------------------
+
+/** Format a Date to "20 Oct 2026" style (en-IN locale). */
+function fmtDate(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  try {
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build the display-H1 string for a post leaf page.
+ *
+ * Pattern (discoverability-framework Task #30):
+ *   "[Post Title] – [Org] [Year]: Apply by [Date]"  (open, deadline known)
+ *   "[Post Title] – [Org] [Year]"                   (open, no deadline)
+ *   "[Post Title] – [Org] [Year]: Applications closed"  (closed)
+ *
+ * The recruitment year is extracted from:
+ *   1. post.recruitmentName (e.g. "IIIT Kota JRF Recruitment 2026" → 2026)
+ *   2. deadline.date year
+ *   3. notificationPublicationDate year
+ * Kept short: org and year are capped; the recruitment name is NOT repeated verbatim
+ * to avoid a 36px line that wraps badly on mobile.
+ */
+function buildH1(
+  title: string,
+  organizationName: string | null | undefined,
+  deadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN" } | null | undefined,
+  recruitmentName: string | null | undefined,
+  notificationPublicationDate: Date | null | undefined
+): string {
+  // Extract year
+  let year: string | null = null;
+  const yearMatch = recruitmentName?.match(/\b(20\d{2})\b/);
+  if (yearMatch) {
+    year = yearMatch[1];
+  } else if (deadline?.date) {
+    year = String(deadline.date.getFullYear());
+  } else if (notificationPublicationDate) {
+    year = String(new Date(notificationPublicationDate).getFullYear());
+  }
+
+  // Build suffix
+  const org = organizationName ? ` – ${organizationName}` : "";
+  const yearPart = year ? ` ${year}` : "";
+  let suffix = "";
+  if (deadline?.state === "OPEN" && deadline.date) {
+    const dateStr = fmtDate(deadline.date);
+    suffix = dateStr ? `: Apply by ${dateStr}` : "";
+  } else if (deadline?.state === "CLOSED") {
+    suffix = ": Applications closed";
+  }
+
+  return `${title}${org}${yearPart}${suffix}`;
+}
+
 export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHeaderProps) {
   // Use resolver output — never compute deadline from raw enrichment
   const deadline = resolvedFacts?.deadline;
@@ -31,6 +92,16 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
     ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
     : "See Notification";
 
+  // Rich H1: "[Post Title] – [Org] [Year]: Apply by [Date]"
+  // Visible H1 is enriched; screen readers and crawlers get the full context inline.
+  const richH1 = buildH1(
+    post.title,
+    post.organizationName,
+    deadline,
+    post.recruitmentName,
+    post.notificationPublicationDate
+  );
+
   return (
     <div style={headerStyles.container}>
       <div style={headerStyles.headerTop}>
@@ -44,7 +115,7 @@ export default function JobPostingHeader({ post, resolvedFacts }: JobPostingHead
           {statusText}
         </span>
       </div>
-      <h1 style={headerStyles.jobTitle}>{post.title}</h1>
+      <h1 style={headerStyles.jobTitle}>{richH1}</h1>
       <div style={headerStyles.jobMeta}>
         {post.enrichment?.payLevel && (
           <div style={headerStyles.metaItem}>

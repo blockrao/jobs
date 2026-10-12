@@ -141,8 +141,30 @@ export async function generateMetadata({
     ? `${metaVacancy.toLocaleString("en-IN")} ${sourceVerificationPending ? "reported vacancies" : "vacancies"} · ${post.title}${post.organizationName ? ` at ${post.organizationName}` : ""}`
     : `${post.title}${post.organizationName ? ` at ${post.organizationName}` : ""} on JobOye`;
 
+  // Page title pattern (discoverability-framework Task #30):
+  //   "[Post Title] – [Org] [Year]: Apply by [Date]"   (50–65 chars target)
+  //   "[Post Title] – [Org] [Year]"                    (no deadline)
+  //   "[Post Title] – [Org] [Year]: Applications closed"  (closed)
+  // Year extracted from recruitmentName first, then fallback to deadline year.
+  const yearMatch = (post.recruitmentName ?? "").match(/\b(20\d{2})\b/);
+  const titleYear =
+    yearMatch?.[1] ??
+    (metaDeadline.date ? String(metaDeadline.date.getFullYear()) : null);
+  const titleOrg = post.organizationName ? ` – ${post.organizationName}` : "";
+  const titleYearPart = titleYear ? ` ${titleYear}` : "";
+  let titleSuffix = "";
+  if (!sourceVerificationPending) {
+    if (metaDeadline.state === "OPEN" && metaDeadline.date) {
+      const d = metaDeadline.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      titleSuffix = `: Apply by ${d}`;
+    } else if (metaDeadline.state === "CLOSED") {
+      titleSuffix = ": Applications closed";
+    }
+  }
+  const pageTitle = `${post.title}${titleOrg}${titleYearPart}${titleSuffix}`;
+
   return {
-    title: `${post.title} - ${post.organizationName}`,
+    title: pageTitle,
     description,
     ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !sourceVerificationPending }),
     openGraph: {
