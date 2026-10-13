@@ -12,6 +12,7 @@ ALTER TABLE public.fja_post_inventory
   ADD COLUMN IF NOT EXISTS age_reference_date_candidate date,
   ADD COLUMN IF NOT EXISTS age_normalization_status text NOT NULL DEFAULT 'NEEDS_REVIEW',
   ADD COLUMN IF NOT EXISTS official_source_page integer,
+  ADD COLUMN IF NOT EXISTS verified_official_source_url text,
   ADD COLUMN IF NOT EXISTS verification_notes text,
   ADD COLUMN IF NOT EXISTS verified_at timestamptz;
 
