@@ -34,6 +34,28 @@ describe("FJA notification versus post-level fact boundaries", () => {
     expect(posts.map((post) => post.vacancyCountCandidate)).toEqual([10, 5]);
     expect(posts.every((post) => post.salaryRaw === null)).toBe(true);
     expect(posts.every((post) => post.ageLimitRaw === null)).toBe(true);
+    expect(posts.every((post) => Object.keys(post.otherInfoRaw.genericArticleFieldsNotAssignedToPost as object).length === 0)).toBe(true);
+  });
+
+  test("keeps notification-level facts on the parent when a post-name list has multiple posts but no post-wise table", () => {
+    const item = {
+      externalId: "777777",
+      sourceUrl: "https://www.freejobalert.com/articles/example-777777/",
+      title: "Example Undecomposed Notification",
+      details: {
+        tableFields: {},
+        postNames: "Assistant Professor | Research Associate",
+        salary: "₹50,000 per month",
+        ageLimit: "18 to 30 years",
+        lists: [],
+        tables: [],
+      },
+    } as never;
+
+    const posts = extractPostCandidates(item);
+    expect(posts).toHaveLength(2);
+    expect(posts.every((post) => post.salaryRaw === null && post.ageLimitRaw === null)).toBe(true);
+    expect(posts.every((post) => post.vacancyCountCandidate === null)).toBe(true);
     expect(posts[0].otherInfoRaw).toMatchObject({
       genericArticleFieldsNotAssignedToPost: {
         salary: "₹50,000 per month",
