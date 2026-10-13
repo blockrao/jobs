@@ -64,8 +64,10 @@ export async function saveFjaCandidate(formData: FormData) {
   if (period && !PERIODS.has(period)) redirect("/admin/fja-review?error=period");
   if (type && !TYPES.has(type)) redirect("/admin/fja-review?error=salary-type");
   const referenceDateRaw = stringValue(formData, "ageReferenceDate");
-  const referenceDate = referenceDateRaw && /^20\d{2}-\d{2}-\d{2}$/.test(referenceDateRaw) ? referenceDateRaw : null;
-  if (referenceDateRaw && !referenceDate) redirect("/admin/fja-review?error=reference-date");
+  const parsedReferenceDate = referenceDateRaw ? new Date(referenceDateRaw + "T00:00:00.000Z") : null;
+  const validReferenceDate = Boolean(referenceDateRaw && /^20\d{2}-\d{2}-\d{2}$/.test(referenceDateRaw) && parsedReferenceDate && Number.isFinite(parsedReferenceDate.getTime()) && parsedReferenceDate.toISOString().slice(0, 10) === referenceDateRaw);
+  if (referenceDateRaw && !validReferenceDate) redirect("/admin/fja-review?error=reference-date");
+  const referenceDate = validReferenceDate ? referenceDateRaw : null;
 
   const db = getDb();
   await db.update(fjaPostInventory).set({
