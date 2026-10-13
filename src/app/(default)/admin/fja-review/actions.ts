@@ -94,7 +94,7 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
   const note = stringValue(formData, "verificationNotes");
   const confirmed = stringValue(formData, "confirmOfficialSource") === "yes";
   if (!id || !page || !note || note.length < 12 || !confirmed) {
-    redirect("/admin/fja-review?error=verification-evidence");
+    redirect("/admin/fja-review?mode=verification&error=verification-evidence");
   }
 
   const db = getDb();
@@ -105,11 +105,11 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
     .innerJoin(fjaJobInventory, eq(fjaPostInventory.recruitmentInventoryId, fjaJobInventory.id))
     .where(eq(fjaPostInventory.id, id)).limit(1);
   const officialUrl = row?.officialNotificationUrl;
-  if (!officialUrl) redirect("/admin/fja-review?error=missing-official-url");
+  if (!officialUrl) redirect("/admin/fja-review?mode=verification&error=missing-official-url");
   let parsed: URL;
-  try { parsed = new URL(officialUrl); } catch { redirect("/admin/fja-review?error=invalid-official-url"); }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") redirect("/admin/fja-review?error=invalid-official-url");
-  if (/(^|\.)freejobalert\.com$/i.test(parsed.hostname)) redirect("/admin/fja-review?error=aggregator-url");
+  try { parsed = new URL(officialUrl); } catch { redirect("/admin/fja-review?mode=verification&error=invalid-official-url"); }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") redirect("/admin/fja-review?mode=verification&error=invalid-official-url");
+  if (/(^|\.)freejobalert\.com$/i.test(parsed.hostname)) redirect("/admin/fja-review?mode=verification&error=aggregator-url");
 
   await db.update(fjaPostInventory).set({
     officialVerificationStatus: "VERIFIED",
@@ -123,5 +123,5 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
     eq(fjaPostInventory.recruitmentInventoryId, row!.recruitmentInventoryId),
   ));
   revalidatePath("/admin/fja-review");
-  redirect("/admin/fja-review?verified=1");
+  redirect("/admin/fja-review?mode=verification&verified=1");
 }
