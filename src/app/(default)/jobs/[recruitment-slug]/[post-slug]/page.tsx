@@ -17,6 +17,10 @@ import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { cache } from "react";
 import { Metadata } from "next";
+
+// Revalidate every 5 minutes so DB writes (decomposition, enrichment) appear
+// without requiring a full deployment.
+export const revalidate = 300;
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
 import { getPostBySlug } from "@/db/operations/get-posts";

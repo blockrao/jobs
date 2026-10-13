@@ -5,6 +5,8 @@
  */
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+export const revalidate = 300;
 import { entitySeo } from "@/lib/seo";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
