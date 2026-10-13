@@ -1141,6 +1141,7 @@ export const fjaPostInventory = pgTable(
     ageReferenceDateCandidate: date("age_reference_date_candidate"),
     ageNormalizationStatus: text("age_normalization_status").notNull().default("NEEDS_REVIEW"),
     officialSourcePage: integer("official_source_page"),
+    verifiedOfficialSourceUrl: text("verified_official_source_url"),
     verificationNotes: text("verification_notes"),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     payLevelRaw: text("pay_level_raw"),
