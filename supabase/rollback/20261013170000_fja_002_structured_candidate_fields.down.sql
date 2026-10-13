@@ -12,6 +12,7 @@ ALTER TABLE public.fja_post_inventory
   DROP CONSTRAINT IF EXISTS fja_post_salary_currency_check,
   DROP COLUMN IF EXISTS verified_at,
   DROP COLUMN IF EXISTS verification_notes,
+  DROP COLUMN IF EXISTS verified_official_source_url,
   DROP COLUMN IF EXISTS official_source_page,
   DROP COLUMN IF EXISTS age_normalization_status,
   DROP COLUMN IF EXISTS age_reference_date_candidate,
