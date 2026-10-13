@@ -19,6 +19,7 @@
 import { getDb } from "../src/db";
 import { loadOrgIndex, resolveOrganization } from "../src/ingest/organization-resolution";
 import { writePostingsToDB } from "../src/db/operations/write-postings-v2";
+import type { DedupedPosting } from "../src/ingest/deduplicate";
 import type { NormalizedPosting } from "../src/ingest/normalize";
 import { sql } from "drizzle-orm";
 
@@ -75,7 +76,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     externalId: row.external_id,
     sourceUrl: row.source_url,
     title: row.title,
-    kind: "GOVT",
+    kind: "GOVERNMENT",
     organizationName: row.organization_name ?? "Unknown",
     organizationFromLabel: true,
     description: row.qualification ?? row.title,
@@ -206,7 +207,15 @@ async function main() {
   for (const row of toProcess) {
     const normalized = toNormalized(row);
     try {
-      const result = await writePostingsToDB([normalized]);
+      const deduped: DedupedPosting = {
+        title: normalized.title,
+        organizationName: normalized.organizationName,
+        locationCity: normalized.locationRegion ?? "",
+        deadline: normalized.validThrough ?? null,
+        primary: normalized,
+        sources: [{ portal: "fja", externalId: normalized.externalId, score: 1 }],
+      };
+      const result = await writePostingsToDB([deduped], [normalized]);
       // A CANDIDATE org means the posting was held (inserted as PENDING but org unresolved)
       const resolution = resolveOrganization(orgIndex, row.organization_name);
       if (resolution.kind === "CANDIDATE" || resolution.kind === "NONE") {
