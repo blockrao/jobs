@@ -165,7 +165,7 @@ export function JobSearch({ onResultsChange, initialQuery = "" }: JobSearchProps
         <input
           id="job-search-input"
           type="text"
-          placeholder="Search jobs by title, organization, post name, or any word from the notice..."
+          placeholder="Search jobs by title, post name, organization, or any word from the notice..."
           value={query}
           role="combobox"
           aria-expanded={showSuggestions && suggestions.length > 0}
@@ -429,6 +429,32 @@ function JobResultCard({ result }: JobResultCardProps) {
           </Link>
           {result.organizationName && <p className="text-sm text-gray-600 mt-1">{result.organizationName}</p>}
 
+          {/* Posts of this recruitment whose title matched the search, each
+              linked to its own page. */}
+          {result.matchingPosts.length > 0 && (result.postCount > 1 || result.matchingPosts[0].href !== result.href) && (
+            <p className="text-sm text-gray-700 mt-2">
+              <span className="text-gray-500">
+                {result.matchingPostCount === 1 ? "Matching post: " : "Matching posts: "}
+              </span>
+              {result.matchingPosts.map((post, i) => (
+                <span key={post.href}>
+                  {i > 0 && <span className="text-gray-400"> · </span>}
+                  <Link href={post.href} className="text-blue-700 hover:underline">
+                    {post.title}
+                  </Link>
+                </span>
+              ))}
+              {result.matchingPostCount > result.matchingPosts.length && (
+                <>
+                  <span className="text-gray-400"> · </span>
+                  <Link href={`/jobs/${result.slug}`} className="text-blue-700 hover:underline">
+                    +{result.matchingPostCount - result.matchingPosts.length} more
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-2 mt-3">
             {result.locationCity && (
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -438,6 +464,11 @@ function JobResultCard({ result }: JobResultCardProps) {
             {result.totalVacancies !== null && result.totalVacancies > 0 && (
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                 👥 {result.totalVacancies} {result.totalVacancies === 1 ? "vacancy" : "vacancies"}
+              </span>
+            )}
+            {result.postCount > 1 && (
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                {result.postCount} posts
               </span>
             )}
             {result.isClosed ? (

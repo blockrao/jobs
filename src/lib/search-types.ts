@@ -16,13 +16,25 @@ export interface SearchFilters {
   language?: "english" | "hindi" | "hinglish";
 }
 
+/** A post of the recruitment whose title matched the query. */
+export interface MatchingPost {
+  title: string;
+  /** /jobs/{recruitment-slug}/{post-slug} */
+  href: string;
+}
+
+/** One search result: a recruitment (SEARCH-003). */
 export interface SearchResult {
+  /** Recruitment id. */
   id: number;
-  /** Posting slug (legacy). Use `href` for links. */
+  /** Recruitment slug. Use `href` for links. */
   slug: string;
-  /** Canonical recruitment slug, when the posting is linked to a recruitment. */
+  /** Recruitment slug (same as `slug`; kept for existing readers). */
   recruitmentSlug: string | null;
-  /** Canonical page for this result: /jobs/{recruitment-slug}. */
+  /**
+   * Page for this result: the Post page when the recruitment has exactly one
+   * live post, otherwise the recruitment page.
+   */
   href: string;
   title: string;
   organizationName: string | null;
@@ -48,4 +60,10 @@ export interface SearchResult {
    * so these are the closest results. Always "full" without a text query.
    */
   matchQuality: "full" | "partial";
+  /** Live posts in this recruitment. */
+  postCount: number;
+  /** Posts whose title matched the query (at most three), best match first. */
+  matchingPosts: MatchingPost[];
+  /** How many posts matched in all. */
+  matchingPostCount: number;
 }
