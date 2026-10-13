@@ -53,24 +53,137 @@ interface FjaJobRow {
 }
 
 // ---------------------------------------------------------------------------
+// Parse a salary string from FJA into { min, max } in whole rupees.
+// Handles "Rs. 1,50,000/- per month", "Rs. 37,640 - Rs. 1,15,500", etc.
+// Returns undefined values when the string cannot be parsed.
+// ---------------------------------------------------------------------------
+function parseSalary(raw: string | undefined): { min?: number; max?: number } {
+  if (!raw) return {};
+  // Strip currency labels, slashes, hyphens used as decorators, and commas
+  // Example inputs:
+  //   "Rs. 1,50,000/- per month"  → 150000
+  //   "Rs. 37,640 - Rs. 1,15,500" → { min: 37640, max: 115500 }
+  const cleaned = raw.replace(/Rs\.?\s*/gi, "").replace(/\/-/g, "").replace(/per\s+\w+/gi, "").trim();
+  // Find all sequences of digits (with embedded commas)
+  const numStrings = cleaned.match(/[\d,]+/g) ?? [];
+  const nums = numStrings
+    .map((s) => parseInt(s.replace(/,/g, ""), 10))
+    .filter((n) => !isNaN(n) && n > 0);
+  if (nums.length === 0) return {};
+  if (nums.length === 1) return { min: nums[0], max: nums[0] };
+  return { min: Math.min(...nums), max: Math.max(...nums) };
+}
+
+// ---------------------------------------------------------------------------
+// Extract apply URL from details.allLinks: first link whose label (case-insensitive)
+// contains "apply online" or "apply here" and whose URL is not an email/CDN-CGI path.
+// ---------------------------------------------------------------------------
+function extractApplyUrl(allLinks: Array<{ url?: string; label?: string }> | undefined): string | undefined {
+  if (!allLinks || !Array.isArray(allLinks)) return undefined;
+  const applyLabels = /apply\s*(online|here|now|link)/i;
+  for (const link of allLinks) {
+    if (!link.url || !link.label) continue;
+    if (link.url.includes("cdn-cgi") || link.url.includes("t.me") || link.url.includes("freejobalert.com/register")) continue;
+    if (applyLabels.test(link.label)) return link.url;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Build a postTable from details.tables: find the table whose heading contains
+// "vacanc" or whose rows have name + vacancy columns. Returns undefined if none found.
+// Only objective facts — name of post and number of vacancies.
+// ---------------------------------------------------------------------------
+function extractPostTable(
+  tables: Array<{
+    heading?: string;
+    rows: Array<{ cells: string[]; rowIndex: number }>;
+  }> | undefined
+): Array<{ name: string; vacancies?: number }> | undefined {
+  if (!tables || !Array.isArray(tables)) return undefined;
+
+  // Find a table whose heading mentions "vacanc" or "post"
+  const vacancyTable = tables.find((t) =>
+    /vacanc|post.?wise|department.?wise/i.test(t.heading ?? "")
+  );
+  if (!vacancyTable) return undefined;
+
+  // Header row tells us which column is name and which is count
+  const headerRow = vacancyTable.rows.find((r) => r.rowIndex === 0);
+  if (!headerRow) return undefined;
+
+  const headers = headerRow.cells.map((c) => c.toLowerCase().trim());
+  // Look for a column that holds the post/role name
+  const nameCol = headers.findIndex((h) => /name|post|position|role|department|area/i.test(h));
+  // Look for a column that holds the number of vacancies
+  const countCol = headers.findIndex((h) => /vacanc|position|no\.|num|count/i.test(h));
+
+  if (nameCol === -1) return undefined;
+
+  const result: Array<{ name: string; vacancies?: number }> = [];
+  for (const row of vacancyTable.rows) {
+    if (row.rowIndex === 0) continue; // skip header
+    const name = row.cells[nameCol]?.trim();
+    if (!name || /^total$/i.test(name)) continue;
+    const countStr = countCol !== -1 ? row.cells[countCol]?.trim() : undefined;
+    const vacancies = countStr ? parseInt(countStr.replace(/,/g, ""), 10) : undefined;
+    result.push({ name, vacancies: vacancies && !isNaN(vacancies) ? vacancies : undefined });
+  }
+  return result.length > 0 ? result : undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Map one FJA inventory row to NormalizedPosting
 // ---------------------------------------------------------------------------
 function toNormalized(row: FjaJobRow): NormalizedPosting {
   const details = row.details ?? {};
-  const applyUrl = (details.applyUrl as string | undefined) ?? undefined;
-  const salaryText = (details.salary as string | undefined) ?? undefined;
-  const locationText = (details.location as string | undefined) ?? undefined;
-  const postTable = (details.postTable as Array<{ name: string; vacancies?: number }> | undefined) ?? undefined;
 
-  // Stage: FJA listing_category gives a loose hint
+  // --- Apply URL: scan allLinks for an "Apply Online"-type label ---
+  const allLinks = details.allLinks as Array<{ url?: string; label?: string }> | undefined;
+  const applyUrl = extractApplyUrl(allLinks);
+
+  // --- Salary: parse the raw salary text string ---
+  const salaryRaw = (details.salary as string | undefined) ?? undefined;
+  const { min: salaryMin, max: salaryMax } = parseSalary(salaryRaw);
+
+  // --- Location: stored as details.location ---
+  const locationText = (details.location as string | undefined) ?? undefined;
+
+  // --- Post table: extract from details.tables ---
+  const tables = details.tables as Array<{
+    heading?: string;
+    rows: Array<{ cells: string[]; rowIndex: number }>;
+  }> | undefined;
+  const postTable = extractPostTable(tables);
+
+  // --- Post names: stored as details.postNames (string or array) ---
+  const rawPostNames = details.postNames;
+  const postNames: string[] | undefined = rawPostNames
+    ? (Array.isArray(rawPostNames) ? rawPostNames : [String(rawPostNames)])
+    : undefined;
+
+  // --- Stage: category hint first, then date logic ---
+  // Fix: APPLICATION_OPEN no longer requires start_date to be non-null.
+  // A future end_date is sufficient to conclude applications are open.
   const cat = (row.listing_category ?? "").toLowerCase();
+  const now = new Date();
+  const endDate = row.application_end_date ? new Date(row.application_end_date) : null;
+  const startDate = row.application_start_date ? new Date(row.application_start_date) : null;
   const stage =
     cat.includes("result") ? "RESULT_OUT" :
     cat.includes("admit") ? "ADMIT_CARD_RELEASED" :
     cat.includes("answer") ? "ANSWER_KEY_OUT" :
-    row.application_end_date && new Date(row.application_end_date) < new Date() ? "APPLICATION_CLOSED" :
-    row.application_start_date && new Date(row.application_start_date) <= new Date() ? "APPLICATION_OPEN" :
+    endDate && endDate < now ? "APPLICATION_CLOSED" :
+    endDate && endDate >= now ? "APPLICATION_OPEN" :
+    startDate && startDate <= now ? "APPLICATION_OPEN" :
     "NOTIFICATION_OUT";
+
+  // --- Eligibility: row.qualification is the primary source; fall back to
+  // details.tableFields["qualification"] which FJA sometimes stores separately.
+  const tableFields = details.tableFields as Record<string, string> | undefined;
+  const eligibility = row.qualification
+    ?? tableFields?.["qualification"]
+    ?? undefined;
 
   return {
     source: "fja",
@@ -80,7 +193,8 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     kind: "GOVERNMENT",
     organizationName: row.organization_name ?? "Unknown",
     organizationFromLabel: true,
-    description: row.qualification ?? row.title,
+    description: row.title,          // title only — qualification goes to eligibility
+    eligibility,                     // objective fact from source
     totalVacancies: row.vacancy_count ?? undefined,
     officialNotificationUrl: row.official_notification_url ?? undefined,
     applyUrl,
@@ -89,6 +203,11 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : undefined,
     validThrough: row.application_end_date ? new Date(row.application_end_date) : undefined,
     postTable,
+    postNames,
+    salaryMin,
+    salaryMax,
+    salaryCurrency: salaryMin !== undefined ? "INR" : undefined,
+    salaryPeriod: salaryMin !== undefined ? "MONTH" : undefined,
     stage: stage as NormalizedPosting["stage"],
     locationRegion: locationText,
     observationFacts: details as Record<string, unknown>,

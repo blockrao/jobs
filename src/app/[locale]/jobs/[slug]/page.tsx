@@ -462,14 +462,21 @@ export default async function LocaleJobPage({ params }: Props) {
             <dd className="font-medium">{posting.postNames.join(", ")}</dd>
           </div>
         )}
-        <div>
-          <dt className="text-neutral-500">{L.employmentType}</dt>
-          <dd className="font-medium">{EMPLOYMENT_TYPE_LABELS[posting.employmentType]}</dd>
-        </div>
-        <div>
-          <dt className="text-neutral-500">{L.workMode}</dt>
-          <dd className="font-medium">{WORKPLACE_TYPE_LABELS[posting.workplaceType]}</dd>
-        </div>
+        {/* Employment type and work mode: only shown when the source explicitly
+            sets these fields. FJA postings carry DB defaults (FULL_TIME/ONSITE)
+            that were never extracted — suppressed until a nullable migration is in place. */}
+        {posting.source !== "fja" && (
+          <div>
+            <dt className="text-neutral-500">{L.employmentType}</dt>
+            <dd className="font-medium">{EMPLOYMENT_TYPE_LABELS[posting.employmentType]}</dd>
+          </div>
+        )}
+        {posting.source !== "fja" && (
+          <div>
+            <dt className="text-neutral-500">{L.workMode}</dt>
+            <dd className="font-medium">{WORKPLACE_TYPE_LABELS[posting.workplaceType]}</dd>
+          </div>
+        )}
         {salaryText && (
           <div>
             <dt className="text-neutral-500">{L.payScale}</dt>
