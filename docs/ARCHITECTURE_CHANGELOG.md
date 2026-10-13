@@ -1284,3 +1284,21 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 **Verification.** Contract tests LINK-01 to LINK-10 pass (10 of 10). Full suite: the same eight tests fail before and after (see SEARCH-003, not in scope); 617 pass. Type check and lint clean. On production data: recruitments resolving a notification link 531 → 797 (open: 185 → 272); an application link 73 → 134 (open: 34 → 53); stored links on an aggregator or social host: 0.
 
 **Not changed.** The wording, trust-line, canonical and row-level-security findings listed in ledger A-087 are recorded there and are not part of this increment. `Organization.sameAs` in the Hub structured data keeps its own government-domain condition. JobPosting markup follows the resolvers, so Posts whose only stored link is on another domain now qualify for it.
+
+## FJA-002 — typed FJA salary and age candidate fields
+
+| Field | Value |
+| --- | --- |
+| Change ID | FJA-002 |
+| Date | 2026-10-13 |
+| Status | Implementation branch; migration not applied |
+| Scope | Internal FJA discovery inventory only |
+
+**Objective.** Preserve the original salary and age wording while adding typed candidate values for review. Salary amount, currency, period and pay structure are separate fields. Age bounds and the reference date are separate fields. Extraction success is not official verification.
+
+**Code.** Adds conservative normalizers in `scripts/fja-normalize.ts`, unit contract tests, nullable typed columns and checks in `supabase/migrations/20261013170000_fja_002_structured_candidate_fields.sql`, matching Drizzle declarations, and crawler persistence. Recrawls preserve manually reviewed normalized values when the source content hash is unchanged; a changed source hash clears the associated verification metadata.
+
+**Guardrails.** Raw text remains intact. Currency and period are not inferred from unmarked amounts. Pay scales remain distinct from monthly salary. Missing values remain NULL. No canonical Recruitment/Post writes are added.
+
+**Validation still required.** Run contract tests and type checks in CI; apply the migration only through the approved recorded migration path; then run and inspect a small pilot. This branch has not been deployed, the migration has not been applied, and no bulk crawl has been started.
+
