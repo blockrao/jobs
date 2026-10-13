@@ -1269,3 +1269,18 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 
 **Not changed.** `/jobs` list and suggestions still read `postings`. Eight contract tests fail on `main` before and after this change (static assertions about other files, one of them about `src/pages/api/ingest.ts`, removed on 2026-10-13); not in scope.
 
+## 2026-10-13: LINK-001 (ledger A-087): a stored official link is shown as stored
+
+**Report.** Owner: `/jobs/hindustan-aeronautics-limited-2026-01` has no official notification link, no application link and no real apply steps.
+
+**Cause (measured on production).** Two causes, stacked. The link resolvers returned a stored link only when its host ended in `.gov.in`, `.nic.in`, `.ac.in` or `.samarth.edu.in`. HAL publishes on `hal-india.co.in`, so both stored links were dropped and the Hub fell back to three generic steps. The same rule hid a stored notification link on 87 of 292 open recruitments and a stored application link on 19. And recruitment 1686 held HAL's home page as its notification link, not the advertisement; it was entered by hand on 8 Oct with no posting, staging row or source document behind it.
+
+**Decision (owner, 2026-10-13).** No judgement on the link's domain or on what the page behind it contains. If a link is stored, it is shown.
+
+**Code.** `src/lib/resolvers/fact-resolvers.ts`: `isAuthoritativeDomain` and its domain list are replaced by `isPublishableLink`, used by all four link resolvers. A stored value is returned when it is an http(s) address. A value that is not a web address (one `mailto:` value exists) is not returned as a link, and aggregator or social links are never returned (`isAggregatorUrl`, standing rule of 2026-10-05). The fallback order is unchanged: Post link, then Recruitment link; `official_application_url`, then `apply_url`. No page component changed: Hub, Post page and structured data already read these resolvers.
+
+**Database.** Migration `20261013050000_link_001_hal_junior_executive_official_notification.sql`, rollback `supabase/rollback/link_001_hal_junior_executive_official_notification.down.sql`: `recruitments.official_notification_url` for 1686 and `posts."officialSourceUrl"` for 1545 to 1553 now hold HAL's detailed advertisement PDF (read 2026-10-13; advertisement number, 150 vacancies, discipline split, dates, fee and age limits match the record). Guarded on the old value. The application link stays `https://www.hal-india.co.in`: the advertisement directs applicants to the Careers section of that site.
+
+**Verification.** Contract tests LINK-01 to LINK-10 pass (10 of 10). Full suite: the same eight tests fail before and after (see SEARCH-003, not in scope); 617 pass. Type check and lint clean. On production data: recruitments resolving a notification link 531 → 797 (open: 185 → 272); an application link 73 → 134 (open: 34 → 53); stored links on an aggregator or social host: 0.
+
+**Not changed.** The wording, trust-line, canonical and row-level-security findings listed in ledger A-087 are recorded there and are not part of this increment. `Organization.sameAs` in the Hub structured data keeps its own government-domain condition. JobPosting markup follows the resolvers, so Posts whose only stored link is on another domain now qualify for it.

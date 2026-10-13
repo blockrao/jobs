@@ -20,6 +20,7 @@
  */
 
 import { JobPostingData, PostEnrichment } from "@/types/job-posting";
+import { isAggregatorUrl } from "@/lib/aggregators";
 
 // ---------------------------------------------------------------------------
 // Supporting types
@@ -82,21 +83,28 @@ const RECONCILED_SALARY_POST_IDS = new Set<number>([
 ]);
 
 // ---------------------------------------------------------------------------
-// Authoritative domain check
+// Stored-link rule (LINK-001, ledger A-087, owner direction 2026-10-13)
 // ---------------------------------------------------------------------------
 
-// Official government and Indian higher-education institution domains, plus
-// Samarth-hosted application portal tenants used by institutions. Do not add
-// generic hosting domains without source and ownership validation.
-const AUTHORITATIVE_DOMAINS = [".gov.in", ".nic.in", ".ac.in", ".samarth.edu.in"];
-
-function isAuthoritativeDomain(url: string): boolean {
+// A stored official link is shown as stored. There is no judgement on the
+// domain or on what the page behind the link contains: if the record holds a
+// web link in an official-link field, the page shows it. This replaces the
+// earlier domain list (.gov.in, .nic.in, .ac.in, .samarth.edu.in), which hid
+// the stored links of public-sector companies, AIIMS institutes, research
+// laboratories and other bodies that publish on other domains.
+//
+// Two mechanical limits remain, neither of them a judgement on content:
+//   - the value must be an http(s) address, so it can be a link at all;
+//   - aggregator and social links are never published (standing owner rule,
+//     2026-10-05, enforced by src/lib/aggregators.ts).
+function isPublishableLink(url: string): boolean {
   try {
-    const { hostname } = new URL(url);
-    return AUTHORITATIVE_DOMAINS.some((d) => hostname.endsWith(d));
+    const { protocol } = new URL(url);
+    if (protocol !== "http:" && protocol !== "https:") return false;
   } catch {
     return false;
   }
+  return !isAggregatorUrl(url);
 }
 
 // ---------------------------------------------------------------------------
@@ -364,18 +372,11 @@ export function resolveDeadline(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the verified official notification URL for a Post, or null.
+ * Returns the official notification URL for a Post, or null.
  *
- * Pipeline:
- *   1. Domain is *.gov.in or *.nic.in
- *   2. URL is confirmed as the correct notification for this specific Post/Recruitment
- *      (not a generic homepage, not a different notification)
- *   3. URL was not synthesized or inferred
- *
- * Current implementation: trusts posts.officialSourceUrl and
- * recruitments.official_notification_url when present and authoritative-domain.
- * The entity-scope validation (requirement 2) relies on the ingest process having
- * linked the correct URL; this resolver rejects non-authoritative domains.
+ * Stored-link rule (A-087): posts.officialSourceUrl when it holds a web link,
+ * otherwise recruitments.official_notification_url. No domain or content
+ * judgement; aggregator links are never returned. Null means nothing is stored.
  */
 export function resolveOfficialSource(
   post: JobPostingData & {
@@ -383,14 +384,14 @@ export function resolveOfficialSource(
   }
 ): string | null {
   // Post-level source (most specific)
-  if (post.officialSourceUrl && isAuthoritativeDomain(post.officialSourceUrl)) {
+  if (post.officialSourceUrl && isPublishableLink(post.officialSourceUrl)) {
     return post.officialSourceUrl;
   }
 
   // Recruitment-level fallback
   if (
     post.recruitmentOfficialNotificationUrl &&
-    isAuthoritativeDomain(post.recruitmentOfficialNotificationUrl)
+    isPublishableLink(post.recruitmentOfficialNotificationUrl)
   ) {
     return post.recruitmentOfficialNotificationUrl;
   }
@@ -403,16 +404,15 @@ export function resolveOfficialSource(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the verified application submission URL for a Post, or null.
+ * Returns the application URL for a Post, or null.
  *
  * Separate from resolveOfficialSource: the notification document and the
- * application endpoint are different facts.
+ * application endpoint are different facts and are never substituted for each
+ * other.
  *
- * Pipeline:
- *   1. Domain is authoritative (*.gov.in, *.nic.in, or verified official portal)
- *   2. URL is confirmed as the application submission endpoint for this Post
- *      (not a notification PDF, not a general portal homepage, not an aggregator link)
- *   3. URL was confirmed to resolve
+ * Stored-link rule (A-087): posts.applyPortalUrl when it holds a web link,
+ * otherwise the Recruitment's application URL. No domain or content judgement;
+ * aggregator links are never returned. Null means nothing is stored.
  */
 export function resolveApplicationUrl(
   post: JobPostingData & {
@@ -420,14 +420,14 @@ export function resolveApplicationUrl(
   }
 ): string | null {
   // Post-level apply URL (most specific)
-  if (post.applyPortalUrl && isAuthoritativeDomain(post.applyPortalUrl)) {
+  if (post.applyPortalUrl && isPublishableLink(post.applyPortalUrl)) {
     return post.applyPortalUrl;
   }
 
   // Recruitment-level fallback
   if (
     post.recruitmentOfficialApplicationUrl &&
-    isAuthoritativeDomain(post.recruitmentOfficialApplicationUrl)
+    isPublishableLink(post.recruitmentOfficialApplicationUrl)
   ) {
     return post.recruitmentOfficialApplicationUrl;
   }
@@ -601,20 +601,12 @@ export interface RecruitmentInput {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the authoritative official notification URL for a Recruitment, or null.
+ * Returns the official notification URL for a Recruitment, or null.
  *
- * Authority rules (in order):
- *   1. MANUAL_VERIFIED link on an authoritative domain — highest confidence.
- *      officialLinkSource === 'MANUAL_VERIFIED' means a human confirmed the URL
- *      points to the correct official notification for this recruitment.
- *   2. Authoritative domain (*.gov.in, *.nic.in, *.ac.in, *.samarth.edu.in) without MANUAL_VERIFIED —
- *      domain is authoritative but provenance is aggregator-discovered; still
- *      preferred over null.
- *   3. Non-authoritative domain or null — return null. Do not expose aggregator
- *      or third-party URLs as an official source.
- *
- * Null means: no authoritative source is confirmed. The Hub must show nothing
- * rather than an unverified link.
+ * Stored-link rule (A-087): recruitments.official_notification_url is returned
+ * whenever it holds a web link. No domain or content judgement; aggregator
+ * links are never returned. Null means nothing is stored, and the Hub shows
+ * no notification link.
  */
 export function resolveRecruitmentOfficialSource(
   recruitment: Pick<RecruitmentInput, "officialNotificationUrl" | "officialLinkSource">
@@ -622,11 +614,7 @@ export function resolveRecruitmentOfficialSource(
   const url = recruitment.officialNotificationUrl;
   if (!url) return null;
 
-  if (!isAuthoritativeDomain(url)) return null;
-
-  // Authoritative domain confirmed — return the URL regardless of linkSource.
-  // MANUAL_VERIFIED is the strongest signal but not a prerequisite for display.
-  return url;
+  return isPublishableLink(url) ? url : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -634,26 +622,25 @@ export function resolveRecruitmentOfficialSource(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the authoritative application submission URL for a Recruitment, or null.
+ * Returns the application URL for a Recruitment, or null.
  *
  * Separate from resolveRecruitmentOfficialSource: the notification document and
  * the application portal are different facts.
  *
- * Authority rules (in order):
- *   1. recruitments.official_application_url on an authoritative domain — primary.
- *   2. recruitments.apply_url (enrichment-sourced) on an authoritative domain — fallback.
- *   3. Non-authoritative domain or null — return null.
+ * Stored-link rule (A-087), in order:
+ *   1. recruitments.official_application_url when it holds a web link.
+ *   2. recruitments.apply_url when it holds a web link.
+ * No domain or content judgement; aggregator links are never returned.
  *
- * Null means: no verified application portal. The Hub must hide the apply button
- * rather than link to an unverified URL.
+ * Null means nothing is stored, and the Hub shows no apply link.
  */
 export function resolveRecruitmentApplicationUrl(
   recruitment: Pick<RecruitmentInput, "officialApplicationUrl" | "applyUrl">
 ): string | null {
-  if (recruitment.officialApplicationUrl && isAuthoritativeDomain(recruitment.officialApplicationUrl)) {
+  if (recruitment.officialApplicationUrl && isPublishableLink(recruitment.officialApplicationUrl)) {
     return recruitment.officialApplicationUrl;
   }
-  if (recruitment.applyUrl && isAuthoritativeDomain(recruitment.applyUrl)) {
+  if (recruitment.applyUrl && isPublishableLink(recruitment.applyUrl)) {
     return recruitment.applyUrl;
   }
   return null;
