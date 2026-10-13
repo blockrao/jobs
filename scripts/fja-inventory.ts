@@ -732,8 +732,6 @@ async function main() {
       parsed.details.crawlerKeys = Object.keys(parsed.details).filter((key) => parsed.details[key] != null).sort();
       const postCandidates = extractPostCandidates(parsed);
       for (const candidate of postCandidates) {
-        const salaryCandidate = normalizeSalary(candidate.salaryRaw);
-        const ageCandidate = normalizeAge(candidate.ageLimitRaw, candidate.ageReferenceDateRaw);
         const {otherInfoRaw, ...facts} = candidate;
         postCandidateRows.push({externalId:parsed.externalId, articleTitle:parsed.title, ...facts, scopeNote:otherInfoRaw.scopeNote});
       }
@@ -792,6 +790,8 @@ async function main() {
         ON CONFLICT (source_slug,external_id,html_sha256) DO NOTHING
       `;
       for (const candidate of postCandidates) {
+        const salaryCandidate = normalizeSalary(candidate.salaryRaw);
+        const ageCandidate = normalizeAge(candidate.ageLimitRaw, candidate.ageReferenceDateRaw);
         // A row that is mapped to a published canonical post (other_info_raw.canonical_post_id) is read by the
         // live post page. A crawl is unreviewed aggregator evidence, so it never rewrites such a row: the WHERE
         // on the upsert skips it, and the capture is attached to it as other_info_raw.crawl_candidate for review.
