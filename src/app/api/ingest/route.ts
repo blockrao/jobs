@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { getDbV2 } from "@/db";
 
-const FJA_DIGEST_URL = "https://www.freejobalert.com/govt-jobs/";
+const FJA_DIGEST_URL = "https://www.freejobalert.com/new-updates/";
 
 interface DigestEntry {
   o?: string;   // org short
