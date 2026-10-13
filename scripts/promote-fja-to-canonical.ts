@@ -122,7 +122,7 @@ async function main() {
   }
   const limitClause = LIMIT > 0 ? `LIMIT ${LIMIT}` : "";
 
-  const rows = (await db.execute(
+  const rawRows = await db.execute(
     sql.raw(`
       SELECT id, external_id, source_url, title, organization_name,
              listing_category, published_date, application_start_date,
@@ -133,9 +133,9 @@ async function main() {
       ORDER BY first_seen_at DESC
       ${limitClause}
     `)
-  )) as unknown as { rows: FjaJobRow[] };
-
-  const inventory = rows.rows ?? [];
+  );
+  // drizzle returns the array directly (not { rows: [...] })
+  const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as any).rows ?? []) as FjaJobRow[];
   console.log(`Fetched ${inventory.length} FJA inventory rows`);
 
   if (inventory.length === 0) {
