@@ -20,6 +20,9 @@ describe("FJA conservative salary normalization", () => {
   test("parses a range when the currency marker appears only on the first endpoint", () => {
     expect(normalizeSalary("₹35,400 - 1,12,400 per month")).toMatchObject({ min: 35400, max: 112400, currency: "INR", period: "MONTH", type: "RANGE", status: "NORMALIZED" });
   });
+  test("does not treat an unrelated age/duration number as the salary range endpoint", () => {
+    expect(normalizeSalary("₹50,000 - 10 years")).toMatchObject({ min: 50000, max: null, status: "NEEDS_REVIEW" });
+  });
   test("does not misread lakh or LPA amounts as single-digit rupees", () => {
     expect(normalizeSalary("₹4.5 LPA")).toMatchObject({ min: null, max: null, status: "NEEDS_REVIEW" });
   });
