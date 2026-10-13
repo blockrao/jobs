@@ -336,15 +336,6 @@ export function DashboardContent({
                             >
                               🔵 View on JobOye
                             </Link>
-                          ) : job.sourceUrl ? (
-                            <a
-                              href={job.sourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 hover:underline whitespace-nowrap"
-                            >
-                              Details →
-                            </a>
                           ) : null}
                         </div>
                       </td>
