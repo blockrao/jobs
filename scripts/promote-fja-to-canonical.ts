@@ -75,6 +75,40 @@ function parseSalary(raw: string | undefined): { min?: number; max?: number } {
 }
 
 // ---------------------------------------------------------------------------
+// Parse an age string from FJA tableFields into an integer (years).
+// Handles "18 Years\n18 Years", "18 years", "18", etc. — takes the first number.
+// ---------------------------------------------------------------------------
+function parseYears(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const match = raw.match(/\d+/);
+  if (!match) return undefined;
+  const n = parseInt(match[0], 10);
+  return isNaN(n) ? undefined : n;
+}
+
+// ---------------------------------------------------------------------------
+// Parse a fee string from FJA tableFields into an integer (rupees).
+// Handles "Rs. 250\nRs. 250", "Rs. 80 (Exemptions Applicable)\nRs. 80", etc.
+// Takes the first clean integer after stripping Rs. prefix and annotations.
+// ---------------------------------------------------------------------------
+function parseRupees(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  // Take only the first line (ignore repeated duplicate lines)
+  const firstLine = raw.split("\n")[0].trim();
+  // Strip currency label, commas, parenthetical notes, slash decorators
+  const cleaned = firstLine
+    .replace(/Rs\.?\s*/gi, "")
+    .replace(/\(.*?\)/g, "")
+    .replace(/\/-/g, "")
+    .replace(/,/g, "")
+    .trim();
+  const match = cleaned.match(/\d+/);
+  if (!match) return undefined;
+  const n = parseInt(match[0], 10);
+  return isNaN(n) ? undefined : n;
+}
+
+// ---------------------------------------------------------------------------
 // Extract apply URL from details.allLinks: first link whose label (case-insensitive)
 // contains "apply online" or "apply here" and whose URL is not an email/CDN-CGI path.
 // ---------------------------------------------------------------------------
@@ -185,6 +219,15 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     ?? tableFields?.["qualification"]
     ?? undefined;
 
+  // --- Age limits: extracted from tableFields["minimum age"] / ["maximum age"] ---
+  const ageLimitMin = parseYears(tableFields?.["minimum age"]);
+  const ageLimitMax = parseYears(tableFields?.["maximum age"]);
+
+  // --- Application fees: general = "application processing fee"; reserved = "examination fee" ---
+  // Only include fees that appear in objective tableFields (never in editorial "How to Apply" lists).
+  const applicationFeeGeneral = parseRupees(tableFields?.["application processing fee"]);
+  const applicationFeeReserved = parseRupees(tableFields?.["examination fee"]);
+
   return {
     source: "fja",
     externalId: row.external_id,
@@ -208,6 +251,10 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     salaryMax,
     salaryCurrency: salaryMin !== undefined ? "INR" : undefined,
     salaryPeriod: salaryMin !== undefined ? "MONTH" : undefined,
+    ageLimitMin,
+    ageLimitMax,
+    applicationFeeGeneral,
+    applicationFeeReserved,
     stage: stage as NormalizedPosting["stage"],
     locationRegion: locationText,
     observationFacts: details as Record<string, unknown>,
