@@ -17,6 +17,12 @@ describe("FJA conservative salary normalization", () => {
       min: 44900, max: 142400, currency: "INR", period: null, type: "PAY_SCALE", status: "NORMALIZED",
     });
   });
+  test("parses a range when the currency marker appears only on the first endpoint", () => {
+    expect(normalizeSalary("₹35,400 - 1,12,400 per month")).toMatchObject({ min: 35400, max: 112400, currency: "INR", period: "MONTH", type: "RANGE", status: "NORMALIZED" });
+  });
+  test("does not misread lakh or LPA amounts as single-digit rupees", () => {
+    expect(normalizeSalary("₹4.5 LPA")).toMatchObject({ min: null, max: null, status: "NEEDS_REVIEW" });
+  });
   test("does not normalize a bare amount without an explicit period", () => {
     expect(normalizeSalary("₹50,000")).toMatchObject({ min: 50000, max: 50000, currency: "INR", period: null, status: "NEEDS_REVIEW" });
   });
@@ -30,6 +36,9 @@ describe("FJA conservative age normalization", () => {
     expect(normalizeAge("Age limit: 18 to 27 years", "Age as on 01.01.2026")).toMatchObject({
       min: 18, max: 27, referenceDate: "2026-01-01", status: "NORMALIZED",
     });
+  });
+  test("parses separately labelled minimum and maximum ages", () => {
+    expect(normalizeAge("Minimum Age: 18 years; Maximum Age: 30 years")).toMatchObject({ min: 18, max: 30, status: "NORMALIZED" });
   });
   test("parses explicit maximum age only", () => {
     expect(normalizeAge("Upper age limit 35 years")).toMatchObject({ min: null, max: 35, status: "NORMALIZED" });
