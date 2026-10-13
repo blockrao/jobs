@@ -770,7 +770,7 @@ async function main() {
       const postCandidates = extractPostCandidates(parsed);
       for (const candidate of postCandidates) {
         const {otherInfoRaw, ...facts} = candidate;
-        postCandidateRows.push({externalId:parsed.externalId, articleTitle:parsed.title, ...facts, scopeNote:otherInfoRaw.scopeNote});
+        postCandidateRows.push({externalId:parsed.externalId, articleTitle:parsed.title, ...facts, salaryNormalization:normalizeSalary(candidate.salaryRaw), ageNormalization:normalizeAge(candidate.ageLimitRaw, candidate.ageReferenceDateRaw), scopeNote:otherInfoRaw.scopeNote});
       }
       if (!db) return parsed;
       const [inventoryRow] = await db`
