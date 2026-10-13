@@ -45,7 +45,6 @@ export function normalizeSalary(rawValue: string | null | undefined): SalaryCand
   if (!raw || /^(?:n\/?a|not (?:mentioned|specified|disclosed)|[-–—]+)$/i.test(raw)) {
     return { min: null, max: null, currency: null, period: null, type: null, status: "NOT_PRESENT", reason: null };
   }
-  const lower = raw.toLowerCase();
   const values = explicitAmounts(raw);
   const currency = /₹|\bINR\b|\bRs\.?\s*\d/i.test(raw) ? "INR" : null;
   let type: SalaryType | null = null;
