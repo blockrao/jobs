@@ -107,6 +107,33 @@ def main():
             "results": [item1, item2],
         }
         (base / "fja-inventory.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        candidate_payload = {
+            "runId": "fja-test-run",
+            "postCandidates": [
+                {
+                    "externalId": "12345", "sourcePostKey": "P01", "postNameRaw": "Assistant",
+                    "vacancyCountRaw": "2", "vacancyCountCandidate": 2,
+                    "qualificationRaw": "Graduate", "salaryRaw": "30000 per month",
+                    "extractionStatus": "EXTRACTED",
+                    "sourceTableRowRaw": {"Name of Post": "Assistant", "Vacancies": "2", "Qualification": "Graduate", "Salary": "30000 per month"}
+                },
+                {
+                    "externalId": "12345", "sourcePostKey": "P02", "postNameRaw": "Clerk",
+                    "vacancyCountRaw": "1", "vacancyCountCandidate": 1,
+                    "qualificationRaw": "12th pass", "salaryRaw": "25000 per month",
+                    "extractionStatus": "EXTRACTED",
+                    "sourceTableRowRaw": {"Name of Post": "Clerk", "Vacancies": "1", "Qualification": "12th pass", "Salary": "25000 per month"}
+                },
+                {
+                    "externalId": "67890", "sourcePostKey": "P01", "postNameRaw": "Consultant",
+                    "vacancyCountRaw": "", "vacancyCountCandidate": None,
+                    "qualificationRaw": "Bachelor's degree", "salaryRaw": "₹40,000 per month",
+                    "extractionStatus": "EXTRACTED",
+                    "sourceTableRowRaw": {}
+                }
+            ]
+        }
+        (base / "fja-post-candidates.json").write_text(json.dumps(candidate_payload, ensure_ascii=False, indent=2), encoding="utf-8")
         env = dict(os.environ, FJA_OUT_DIR=str(base))
         subprocess.run([sys.executable, str(EXPORTER)], check=True, env=env)
         subprocess.run([sys.executable, str(VALIDATOR)], check=True, env=env)

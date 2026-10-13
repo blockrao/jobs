@@ -12,6 +12,20 @@ PAYLOAD_PATH = BASE / "fja-inventory.json"
 MAX_CELL_CHARS = 30000
 payload = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
 items = payload.get("results", [])
+CANDIDATES_PATH = BASE / "fja-post-candidates.json"
+if not CANDIDATES_PATH.exists():
+    raise SystemExit(f"Missing structured post candidate payload: {CANDIDATES_PATH}")
+candidate_payload = json.loads(CANDIDATES_PATH.read_text(encoding="utf-8"))
+if candidate_payload.get("runId") != payload.get("runId"):
+    raise SystemExit("Recruitment and post candidate payload run IDs do not match")
+post_candidates = candidate_payload.get("postCandidates", [])
+candidate_ids = {str(item.get("externalId") or "") for item in items}
+unknown_candidate_ids = sorted({str(row.get("externalId") or "") for row in post_candidates} - candidate_ids)
+if unknown_candidate_ids:
+    raise SystemExit(f"Post candidates reference unknown recruitment IDs: {unknown_candidate_ids}")
+candidates_by_external_id = {}
+for candidate in post_candidates:
+    candidates_by_external_id.setdefault(str(candidate.get("externalId") or ""), []).append(candidate)
 BASE.mkdir(parents=True, exist_ok=True)
 
 def as_json(value):
@@ -75,53 +89,6 @@ def classify_link_candidates(links):
         if re.search(r"apply|application|registration|online form", label, re.I):
             application.append({"label": label, "url": url})
     return notification, application
-
-def split_candidates(value):
-    if not value or not str(value).strip():
-        return []
-    # Heuristic candidates only; preserve the original complete postNames value elsewhere.
-    return [part.strip(" \t\r\n-•") for part in re.split(r"\r?\n|\s*\|\s*|\s*;\s*", str(value)) if part.strip(" \t\r\n-•")]
-
-def explicit_post_rows(details):
-    """Extract post facts only from tables with an explicit post-title column."""
-    output = []
-    for table in details.get("tables") or []:
-        rows = table.get("rows") or []
-        header_index = None
-        headers = []
-        for index, row in enumerate(rows):
-            cells = row.get("cells") or []
-            if any(re.search(r"post name|name of post|post title|job title|designation|position", str(cell), re.I) for cell in cells):
-                header_index = index
-                headers = [str(cell).strip() for cell in cells]
-                break
-        if header_index is None:
-            continue
-        for row in rows[header_index + 1:]:
-            cells = row.get("cells") or []
-            if not cells or not any(str(cell).strip() for cell in cells):
-                continue
-            record = {headers[i]: cells[i] for i in range(min(len(headers), len(cells))) if str(headers[i]).strip() and str(cells[i]).strip()}
-            title = next((str(value).strip() for key, value in record.items() if re.search(r"post name|name of post|post title|job title|designation|position", key, re.I)), "")
-            if title and not re.search(r"total|grand total|note|important", title, re.I):
-                output.append({"postName": title, "fields": record, "tableIndex": table.get("tableIndex"), "rowIndex": row.get("rowIndex")})
-    return output
-
-def matching_field(record, patterns):
-    fields = (record or {}).get("fields") or {}
-    for key, value in fields.items():
-        if value is not None and str(value).strip() and any(re.search(pattern, str(key), re.I) for pattern in patterns):
-            return str(value).strip()
-    return ""
-
-def normalized_count(value):
-    match = re.fullmatch(r"\s*([\d,]+)\s*", str(value or ""))
-    if not match:
-        return ""
-    try:
-        return int(match.group(1).replace(",", ""))
-    except ValueError:
-        return ""
 
 def other_payload(item, details, fields, links):
     known_detail_keys = {
@@ -228,82 +195,46 @@ for item in items:
     recruitment_details_values.append(chunks(details_json))
     recruitment_other_values.append(chunks(other_json))
 
-    table_post_rows = explicit_post_rows(details)
-    if table_post_rows:
-        candidates = []
-        for record in table_post_rows:
-            if record["postName"] not in candidates:
-                candidates.append(record["postName"])
-    else:
-        candidates = split_candidates(details.get("postNames"))
-    if not candidates:
-        candidates = [""]
-    one_unambiguous_post = len(candidates) == 1 and bool(candidates[0]) and not table_post_rows
+    candidates = candidates_by_external_id.get(external_id, [])
     for index, candidate in enumerate(candidates, 1):
-        explicit_record = next((record for record in table_post_rows if record["postName"] == candidate), None)
-        if explicit_record:
-            qualification = matching_field(explicit_record, [r"qualification", r"eligibility", r"educational"])
-            experience = matching_field(explicit_record, [r"experience"])
-            age = matching_field(explicit_record, [r"age limit", r"age criteria"])
-            age_reference = matching_field(explicit_record, [r"age as on", r"age reckoning date"])
-            age_relaxation = matching_field(explicit_record, [r"age relaxation", r"relaxation"])
-            source_post_code = matching_field(explicit_record, [r"post code", r"serial no", r"sl.? no", r"post id"])
-            salary = matching_field(explicit_record, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"])
-            location = matching_field(explicit_record, [r"location", r"place of posting"])
-            vacancy_raw = matching_field(explicit_record, [r"vacanc", r"no.? of post", r"number of post", r"number of position"])
-            pay_level = matching_field(explicit_record, [r"pay level", r"pay scale", r"grade pay"])
-            tenure = matching_field(explicit_record, [r"duration", r"tenure", r"contract period"])
-            employment_type = matching_field(explicit_record, [r"employment type", r"nature of appointment", r"job type"])
-            duties = matching_field(explicit_record, [r"job profile", r"roles and responsibilities", r"duties", r"responsibilities"])
-            eligibility_conditions = matching_field(explicit_record, [r"eligibility criteria", r"other conditions", r"conditions", r"minimum requirements"])
-            post_milestones = [{"field": k, "value": v} for k, v in explicit_record["fields"].items() if re.search(r"date|deadline|exam|interview|correction", str(k), re.I)]
-            post_application_selection = [{"field": k, "value": v} for k, v in explicit_record["fields"].items() if re.search(r"fee|apply|application|selection|document|instruction", str(k), re.I)]
-            unresolved_shared_fields = {}
-            note = "Mapped from a source table with an explicit post-title column; source-reported only and requires official verification."
-        elif one_unambiguous_post:
-            qualification = item.get("qualification") or first_field(fields, [r"qualification", r"eligibility", r"educational"])
-            experience = first_field(fields, [r"experience", r"work experience"])
-            age = details.get("ageLimit") or first_field(fields, [r"age limit", r"age criteria"])
-            age_reference = first_field(fields, [r"age as on", r"age reckoning date"])
-            age_relaxation = first_field(fields, [r"age relaxation", r"relaxation"])
-            source_post_code = first_field(fields, [r"post code", r"serial no", r"sl.? no", r"post id"])
-            salary = details.get("salary") or first_field(fields, [r"salary", r"pay scale", r"pay level", r"remuneration", r"emolument"])
-            location = details.get("location") or first_field(fields, [r"job location", r"place of posting", r"location"])
-            vacancy_raw = first_field(fields, [r"vacanc", r"number of post", r"no.? of post"])
-            pay_level = first_field(fields, [r"pay level", r"pay scale", r"grade pay"])
-            tenure = first_field(fields, [r"duration", r"tenure", r"contract period"])
-            employment_type = first_field(fields, [r"employment type", r"nature of appointment", r"job type"])
-            duties = first_field(fields, [r"job profile", r"roles and responsibilities", r"duties"])
-            eligibility_conditions = first_field(fields, [r"other eligibility", r"eligibility criteria", r"other conditions", r"minimum requirements"])
-            post_milestones = {}
-            post_application_selection = {}
-            unresolved_shared_fields = {}
-            note = "Single candidate; generic article fields are candidates only and still require official verification."
-        else:
-            qualification = experience = age = age_reference = age_relaxation = source_post_code = salary = location = vacancy_raw = pay_level = tenure = employment_type = duties = eligibility_conditions = ""
-            post_milestones = {}
-            post_application_selection = {}
-            unresolved_shared_fields = fields
-            note = "MULTI_POST_SCOPE_UNRESOLVED: generic article-level facts retained in other info; not copied onto this post."
+        source_row = candidate.get("sourceTableRowRaw") or {}
+        salary_normalization = candidate.get("salaryNormalization") or {}
+        age_normalization = candidate.get("ageNormalization") or {}
+        candidate_name = candidate.get("postNameRaw") or ""
+        source_post_key = candidate.get("sourcePostKey") or f"unresolved-{index:02d}"
+        post_key = f"{external_id}-{source_post_key}"
+        scope_note = candidate.get("scopeNote") or ""
+        extraction_status = candidate.get("extractionStatus") or "POST_DECOMPOSITION_NOT_EXTRACTED"
         post_other = {
-            "candidate_name_raw": candidate,
-            "article_post_names_field_raw": details.get("postNames") or "",
-            "explicit_source_table_row": explicit_record,
-            "unmapped_and_unassigned_fields": unresolved_shared_fields,
-            "all_details_keys": sorted(details.keys()),
-            "raw_source_text_reference": source_ref,
-            "preservation_policy": "Candidate only; do not AI-rewrite or mark verified during extraction."
+            "candidate_name_raw": candidate_name,
+            "source_post_key": source_post_key,
+            "source_table_row_raw": source_row,
+            "scope_note": scope_note,
+            "source_post_candidate_hash": candidate.get("contentHash"),
+            "salary_normalization_candidate": salary_normalization,
+            "age_normalization_candidate": age_normalization,
+            "preservation_policy": "Source candidate only; official verification is separate and canonical promotion is not authorized."
         }
-        post_key = f"{external_id}-P{index:02d}"
         post_base_rows.append([
-            post_key, recruitment_key, external_id, candidate, "", source_post_code,
-            vacancy_raw, normalized_count(vacancy_raw), qualification, experience, "", "", age, age_reference, age_relaxation, "", "", "", "",
-            salary, pay_level, employment_type, tenure, location, duties, eligibility_conditions,
-            as_json(post_milestones), as_json(post_application_selection),
-            as_json(unresolved_shared_fields), source_ref, item.get("contentHash"), payload.get("runId"),
-            "CANDIDATE_NEEDS_REVIEW" if candidate else "POST_DECOMPOSITION_NOT_EXTRACTED",
-            item.get("detailStatus"), "PENDING_OFFICIAL_REVIEW",
-            "TABLE_MAPPED_REVIEW_REQUIRED" if explicit_record else "NOT_MAPPED_TO_CANONICAL", note
+            post_key, recruitment_key, external_id, candidate_name, "", candidate.get("sourcePostCodeRaw") or "",
+            candidate.get("vacancyCountRaw") or "", candidate.get("vacancyCountCandidate") if candidate.get("vacancyCountCandidate") is not None else "",
+            candidate.get("qualificationRaw") or "", candidate.get("experienceRaw") or "",
+            age_normalization.get("min") if age_normalization.get("min") is not None else "",
+            age_normalization.get("max") if age_normalization.get("max") is not None else "",
+            candidate.get("ageLimitRaw") or "", candidate.get("ageReferenceDateRaw") or "",
+            candidate.get("ageRelaxationRulesRaw") or "",
+            salary_normalization.get("min") if salary_normalization.get("min") is not None else "",
+            salary_normalization.get("max") if salary_normalization.get("max") is not None else "",
+            salary_normalization.get("currency") or "", salary_normalization.get("period") or "",
+            candidate.get("salaryRaw") or "", candidate.get("payLevelRaw") or "",
+            candidate.get("employmentTypeRaw") or "", candidate.get("tenureRaw") or "",
+            candidate.get("locationRaw") or "", candidate.get("dutiesResponsibilitiesRaw") or "",
+            candidate.get("eligibilityConditionsRaw") or "",
+            as_json(candidate.get("milestonesRaw") or []), as_json(candidate.get("applicationSelectionRaw") or []),
+            as_json(candidate.get("otherInfoRaw") or {}), source_ref, item.get("contentHash"),
+            payload.get("runId"), extraction_status, item.get("detailStatus"),
+            "PENDING_OFFICIAL_REVIEW", "TABLE_MAPPED_REVIEW_REQUIRED" if source_row else "NAME_FIELD_CANDIDATE",
+            scope_note
         ])
         post_other_values.append(chunks(as_json(post_other)))
 
@@ -362,6 +293,7 @@ summary = {
     "runId": payload.get("runId"),
     "recruitmentRows": len(recruitment_rows),
     "postCandidateRows": len(post_rows),
+    "structuredPostCandidates": len(post_candidates),
     "unresolvedPostRows": sum(1 for row in post_rows if not row[0]),
     "workbookSheets": ["Recruitments", "Posts"],
     "sourceBodyTextChunkColumns": max_body,
