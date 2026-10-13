@@ -834,9 +834,10 @@ async function main() {
             max_age_years_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.max_age_years_candidate ELSE excluded.max_age_years_candidate END,
             age_reference_date_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.age_reference_date_candidate ELSE excluded.age_reference_date_candidate END,
             age_normalization_status=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.age_normalization_status ELSE excluded.age_normalization_status END,
-            official_source_page=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL ELSE public.fja_post_inventory.official_source_page END,
-            verification_notes=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL ELSE public.fja_post_inventory.verification_notes END,
-            verified_at=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL ELSE public.fja_post_inventory.verified_at END,
+            official_source_page=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.official_source_page END,
+            verified_official_source_url=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.verified_official_source_url END,
+            verification_notes=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.verification_notes END,
+            verified_at=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.verified_at END,
             pay_level_raw=excluded.pay_level_raw,employment_type_raw=excluded.employment_type_raw,
             tenure_raw=excluded.tenure_raw,location_raw=excluded.location_raw,duties_responsibilities_raw=excluded.duties_responsibilities_raw,
             eligibility_conditions_raw=excluded.eligibility_conditions_raw,milestones_raw=excluded.milestones_raw,
@@ -848,6 +849,7 @@ async function main() {
             -- this crawl; an unchanged row keeps the status a reviewer gave it (VERIFIED, CONFLICT, ...).
             official_verification_status=CASE
               WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash
+                OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url}
                 OR public.fja_post_inventory.official_verification_status = 'PENDING'
               THEN excluded.official_verification_status
               ELSE public.fja_post_inventory.official_verification_status END,
