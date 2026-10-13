@@ -1115,17 +1115,26 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       p."updatedAt",
       p."officialSourceUrl",
       p."applyPortalUrl",
-      COALESCE(e."salaryMin", NULL) as "salaryMin",
-      COALESCE(e."salaryMax", NULL) as "salaryMax",
+      e."salaryMin",
+      e."salaryMax",
       e."salaryNote",
+      e."payScale",
+      e."payLevel",
       e."ageNote",
+      e."ageRulesByCategory",
       e.education,
       e.experience,
       e."selectionProcess",
       e."vacanciesTotal",
+      e."vacanciesByCategory",
       e."feeNote",
       e."applicationClosingDate",
-      e."examDate"
+      e."examDate",
+      e."resultDate",
+      e."appointmentDate",
+      e."sourceVerificationStatus",
+      e."extractionConfidence",
+      e."dataGaps"
     FROM public.posts p
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
@@ -1150,14 +1159,23 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     salaryMin: row.salaryMin,
     salaryMax: row.salaryMax,
     salaryNote: row.salaryNote,
+    payScale: row.payScale,
+    payLevel: row.payLevel,
     ageNote: row.ageNote,
+    ageRulesByCategory: row.ageRulesByCategory,
     education: row.education,
     experience: row.experience,
     selectionProcess: row.selectionProcess,
     vacanciesTotal: row.vacanciesTotal,
+    vacanciesByCategory: row.vacanciesByCategory,
     feeNote: row.feeNote,
     applicationClosingDate: row.applicationClosingDate ? new Date(row.applicationClosingDate) : null,
     examDate: row.examDate ? new Date(row.examDate) : null,
+    resultDate: row.resultDate ? new Date(row.resultDate) : null,
+    appointmentDate: row.appointmentDate ? new Date(row.appointmentDate) : null,
+    sourceVerificationStatus: row.sourceVerificationStatus,
+    extractionConfidence: row.extractionConfidence,
+    dataGaps: row.dataGaps,
   }));
 }
 

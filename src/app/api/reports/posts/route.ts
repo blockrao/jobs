@@ -17,14 +17,15 @@ export async function GET(request: Request) {
     const stats = await getEnrichmentStats();
 
     // Convert Date objects to ISO strings for JSON serialization
+    const toIso = (v: unknown) => v instanceof Date ? v.toISOString() : v;
     const serializedPosts = posts.map(post => ({
       ...post,
-      postedAt: post.postedAt instanceof Date ? post.postedAt.toISOString() : post.postedAt,
-      updatedAt: post.updatedAt instanceof Date ? post.updatedAt.toISOString() : post.updatedAt,
-      applicationClosingDate: post.applicationClosingDate instanceof Date
-        ? post.applicationClosingDate.toISOString()
-        : post.applicationClosingDate,
-      examDate: post.examDate instanceof Date ? post.examDate.toISOString() : post.examDate,
+      postedAt: toIso(post.postedAt),
+      updatedAt: toIso(post.updatedAt),
+      applicationClosingDate: toIso(post.applicationClosingDate),
+      examDate: toIso(post.examDate),
+      resultDate: toIso((post as any).resultDate),
+      appointmentDate: toIso((post as any).appointmentDate),
     }));
 
     return NextResponse.json({
