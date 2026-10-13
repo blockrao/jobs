@@ -1319,3 +1319,18 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 
 **Validation still required.** CI type-check and contract tests, followed by an approved migration application and a reviewed pilot. No deployment or production data change has occurred.
 
+## FJA-004 — section extractor wired into inventory
+
+| Field | Value |
+| --- | --- |
+| Change ID | FJA-004 |
+| Date | 2026-10-13 |
+| Status | Implementation branch; pilot pending |
+| Scope | FJA source inventory only |
+
+**Objective.** Combine the existing section-based article extractor with the inventory crawler instead of maintaining a separate extraction path.
+
+**Code.** The crawler now stores the extractor's age, fee, salary, dates, links, extra-content, unparsed-section and review-flag output alongside the raw table/link evidence. Field coverage is explicitly diagnostic: a field not extracted is not proof that the source omitted it. The section extractor's valid-through date and official-notification URL are conservative fallbacks when the table/link extraction path lacks them. A unit contract protects this integration and immutable raw-capture behavior.
+
+**Guardrails.** Extracted section facts remain discovery evidence, not official verification or canonical JobOye facts. No canonical Recruitment/Post write is added. The workflow stays pilot-only pending acceptance.
+
