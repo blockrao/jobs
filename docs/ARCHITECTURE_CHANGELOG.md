@@ -1313,7 +1313,7 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 
 **Objective.** Give the operator a browser-based way to review post-level raw salary and age wording, edit typed candidate values, and separately record verification against an official notification.
 
-**Code.** Adds `/admin/fja-review` and server actions that independently re-check the existing admin session. Normalized-value saves are separate from official verification. Verification requires a stored non-FreeJobAlert notification URL, a positive document page number, a meaningful note, and explicit confirmation. The dashboard links to the review workspace.
+**Code.** Adds `/admin/fja-review` and server actions that independently re-check the existing admin session. Normalized-value saves are separate from official verification. Verification requires a stored non-FreeJobAlert notification URL, a positive document page number, a meaningful note, and explicit confirmation. The exact official URL used for verification is stored, and changing that URL invalidates the verification. The dashboard links to the review workspace.
 
 **Guardrails.** The page is under the existing `/admin` route guard. Server actions also authenticate independently because server actions can be invoked without loading the page. The workspace updates only `fja_post_inventory`; it does not promote records to canonical tables. Deployment must follow the migration-first order in `supabase/migrations/README.md`.
 
