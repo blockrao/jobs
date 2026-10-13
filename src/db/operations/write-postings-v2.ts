@@ -527,7 +527,7 @@ export async function writePostingsToDB(
             publishingStatus: "DRAFT",
             status: "ACTIVE",
             datePosted: norm.datePosted ?? new Date(),
-            lastVerifiedAt: new Date(),
+            lastVerifiedAt: null, // only set on manual verification, not ingest
             createdAt: new Date(),
             updatedAt: new Date(),
           })

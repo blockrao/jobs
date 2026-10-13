@@ -440,7 +440,7 @@ export default async function JobsListPage({ searchParams }: Props) {
                       {examDate && (
                         <> · {L.examOn}: {formatDate(examDate, dateLocale)}</>
                       )}
-                      {lastVerifiedAt && (
+                      {lastVerifiedAt && posting.reviewStatus !== "PENDING" && (
                         <> · {L.verified} {formatDate(lastVerifiedAt, dateLocale)}</>
                       )}
                     </p>
