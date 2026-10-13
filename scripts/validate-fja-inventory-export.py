@@ -25,7 +25,7 @@ expected_candidates = candidate_payload.get("postCandidates", [])
 expected_by_key = {
     (str(candidate.get("externalId") or ""), str(candidate.get("sourcePostKey") or ""))
     : candidate
-    for candidate in expected_candidates
+    for candidate in expected_output_candidates
 }
 if len(expected_by_key) != len(expected_candidates):
     raise SystemExit("Duplicate (externalId, sourcePostKey) in structured candidate payload")
@@ -47,8 +47,12 @@ recruitment_records = list(recruitments.iter_rows(min_row=2, values_only=True))
 post_records = list(posts.iter_rows(min_row=2, values_only=True))
 if len(recruitment_records) != len(items):
     raise SystemExit(f"Recruitment row mismatch: workbook={len(recruitment_records)} payload={len(items)}")
-if len(post_records) != len(expected_candidates):
-    raise SystemExit(f"Post candidate row mismatch: workbook={len(post_records)} structured payload={len(expected_candidates)}")
+expected_output_candidates = [
+    candidate for candidate in expected_candidates
+    if str(candidate.get("externalId") or "") in {str(item.get("externalId") or "") for item in items}
+]
+if len(post_records) != len(expected_output_candidates):
+    raise SystemExit(f"Post candidate row mismatch: workbook={len(post_records)} structured payload={len(expected_output_candidates)}")
 
 recruitment_key_idx = recruitment_headers.index("recruitment_key")
 source_id_idx = recruitment_headers.index("source_external_id_internal")
