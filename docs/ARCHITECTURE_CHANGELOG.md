@@ -1302,3 +1302,20 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 
 **Validation still required.** Run contract tests and type checks in CI; apply the migration only through the approved recorded migration path; then run and inspect a small pilot. This branch has not been deployed, the migration has not been applied, and no bulk crawl has been started.
 
+## FJA-003 — protected FJA review workspace
+
+| Field | Value |
+| --- | --- |
+| Change ID | FJA-003 |
+| Date | 2026-10-13 |
+| Status | Implementation branch; migration not applied |
+| Scope | Internal admin review only |
+
+**Objective.** Give the operator a browser-based way to review post-level raw salary and age wording, edit typed candidate values, and separately record verification against an official notification.
+
+**Code.** Adds `/admin/fja-review` and server actions that independently re-check the existing admin session. Normalized-value saves are separate from official verification. Verification requires a stored non-FreeJobAlert notification URL, a positive document page number, a meaningful note, and explicit confirmation. The dashboard links to the review workspace.
+
+**Guardrails.** The page is under the existing `/admin` route guard. Server actions also authenticate independently because server actions can be invoked without loading the page. The workspace updates only `fja_post_inventory`; it does not promote records to canonical tables. Deployment must follow the migration-first order in `supabase/migrations/README.md`.
+
+**Validation still required.** CI type-check and contract tests, followed by an approved migration application and a reviewed pilot. No deployment or production data change has occurred.
+
