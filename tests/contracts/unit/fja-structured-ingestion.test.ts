@@ -4,6 +4,8 @@ import { describe, expect, test } from "vitest";
 const crawler = readFileSync("scripts/fja-inventory.ts", "utf8");
 const workflow = readFileSync(".github/workflows/fja-jobs-inventory.yml", "utf8");
 const migration = readFileSync("supabase/migrations/20261013170000_fja_002_structured_candidate_fields.sql", "utf8");
+const reviewPage = readFileSync("src/app/(default)/admin/fja-review/page.tsx", "utf8");
+const reviewActions = readFileSync("src/app/(default)/admin/fja-review/actions.ts", "utf8");
 
 describe("FJA structured ingestion safety contracts", () => {
   test("crawler persists typed salary and age candidates separately from raw source text", () => {
@@ -25,6 +27,15 @@ describe("FJA structured ingestion safety contracts", () => {
     expect(migration).toContain("salary_period_candidate");
     expect(migration).toContain("age_reference_date_candidate");
     expect(migration).not.toMatch(/\b(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+)?public\.(?:posts|recruitments)\b/i);
+  });
+
+  test("review workspace is under admin and mutating server actions re-check the admin session", () => {
+    expect(reviewPage).toContain("FJA candidate review");
+    expect(reviewActions).toContain('if (!token || store.get(COOKIE_NAME)?.value !== token) redirect("/admin/login")');
+    expect(reviewActions).toContain('stringValue(formData, "confirmOfficialSource") === "yes"');
+    expect(reviewActions).toContain('officialVerificationStatus: "VERIFIED"');
+    expect(reviewActions).toContain('verificationNotes: note');
+    expect(reviewActions).toContain('officialSourcePage: page');
   });
 
   test("automated inventory workflow remains pilot-only pending pilot acceptance", () => {
