@@ -15,6 +15,9 @@ const CONCURRENCY = Number(process.env.FJA_CONCURRENCY ?? 4);
 const RUN_MODE = process.env.FJA_RUN_MODE ?? "pilot";
 const PILOT_URLS = (process.env.FJA_PILOT_URLS ?? "").split(",").map((url) => url.trim()).filter(Boolean);
 const PILOT_URLS_FILE = (process.env.FJA_PILOT_URLS_FILE ?? "").trim();
+const QUEUE_FILE = (process.env.FJA_QUEUE_FILE ?? "").trim();
+const QUEUE_OFFSET = Math.max(0, Number(process.env.FJA_QUEUE_OFFSET ?? 0));
+const QUEUE_LIMIT = Math.max(1, Math.min(30, Number(process.env.FJA_QUEUE_LIMIT ?? 20)));
 // window mode: every recruitment the source listed or updated on/after FJA_START_DATE that is still open.
 const START_DATE = (process.env.FJA_START_DATE ?? "").trim();
 const MAX_LIST_PAGES = Number(process.env.FJA_MAX_LIST_PAGES ?? 150);
@@ -615,7 +618,8 @@ async function discoverWindow(startDate: string): Promise<{articles:Required<Dis
 async function main() {
   if (!DRY_RUN && !process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
   if (RUN_MODE === "pilot" && PILOT_URLS.length === 0 && !PILOT_URLS_FILE) throw new Error("Pilot mode requires FJA_PILOT_URLS or FJA_PILOT_URLS_FILE; refusing to fall back to broad crawl.");
-  if (RUN_MODE !== "pilot" && RUN_MODE !== "full" && RUN_MODE !== "window") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
+  if (RUN_MODE === "queue" && !QUEUE_FILE) throw new Error("Queue mode requires FJA_QUEUE_FILE; refusing to fall back to broad crawl.");
+  if (RUN_MODE !== "pilot" && RUN_MODE !== "queue" && RUN_MODE !== "full" && RUN_MODE !== "window") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
   if (RUN_MODE === "window" && !/^20\d{2}-\d{2}-\d{2}$/.test(START_DATE)) throw new Error("Window mode requires FJA_START_DATE as YYYY-MM-DD.");
   // prepare:false — DATABASE_URL is the pooled (transaction-mode) connection, which does not keep
   // prepared statements between queries. Same setting as src/db/index.ts.
@@ -636,13 +640,15 @@ async function main() {
         windowSkipped.push({url:article.url, title:article.title, updatedOn:article.updatedOn, reason:"listing title is not a recruitment (result, admit card, answer key, ...)"});
       } else listings.set(article.externalId, article);
     }
-  } else if (PILOT_URLS.length > 0 || PILOT_URLS_FILE) {
-    // Pilot mode deliberately bypasses broad discovery and processes only supplied article URLs.
-    // File mode is intended for large, reviewed URL inventories exported from a workbook (one URL per line).
-    const fileUrls = PILOT_URLS_FILE
-      ? (await readFile(PILOT_URLS_FILE, "utf8")).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
+  } else if (RUN_MODE === "queue" || PILOT_URLS.length > 0 || PILOT_URLS_FILE) {
+    // Pilot and queue modes bypass broad discovery. Queue mode is bounded per dispatch.
+    const selectedFile = RUN_MODE === "queue" ? QUEUE_FILE : PILOT_URLS_FILE;
+    const fileUrls = selectedFile
+      ? (await readFile(selectedFile, "utf8")).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
       : [];
-    const suppliedUrls = [...PILOT_URLS, ...fileUrls];
+    const allSuppliedUrls = [...PILOT_URLS, ...fileUrls];
+    const suppliedUrls = RUN_MODE === "queue" ? allSuppliedUrls.slice(QUEUE_OFFSET, QUEUE_OFFSET + QUEUE_LIMIT) : allSuppliedUrls;
+    if (RUN_MODE === "queue" && QUEUE_OFFSET >= allSuppliedUrls.length) throw new Error("Queue offset " + QUEUE_OFFSET + " is beyond the " + allSuppliedUrls.length + "-URL queue.");
     if (suppliedUrls.length === 0) throw new Error("The supplied FJA URL list is empty.");
     for (const suppliedUrl of suppliedUrls) {
       const normalized = normalizeUrl(suppliedUrl, BASE);
