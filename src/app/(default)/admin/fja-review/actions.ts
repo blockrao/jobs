@@ -110,7 +110,7 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
   let parsed: URL;
   try { parsed = new URL(officialUrl); } catch { redirect("/admin/fja-review?mode=verification&error=invalid-official-url"); }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") redirect("/admin/fja-review?mode=verification&error=invalid-official-url");
-  if (/(^|\.)freejobalert\.com$/i.test(parsed.hostname)) redirect("/admin/fja-review?mode=verification&error=aggregator-url");
+  if (isAggregatorUrl(officialUrl)) redirect("/admin/fja-review?mode=verification&error=aggregator-url");
 
   await db.update(fjaPostInventory).set({
     officialVerificationStatus: "VERIFIED",
