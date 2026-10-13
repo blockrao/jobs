@@ -639,7 +639,7 @@ async function main() {
     // Pilot mode deliberately bypasses broad discovery and processes only supplied article URLs.
     // File mode is intended for large, reviewed URL inventories exported from a workbook (one URL per line).
     const fileUrls = PILOT_URLS_FILE
-      ? (await readFile(PILOT_URLS_FILE, "utf8")).split(/\\r?\\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
+      ? (await readFile(PILOT_URLS_FILE, "utf8")).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
       : [];
     const suppliedUrls = [...PILOT_URLS, ...fileUrls];
     if (suppliedUrls.length === 0) throw new Error("The supplied FJA URL list is empty.");
