@@ -29,7 +29,7 @@ function explicitAmounts(text: string): number[] {
     const n = amountValue(match[1]);
     if (n !== null) values.push(n);
     const tail = text.slice((match.index ?? 0) + match[0].length);
-    const rangeContinuation = tail.match(/^\s*(?:to|[-–—])\s*(?:(?:₹|INR\s*|Rs\.?\s*))?(\d[\d,]*(?:\.\d{1,2})?)/i);
+    const rangeContinuation = tail.match(/^\s*(?:to|[-–—])\s*(?:(?:₹|INR\s*|Rs\.?\s*))?(\d[\d,]*(?:\.\d{1,2})?)(?=$|\s*(?:per\b|monthly\b|yearly\b|annually\b|a\s+month\b|a\s+year\b|\/))/i);
     if (rangeContinuation) {
       const upper = amountValue(rangeContinuation[1]);
       if (upper !== null) values.push(upper);
@@ -76,7 +76,7 @@ export function normalizeSalary(rawValue: string | null | undefined): SalaryCand
     return { min: null, max: null, currency, period: salaryPeriod(raw), type, status: "NEEDS_REVIEW", reason: "No explicit currency-marked numeric amount found; retain the source wording for review." };
   }
   const min = values.length > 1 ? Math.min(...values) : values[0];
-  const max = values.length > 1 ? Math.max(...values) : values[0];
+  const max = values.length > 1 ? Math.max(...values) : type === "RANGE" ? null : values[0];
   const period = salaryPeriod(raw);
   const ambiguousScale = /\b(?:level[- ]?\d|grade pay|pay matrix|pay scale|scale of pay|pay band)\b/i.test(raw) && type !== "PAY_SCALE";
   const status: NormalizationStatus = currency && type && (period || type === "PAY_SCALE") && !ambiguousScale
