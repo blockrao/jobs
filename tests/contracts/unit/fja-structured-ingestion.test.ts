@@ -19,7 +19,8 @@ describe("FJA structured ingestion safety contracts", () => {
   test("unchanged-source recrawls preserve manually reviewed normalized values", () => {
     expect(crawler).toContain("salary_normalization_status='MANUALLY_REVIEWED'");
     expect(crawler).toContain("age_normalization_status='MANUALLY_REVIEWED'");
-    expect(crawler).toContain("verified_at=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL");
+    expect(crawler).toContain("verified_official_source_url IS DISTINCT FROM");
+    expect(crawler).toContain("verified_at=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM");
   });
 
   test("migration adds nullable typed candidate fields and does not write canonical tables", () => {
@@ -36,6 +37,9 @@ describe("FJA structured ingestion safety contracts", () => {
     expect(reviewActions).toContain('officialVerificationStatus: "VERIFIED"');
     expect(reviewActions).toContain('verificationNotes: note');
     expect(reviewActions).toContain('officialSourcePage: page');
+    expect(reviewActions).toContain('verifiedOfficialSourceUrl: officialUrl');
+    expect(reviewActions).toContain('?error=salary-value');
+    expect(reviewActions).toContain('?error=age-value');
   });
 
   test("automated inventory workflow remains pilot-only pending pilot acceptance", () => {
