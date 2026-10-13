@@ -31,13 +31,15 @@ function ageValue(data: FormData, key: string): number | null {
   const raw = stringValue(data, key);
   if (!raw) return null;
   const value = Number(raw);
-  return Number.isInteger(value) && value >= 14 && value <= 100 ? value : null;
+  if (!Number.isInteger(value) || value < 14 || value > 100) redirect("/admin/fja-review?error=age-value");
+  return value;
 }
 function moneyValue(data: FormData, key: string): string | null {
   const raw = stringValue(data, key);
   if (!raw) return null;
   const value = Number(raw);
-  return Number.isFinite(value) && value > 0 && value <= 1_000_000_000_000 ? value.toFixed(2) : null;
+  if (!Number.isFinite(value) || value <= 0 || value > 1_000_000_000_000) redirect("/admin/fja-review?error=salary-value");
+  return value.toFixed(2);
 }
 
 export async function saveFjaCandidate(formData: FormData) {
@@ -110,6 +112,7 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
   await db.update(fjaPostInventory).set({
     officialVerificationStatus: "VERIFIED",
     officialSourcePage: page,
+    verifiedOfficialSourceUrl: officialUrl,
     verificationNotes: note,
     verifiedAt: new Date(),
     updatedAt: new Date(),
