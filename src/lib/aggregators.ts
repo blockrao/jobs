@@ -8,10 +8,13 @@ const AGGREGATOR_HOSTS = [
   "freejobalert.com", "sarkariresult.com", "sarkarinaukri.com", "indiasarkarinaukri.com",
   "sahisarkarijobs.com", "sarkariexam.com", "t.me", "telegram.me", "whatsapp.com",
   "arattai.in", "web.arattai.in", "wa.me", "telegram.org", "facebook.com", "twitter.com", "x.com", "instagram.com", "youtube.com",
+  // Content portals that host unofficial copies of notifications — not official sources
+  "marugujarat.co.in", "pdfjobsjankari.com", "onlineupcar.com",
+  "rojgarresult.com", "freshersworld.com",
 ];
-const NAME_RE = /arattai|free\s*job\s*alert|sarkari[\s-]*result|sarkari[\s-]*naukri|sahi\s*sarkari|sarkari[\s-]*exam\b/i;
+const NAME_RE = /arattai|free\s*job\s*alert|sarkari[\s-]*result|sarkari[\s-]*naukri|sahi\s*sarkari|sarkari[\s-]*exam\b|marugujarat|pdfjobsjankari|rojgarresult|freshersworld/i;
 // Any host that looks like an aggregator even when it is not in the list (sarkari-naukri.in, freejobalert.in ...).
-const HOST_RE = /sarkari|freejobalert|arattai/i;
+const HOST_RE = /sarkari|freejobalert|arattai|marugujarat|pdfjobsjankari/i;
 
 export function isAggregatorUrl(url: string | null | undefined): boolean {
   if (!url) return false;

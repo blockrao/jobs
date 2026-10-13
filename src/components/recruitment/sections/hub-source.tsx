@@ -5,6 +5,7 @@
 
 import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
+import { publicLink } from '@/lib/aggregators';
 
 interface HubSourceProps {
   data: HubData;
@@ -14,7 +15,7 @@ export default function HubSource({ data }: HubSourceProps) {
   const { recruitment, sourceFactsUnverified, displayOfficialSource } = data;
 
   const verificationStatus = recruitment.sourceVerificationStatus;
-  const sourceUrl = recruitment.sourceExtract?.sourceUrl ?? null;
+  const sourceUrl = publicLink(recruitment.sourceExtract?.sourceUrl ?? null);
   const detailStatus = typeof recruitment.sourceExtract?.detailStatus === 'string'
     ? recruitment.sourceExtract.detailStatus
     : null;
