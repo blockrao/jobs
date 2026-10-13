@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const [digestStats, topJobs] = await Promise.all([
     getDailyDigestStats().catch(() => null),
-    getDailyDigestJobs({ limit: 30 }).catch(() => []),
+    getDailyDigestJobs({ limit: 2000 }).catch(() => []),
   ]);
 
   return <DashboardContent digestStats={digestStats} topJobs={topJobs} />;

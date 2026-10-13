@@ -1025,8 +1025,10 @@ export async function getDailyDigestJobs(opts: {
   sourceUrl: string | null;
   category: string | null;
   states: string[] | null;
+  qualificationText: string | null;
   promotedRecruitmentId: number | null;
   promotedPostId: number | null;
+  promotedSlug: string | null;
 }[]> {
   if (!hasDb()) return [];
   const db = getDb();
@@ -1036,7 +1038,7 @@ export async function getDailyDigestJobs(opts: {
     : sql`AND rn.digest_date = (SELECT MAX(digest_date) FROM raw_notifications)`;
 
   const categoryFilter = opts.category ? sql`AND rn.category = ${opts.category}` : sql``;
-  const lim = opts.limit ?? 50;
+  const lim = opts.limit ?? 2000;
   const off = opts.offset ?? 0;
 
   const rows = await db.execute(sql`
@@ -1054,9 +1056,14 @@ export async function getDailyDigestJobs(opts: {
       rn.source_url,
       rn.category,
       rn.states,
+      rn.qualification_text,
       rn.promoted_recruitment_id,
-      rn.promoted_post_id
+      rn.promoted_post_id,
+      p.slug AS promoted_slug,
+      r.slug AS recruitment_slug
     FROM raw_notifications rn
+    LEFT JOIN posts p ON p.id = rn.promoted_post_id
+    LEFT JOIN recruitments r ON r.id = rn.promoted_recruitment_id
     WHERE TRUE ${dateFilter} ${categoryFilter}
     ORDER BY rn.vacancies DESC NULLS LAST, rn.id
     LIMIT ${lim} OFFSET ${off}
@@ -1076,8 +1083,12 @@ export async function getDailyDigestJobs(opts: {
     sourceUrl: r.source_url != null ? String(r.source_url) : null,
     category: r.category != null ? String(r.category) : null,
     states: Array.isArray(r.states) ? (r.states as string[]) : null,
+    qualificationText: r.qualification_text != null ? String(r.qualification_text) : null,
     promotedRecruitmentId: r.promoted_recruitment_id != null ? Number(r.promoted_recruitment_id) : null,
     promotedPostId: r.promoted_post_id != null ? Number(r.promoted_post_id) : null,
+    promotedSlug: (r.recruitment_slug && r.promoted_slug)
+      ? `/jobs/${r.recruitment_slug}/${r.promoted_slug}`
+      : null,
   }));
 }
 
