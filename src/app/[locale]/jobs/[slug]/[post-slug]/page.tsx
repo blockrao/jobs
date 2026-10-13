@@ -130,6 +130,15 @@ export default async function LocaleJobPostingPage({ params }: Props) {
           notificationPublicationDate: post.notificationPublicationDate ?? null,
           postedAt: post.postedAt ?? null,
           updatedAt: post.updatedAt ?? null,
+          // Official advertisement number — used as schema.org identifier; mirrors (default) route.
+          vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
+          officialSourceUrl: post.officialSourceUrl ?? null,
+          // Phase 1 eligibility text from source inventory; mirrors (default) route.
+          qualificationText:
+            post.fjaExtract?.eligibilityRaw ??
+            post.fjaExtract?.qualificationRaw ??
+            null,
+          experienceText: post.fjaExtract?.experienceRaw ?? null,
         }}
         resolvedVacancy={resolvedFacts.vacancyCount}
         resolvedSalary={resolvedFacts.salary}
