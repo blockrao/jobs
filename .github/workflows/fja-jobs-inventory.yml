@@ -4,12 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Run a three-article pilot or the full discovery crawl"
+        description: "Pilot only. Full and workbook-queue runs remain disabled until pilot acceptance."
         required: true
         type: choice
         options:
           - pilot
-          - full
         default: pilot
       pilot_urls:
         description: "Comma-separated FJA article URLs (used in pilot mode)"

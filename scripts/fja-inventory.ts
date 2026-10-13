@@ -1,6 +1,8 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import postgres from "postgres";
+import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
+import { normalizeAge, normalizeSalary } from "./fja-normalize";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -14,6 +16,9 @@ const CONCURRENCY = Number(process.env.FJA_CONCURRENCY ?? 4);
 const RUN_MODE = process.env.FJA_RUN_MODE ?? "pilot";
 const PILOT_URLS = (process.env.FJA_PILOT_URLS ?? "").split(",").map((url) => url.trim()).filter(Boolean);
 const PILOT_URLS_FILE = (process.env.FJA_PILOT_URLS_FILE ?? "").trim();
+const QUEUE_FILE = (process.env.FJA_QUEUE_FILE ?? "").trim();
+const QUEUE_OFFSET = Math.max(0, Number(process.env.FJA_QUEUE_OFFSET ?? 0));
+const QUEUE_LIMIT = Math.max(1, Math.min(30, Number(process.env.FJA_QUEUE_LIMIT ?? 20)));
 // window mode: every recruitment the source listed or updated on/after FJA_START_DATE that is still open.
 const START_DATE = (process.env.FJA_START_DATE ?? "").trim();
 const MAX_LIST_PAGES = Number(process.env.FJA_MAX_LIST_PAGES ?? 150);
@@ -163,7 +168,7 @@ const postMatchKey = (name: string) => name.toLowerCase().replace(/\(\s*\d{1,5}\
 const isTokenPrefix = (shorter: string, longer: string) => shorter.length > 0 && shorter !== longer && longer.startsWith(shorter + " ");
 const slugify = (value: string) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
 
-function extractPostCandidates(item: Listing): FjaPostCandidate[] {
+export function extractPostCandidates(item: Listing): FjaPostCandidate[] {
   const details = item.details ?? {};
   const tableFields = (details.tableFields ?? {}) as Record<string, string>;
   const tables = Array.isArray(details.tables) ? details.tables as RawTable[] : [];
@@ -482,15 +487,51 @@ function detailFields(html: string, listing: {url:string; title:string; external
     listContent: lists,
     preservationNote: "Unmapped source fields and page structure are retained as raw evidence; no AI rewrite or official verification is performed during extraction.",
   };
+  const articleFacts = parseFreeJobAlertArticle(html);
+  // Keep section-based extraction alongside table/link evidence; this is still aggregator evidence.
+  const articleFactsStored = {
+    ageLimitMin: articleFacts.ageLimitMin ?? null,
+    ageLimitMax: articleFacts.ageLimitMax ?? null,
+    ageRelaxationNotes: articleFacts.ageRelaxationNotes ?? null,
+    applicationFeeGeneral: articleFacts.applicationFeeGeneral ?? null,
+    applicationFeeReserved: articleFacts.applicationFeeReserved ?? null,
+    salaryMin: articleFacts.salaryMin ?? null,
+    salaryMax: articleFacts.salaryMax ?? null,
+    validThrough: articleFacts.validThrough?.toISOString() ?? null,
+    examDate: articleFacts.examDate?.toISOString() ?? null,
+    applyUrl: articleFacts.applyUrl ?? null,
+    officialNotificationUrl: articleFacts.officialNotificationUrl ?? null,
+    officialWebsiteUrl: articleFacts.officialWebsiteUrl ?? null,
+    extraContent: articleFacts.extraContent ?? null,
+    unparsed: articleFacts.unparsed,
+    review: articleFacts.review,
+  };
+  const fieldCoverage = {
+    labeledTableFields: Object.keys(rows),
+    sectionExtractor: {
+      age: articleFacts.ageLimitMin != null || articleFacts.ageLimitMax != null,
+      fee: articleFacts.applicationFeeGeneral != null || articleFacts.applicationFeeReserved != null,
+      salary: articleFacts.salaryMin != null || articleFacts.salaryMax != null,
+      deadline: articleFacts.validThrough != null,
+      examDate: articleFacts.examDate != null,
+      applyUrl: articleFacts.applyUrl != null,
+      notificationUrl: articleFacts.officialNotificationUrl != null,
+      officialWebsiteUrl: articleFacts.officialWebsiteUrl != null,
+    },
+    unparsedSections: articleFacts.unparsed,
+    reviewFlags: articleFacts.review,
+    note: "Coverage reports what extraction found; absence does not prove the source omitted a fact.",
+  };
   const details: Record<string, unknown> = {
     contentScope,
     tableFields: rows, tables, headings, lists, allLinks, officialLinks,
     // Top-level promoted field — best official notification/PDF URL found on this page.
     // This is what the DB write uses for fja_job_inventory.official_notification_url.
-    official_notification_url: officialNotificationUrl ?? null,
+    official_notification_url: officialNotificationUrl ?? articleFacts.officialNotificationUrl ?? null,
     postNames, ageLimit, applicationFee, selectionProcess, salary, location, otherInfoRaw,
+    articleFacts: articleFactsStored, fieldCoverage,
   };
-  const parsedEndDate = endRaw ? parseEndDate(endRaw) : undefined;
+  const parsedEndDate = (endRaw ? parseEndDate(endRaw) : undefined) ?? articleFacts.validThrough?.toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
   // A dated closing date decides the status. Free text is only consulted when there is no date, and only
   // inside the article body with a bounded match ("last date ... over" used to match the word "Overview").
@@ -512,7 +553,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     advertisementNumber:find(/advertisement number|notification number|advertisement no|notification no/i),
     qualification,
     vacancyCount:vacancyMatch ? Number(vacancyMatch[0]) : undefined,
-    officialNotificationUrl: officialNotificationUrl ?? null,
+    officialNotificationUrl: officialNotificationUrl ?? articleFacts.officialNotificationUrl ?? null,
     detailStatus:populated >= 3 ? "EXTRACTED" : populated > 0 ? "PARTIAL" : "FAILED",
     sourceStatus:status, details, rawText:text, rawHtml:html, htmlSha256, contentHash:sha(hashInput),
   };
@@ -614,7 +655,8 @@ async function discoverWindow(startDate: string): Promise<{articles:Required<Dis
 async function main() {
   if (!DRY_RUN && !process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
   if (RUN_MODE === "pilot" && PILOT_URLS.length === 0 && !PILOT_URLS_FILE) throw new Error("Pilot mode requires FJA_PILOT_URLS or FJA_PILOT_URLS_FILE; refusing to fall back to broad crawl.");
-  if (RUN_MODE !== "pilot" && RUN_MODE !== "full" && RUN_MODE !== "window") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
+  if (RUN_MODE === "queue" && !QUEUE_FILE) throw new Error("Queue mode requires FJA_QUEUE_FILE; refusing to fall back to broad crawl.");
+  if (RUN_MODE !== "pilot" && RUN_MODE !== "queue" && RUN_MODE !== "full" && RUN_MODE !== "window") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
   if (RUN_MODE === "window" && !/^20\d{2}-\d{2}-\d{2}$/.test(START_DATE)) throw new Error("Window mode requires FJA_START_DATE as YYYY-MM-DD.");
   // prepare:false — DATABASE_URL is the pooled (transaction-mode) connection, which does not keep
   // prepared statements between queries. Same setting as src/db/index.ts.
@@ -635,13 +677,15 @@ async function main() {
         windowSkipped.push({url:article.url, title:article.title, updatedOn:article.updatedOn, reason:"listing title is not a recruitment (result, admit card, answer key, ...)"});
       } else listings.set(article.externalId, article);
     }
-  } else if (PILOT_URLS.length > 0 || PILOT_URLS_FILE) {
-    // Pilot mode deliberately bypasses broad discovery and processes only supplied article URLs.
-    // File mode is intended for large, reviewed URL inventories exported from a workbook (one URL per line).
-    const fileUrls = PILOT_URLS_FILE
-      ? (await readFile(PILOT_URLS_FILE, "utf8")).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
+  } else if (RUN_MODE === "queue" || PILOT_URLS.length > 0 || PILOT_URLS_FILE) {
+    // Pilot and queue modes bypass broad discovery. Queue mode is bounded per dispatch.
+    const selectedFile = RUN_MODE === "queue" ? QUEUE_FILE : PILOT_URLS_FILE;
+    const fileUrls = selectedFile
+      ? (await readFile(selectedFile, "utf8")).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
       : [];
-    const suppliedUrls = [...PILOT_URLS, ...fileUrls];
+    const allSuppliedUrls = [...PILOT_URLS, ...fileUrls];
+    const suppliedUrls = RUN_MODE === "queue" ? allSuppliedUrls.slice(QUEUE_OFFSET, QUEUE_OFFSET + QUEUE_LIMIT) : allSuppliedUrls;
+    if (RUN_MODE === "queue" && QUEUE_OFFSET >= allSuppliedUrls.length) throw new Error("Queue offset " + QUEUE_OFFSET + " is beyond the " + allSuppliedUrls.length + "-URL queue.");
     if (suppliedUrls.length === 0) throw new Error("The supplied FJA URL list is empty.");
     for (const suppliedUrl of suppliedUrls) {
       const normalized = normalizeUrl(suppliedUrl, BASE);
@@ -783,6 +827,8 @@ async function main() {
         ON CONFLICT (source_slug,external_id,html_sha256) DO NOTHING
       `;
       for (const candidate of postCandidates) {
+        const salaryCandidate = normalizeSalary(candidate.salaryRaw);
+        const ageCandidate = normalizeAge(candidate.ageLimitRaw, candidate.ageReferenceDateRaw);
         // A row that is mapped to a published canonical post (other_info_raw.canonical_post_id) is read by the
         // live post page. A crawl is unreviewed aggregator evidence, so it never rewrites such a row: the WHERE
         // on the upsert skips it, and the capture is attached to it as other_info_raw.crawl_candidate for review.
@@ -790,27 +836,46 @@ async function main() {
           INSERT INTO public.fja_post_inventory
             (recruitment_inventory_id,source_slug,external_id,source_post_key,post_name_raw,post_name_normalized_candidate,
              source_post_code_raw,vacancy_count_raw,vacancy_count_candidate,qualification_raw,experience_raw,age_limit_raw,
-             age_reference_date_raw,age_relaxation_rules_raw,salary_raw,pay_level_raw,employment_type_raw,tenure_raw,
-             location_raw,duties_responsibilities_raw,eligibility_conditions_raw,milestones_raw,application_selection_raw,
-             other_info_raw,source_table_row_raw,extraction_status,official_verification_status,content_hash,last_crawl_run_id,
-             first_seen_at,last_seen_at,updated_at)
+             age_reference_date_raw,age_relaxation_rules_raw,salary_raw,salary_min_candidate,salary_max_candidate,
+             salary_currency_candidate,salary_period_candidate,salary_type_candidate,salary_normalization_status,
+             min_age_years_candidate,max_age_years_candidate,age_reference_date_candidate,age_normalization_status,
+             pay_level_raw,employment_type_raw,tenure_raw,location_raw,duties_responsibilities_raw,eligibility_conditions_raw,
+             milestones_raw,application_selection_raw,other_info_raw,source_table_row_raw,extraction_status,
+             official_verification_status,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
           VALUES
             (${inventoryRow.id},'freejobalert',${parsed.externalId},${candidate.sourcePostKey},${candidate.postNameRaw},
              NULL,${candidate.sourcePostCodeRaw},${candidate.vacancyCountRaw},${candidate.vacancyCountCandidate},
              ${candidate.qualificationRaw},${candidate.experienceRaw},${candidate.ageLimitRaw},${candidate.ageReferenceDateRaw},
-             ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${candidate.payLevelRaw},${candidate.employmentTypeRaw},
-             ${candidate.tenureRaw},${candidate.locationRaw},${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
+             ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${salaryCandidate.min},${salaryCandidate.max},
+             ${salaryCandidate.currency},${salaryCandidate.period},${salaryCandidate.type},${salaryCandidate.status},
+             ${ageCandidate.min},${ageCandidate.max},${ageCandidate.referenceDate},${ageCandidate.status},
+             ${candidate.payLevelRaw},${candidate.employmentTypeRaw},${candidate.tenureRaw},${candidate.locationRaw},
+             ${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
              ${db.json(candidate.milestonesRaw as never)},${db.json(candidate.applicationSelectionRaw as never)},${db.json(candidate.otherInfoRaw as never)},
              ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw as never) : null},${candidate.extractionStatus},
-             ${postVerificationStatus},
-             ${candidate.contentHash},${RUN_ID},now(),now(),now())
+             ${postVerificationStatus},${candidate.contentHash},${RUN_ID},now(),now(),now())
           ON CONFLICT (source_slug,external_id,source_post_key) DO UPDATE SET
             recruitment_inventory_id=excluded.recruitment_inventory_id,
             post_name_raw=excluded.post_name_raw,source_post_code_raw=excluded.source_post_code_raw,
             vacancy_count_raw=excluded.vacancy_count_raw,vacancy_count_candidate=excluded.vacancy_count_candidate,
             qualification_raw=excluded.qualification_raw,experience_raw=excluded.experience_raw,age_limit_raw=excluded.age_limit_raw,
             age_reference_date_raw=excluded.age_reference_date_raw,age_relaxation_rules_raw=excluded.age_relaxation_rules_raw,
-            salary_raw=excluded.salary_raw,pay_level_raw=excluded.pay_level_raw,employment_type_raw=excluded.employment_type_raw,
+            salary_raw=excluded.salary_raw,
+            salary_min_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_min_candidate ELSE excluded.salary_min_candidate END,
+            salary_max_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_max_candidate ELSE excluded.salary_max_candidate END,
+            salary_currency_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_currency_candidate ELSE excluded.salary_currency_candidate END,
+            salary_period_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_period_candidate ELSE excluded.salary_period_candidate END,
+            salary_type_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_type_candidate ELSE excluded.salary_type_candidate END,
+            salary_normalization_status=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_normalization_status ELSE excluded.salary_normalization_status END,
+            min_age_years_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.min_age_years_candidate ELSE excluded.min_age_years_candidate END,
+            max_age_years_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.max_age_years_candidate ELSE excluded.max_age_years_candidate END,
+            age_reference_date_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.age_reference_date_candidate ELSE excluded.age_reference_date_candidate END,
+            age_normalization_status=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.age_normalization_status ELSE excluded.age_normalization_status END,
+            official_source_page=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.official_source_page END,
+            verified_official_source_url=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.verified_official_source_url END,
+            verification_notes=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.verification_notes END,
+            verified_at=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url} THEN NULL ELSE public.fja_post_inventory.verified_at END,
+            pay_level_raw=excluded.pay_level_raw,employment_type_raw=excluded.employment_type_raw,
             tenure_raw=excluded.tenure_raw,location_raw=excluded.location_raw,duties_responsibilities_raw=excluded.duties_responsibilities_raw,
             eligibility_conditions_raw=excluded.eligibility_conditions_raw,milestones_raw=excluded.milestones_raw,
             application_selection_raw=excluded.application_selection_raw,
@@ -821,6 +886,7 @@ async function main() {
             -- this crawl; an unchanged row keeps the status a reviewer gave it (VERIFIED, CONFLICT, ...).
             official_verification_status=CASE
               WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash
+                OR public.fja_post_inventory.verified_official_source_url IS DISTINCT FROM ${inventoryRow.official_notification_url}
                 OR public.fja_post_inventory.official_verification_status = 'PENDING'
               THEN excluded.official_verification_status
               ELSE public.fja_post_inventory.official_verification_status END,
@@ -885,4 +951,4 @@ async function main() {
   console.log(JSON.stringify({runId:RUN_ID,processed:results.length,postCandidates:postCandidateRows.length,failed:failedDetailUrls.length,liveMappedPostRowsPreserved,skippedByReason,summary:summary[0],out:OUT}));
   await db.end();
 }
-main().catch(error=>{console.error(error);process.exit(1);});
+if (process.env.NODE_ENV !== "test") main().catch(error=>{console.error(error);process.exit(1);});

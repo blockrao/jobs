@@ -32,11 +32,14 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
       {error && <div role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
-        <form action={logoutAction}>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/fja-review" className="text-sm underline">FJA candidate review</Link>
+          <form action={logoutAction}>
           <SubmitButton className="text-sm underline" pendingText="Logging out…">
             Log out
           </SubmitButton>
-        </form>
+          </form>
+        </div>
       </div>
 
       <section>
