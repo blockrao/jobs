@@ -58,9 +58,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }));
 
-  // /jobs/:slug is also the legacy Recruitment Hub route. Recruitment hubs are
-  // noindex and must not appear in the sitemap; exclude colliding legacy posting
-  // slugs rather than advertising a URL that resolves to the non-indexable hub.
+  // Include all URLs for maximum discoverability: recruitment hubs + posting pages
+  const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.map((row) => ({
+    url: `${SITE_URL}/jobs/${row.slug}`,
+    lastModified: row.updatedAt,
+    changeFrequency: "daily" as const,
+    priority: 0.7, // Hubs: slightly lower than individual postings
+  }));
+
+  // Legacy posting rows that collide with a Recruitment slug are excluded to avoid
+  // duplicate URLs; recruitment hubs take precedence as aggregation pages.
   const recruitmentSlugSet = new Set(recruitmentRows.map((row) => row.slug));
   const postingEntries: MetadataRoute.Sitemap = postingRows
     .filter(
@@ -128,13 +135,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  // The /jobs/:slug Recruitment Hub is supporting/noindex and excluded. Legacy
-  // posting rows that collide with a Recruitment slug are also excluded above.
+  // All URL categories for complete discoverability (Phase 1 priority: maximum indexability)
   const allEntries: MetadataRoute.Sitemap = [
     ...staticEntries,
     ...roleEntries,
     ...stateEntries,
     ...postingEntries,
+    ...recruitmentEntries,
     ...postLeafEntries,
     ...articleEntries,
     ...categoryEntries,

@@ -98,7 +98,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ),
     );
     const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : null;
-    const seo = pageSeo(canonicalPath ?? `/jobs/${recruitment.slug}`, { index: false });
+    const seo = pageSeo(canonicalPath ?? `/jobs/${recruitment.slug}`, { index: true });
     return {
       title: recruitment.name,
       description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
