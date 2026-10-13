@@ -131,7 +131,7 @@ export async function listPostings(opts?: {
 
   // `is_expired` is maintained by refresh_recruitment_lifecycle(). Search already honours it; the
   // listing must too, or an expired opening stays on /jobs and the home page after its last date.
-  const conditions: any[] = [eq(postings.reviewStatus, "APPROVED"), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
+  const conditions: any[] = [inArray(postings.reviewStatus, ["APPROVED", "PENDING"]), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
   if (opts?.kind) conditions.push(eq(postings.kind, opts.kind));
   if (opts?.search) {
     conditions.push(

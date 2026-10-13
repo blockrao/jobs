@@ -405,6 +405,12 @@ export default async function JobsListPage({ searchParams }: Props) {
                             : L.daysLeft(daysLeftNum!)}
                         </span>
                       )}
+                      {/* Pending review badge — shown for PENDING postings not yet approved */}
+                      {posting.reviewStatus === "PENDING" && (
+                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-500/30">
+                          Pending review
+                        </span>
+                      )}
                     </div>
 
                     {/* Org + location */}
