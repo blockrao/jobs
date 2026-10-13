@@ -233,7 +233,7 @@ for item in items:
             as_json(candidate.get("milestonesRaw") or []), as_json(candidate.get("applicationSelectionRaw") or []),
             as_json(candidate.get("otherInfoRaw") or {}), source_ref, item.get("contentHash"),
             payload.get("runId"), extraction_status, item.get("detailStatus"),
-            "PENDING_OFFICIAL_REVIEW", "SOURCE_TABLE_CANDIDATE" if source_row else "NAME_FIELD_CANDIDATE",
+            "PENDING_OFFICIAL_REVIEW", "TABLE_MAPPED_REVIEW_REQUIRED" if source_row else "NAME_FIELD_CANDIDATE",
             scope_note
         ])
         post_other_values.append(chunks(as_json(post_other)))
