@@ -527,7 +527,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     tableFields: rows, tables, headings, lists, allLinks, officialLinks,
     // Top-level promoted field — best official notification/PDF URL found on this page.
     // This is what the DB write uses for fja_job_inventory.official_notification_url.
-    official_notification_url: officialNotificationUrl ?? null,
+    official_notification_url: officialNotificationUrl ?? articleFacts.officialNotificationUrl ?? null,
     postNames, ageLimit, applicationFee, selectionProcess, salary, location, otherInfoRaw,
     articleFacts: articleFactsStored, fieldCoverage,
   };
@@ -553,7 +553,7 @@ function detailFields(html: string, listing: {url:string; title:string; external
     advertisementNumber:find(/advertisement number|notification number|advertisement no|notification no/i),
     qualification,
     vacancyCount:vacancyMatch ? Number(vacancyMatch[0]) : undefined,
-    officialNotificationUrl: officialNotificationUrl ?? null,
+    officialNotificationUrl: officialNotificationUrl ?? articleFacts.officialNotificationUrl ?? null,
     detailStatus:populated >= 3 ? "EXTRACTED" : populated > 0 ? "PARTIAL" : "FAILED",
     sourceStatus:status, details, rawText:text, rawHtml:html, htmlSha256, contentHash:sha(hashInput),
   };
