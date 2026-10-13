@@ -1206,7 +1206,16 @@ export async function getPostsCount() {
  * Get enrichment statistics across all live posts
  */
 export async function getEnrichmentStats() {
-  if (!hasDb()) return { totalPosts: 0, withSalary: 0, withVacancies: 0, withExamDate: 0 };
+  if (!hasDb()) return {
+    totalPosts: 0,
+    withSalary: 0,
+    withVacancies: 0,
+    withExamDate: 0,
+    enrichedVerified: 0,
+    enrichedPending: 0,
+    notEnriched: 0,
+    avgConfidence: 0,
+  };
 
   const db = getDb();
   const result = await db.execute<any>(sql`
@@ -1214,17 +1223,14 @@ export async function getEnrichmentStats() {
       COUNT(*)::int as "totalPosts",
       COUNT(CASE WHEN "salaryMin" IS NOT NULL OR "salaryMax" IS NOT NULL THEN 1 END)::int as "withSalary",
       COUNT(CASE WHEN "vacanciesTotal" IS NOT NULL THEN 1 END)::int as "withVacancies",
-      COUNT(CASE WHEN "examDate" IS NOT NULL THEN 1 END)::int as "withExamDate"
-    FROM (
-      SELECT
-        e."salaryMin",
-        e."salaryMax",
-        e."vacanciesTotal",
-        e."examDate"
-      FROM public.posts p
-      LEFT JOIN public.post_enrichments e ON p.id = e.post_id
-      WHERE p."isLive" = true
-    ) results
+      COUNT(CASE WHEN "examDate" IS NOT NULL THEN 1 END)::int as "withExamDate",
+      COUNT(CASE WHEN e."sourceVerificationStatus" = 'VERIFIED' THEN 1 END)::int as "enrichedVerified",
+      COUNT(CASE WHEN e."sourceVerificationStatus" = 'PENDING' THEN 1 END)::int as "enrichedPending",
+      COUNT(CASE WHEN e.post_id IS NULL THEN 1 END)::int as "notEnriched",
+      COALESCE(ROUND(AVG(CASE WHEN e."extractionConfidence" IS NOT NULL THEN e."extractionConfidence" ELSE 0 END))::int, 0) as "avgConfidence"
+    FROM public.posts p
+    LEFT JOIN public.post_enrichments e ON p.id = e.post_id
+    WHERE p."isLive" = true
   `);
 
   const stats = result?.[0];
@@ -1233,6 +1239,10 @@ export async function getEnrichmentStats() {
     withSalary: stats?.withSalary || stats?.[`"withSalary"`] || 0,
     withVacancies: stats?.withVacancies || stats?.[`"withVacancies"`] || 0,
     withExamDate: stats?.withExamDate || stats?.[`"withExamDate"`] || 0,
+    enrichedVerified: stats?.enrichedVerified || stats?.[`"enrichedVerified"`] || 0,
+    enrichedPending: stats?.enrichedPending || stats?.[`"enrichedPending"`] || 0,
+    notEnriched: stats?.notEnriched || stats?.[`"notEnriched"`] || 0,
+    avgConfidence: stats?.avgConfidence || stats?.[`"avgConfidence"`] || 0,
   };
 }
 

@@ -47,6 +47,10 @@ interface EnrichmentStats {
   withSalary: number;
   withVacancies: number;
   withExamDate: number;
+  enrichedVerified: number;
+  enrichedPending: number;
+  notEnriched: number;
+  avgConfidence: number;
 }
 
 // Format rupee salary — stored as raw rupees (e.g. 67700 → ₹67,700)
@@ -136,7 +140,16 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPosts, setTotalPosts] = useState(0);
-  const [stats, setStats] = useState<EnrichmentStats>({ totalPosts: 0, withSalary: 0, withVacancies: 0, withExamDate: 0 });
+  const [stats, setStats] = useState<EnrichmentStats>({
+    totalPosts: 0,
+    withSalary: 0,
+    withVacancies: 0,
+    withExamDate: 0,
+    enrichedVerified: 0,
+    enrichedPending: 0,
+    notEnriched: 0,
+    avgConfidence: 0,
+  });
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -177,6 +190,17 @@ export default function ReportsPage() {
           <MetricCard label="With Salary" value={stats.withSalary} percentage={pct(stats.withSalary, stats.totalPosts)} color="text-emerald-600" icon="💰" />
           <MetricCard label="With Vacancies" value={stats.withVacancies} percentage={pct(stats.withVacancies, stats.totalPosts)} color="text-blue-600" icon="👥" />
           <MetricCard label="With Exam Date" value={stats.withExamDate} percentage={pct(stats.withExamDate, stats.totalPosts)} color="text-purple-600" icon="📅" />
+        </div>
+
+        {/* Enrichment Status Metrics */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Enrichment Pipeline Status</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <MetricCard label="Verified (Published)" value={stats.enrichedVerified} percentage={pct(stats.enrichedVerified, stats.totalPosts)} color="text-emerald-600" icon="✓" />
+            <MetricCard label="Pending Review" value={stats.enrichedPending} percentage={pct(stats.enrichedPending, stats.totalPosts)} color="text-amber-600" icon="⏳" />
+            <MetricCard label="Not Yet Enriched" value={stats.notEnriched} percentage={pct(stats.notEnriched, stats.totalPosts)} color="text-gray-600" icon="○" />
+            <MetricCard label="Avg Confidence" value={stats.avgConfidence} percentage={stats.avgConfidence} color={stats.avgConfidence >= 80 ? "text-emerald-600" : stats.avgConfidence >= 50 ? "text-amber-600" : "text-red-600"} icon="🎯" />
+          </div>
         </div>
 
         {/* Table */}
