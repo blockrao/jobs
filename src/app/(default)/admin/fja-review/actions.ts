@@ -105,7 +105,7 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
   if (!officialUrl) redirect("/admin/fja-review?error=missing-official-url");
   let parsed: URL;
   try { parsed = new URL(officialUrl); } catch { redirect("/admin/fja-review?error=invalid-official-url"); }
-  if (parsed.protocol !== "https:" && parsed!.protocol !== "http:") redirect("/admin/fja-review?error=invalid-official-url");
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") redirect("/admin/fja-review?error=invalid-official-url");
   if (/(^|\.)freejobalert\.com$/i.test(parsed.hostname)) redirect("/admin/fja-review?error=aggregator-url");
 
   await db.update(fjaPostInventory).set({
@@ -116,7 +116,7 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
     updatedAt: new Date(),
   }).where(and(
     eq(fjaPostInventory.id, id),
-    eq(fjaPostInventory.recruitmentInventoryId, row!.postId === id ? fjaPostInventory.recruitmentInventoryId : fjaPostInventory.recruitmentInventoryId),
+    eq(fjaPostInventory.recruitmentInventoryId, row!.recruitmentInventoryId),
   ));
   revalidatePath("/admin/fja-review");
   redirect("/admin/fja-review?verified=1");
