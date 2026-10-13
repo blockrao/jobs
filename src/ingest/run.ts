@@ -129,12 +129,3 @@ export async function main(opts?: { dryRun?: boolean }) {
   console.log("✨ Ingestion pipeline complete");
   console.log("=".repeat(60));
 }
-
-// Allow DRY_RUN env var to disable dry-run mode (default: dry-run enabled)
-const dryRunEnv = process.env.DRY_RUN;
-const liveModeRequested = dryRunEnv === 'false' || dryRunEnv === '0' || dryRunEnv === 'no';
-
-main({ dryRun: !liveModeRequested }).catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
