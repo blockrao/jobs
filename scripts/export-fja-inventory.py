@@ -293,6 +293,7 @@ summary = {
     "runId": payload.get("runId"),
     "recruitmentRows": len(recruitment_rows),
     "postCandidateRows": len(post_rows),
+    "structuredPostCandidates": len(post_candidates),
     "unresolvedPostRows": sum(1 for row in post_rows if not row[0]),
     "workbookSheets": ["Recruitments", "Posts"],
     "sourceBodyTextChunkColumns": max_body,
