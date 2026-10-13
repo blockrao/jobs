@@ -1104,7 +1104,8 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
   const results = await db.execute<any>(sql`
     SELECT
       p.id,
-      p.title,
+      COALESCE(p.title, p.name) as title,
+      p.name,
       p.slug,
       p."organizationName",
       p."recruitmentName",
@@ -1115,6 +1116,8 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       p."updatedAt",
       p."officialSourceUrl",
       p."applyPortalUrl",
+      p.location_city as "locationCity",
+      p.location_state as "locationState",
       e."salaryMin",
       e."salaryMax",
       e."salaryNote",
@@ -1138,14 +1141,18 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     FROM public.posts p
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
-    ORDER BY p."postedAt" DESC
+    ORDER BY
+      CASE WHEN e.post_id IS NOT NULL THEN 0 ELSE 1 END ASC,
+      e."extractionConfidence" DESC NULLS LAST,
+      p."postedAt" DESC
     LIMIT ${limit}
     OFFSET ${offset}
   `);
 
   return (results || []).map((row: any) => ({
     id: row.id,
-    title: row.title,
+    title: row.title, // already COALESCE(title, name) from SQL
+    name: row.name,
     slug: row.slug,
     organizationName: row.organizationName,
     recruitmentName: row.recruitmentName,
@@ -1156,6 +1163,8 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     updatedAt: row.updatedAt,
     officialSourceUrl: row.officialSourceUrl,
     applyPortalUrl: row.applyPortalUrl,
+    locationCity: row.locationCity,
+    locationState: row.locationState,
     salaryMin: row.salaryMin,
     salaryMax: row.salaryMax,
     salaryNote: row.salaryNote,
