@@ -53,7 +53,13 @@ export function normalizeSalary(rawValue: string | null | undefined): SalaryCand
   }
   if (/\b(?:lakh|lac|crore|million|thousand|lpa)\b|\d\s*k\b/i.test(raw)) {
     const currency = /₹|\bINR\b|\bRs\.?\s*\d/i.test(raw) ? "INR" : null;
-    return { min: null, max: null, currency, period: salaryPeriod(raw), type: "OTHER", status: "NEEDS_REVIEW", reason: "Salary uses an abbreviated scale (for example lakh/LPA); convert only after explicit review." };
+    let type: SalaryType = "OTHER";
+    if (/\b(?:pay scale|scale of pay|pay matrix|grade pay|pay level|level[- ]?\d|band pay)\b/i.test(raw)) type = "PAY_SCALE";
+    else if (/\bCTC\b|cost to company/i.test(raw)) type = "CTC";
+    else if (/\bstipend\b/i.test(raw)) type = "STIPEND";
+    else if (/consolidated|fixed remuneration/i.test(raw)) type = "CONSOLIDATED";
+    else if (/\bto\b|[-–—]/.test(raw)) type = "RANGE";
+    return { min: null, max: null, currency, period: salaryPeriod(raw), type, status: "NEEDS_REVIEW", reason: "Salary uses an abbreviated scale (for example lakh/LPA); convert only after explicit review." };
   }
   const values = explicitAmounts(raw);
   const currency = /₹|\bINR\b|\bRs\.?\s*\d/i.test(raw) ? "INR" : null;
