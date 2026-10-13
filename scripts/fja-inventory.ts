@@ -168,7 +168,7 @@ const postMatchKey = (name: string) => name.toLowerCase().replace(/\(\s*\d{1,5}\
 const isTokenPrefix = (shorter: string, longer: string) => shorter.length > 0 && shorter !== longer && longer.startsWith(shorter + " ");
 const slugify = (value: string) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 96).replace(/-+$/g, "");
 
-function extractPostCandidates(item: Listing): FjaPostCandidate[] {
+export function extractPostCandidates(item: Listing): FjaPostCandidate[] {
   const details = item.details ?? {};
   const tableFields = (details.tableFields ?? {}) as Record<string, string>;
   const tables = Array.isArray(details.tables) ? details.tables as RawTable[] : [];
@@ -951,4 +951,4 @@ async function main() {
   console.log(JSON.stringify({runId:RUN_ID,processed:results.length,postCandidates:postCandidateRows.length,failed:failedDetailUrls.length,liveMappedPostRowsPreserved,skippedByReason,summary:summary[0],out:OUT}));
   await db.end();
 }
-main().catch(error=>{console.error(error);process.exit(1);});
+if (process.env.NODE_ENV !== "test") main().catch(error=>{console.error(error);process.exit(1);});
