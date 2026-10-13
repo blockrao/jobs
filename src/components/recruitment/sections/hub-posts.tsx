@@ -48,7 +48,7 @@ function PostCard({
     : null;
 
   const payRaw = typeof postAny.payLevel?.raw === 'string' ? postAny.payLevel.raw : null;
-  const payDisplay = payRaw ?? post.fjaExtract?.salaryRaw ?? null;
+  const payDisplay = payRaw ?? post.fjaExtract?.salaryRaw ?? (post as any).enrichment?.payScale ?? null;
 
   const qual = post.fjaExtract?.qualificationRaw ?? null;
   const exp = post.fjaExtract?.experienceRaw ?? null;

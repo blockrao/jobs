@@ -16,6 +16,8 @@ import ApplicationFee from "./sections/application-fee";
 import HowToApply from "./sections/how-to-apply";
 import DocumentsRequired from "./sections/documents-required";
 import OfficialSourceVerification from "./sections/official-source-verification";
+import DutiesResponsibilities from "./sections/duties-responsibilities";
+import SalaryCompensation from "./sections/salary-compensation";
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
@@ -221,9 +223,17 @@ export default function JobPostingPage({
         <nav className={styles.toc} aria-label="On this page">
           <a href="#quick">Quick answers</a>
           <a href="#facts">Post facts</a>
-          {(qualText || expText) && <a href="#eligibility">Eligibility</a>}
+          {(qualText || expText ||
+            post.enrichment?.education ||
+            post.enrichment?.experience ||
+            post.enrichment?.ageRulesByCategory ||
+            post.enrichment?.ageNote ||
+            post.enrichment?.ageRelaxationRules ||
+            post.enrichment?.eligibilityPathways) && <a href="#eligibility">Eligibility</a>}
           <a href="#dates">Dates</a>
-          {(vacancyCount != null || reportedVacancyCount != null) && <a href="#vacancies">Vacancies</a>}
+          {(vacancyCount != null || reportedVacancyCount != null ||
+            post.enrichment?.vacanciesTotal != null ||
+            (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && <a href="#vacancies">Vacancies</a>}
           <a href="#selection">Selection</a>
           <a href="#apply">How to apply</a>
           <a href="#documents">Documents</a>
@@ -335,7 +345,13 @@ export default function JobPostingPage({
         )}
 
         {/* Eligibility */}
-        {(qualText || expText) && (
+        {(qualText || expText ||
+          post.enrichment?.education ||
+          post.enrichment?.experience ||
+          post.enrichment?.ageRulesByCategory ||
+          post.enrichment?.ageNote ||
+          post.enrichment?.ageRelaxationRules ||
+          post.enrichment?.eligibilityPathways) && (
           <section id="eligibility" className={styles.section} aria-labelledby="elig-h">
             <h2 id="elig-h" className={styles.sectionTitle}>
               Eligibility
@@ -369,7 +385,9 @@ export default function JobPostingPage({
         </section>
 
         {/* Vacancy Details */}
-        {(vacancyCount != null || reportedVacancyCount != null) && (
+        {(vacancyCount != null || reportedVacancyCount != null ||
+          post.enrichment?.vacanciesTotal != null ||
+          (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && (
           <section id="vacancies" className={styles.section} aria-labelledby="vac-h">
             <h2 id="vac-h" className={styles.sectionTitle}>
               Seats and vacancies{reportedVacancyCount != null && vacancyCount == null ? " (reported)" : ""}
@@ -389,6 +407,12 @@ export default function JobPostingPage({
             embedded
           />
         </section>
+
+        {/* Duties and Responsibilities */}
+        <DutiesResponsibilities post={post} />
+
+        {/* Salary and Compensation */}
+        <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
 
         {/* Application Fee */}
         <section id="fee" className={styles.section} aria-labelledby="fee-h">
