@@ -28,6 +28,12 @@ function explicitAmounts(text: string): number[] {
   for (const match of text.matchAll(re)) {
     const n = amountValue(match[1]);
     if (n !== null) values.push(n);
+    const tail = text.slice((match.index ?? 0) + match[0].length);
+    const rangeContinuation = tail.match(/^\s*(?:to|[-–—])\s*(?:(?:₹|INR\s*|Rs\.?\s*))?(\d[\d,]*(?:\.\d{1,2})?)/i);
+    if (rangeContinuation) {
+      const upper = amountValue(rangeContinuation[1]);
+      if (upper !== null) values.push(upper);
+    }
   }
   return [...new Set(values)];
 }
@@ -44,6 +50,10 @@ export function normalizeSalary(rawValue: string | null | undefined): SalaryCand
   const raw = collapse(rawValue ?? "");
   if (!raw || /^(?:n\/?a|not (?:mentioned|specified|disclosed)|[-–—]+)$/i.test(raw)) {
     return { min: null, max: null, currency: null, period: null, type: null, status: "NOT_PRESENT", reason: null };
+  }
+  if (/\b(?:lakh|lac|crore|million|thousand|lpa)\b|\d\s*k\b/i.test(raw)) {
+    const currency = /₹|\bINR\b|\bRs\.?\s*\d/i.test(raw) ? "INR" : null;
+    return { min: null, max: null, currency, period: salaryPeriod(raw), type: "OTHER", status: "NEEDS_REVIEW", reason: "Salary uses an abbreviated scale (for example lakh/LPA); convert only after explicit review." };
   }
   const values = explicitAmounts(raw);
   const currency = /₹|\bINR\b|\bRs\.?\s*\d/i.test(raw) ? "INR" : null;
@@ -104,11 +114,12 @@ export function normalizeAge(rawValue: string | null | undefined, referenceRaw?:
   if (range && years) {
     const a = Number(range[1]), b = Number(range[2]);
     if (a >= 14 && b <= 100 && a <= b) { min = a; max = b; }
-  } else if (nums.length === 1 && years) {
-    const n = nums[0];
-    if (/\b(?:minimum|min\.?|not less than)\b/i.test(raw)) min = n;
-    else if (/\b(?:maximum|max\.?|upper age|not more than|up to)\b/i.test(raw)) max = n;
-    else if (/\bage limit\b/i.test(raw)) max = n;
+  } else if (years) {
+    const minMatch = raw.match(/\b(?:minimum age|min\.? age|not less than|at least)\D{0,30}(\d{1,3})\s*(?:years?|yrs?)\b/i);
+    const maxMatch = raw.match(/\b(?:maximum age|max\.? age|upper age limit|not more than|up to)\D{0,30}(\d{1,3})\s*(?:years?|yrs?)\b/i);
+    if (minMatch && Number(minMatch[1]) >= 14 && Number(minMatch[1]) <= 100) min = Number(minMatch[1]);
+    if (maxMatch && Number(maxMatch[1]) >= 14 && Number(maxMatch[1]) <= 100) max = Number(maxMatch[1]);
+    if (min === null && max === null && nums.length === 1 && /\bage limit\b/i.test(raw)) max = nums[0];
   }
   const referenceDate = parseExplicitDate(combined);
   const status: NormalizationStatus = min !== null || max !== null ? "NORMALIZED" : "NEEDS_REVIEW";
