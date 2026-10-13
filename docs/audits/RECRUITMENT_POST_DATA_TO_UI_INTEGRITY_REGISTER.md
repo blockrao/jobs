@@ -89,6 +89,22 @@ Code trace found:
 - The top-level action buttons and How to Apply section already consume the resolved Recruitment application URL, but the Official Sources section reads only `post.officialSourceUrl` and `post.applyPortalUrl`, omitting Recruitment-owned URLs.
 - Draft PR #7 proposes the resolver and Official Sources fixes. Because the application URL provenance is currently `AGGREGATOR_DISCOVERED`, confirm the exact portal destination against the institution's official link before considering the source provenance verified. CI and live behavior remain unverified.
 
+## Gate 1B — Post vacancy count conflict (2026-10-09)
+
+Read-only production query confirmed a concrete contradiction for Post ID 2, Assistant Legislative Counsel:
+- `posts.vacancy_total`: 8
+- `recruitments.total_vacancies`: 8
+- `post_enrichments.vacanciesTotal`: 33
+- `post_enrichments.vacanciesByCategory`: SC 4 + ST 3 + OBC 8 + General 18 = 33
+- Enrichment status/confidence: `VERIFIED` / 85
+- Post and Recruitment both reference the same UPSC Advertisement No. 12/2026 notification URL.
+
+The agreement between Post and Recruitment totals does not independently prove the Post count, but the conflicting enrichment value must not win solely because its verification flag and confidence threshold pass. The category sum confirms the enrichment is internally arithmetical; it does not establish that 33 belongs to this Post.
+
+**Proposed code safeguard:** if both Post-level candidate counts are populated, positive, and disagree, `resolvePostVacancy()` returns `null` pending source-based reconciliation. It does not silently prefer either count. A focused resolver contract test covers this case, pending CI execution and review.
+
+DUI-001 remains open until the code change is reviewed, CI passes, and affected page/structured-data outputs are verified. No production data was changed.
+
 ## Required verification matrix
 
 For every P0 fix, test at least:
