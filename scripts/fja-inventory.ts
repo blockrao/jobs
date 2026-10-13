@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import postgres from "postgres";
+import { normalizeAge, normalizeSalary } from "./fja-normalize";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -725,6 +726,8 @@ async function main() {
       parsed.details.crawlerKeys = Object.keys(parsed.details).filter((key) => parsed.details[key] != null).sort();
       const postCandidates = extractPostCandidates(parsed);
       for (const candidate of postCandidates) {
+        const salaryCandidate = normalizeSalary(candidate.salaryRaw);
+        const ageCandidate = normalizeAge(candidate.ageLimitRaw, candidate.ageReferenceDateRaw);
         const {otherInfoRaw, ...facts} = candidate;
         postCandidateRows.push({externalId:parsed.externalId, articleTitle:parsed.title, ...facts, scopeNote:otherInfoRaw.scopeNote});
       }
@@ -790,27 +793,45 @@ async function main() {
           INSERT INTO public.fja_post_inventory
             (recruitment_inventory_id,source_slug,external_id,source_post_key,post_name_raw,post_name_normalized_candidate,
              source_post_code_raw,vacancy_count_raw,vacancy_count_candidate,qualification_raw,experience_raw,age_limit_raw,
-             age_reference_date_raw,age_relaxation_rules_raw,salary_raw,pay_level_raw,employment_type_raw,tenure_raw,
-             location_raw,duties_responsibilities_raw,eligibility_conditions_raw,milestones_raw,application_selection_raw,
-             other_info_raw,source_table_row_raw,extraction_status,official_verification_status,content_hash,last_crawl_run_id,
-             first_seen_at,last_seen_at,updated_at)
+             age_reference_date_raw,age_relaxation_rules_raw,salary_raw,salary_min_candidate,salary_max_candidate,
+             salary_currency_candidate,salary_period_candidate,salary_type_candidate,salary_normalization_status,
+             min_age_years_candidate,max_age_years_candidate,age_reference_date_candidate,age_normalization_status,
+             pay_level_raw,employment_type_raw,tenure_raw,location_raw,duties_responsibilities_raw,eligibility_conditions_raw,
+             milestones_raw,application_selection_raw,other_info_raw,source_table_row_raw,extraction_status,
+             official_verification_status,content_hash,last_crawl_run_id,first_seen_at,last_seen_at,updated_at)
           VALUES
             (${inventoryRow.id},'freejobalert',${parsed.externalId},${candidate.sourcePostKey},${candidate.postNameRaw},
              NULL,${candidate.sourcePostCodeRaw},${candidate.vacancyCountRaw},${candidate.vacancyCountCandidate},
              ${candidate.qualificationRaw},${candidate.experienceRaw},${candidate.ageLimitRaw},${candidate.ageReferenceDateRaw},
-             ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${candidate.payLevelRaw},${candidate.employmentTypeRaw},
-             ${candidate.tenureRaw},${candidate.locationRaw},${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
+             ${candidate.ageRelaxationRulesRaw},${candidate.salaryRaw},${salaryCandidate.min},${salaryCandidate.max},
+             ${salaryCandidate.currency},${salaryCandidate.period},${salaryCandidate.type},${salaryCandidate.status},
+             ${ageCandidate.min},${ageCandidate.max},${ageCandidate.referenceDate},${ageCandidate.status},
+             ${candidate.payLevelRaw},${candidate.employmentTypeRaw},${candidate.tenureRaw},${candidate.locationRaw},
+             ${candidate.dutiesResponsibilitiesRaw},${candidate.eligibilityConditionsRaw},
              ${db.json(candidate.milestonesRaw as never)},${db.json(candidate.applicationSelectionRaw as never)},${db.json(candidate.otherInfoRaw as never)},
              ${candidate.sourceTableRowRaw ? db.json(candidate.sourceTableRowRaw as never) : null},${candidate.extractionStatus},
-             ${postVerificationStatus},
-             ${candidate.contentHash},${RUN_ID},now(),now(),now())
+             ${postVerificationStatus},${candidate.contentHash},${RUN_ID},now(),now(),now())
           ON CONFLICT (source_slug,external_id,source_post_key) DO UPDATE SET
             recruitment_inventory_id=excluded.recruitment_inventory_id,
             post_name_raw=excluded.post_name_raw,source_post_code_raw=excluded.source_post_code_raw,
             vacancy_count_raw=excluded.vacancy_count_raw,vacancy_count_candidate=excluded.vacancy_count_candidate,
             qualification_raw=excluded.qualification_raw,experience_raw=excluded.experience_raw,age_limit_raw=excluded.age_limit_raw,
             age_reference_date_raw=excluded.age_reference_date_raw,age_relaxation_rules_raw=excluded.age_relaxation_rules_raw,
-            salary_raw=excluded.salary_raw,pay_level_raw=excluded.pay_level_raw,employment_type_raw=excluded.employment_type_raw,
+            salary_raw=excluded.salary_raw,
+            salary_min_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_min_candidate ELSE excluded.salary_min_candidate END,
+            salary_max_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_max_candidate ELSE excluded.salary_max_candidate END,
+            salary_currency_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_currency_candidate ELSE excluded.salary_currency_candidate END,
+            salary_period_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_period_candidate ELSE excluded.salary_period_candidate END,
+            salary_type_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_type_candidate ELSE excluded.salary_type_candidate END,
+            salary_normalization_status=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.salary_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.salary_normalization_status ELSE excluded.salary_normalization_status END,
+            min_age_years_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.min_age_years_candidate ELSE excluded.min_age_years_candidate END,
+            max_age_years_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.max_age_years_candidate ELSE excluded.max_age_years_candidate END,
+            age_reference_date_candidate=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.age_reference_date_candidate ELSE excluded.age_reference_date_candidate END,
+            age_normalization_status=CASE WHEN public.fja_post_inventory.content_hash IS NOT DISTINCT FROM excluded.content_hash AND public.fja_post_inventory.age_normalization_status='MANUALLY_REVIEWED' THEN public.fja_post_inventory.age_normalization_status ELSE excluded.age_normalization_status END,
+            official_source_page=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL ELSE public.fja_post_inventory.official_source_page END,
+            verification_notes=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL ELSE public.fja_post_inventory.verification_notes END,
+            verified_at=CASE WHEN public.fja_post_inventory.content_hash IS DISTINCT FROM excluded.content_hash THEN NULL ELSE public.fja_post_inventory.verified_at END,
+            pay_level_raw=excluded.pay_level_raw,employment_type_raw=excluded.employment_type_raw,
             tenure_raw=excluded.tenure_raw,location_raw=excluded.location_raw,duties_responsibilities_raw=excluded.duties_responsibilities_raw,
             eligibility_conditions_raw=excluded.eligibility_conditions_raw,milestones_raw=excluded.milestones_raw,
             application_selection_raw=excluded.application_selection_raw,
