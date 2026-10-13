@@ -927,6 +927,160 @@ export async function getHomepageStats(): Promise<{
   return { stats, closingSoon };
 }
 
+// ---------------------------------------------------------------------------
+// Daily digest dashboard stats (from raw_notifications staging table)
+// ---------------------------------------------------------------------------
+
+export interface DigestCategoryStat {
+  category: string;
+  count: number;
+  vacancies: number;
+  withPdf: number;
+}
+
+export interface DigestStats {
+  digestDate: string;
+  total: number;
+  totalVacancies: number;
+  withPdf: number;
+  byCategory: DigestCategoryStat[];
+  closingToday: number;
+  closingThreeDays: number;
+  closingThisWeek: number;
+}
+
+export async function getDailyDigestStats(digestDate?: string): Promise<DigestStats | null> {
+  if (!hasDb()) return null;
+  const db = getDb();
+
+  const dateFilter = digestDate
+    ? sql`AND digest_date = ${digestDate}::date`
+    : sql`AND digest_date = (SELECT MAX(digest_date) FROM raw_notifications)`;
+
+  const [summaryRows, categoryRows] = await Promise.all([
+    db.execute(sql`
+      SELECT
+        digest_date::text AS digest_date,
+        COUNT(*)::int AS total,
+        COALESCE(SUM(vacancies), 0)::int AS total_vacancies,
+        COUNT(official_pdf_url)::int AS with_pdf,
+        COUNT(*) FILTER (WHERE last_date = CURRENT_DATE)::int AS closing_today,
+        COUNT(*) FILTER (WHERE last_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 3)::int AS closing_three_days,
+        COUNT(*) FILTER (WHERE last_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 7)::int AS closing_this_week
+      FROM raw_notifications
+      WHERE TRUE ${dateFilter}
+      GROUP BY digest_date
+    `),
+    db.execute(sql`
+      SELECT
+        COALESCE(category, 'Other') AS category,
+        COUNT(*)::int AS count,
+        COALESCE(SUM(vacancies), 0)::int AS vacancies,
+        COUNT(official_pdf_url)::int AS with_pdf
+      FROM raw_notifications
+      WHERE TRUE ${dateFilter}
+      GROUP BY category
+      ORDER BY vacancies DESC NULLS LAST
+    `),
+  ]);
+
+  const summary = (summaryRows as unknown as Record<string, unknown>[])[0];
+  if (!summary) return null;
+
+  const byCategory: DigestCategoryStat[] = (categoryRows as unknown as Record<string, unknown>[]).map((r) => ({
+    category: String(r.category),
+    count: Number(r.count),
+    vacancies: Number(r.vacancies),
+    withPdf: Number(r.with_pdf),
+  }));
+
+  return {
+    digestDate: String(summary.digest_date),
+    total: Number(summary.total),
+    totalVacancies: Number(summary.total_vacancies),
+    withPdf: Number(summary.with_pdf),
+    byCategory,
+    closingToday: Number(summary.closing_today),
+    closingThreeDays: Number(summary.closing_three_days),
+    closingThisWeek: Number(summary.closing_this_week),
+  };
+}
+
+export async function getDailyDigestJobs(opts: {
+  digestDate?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  id: number;
+  orgShort: string | null;
+  orgFull: string | null;
+  postName: string | null;
+  vacancies: number | null;
+  salaryText: string | null;
+  feeText: string | null;
+  lastDate: string | null;
+  officialPdfUrl: string | null;
+  applyUrl: string | null;
+  sourceUrl: string | null;
+  category: string | null;
+  states: string[] | null;
+  promotedRecruitmentId: number | null;
+  promotedPostId: number | null;
+}[]> {
+  if (!hasDb()) return [];
+  const db = getDb();
+
+  const dateFilter = opts.digestDate
+    ? sql`AND rn.digest_date = ${opts.digestDate}::date`
+    : sql`AND rn.digest_date = (SELECT MAX(digest_date) FROM raw_notifications)`;
+
+  const categoryFilter = opts.category ? sql`AND rn.category = ${opts.category}` : sql``;
+  const lim = opts.limit ?? 50;
+  const off = opts.offset ?? 0;
+
+  const rows = await db.execute(sql`
+    SELECT
+      rn.id,
+      rn.org_short,
+      rn.org_full,
+      rn.post_name,
+      rn.vacancies,
+      rn.salary_text,
+      rn.fee_text,
+      rn.last_date::text AS last_date,
+      rn.official_pdf_url,
+      rn.apply_url,
+      rn.source_url,
+      rn.category,
+      rn.states,
+      rn.promoted_recruitment_id,
+      rn.promoted_post_id
+    FROM raw_notifications rn
+    WHERE TRUE ${dateFilter} ${categoryFilter}
+    ORDER BY rn.vacancies DESC NULLS LAST, rn.id
+    LIMIT ${lim} OFFSET ${off}
+  `);
+
+  return (rows as unknown as Record<string, unknown>[]).map((r) => ({
+    id: Number(r.id),
+    orgShort: r.org_short != null ? String(r.org_short) : null,
+    orgFull: r.org_full != null ? String(r.org_full) : null,
+    postName: r.post_name != null ? String(r.post_name) : null,
+    vacancies: r.vacancies != null ? Number(r.vacancies) : null,
+    salaryText: r.salary_text != null ? String(r.salary_text) : null,
+    feeText: r.fee_text != null ? String(r.fee_text) : null,
+    lastDate: r.last_date != null ? String(r.last_date) : null,
+    officialPdfUrl: r.official_pdf_url != null ? String(r.official_pdf_url) : null,
+    applyUrl: r.apply_url != null ? String(r.apply_url) : null,
+    sourceUrl: r.source_url != null ? String(r.source_url) : null,
+    category: r.category != null ? String(r.category) : null,
+    states: Array.isArray(r.states) ? (r.states as string[]) : null,
+    promotedRecruitmentId: r.promoted_recruitment_id != null ? Number(r.promoted_recruitment_id) : null,
+    promotedPostId: r.promoted_post_id != null ? Number(r.promoted_post_id) : null,
+  }));
+}
+
 /**
  * Fetch all posts with enrichment data for comprehensive reporting
  * Returns paginated results with all enrichment details
