@@ -96,6 +96,7 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
   const db = getDb();
   const [row] = await db.select({
     postId: fjaPostInventory.id,
+    recruitmentInventoryId: fjaPostInventory.recruitmentInventoryId,
     officialNotificationUrl: fjaJobInventory.officialNotificationUrl,
   }).from(fjaPostInventory)
     .innerJoin(fjaJobInventory, eq(fjaPostInventory.recruitmentInventoryId, fjaJobInventory.id))
@@ -104,8 +105,8 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
   if (!officialUrl) redirect("/admin/fja-review?error=missing-official-url");
   let parsed: URL;
   try { parsed = new URL(officialUrl); } catch { redirect("/admin/fja-review?error=invalid-official-url"); }
-  if (parsed!.protocol !== "https:" && parsed!.protocol !== "http:") redirect("/admin/fja-review?error=invalid-official-url");
-  if (/(^|\.)freejobalert\.com$/i.test(parsed!.hostname)) redirect("/admin/fja-review?error=aggregator-url");
+  if (parsed.protocol !== "https:" && parsed!.protocol !== "http:") redirect("/admin/fja-review?error=invalid-official-url");
+  if (/(^|\.)freejobalert\.com$/i.test(parsed.hostname)) redirect("/admin/fja-review?error=aggregator-url");
 
   await db.update(fjaPostInventory).set({
     officialVerificationStatus: "VERIFIED",
