@@ -22,12 +22,16 @@ candidate_payload = json.loads(candidate_path.read_text(encoding="utf-8"))
 if candidate_payload.get("runId") != payload.get("runId"):
     raise SystemExit("Recruitment and post candidate payload run IDs do not match")
 expected_candidates = candidate_payload.get("postCandidates", [])
+item_external_ids = {str(item.get("externalId") or "") for item in items}
+expected_output_candidates = [
+    candidate for candidate in expected_candidates
+    if str(candidate.get("externalId") or "") in item_external_ids
+]
 expected_by_key = {
-    (str(candidate.get("externalId") or ""), str(candidate.get("sourcePostKey") or ""))
-    : candidate
+    (str(candidate.get("externalId") or ""), str(candidate.get("sourcePostKey") or "")): candidate
     for candidate in expected_output_candidates
 }
-if len(expected_by_key) != len(expected_candidates):
+if len(expected_by_key) != len(expected_output_candidates):
     raise SystemExit("Duplicate (externalId, sourcePostKey) in structured candidate payload")
 wb = load_workbook(workbook_path, read_only=True, data_only=True)
 expected_sheets = ["Recruitments", "Posts"]
@@ -47,10 +51,6 @@ recruitment_records = list(recruitments.iter_rows(min_row=2, values_only=True))
 post_records = list(posts.iter_rows(min_row=2, values_only=True))
 if len(recruitment_records) != len(items):
     raise SystemExit(f"Recruitment row mismatch: workbook={len(recruitment_records)} payload={len(items)}")
-expected_output_candidates = [
-    candidate for candidate in expected_candidates
-    if str(candidate.get("externalId") or "") in {str(item.get("externalId") or "") for item in items}
-]
 if len(post_records) != len(expected_output_candidates):
     raise SystemExit(f"Post candidate row mismatch: workbook={len(post_records)} structured payload={len(expected_output_candidates)}")
 
