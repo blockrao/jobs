@@ -34,9 +34,10 @@ function errorMessage(code?: string) {
 export default async function FjaReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; verified?: string; offset?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; verified?: string; offset?: string; mode?: string }>;
 }) {
   const params = await searchParams;
+  const mode = params.mode === "verification" ? "verification" : "normalization";
   const parsedOffset = Number(params.offset ?? 0);
   const offset = Number.isInteger(parsedOffset) && parsedOffset >= 0 ? Math.floor(parsedOffset / PAGE_SIZE) * PAGE_SIZE : 0;
   const db = getDb();
@@ -45,11 +46,12 @@ export default async function FjaReviewPage({
     parent: fjaJobInventory,
   }).from(fjaPostInventory)
     .innerJoin(fjaJobInventory, eq(fjaPostInventory.recruitmentInventoryId, fjaJobInventory.id))
-    .where(or(
-      ne(fjaPostInventory.salaryNormalizationStatus, "MANUALLY_REVIEWED"),
-      ne(fjaPostInventory.ageNormalizationStatus, "MANUALLY_REVIEWED"),
-      ne(fjaPostInventory.officialVerificationStatus, "VERIFIED"),
-    ))
+    .where(mode === "verification"
+      ? ne(fjaPostInventory.officialVerificationStatus, "VERIFIED")
+      : or(
+          ne(fjaPostInventory.salaryNormalizationStatus, "MANUALLY_REVIEWED"),
+          ne(fjaPostInventory.ageNormalizationStatus, "MANUALLY_REVIEWED"),
+        ))
     .orderBy(asc(fjaPostInventory.id))
     .limit(PAGE_SIZE + 1)
     .offset(offset);
@@ -75,11 +77,16 @@ export default async function FjaReviewPage({
       {params.saved && <p role="status" className="rounded border px-3 py-2 text-sm">Normalized candidate values saved.</p>}
       {params.verified && <p role="status" className="rounded border px-3 py-2 text-sm">Official-source verification recorded for this candidate.</p>}
 
+      <nav aria-label="FJA review mode" className="flex flex-wrap gap-2 border-b pb-3">
+        <Link href="/admin/fja-review?mode=normalization" aria-current={mode === "normalization" ? "page" : undefined} className={mode === "normalization" ? "rounded bg-neutral-900 px-3 py-2 text-sm text-white" : "rounded border px-3 py-2 text-sm"}>Normalize salary and age</Link>
+        <Link href="/admin/fja-review?mode=verification" aria-current={mode === "verification" ? "page" : undefined} className={mode === "verification" ? "rounded bg-neutral-900 px-3 py-2 text-sm text-white" : "rounded border px-3 py-2 text-sm"}>Verify against official source</Link>
+      </nav>
+
       <div className="flex items-center justify-between text-sm text-neutral-500">
-        <span>Showing candidate rows {offset + 1}–{offset + rows.length}</span>
+        <span>Showing {mode === "normalization" ? "normalization" : "verification"} queue rows {offset + 1}–{offset + rows.length}</span>
         <div className="flex gap-3">
-          {offset > 0 && <Link className="underline" href={"/admin/fja-review?offset=" + Math.max(0, offset - PAGE_SIZE)}>Previous</Link>}
-          {hasNext && <Link className="underline" href={"/admin/fja-review?offset=" + (offset + PAGE_SIZE)}>Next</Link>}
+          {offset > 0 && <Link className="underline" href={"/admin/fja-review?mode=" + mode + "&offset=" + Math.max(0, offset - PAGE_SIZE)}>Previous</Link>}
+          {hasNext && <Link className="underline" href={"/admin/fja-review?mode=" + mode + "&offset=" + (offset + PAGE_SIZE)}>Next</Link>}
         </div>
       </div>
 
@@ -117,7 +124,7 @@ export default async function FjaReviewPage({
             </div>
           </div>
 
-          <form action={saveFjaCandidate} className="space-y-3 border-t pt-4">
+          {mode === "normalization" && <form action={saveFjaCandidate} className="space-y-3 border-t pt-4">
             <input type="hidden" name="postInventoryId" value={post.id} />
             <h3 className="font-semibold">Normalized candidate values</h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -154,9 +161,9 @@ export default async function FjaReviewPage({
             </div>
             <button type="submit" className="rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white">Save normalized values</button>
             <p className="text-xs text-neutral-500">Saving marks the salary and age fields as manually reviewed, including an intentional decision that a field is not present. It does not mark the official source as verified.</p>
-          </form>
+          </form>}
 
-          <form action={verifyFjaPostAgainstOfficialSource} className="space-y-3 border-t pt-4">
+          {mode === "verification" && <form action={verifyFjaPostAgainstOfficialSource} className="space-y-3 border-t pt-4">
             <input type="hidden" name="postInventoryId" value={post.id} />
             <h3 className="font-semibold">Official-source verification</h3>
             <p className="text-sm text-neutral-600">Open the official notification above and compare this post's facts with the document. An official URL, source page, written note, and explicit confirmation are required.</p>
@@ -173,7 +180,7 @@ export default async function FjaReviewPage({
               I personally checked this post against the linked official notification; this is not an inference from FreeJobAlert.
             </label>
             <button type="submit" className="rounded border border-neutral-900 px-4 py-2 text-sm font-semibold">Record official verification</button>
-          </form>
+          </form>}
         </article>
       ))}
     </main>
