@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { fjaJobInventory, fjaPostInventory } from "@/db/schema";
 import { adminSessionToken } from "@/lib/admin-token";
+import { isAggregatorUrl } from "@/lib/aggregators";
 
 const COOKIE_NAME = "admin_session";
 const PERIODS = new Set(["HOUR", "DAY", "WEEK", "MONTH", "YEAR"]);
