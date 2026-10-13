@@ -95,7 +95,6 @@ export async function verifyFjaPostAgainstOfficialSource(formData: FormData) {
 
   const db = getDb();
   const [row] = await db.select({
-    postId: fjaPostInventory.id,
     recruitmentInventoryId: fjaPostInventory.recruitmentInventoryId,
     officialNotificationUrl: fjaJobInventory.officialNotificationUrl,
   }).from(fjaPostInventory)
