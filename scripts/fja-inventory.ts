@@ -2,7 +2,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import postgres from "postgres";
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE = "https://www.freejobalert.com";
@@ -13,6 +13,7 @@ const MAX_PAGES = Number(process.env.FJA_MAX_PAGES ?? 1200);
 const CONCURRENCY = Number(process.env.FJA_CONCURRENCY ?? 4);
 const RUN_MODE = process.env.FJA_RUN_MODE ?? "pilot";
 const PILOT_URLS = (process.env.FJA_PILOT_URLS ?? "").split(",").map((url) => url.trim()).filter(Boolean);
+const PILOT_URLS_FILE = (process.env.FJA_PILOT_URLS_FILE ?? "").trim();
 // window mode: every recruitment the source listed or updated on/after FJA_START_DATE that is still open.
 const START_DATE = (process.env.FJA_START_DATE ?? "").trim();
 const MAX_LIST_PAGES = Number(process.env.FJA_MAX_LIST_PAGES ?? 150);
@@ -612,7 +613,7 @@ async function discoverWindow(startDate: string): Promise<{articles:Required<Dis
 }
 async function main() {
   if (!DRY_RUN && !process.env.DATABASE_URL) throw new Error("DATABASE_URL secret is required; refusing to run without database destination.");
-  if (RUN_MODE === "pilot" && PILOT_URLS.length === 0) throw new Error("Pilot mode requires FJA_PILOT_URLS; refusing to fall back to broad crawl.");
+  if (RUN_MODE === "pilot" && PILOT_URLS.length === 0 && !PILOT_URLS_FILE) throw new Error("Pilot mode requires FJA_PILOT_URLS or FJA_PILOT_URLS_FILE; refusing to fall back to broad crawl.");
   if (RUN_MODE !== "pilot" && RUN_MODE !== "full" && RUN_MODE !== "window") throw new Error(`Unsupported FJA_RUN_MODE: ${RUN_MODE}`);
   if (RUN_MODE === "window" && !/^20\d{2}-\d{2}-\d{2}$/.test(START_DATE)) throw new Error("Window mode requires FJA_START_DATE as YYYY-MM-DD.");
   // prepare:false — DATABASE_URL is the pooled (transaction-mode) connection, which does not keep
@@ -634,9 +635,15 @@ async function main() {
         windowSkipped.push({url:article.url, title:article.title, updatedOn:article.updatedOn, reason:"listing title is not a recruitment (result, admit card, answer key, ...)"});
       } else listings.set(article.externalId, article);
     }
-  } else if (PILOT_URLS.length > 0) {
-    // Pilot mode deliberately bypasses broad discovery and processes only the supplied article URLs.
-    for (const suppliedUrl of PILOT_URLS) {
+  } else if (PILOT_URLS.length > 0 || PILOT_URLS_FILE) {
+    // Pilot mode deliberately bypasses broad discovery and processes only supplied article URLs.
+    // File mode is intended for large, reviewed URL inventories exported from a workbook (one URL per line).
+    const fileUrls = PILOT_URLS_FILE
+      ? (await readFile(PILOT_URLS_FILE, "utf8")).split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"))
+      : [];
+    const suppliedUrls = [...PILOT_URLS, ...fileUrls];
+    if (suppliedUrls.length === 0) throw new Error("The supplied FJA URL list is empty.");
+    for (const suppliedUrl of suppliedUrls) {
       const normalized = normalizeUrl(suppliedUrl, BASE);
       const id = normalized?.pathname.match(ARTICLE_RE)?.[1];
       if (!normalized || !id) throw new Error(`Invalid FJA pilot article URL: ${suppliedUrl}`);
