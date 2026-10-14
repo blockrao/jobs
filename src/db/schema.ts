@@ -974,6 +974,7 @@ export const positionCategoryEnum = pgEnum("position_category", [
 export const recruitmentStatusEnum = pgEnum("recruitment_status", [
   "UPCOMING",
   "ACTIVE",
+  "CLOSED", // LIFE-002: application window passed; admit card/exam may still be pending
   "RESULTS",
   "ARCHIVED",
 ]);

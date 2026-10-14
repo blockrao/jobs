@@ -1353,3 +1353,18 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 **Guardrails.** Rollback scripts in `supabase/rollback/`; the data rollback is intentionally empty (a placeholder is never restored). The 11 posts whose recruitment now has an end date (10, 11, 35, 36, 67, 147, 285, 287, 821, 1420, 1521) are queued for official-source verification, not backfilled.
 
 **Verification (production, 2026-10-14 ~04:05 UTC).** Applied in order through the recorded migration path (3 rows in `supabase_migrations.schema_migrations` for 20261014). After: enrichment rows with a date ≥ 2090: 0; `posts.key_dates` containing 2099: 0; `applicationClosingDate IS NULL`: exactly 38; the 38 `key_dates` objects no longer carry `applicationCloseDate`; `post_enrichments` row count unchanged at 1,517; `post_enrichments_dates_plausible` present and confirmed to raise `check_violation` on a sentinel write (negative test inside a rolled-back block).
+
+## LIFE-002 — the public lifecycle can say CLOSED
+
+| Field | Value |
+| --- | --- |
+| Change ID | LIFE-002 |
+| Date | 2026-10-14 |
+| Status | Migrations committed; applied and the function run 2026-10-14 (verification below) |
+| Scope | `recruitment_status` enum, `refresh_recruitment_lifecycle()`, `src/db/schema.ts`, one TS union in `src/lib/queries.ts` |
+
+**Objective.** Phase 1 P0 #8: expired recruitments must not show an active state. 442 recruitments with a passed application window were stored as `ACTIVE`.
+
+**Cause.** Not a cron failure. `refresh_recruitment_lifecycle()` computed `calculated_status = 'CLOSED'` correctly and then mapped it to `status = 'ACTIVE'` because the enum had no CLOSED member. All 26 read paths key on `status`; none read `calculated_status`.
+
+**Change.** `20261014050000_life_002a` adds `CLOSED` to the enum (additive). `20261014050100_life_002b` changes only the mapping: computed `CLOSED`, `ADMIT_CARD` and `EXAM` now store `CLOSED`; the rest of the function is byte-identical to A-071 (md5 checked). Coarse public lifecycle: UPCOMING → ACTIVE (applications open) → CLOSED (window passed; exam/admit card may be pending) → RESULTS → ARCHIVED; the finer stage stays in `calculated_status`. Read paths need no change: live predicates use `IN ('ACTIVE','UPCOMING')`, the Hub already treats `closed` as closed, badge code already has a CLOSED branch or a neutral default. Contract test `tests/contracts/unit/lifecycle-closed-status.test.ts`.

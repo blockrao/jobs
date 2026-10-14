@@ -453,7 +453,7 @@ export interface SectorPostRow {
   vacancyTotal: number | null;
   recruitmentName: string;
   recruitmentSlug: string;
-  recruitmentStatus: "UPCOMING" | "ACTIVE" | "RESULTS" | "ARCHIVED";
+  recruitmentStatus: "UPCOMING" | "ACTIVE" | "CLOSED" | "RESULTS" | "ARCHIVED";
   applicationEndDate: Date | null;
   locationStateCode: string | null;
   orgName: string;
