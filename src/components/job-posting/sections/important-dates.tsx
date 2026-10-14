@@ -26,6 +26,20 @@ const KEY_DATES_LABELS: Record<string, string> = {
   source_updated_date: "Listing Updated",
 };
 
+/**
+ * Reject malformed dates and known far-future sentinel values from candidate-facing
+ * timelines. A sentinel is treated as unknown, never converted into an application
+ * deadline. This is a rendering safeguard; source records must still be corrected
+ * through official-source verification.
+ */
+export function isDisplayableRecruitmentDate(value: unknown): boolean {
+  if (typeof value !== "string" && !(value instanceof Date)) return false;
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(parsed.getTime())) return false;
+  const year = parsed.getFullYear();
+  return year >= 1900 && year < 2090;
+}
+
 export default function ImportantDates({ post, embedded }: ImportantDatesProps) {
   const enrichment = post.enrichment;
 
@@ -33,7 +47,7 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
   const keyDateEntries: Array<{ label: string; date: string; key: string }> = [];
   if (post.keyDates && typeof post.keyDates === "object") {
     for (const [key, val] of Object.entries(post.keyDates)) {
-      if (typeof val === "string" && val.trim()) {
+      if (typeof val === "string" && val.trim() && isDisplayableRecruitmentDate(val)) {
         const label = KEY_DATES_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
         keyDateEntries.push({ label, date: val, key: `keydate-${key}` });
       }
@@ -43,7 +57,7 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
   const extractedMilestones = Array.isArray(post.fjaExtract?.milestonesRaw)
     ? post.fjaExtract.milestonesRaw
         .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
-        .filter((item) => typeof item.date === "string" && typeof item.event === "string")
+        .filter((item) => typeof item.date === "string" && typeof item.event === "string" && isDisplayableRecruitmentDate(item.date))
         .map((item) => ({
           label: post.fjaExtract?.verificationStatus === "VERIFIED"
             ? String(item.event)
@@ -77,7 +91,7 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
         { label: "Appointment Date", date: enrichment?.appointmentDate },
       ];
 
-  const enrichmentOrFjaDates = dates.filter((d) => d.date);
+  const enrichmentOrFjaDates = dates.filter((d) => isDisplayableRecruitmentDate(d.date));
   // Use keyDates from posts table when no other dates are available
   const keyDateFallbacks = enrichmentOrFjaDates.length === 0 && extractedMilestones.length === 0
     ? keyDateEntries
