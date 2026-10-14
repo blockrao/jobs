@@ -13,7 +13,12 @@ describe("P0 Post Leaf ISR and bounded context query", () => {
     expect(route).toMatch(/export const dynamicParams\s*=\s*true\s*;/);
     expect(route).toMatch(/export async function generateStaticParams\(\)\s*\{\s*return \[\];\s*\}/);
     expect(route).toContain("getRecruitmentLeafContext(recruitmentSlug)");
+    expect(route).toContain("getPostBySlug(recruitmentSlug, postSlug, true)");
     expect(route).not.toContain("getRecruitmentWithPosts(recruitmentSlug)");
+
+    const postQuery = stripComments(readSource("src/db/operations/get-posts.ts"));
+    expect(postQuery).toContain("throwOnError = false");
+    expect(postQuery).toContain("if (throwOnError) throw err;");
   });
 
   test("leaf context only selects recruitment facts and sibling link summaries", () => {
