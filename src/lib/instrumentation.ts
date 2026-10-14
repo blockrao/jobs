@@ -20,7 +20,7 @@ export interface RequestMetrics {
   method: string;
   startTime: number;
   queries: QueryMetric[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 // Store metrics per request in async context

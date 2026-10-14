@@ -40,7 +40,7 @@ interface ArticleRecord {
   title: string;
   body: string | null;
   dek: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 async function translateArticleBatch(

@@ -76,11 +76,12 @@ async function main() {
       (select jsonb_build_array(c.normalized_name, c.source) from public.organization_candidates c where c.id = o.candidate_id) as candidate
     from public.source_observations o order by 1, 2, 3`;
   const [oldRows, newRows] = await Promise.all([A.unsafe(q), B.unsafe(q)]);
-  const key = (r: any) => JSON.stringify([r.source, r.external_id, r.content_hash]);
-  const oldMap = new Map(oldRows.map((r: any) => [key(r), r]));
-  const updates: any[] = [];
-  for (const n of newRows as any[]) {
-    const o: any = oldMap.get(key(n));
+  type ObsRow = { source: unknown; external_id: unknown; content_hash: unknown; outcome: unknown; outcome_reason: unknown; posting: unknown; candidate: unknown };
+  const key = (r: ObsRow) => JSON.stringify([r.source, r.external_id, r.content_hash]);
+  const oldMap = new Map((oldRows as unknown as ObsRow[]).map((r) => [key(r), r]));
+  const updates: { k: unknown[]; old: Record<string, unknown>; new: Record<string, unknown> }[] = [];
+  for (const n of newRows as unknown as ObsRow[]) {
+    const o = oldMap.get(key(n));
     if (!o) throw new Error(`observation ${key(n)} exists in the rehearsal but not in the baseline copy (an INSERT would be needed)`);
     const same = o.outcome === n.outcome && o.outcome_reason === n.outcome_reason && JSON.stringify(o.posting) === JSON.stringify(n.posting) && JSON.stringify(o.candidate) === JSON.stringify(n.candidate);
     if (!same) {
@@ -92,7 +93,7 @@ async function main() {
     }
   }
   if (newRows.length !== oldRows.length) throw new Error("observation counts differ between the two copies");
-  const expectObs: any = (await B.unsafe(obsFull))[0];
+  const expectObs: Record<string, unknown> = (await B.unsafe(obsFull))[0];
   await A.end();
   await B.end();
   const upJson = JSON.stringify(updates);

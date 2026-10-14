@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { IntlErrorCode, NextIntlClientProvider } from 'next-intl';
+import { IntlErrorCode, NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl';
 import { Locale } from '@/i18n/request';
 
 export function IntlProvider({
@@ -11,7 +11,7 @@ export function IntlProvider({
 }: {
   children: ReactNode;
   locale: Locale;
-  messages: Record<string, any>;
+  messages: AbstractIntlMessages;
 }) {
   return (
     <NextIntlClientProvider

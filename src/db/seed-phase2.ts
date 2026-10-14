@@ -132,11 +132,11 @@ async function seedPhase2() {
       },
     ];
 
-    const insertedRecruitments: any[] = [];
+    const insertedRecruitments: (typeof recruitments.$inferSelect)[] = [];
     for (const rec of recruitmentData) {
       const result = await db
         .insert(recruitments)
-        .values(rec as any)
+        .values(rec as typeof recruitments.$inferInsert)
         .onConflictDoNothing()
         .returning();
       if (result.length > 0) {
@@ -198,11 +198,11 @@ async function seedPhase2() {
       },
     ];
 
-    const insertedPosts: any[] = [];
+    const insertedPosts: (typeof posts.$inferSelect)[] = [];
     for (const post of postsData) {
       // Get the actual recruitment ID from the inserted recruitments
       const recruitment = insertedRecruitments.find((r) =>
-        r.slug.includes(post.slug.split("-").pop())
+        r.slug.includes(post.slug.split("-").pop() as string)
       );
       if (recruitment) {
         const result = await db
@@ -210,7 +210,7 @@ async function seedPhase2() {
           .values({
             ...post,
             recruitmentId: recruitment.id,
-          } as any)
+          } as typeof posts.$inferInsert)
           .onConflictDoNothing()
           .returning();
         if (result.length > 0) {
@@ -243,7 +243,7 @@ async function seedPhase2() {
 
       await db
         .insert(eligibilities)
-        .values(eligibilityData as any)
+        .values(eligibilityData as typeof eligibilities.$inferInsert)
         .onConflictDoNothing();
     }
     console.log(`  ✓ Inserted eligibilities for ${insertedPosts.length} posts\n`);
@@ -275,7 +275,7 @@ async function seedPhase2() {
                 categoryType: category,
                 gender,
                 count: categoryCount > 0 ? categoryCount : 1,
-              } as any)
+              } as typeof vacancies.$inferInsert)
               .onConflictDoNothing();
             vacancyCount++;
           }

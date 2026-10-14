@@ -28,7 +28,7 @@ async function getRecruitmentsByPosition(positionId: number) {
     with: { recruitment: true },
   });
   return Array.from(
-    new Map(postsList.map((p: any) => [p.recruitment.id, p.recruitment])).values(),
+    new Map(postsList.map((p) => [p.recruitment.id, p.recruitment])).values(),
   );
 }
 
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const position = await safeQuery(() => getPositionBySlug(slug), null);
   if (!position) return {};
 
-  const nameHi = (position as any).nameHi as string | null;
+  const nameHi = (position as { nameHi?: string | null }).nameHi as string | null;
   const displayName = isHi && nameHi ? nameHi : position.name;
   const title = isHi
     ? `${displayName} - सरकारी नौकरी पद, वेतन, आयु, योग्यता`
@@ -67,8 +67,8 @@ export default async function LocalePositionPage({ params }: Props) {
     [],
   );
 
-  const nameHi = (position as any).nameHi as string | null;
-  const descriptionHi = (position as any).descriptionHi as string | null;
+  const nameHi = (position as { nameHi?: string | null }).nameHi as string | null;
+  const descriptionHi = (position as { descriptionHi?: string | null }).descriptionHi as string | null;
   const displayName = isHi && nameHi ? nameHi : position.name;
   const displayDescription = isHi && descriptionHi ? descriptionHi : position.description;
 
@@ -194,8 +194,8 @@ export default async function LocalePositionPage({ params }: Props) {
           </div>
         ) : (
           <div className="space-y-4">
-            {recruitmentsList.map((recruitment: any) => {
-              const recNameHi = recruitment.nameHi as string | null;
+            {recruitmentsList.map((recruitment) => {
+              const recNameHi = (recruitment as { nameHi?: string | null }).nameHi as string | null;
               const displayRecName = isHi && recNameHi ? recNameHi : recruitment.name;
               return (
                 <Link

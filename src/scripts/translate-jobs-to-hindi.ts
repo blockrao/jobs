@@ -50,7 +50,7 @@ interface JobRecord {
   requirements: string | null;
   ageRelaxationNotes: string | null;
   locationCity: string | null;
-  [key: string]: any; // Other fields from postings table
+  [key: string]: unknown; // Other fields from postings table
 }
 
 async function translateJobBatch(

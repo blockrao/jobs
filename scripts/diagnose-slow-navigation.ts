@@ -84,7 +84,7 @@ async function measureUrl(path: string): Promise<DiagnosticResult> {
           const isRedirect = response.statusCode === 301 || response.statusCode === 302;
 
           // Try to extract metrics from HTML comment or headers
-          let metrics: any = undefined;
+          let metrics: DiagnosticResult["metrics"] = undefined;
           if (data.includes("<!-- Metrics:")) {
             const match = data.match(/<!-- Metrics:(.*?)-->/);
             if (match) {

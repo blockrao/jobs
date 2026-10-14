@@ -7,7 +7,83 @@ import { cache } from "react";
 
 import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
-import { JobPostingData } from "@/types/job-posting";
+import { JobPostingData, PostEnrichment } from "@/types/job-posting";
+
+type RawDate = string | Date | null;
+type FjaExtract = NonNullable<JobPostingData["fjaExtract"]>;
+
+/** Row shape returned by the raw post + enrichment SELECTs below. */
+type PostRow = Omit<
+  JobPostingData,
+  | "postedAt"
+  | "updatedAt"
+  | "recruitmentApplicationStartDate"
+  | "recruitmentApplicationEndDate"
+  | "notificationPublicationDate"
+  | "fjaExtract"
+  | "enrichment"
+  | "payLevel"
+> &
+  Omit<
+    PostEnrichment,
+    | "ageReferenceDate"
+    | "notificationDate"
+    | "applicationOpenDate"
+    | "applicationClosingDate"
+    | "examDate"
+    | "admitCardDate"
+    | "resultDate"
+    | "interviewScheduleDate"
+    | "appointmentDate"
+    | "sourceVerificationDate"
+    | "payLevel"
+  > & {
+    postedAt: string | Date;
+    updatedAt: string | Date;
+    recruitmentApplicationStartDate: RawDate;
+    recruitmentApplicationEndDate: RawDate;
+    notificationPublicationDate: RawDate;
+    // "payLevel" is selected from both posts and post_enrichments; the
+    // driver returns whichever column comes last.
+    payLevel: JobPostingData["payLevel"] & PostEnrichment["payLevel"];
+    enrichmentId: number | string | null;
+    ageReferenceDate: RawDate;
+    notificationDate: RawDate;
+    applicationOpenDate: RawDate;
+    applicationClosingDate: RawDate;
+    examDate: RawDate;
+    admitCardDate: RawDate;
+    resultDate: RawDate;
+    interviewScheduleDate: RawDate;
+    appointmentDate: RawDate;
+    sourceVerificationDate: RawDate;
+    fjaInventoryPostId: FjaExtract["inventoryId"] | null;
+    fjaExternalId: FjaExtract["externalId"];
+    fjaSourcePostCodeRaw: FjaExtract["sourcePostCodeRaw"];
+    fjaVacancyCountRaw: FjaExtract["vacancyCountRaw"];
+    fjaQualificationRaw: FjaExtract["qualificationRaw"];
+    fjaExperienceRaw: FjaExtract["experienceRaw"];
+    fjaAgeLimitRaw: FjaExtract["ageLimitRaw"];
+    fjaAgeReferenceDateRaw: FjaExtract["ageReferenceDateRaw"];
+    fjaAgeRelaxationRulesRaw: FjaExtract["ageRelaxationRulesRaw"];
+    fjaSalaryRaw: FjaExtract["salaryRaw"];
+    fjaPayLevelRaw: FjaExtract["payLevelRaw"];
+    fjaEmploymentTypeRaw: FjaExtract["employmentTypeRaw"];
+    fjaTenureRaw: FjaExtract["tenureRaw"];
+    fjaLocationRaw: FjaExtract["locationRaw"];
+    fjaDutiesRaw: FjaExtract["dutiesRaw"];
+    fjaEligibilityRaw: FjaExtract["eligibilityRaw"];
+    fjaMilestonesRaw: FjaExtract["milestonesRaw"];
+    fjaApplicationSelectionRaw: FjaExtract["applicationSelectionRaw"];
+    fjaOtherInfoRaw: FjaExtract["otherInfoRaw"];
+    fjaSourcePublishedDate: FjaExtract["sourcePublishedDate"];
+    fjaSourceApplicationEndDate: FjaExtract["sourceApplicationEndDate"];
+    fjaRecruitmentDetails: FjaExtract["recruitmentDetails"];
+    fjaRecruitmentOtherInfoRaw: FjaExtract["recruitmentOtherInfoRaw"];
+    fjaAdvertisementNumber: FjaExtract["advertisementNumber"];
+    fjaExtractionStatus: FjaExtract["extractionStatus"];
+    fjaVerificationStatus: FjaExtract["verificationStatus"];
+  };
 
 /**
  * Fetch a single post by recruitment and post slugs with enrichment data
@@ -21,7 +97,7 @@ export async function getPostBySlug(
     const db = getDb();
 
     // Raw SQL query to join posts with post_enrichments
-    const result = await db.execute<any>(sql`
+    const result = await db.execute<PostRow>(sql`
       SELECT
         p.id,
         p.title,
@@ -307,7 +383,7 @@ export async function getPostsByRecruitment(
     const db = getDb();
 
     // Raw SQL query to fetch multiple posts with pagination
-    const results = await db.execute<any>(sql`
+    const results = await db.execute<PostRow>(sql`
       SELECT
         p.id,
         p.title,
@@ -406,7 +482,7 @@ export async function getPostsByRecruitment(
       OFFSET ${offset}
     `);
 
-    return (results || []).map((data: any) => {
+    return (results || []).map((data) => {
       return {
         id: data.id,
         title: data.title,

@@ -204,7 +204,7 @@ async function seedPhase1() {
     for (const org of orgData) {
       await db
         .insert(organizations)
-        .values(org as any)
+        .values(org as typeof organizations.$inferInsert)
         .onConflictDoNothing();
     }
     console.log(`  ✓ Inserted ${orgData.length} organizations\n`);
@@ -217,7 +217,7 @@ async function seedPhase1() {
       const result = await db.query.organizations.findFirst({
         where: eq(organizations.slug, slug),
       });
-      return result?.id!;
+      return result?.id as (typeof organizations.$inferSelect)["id"];
     };
 
     const sscId = await getOrgId("ssc");
@@ -387,7 +387,7 @@ async function seedPhase1() {
     for (const exam of examData) {
       await db
         .insert(exams)
-        .values(exam as any)
+        .values(exam as unknown as typeof exams.$inferInsert)
         .onConflictDoNothing();
     }
     console.log(`  ✓ Inserted ${examData.length} exams\n`);
@@ -522,7 +522,7 @@ async function seedPhase1() {
     for (const pos of positionData) {
       await db
         .insert(positions)
-        .values(pos as any)
+        .values(pos as typeof positions.$inferInsert)
         .onConflictDoNothing();
     }
     console.log(`  ✓ Inserted ${positionData.length} positions\n`);

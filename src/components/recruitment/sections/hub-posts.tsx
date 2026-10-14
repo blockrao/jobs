@@ -34,6 +34,7 @@ function PostCard({
     employmentType?: string | null;
     payLevel?: Record<string, unknown> | null;
     vacancyTotal?: number | null;
+    enrichment?: { payScale?: string | null } | null;
   };
 
   const title = post.name ?? post.position?.name ?? `Post ${index + 1}`;
@@ -48,7 +49,7 @@ function PostCard({
     : null;
 
   const payRaw = typeof postAny.payLevel?.raw === 'string' ? postAny.payLevel.raw : null;
-  const payDisplay = payRaw ?? post.fjaExtract?.salaryRaw ?? (post as any).enrichment?.payScale ?? null;
+  const payDisplay = payRaw ?? post.fjaExtract?.salaryRaw ?? postAny.enrichment?.payScale ?? null;
 
   const qual = post.fjaExtract?.qualificationRaw ?? null;
   const exp = post.fjaExtract?.experienceRaw ?? null;

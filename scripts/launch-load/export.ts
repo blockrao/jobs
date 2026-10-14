@@ -19,6 +19,7 @@ function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
+type ExportRow = { j: Record<string, unknown>; k: unknown; fp: string; [fk: string]: unknown };
 const flag = (n: string) => process.argv.includes(`--${n}`);
 
 const ident = (s: string) => {
@@ -76,12 +77,21 @@ async function main() {
     if (r[0].n > 0) throw new Error(`source holds ${r[0].n} rows in ${t}, which this exporter does not carry; refusing to drop them silently`);
   }
 
-  const manifest: any = {
+  type Chunk = { seq: number; file: string; table: string; rows: number; bytes: number; sha256: string };
+  const manifest: {
+    createdAt: string;
+    trimRaw: boolean;
+    tables: Record<string, { rows: number; keys: unknown[]; columns: string[] }>;
+    chunks: Chunk[];
+    skippedExisting: Record<string, number>;
+    expectedVerify?: Record<string, { n: number; fp: string }>;
+    guardedUnexportedCounts?: unknown;
+  } = {
     createdAt: new Date().toISOString(),
     trimRaw,
-    tables: {} as Record<string, any>,
-    chunks: [] as any[],
-    skippedExisting: {} as Record<string, number>,
+    tables: {},
+    chunks: [],
+    skippedExisting: {},
   };
   let seq = 0;
 
@@ -101,17 +111,17 @@ async function main() {
     );
 
     const existing = new Set((prodKeys[t] ?? []).map((k) => JSON.stringify(k)));
-    const keep = rows.filter((r: any) => !existing.has(JSON.stringify(r.k)));
+    const keep = (rows as unknown as ExportRow[]).filter((r) => !existing.has(JSON.stringify(r.k)));
     manifest.skippedExisting[t] = rows.length - keep.length;
 
     // Validate foreign keys: a non-nullable FK must resolve in the source.
-    for (const r of keep as any[]) {
+    for (const r of keep) {
       for (const f of spec.fks) {
         if (!f.nullable && r[`fk_${f.column}`] == null) throw new Error(`${t}: row ${JSON.stringify(r.k)} has an unresolved required foreign key ${f.column}`);
       }
     }
 
-    const objs = (keep as any[]).map((r) => {
+    const objs = keep.map((r) => {
       const j = { ...r.j } as Record<string, unknown>;
       for (const f of spec.fks) delete j[f.column];
       for (const c of nullCols) j[c] = null;
@@ -121,13 +131,13 @@ async function main() {
       return { ...j, _fk: fk };
     });
 
-    manifest.tables[t] = { rows: keep.length, keys: keep.map((r: any) => r.k), columns: plainCols };
+    manifest.tables[t] = { rows: keep.length, keys: keep.map((r) => r.k), columns: plainCols };
 
     // Chunk by byte budget.
     const colList = [...plainCols.filter((c) => !nullCols.has(c)), ...spec.fks.map((f) => f.column), ...[...nullCols]];
     let i = 0;
     while (i < objs.length) {
-      const batch: any[] = [];
+      const batch: (typeof objs)[number][] = [];
       let bytes = 0;
       while (i < objs.length && (batch.length === 0 || bytes + JSON.stringify(objs[i]).length < chunkBytes)) {
         batch.push(objs[i]);
@@ -175,23 +185,23 @@ async function main() {
 
   // Manifest hashes: expected values for verify.sql, computed on the source with the same SQL.
   const expectedRows = await sql.unsafe(readFileSync(join(outDir, "verify.sql"), "utf8").replace(/;\s*$/, ""));
-  manifest.expectedVerify = Object.fromEntries(expectedRows.map((r: any) => [r.tbl, { n: r.n, fp: r.fp }]));
+  manifest.expectedVerify = Object.fromEntries((expectedRows as unknown as { tbl: string; n: number; fp: string }[]).map((r) => [r.tbl, { n: r.n, fp: r.fp }]));
   for (const spec of TABLES) {
-    const exp = manifest.expectedVerify[spec.name];
+    const exp = manifest.expectedVerify![spec.name];
     if (exp.n !== manifest.tables[spec.name].rows) {
       throw new Error(`${spec.name}: manifest has ${manifest.tables[spec.name].rows} rows but the source verify query matched ${exp.n} (duplicate natural keys?)`);
     }
   }
   manifest.guardedUnexportedCounts = guarded;
   // Files for the psql application: chunk list, and the state-hash SQL for BEFORE and AFTER.
-  writeFileSync(join(outDir, "chunk_list.txt"), manifest.chunks.map((c: any) => `${c.seq}|${c.file}|${c.sha256}`).join("\n") + "\n");
+  writeFileSync(join(outDir, "chunk_list.txt"), manifest.chunks.map((c) => `${c.seq}|${c.file}|${c.sha256}`).join("\n") + "\n");
   writeFileSync(join(outDir, "state.sql"), parametricSql());
   writeFileSync(join(outDir, "state_tables.txt"), BOUNDED_TABLES.join("\n") + "\n");
   writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 1));
   await sql.end();
 
   const summary = Object.fromEntries(TABLES.map((s) => [s.name, { rows: manifest.tables[s.name].rows, skippedExisting: manifest.skippedExisting[s.name] }]));
-  console.log(JSON.stringify({ chunks: manifest.chunks.length, bytes: manifest.chunks.reduce((a: number, c: any) => a + c.bytes, 0), summary }, null, 1));
+  console.log(JSON.stringify({ chunks: manifest.chunks.length, bytes: manifest.chunks.reduce((a: number, c) => a + c.bytes, 0), summary }, null, 1));
 }
 
 if (process.argv[1]?.endsWith("export.ts")) {

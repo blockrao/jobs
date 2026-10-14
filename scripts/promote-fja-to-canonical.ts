@@ -304,7 +304,7 @@ async function main() {
     `)
   );
   // drizzle returns the array directly (not { rows: [...] })
-  const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as any).rows ?? []) as FjaJobRow[];
+  const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as { rows?: unknown[] }).rows ?? []) as FjaJobRow[];
   console.log(`Fetched ${inventory.length} FJA inventory rows`);
 
   if (inventory.length === 0) {

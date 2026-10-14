@@ -21,12 +21,14 @@ interface EventParams {
  * - User navigation patterns (commission → exam → job)
  * - Engagement metrics (clicks, views, time spent)
  */
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
 export function trackEvent(eventName: AnalyticsEvent, params?: EventParams) {
   if (typeof window === 'undefined') return;
 
   // Use gtag if available (GA4 script loaded)
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', eventName, params);
+  if (typeof window !== 'undefined' && (window as GtagWindow).gtag) {
+    (window as GtagWindow).gtag!('event', eventName, params);
   }
 }
 

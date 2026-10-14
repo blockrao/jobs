@@ -12,7 +12,7 @@ export function NotFoundContent() {
           Page not found
         </h1>
         <p className="text-gray-600 mb-8">
-          We couldn't find the page you were looking for. It might have been
+          We couldn&apos;t find the page you were looking for. It might have been
           moved, deleted, or the link might be incorrect.
         </p>
 

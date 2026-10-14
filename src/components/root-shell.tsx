@@ -2,6 +2,7 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/inter/wght-italic.css";
 import "@/app/globals.css";
 import { Header } from "@/components/header";
+import type { AbstractIntlMessages } from "next-intl";
 import { Footer } from "@/components/footer";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { ListingLanguageAssist } from "@/components/listing-language-assist";
@@ -67,7 +68,7 @@ export async function RootShell({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
         />
         <NavigationProgressProvider>
-          <IntlProvider locale={defaultLocale} messages={messages as Record<string, any>}>
+          <IntlProvider locale={defaultLocale} messages={messages as AbstractIntlMessages}>
             {listingLanguageAssist && <ListingLanguageAssist />}
             <AnalyticsTracker />
             <Header />

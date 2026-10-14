@@ -15,6 +15,8 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import postgres from "postgres";
+
+type OrgRow = { id: number; slug: string; name: string };
 import { lookupForms, normalizeOrgName, normalizeWithoutParens, orgNameVerdict } from "../../src/lib/org-name";
 
 const arg = (n: string) => {
@@ -51,15 +53,15 @@ async function main() {
   const rows: { rank: number; canonical: string; family: string; existing: string | null; fuzzy: boolean }[] = JSON.parse(readFileSync(rowsFile, "utf8"));
   const orgs = await sql`select id, slug, name from public.organizations`;
   const aliasRows = await sql`select alias_normalized from public.organization_aliases`;
-  const haveAlias = new Set(aliasRows.map((a: any) => a.alias_normalized));
-  const haveSlug = new Set(orgs.map((o: any) => o.slug));
+  const haveAlias = new Set(aliasRows.map((a) => a.alias_normalized));
+  const haveSlug = new Set(orgs.map((o) => o.slug));
   const existingForms = new Map<string, number[]>();
-  for (const o of orgs as any[]) {
+  for (const o of orgs as unknown as OrgRow[]) {
     if (!orgNameVerdict(o.name).ok) continue;
     for (const f of lookupForms(o.name)) existingForms.set(f, [...(existingForms.get(f) ?? []), o.id]);
   }
 
-  const report: any = { created: [], skipped: [] as { canonical: string; reason: string; with?: string }[], fuzzyRowsKept: 0 };
+  const report: { created: { rank: number; canonical: string; sector: unknown }[]; skipped: { rank?: number; canonical: string; reason: string; with?: string }[]; fuzzyRowsKept: number; counts?: unknown } = { created: [], skipped: [] as { canonical: string; reason: string; with?: string }[], fuzzyRowsKept: 0 };
   for (const r of rows) {
     const canonical = r.canonical.trim();
     const norm = normalizeOrgName(canonical);
@@ -72,16 +74,16 @@ async function main() {
     const forms = lookupForms(canonical);
     const hit = forms.map((f) => existingForms.get(f)).find((ids) => ids && ids.length > 0);
     if (hit) {
-      skip(hit.length > 1 ? "EXISTING_AMBIGUOUS_NOT_ALIASED" : "EXISTING_ORG_REUSED_BY_NAME", orgs.find((o: any) => o.id === hit[0])?.name);
+      skip(hit.length > 1 ? "EXISTING_AMBIGUOUS_NOT_ALIASED" : "EXISTING_ORG_REUSED_BY_NAME", (orgs as unknown as OrgRow[]).find((o) => o.id === hit[0])?.name);
       continue;
     }
     // Same body or broader name already present (sheet "close" matches): leave unresolved.
     const mine = toks(canonical);
-    const container = (orgs as any[]).find((o) => orgNameVerdict(o.name).ok && mine.size >= 2 && subset(mine, toks(o.name)));
+    const container = (orgs as unknown as OrgRow[]).find((o) => orgNameVerdict(o.name).ok && mine.size >= 2 && subset(mine, toks(o.name)));
     if (container) { skip("NAME_CONTAINED_IN_EXISTING_ORG", container.name); continue; }
     if (haveAlias.has(norm)) { skip("ALIAS_ALREADY_EXISTS"); continue; }
 
-    let slug = slugify(canonical);
+    const slug = slugify(canonical);
     if (!slug || haveSlug.has(slug)) { skip("SLUG_COLLISION"); continue; }
     const sector = familySector(r.family, canonical);
     const o = await sql`insert into public.organizations (slug, name, sector) values (${slug}, ${canonical}, ${sector}::org_sector) returning id`;
@@ -94,7 +96,7 @@ async function main() {
     sheetRows: rows.length,
     created: report.created.length,
     skipped: report.skipped.length,
-    skippedByReason: report.skipped.reduce((a: any, s: any) => ((a[s.reason] = (a[s.reason] ?? 0) + 1), a), {}),
+    skippedByReason: report.skipped.reduce((a: Record<string, number>, s) => ((a[s.reason] = (a[s.reason] ?? 0) + 1), a), {}),
     fuzzyRowsCreatedWithOneAliasOnly: rows.filter((r) => r.fuzzy).length,
   };
   writeFileSync(outFile, JSON.stringify(report, null, 1));

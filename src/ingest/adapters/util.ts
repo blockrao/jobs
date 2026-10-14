@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from "axios";
-import type { Browser, Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
 import type { RawPosting } from "../types";
 import { isDateLabel } from "../../lib/semantic-fields";
 
@@ -179,7 +179,7 @@ export async function fetchHtmlWithBrowser(
   for (let attempt = 0; attempt <= retries; attempt++) {
     const browser = await getBrowser();
     let page: Page | null = null;
-    let context: any = null;
+    let context: BrowserContext | null = null;
     try {
       // Create a context with a spoofed user agent
       context = await browser.newContext({
