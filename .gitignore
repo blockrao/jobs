@@ -20,3 +20,10 @@ skills-lock.json
 /reports/
 phase2b-discovery.log
 phase2b-discovery-checkpoint.json
+# Phase 2B discovery + enrichment runtime files
+phase2b-discovery.log
+phase2b-discovery-checkpoint.json
+phase2b-enrichment.log
+phase2b-enrichment-checkpoint.json
+phase2b-enrichment-summary.json
+phase2b-enrichment-run.log
