@@ -154,7 +154,7 @@ describe("extracted source projection", () => {
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
     expect(route).toContain("const singleLeafSlug = await getSinglePostLeafSlug(recruitment.id);");
     expect(route).toContain("const canonicalPath = singleLeafSlug ? `/jobs/${recruitment.slug}/${singleLeafSlug}` : `/jobs/${recruitment.slug}`;");
-    expect(route).toContain("const hubIndexable = !singleLeafSlug;");
+    expect(route).toContain("const hubIndexable = !singleLeafSlug && !unresolvedOrg;");
     expect(route).toContain("pageSeo(canonicalPath, hubIndexable ? undefined : { index: false })");
     expect(route).not.toContain("/posts/${roleSlugs[0]}");
     expect(route).toContain("verificationStatus: recruitment.sourceVerificationStatus ?? null");
