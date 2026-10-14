@@ -131,6 +131,7 @@ export async function getRecruitmentWithPosts(slug: string) {
         recruitment: recruitments,
         organizationName: organizations.name,
         organizationSlug: organizations.slug,
+        organizationSector: organizations.sector,
       })
       .from(recruitments)
       .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
@@ -151,6 +152,7 @@ export async function getRecruitmentWithPosts(slug: string) {
             recruitment: recruitments,
             organizationName: organizations.name,
             organizationSlug: organizations.slug,
+            organizationSector: organizations.sector,
           })
           .from(recruitments)
           .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
@@ -168,6 +170,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       ...recruitmentResult[0].recruitment,
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
+      organizationSector: recruitmentResult[0].organizationSector as string,
       sourceVerificationStatus: null as string | null,
       sourceListingPublishedDate: null as Date | string | null,
       sourceExtract: null as null | {

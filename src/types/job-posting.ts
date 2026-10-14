@@ -12,6 +12,8 @@ export interface JobPostingData {
   slug: string;
   organizationId: string;
   organizationName: string;
+  /** org_sector of the issuing body; PRIVATE = unresolved (never indexed). */
+  organizationSector?: string | null;
   recruitmentId: string;
   recruitmentName: string;
   recruitmentSlug: string;

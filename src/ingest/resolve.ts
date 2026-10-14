@@ -13,7 +13,7 @@
  * and stays where it is in the writer.
  */
 
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
@@ -277,7 +277,7 @@ export async function resolvePost(db: Db, identity: PostIdentity, slug: string):
   // is a coarse classification (e.g. "ENGINEERING"), not the job title —
   // it's fine for several unrelated posts to share one Position, unlike
   // the old bug where *postings themselves* were glued onto one bucket.
-  const positionId = await getOrCreatePositionId(db, identity.positionCategory);
+  const positionId = await resolvePositionId(db, safeName, identity.positionCategory);
 
   const [created] = await db
     .insert(posts)
@@ -332,23 +332,41 @@ export interface PostLinesResult {
   singlePostId: number | null;
 }
 
+/**
+ * DISC-001 (2026-10-14): positions are roles. Resolve a post to its role by
+ * normalised name (the same `normalize_role_key()` the DB backfill used, so
+ * ingest and backfill agree), falling back to the coarse category bucket
+ * (`category-<x>`) only when no role row exists. Buckets are found by SLUG:
+ * looking them up by category enum would now return an arbitrary role row of
+ * that category (e.g. a specific teacher role for every TEACHING post).
+ */
+async function resolvePositionId(
+  db: Db,
+  postName: string,
+  category: PostIdentity["positionCategory"],
+): Promise<number> {
+  const byRole = await db.execute<{ id: number }>(sql`
+    SELECT id FROM public.positions
+    WHERE slug NOT LIKE 'category-%'
+      AND public.normalize_role_key(name) = public.normalize_role_key(${postName})
+    ORDER BY id LIMIT 1
+  `);
+  const roleRow = (byRole as unknown as { id: number }[])[0];
+  if (roleRow) return roleRow.id;
+  return getOrCreatePositionId(db, category);
+}
+
 async function getOrCreatePositionId(db: Db, category: PostIdentity["positionCategory"]): Promise<number> {
-  // Position category is the semantic identity. Slugs are URL presentation only.
-  const foundByCategory = await db.query.positions.findFirst({
-    where: eq(positions.category, category),
+  const bucketSlug = slugifyPositionCategory(category);
+  const foundBySlug = await db.query.positions.findFirst({
+    where: eq(positions.slug, bucketSlug),
   });
-  if (foundByCategory) return foundByCategory.id;
+  if (foundBySlug) return foundBySlug.id;
 
-  // Reuse a legacy row by its canonical display name if category was not backfilled.
   const canonicalName = titleCasePositionCategory(category);
-  const foundByName = await db.query.positions.findFirst({
-    where: eq(positions.name, canonicalName),
-  });
-  if (foundByName) return foundByName.id;
-
   const [createdPosition] = await db
     .insert(positions)
-    .values({ name: canonicalName, slug: slugifyPositionCategory(category), category })
+    .values({ name: canonicalName, slug: bucketSlug, category })
     .returning();
   return createdPosition.id;
 }
@@ -400,7 +418,7 @@ export async function resolvePostLines(
       result.lines.push({ name, verdict, action: "unresolved", postId: null, detail: decision.reason });
       continue;
     }
-    positionId ??= await getOrCreatePositionId(db, "OTHER");
+    positionId ??= await resolvePositionId(db, name, "OTHER");
     const [row] = await db
       .insert(posts)
       .values({ recruitmentId, positionId, name, slug: postLineSlug(recruitmentSlug, name), vacancyTotal: count })

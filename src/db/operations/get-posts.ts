@@ -107,6 +107,7 @@ export async function getPostBySlug(
         COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
         p."recruitmentName",
         r.slug AS "recruitmentSlug",
+        o.sector AS "organizationSector",
         p."examType",
         p."examTypeSlug",
         p.description,
@@ -212,6 +213,7 @@ export async function getPostBySlug(
       FROM posts p
       LEFT JOIN post_enrichments e ON p.id = e.post_id
       LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      LEFT JOIN organizations o ON o.id = r.organization_id
       LEFT JOIN LATERAL (
         SELECT inventory_post.*
         FROM fja_post_inventory inventory_post
@@ -246,6 +248,8 @@ export async function getPostBySlug(
       slug: data.slug,
       organizationId: data.organizationId,
       organizationName: data.organizationName,
+      // org_sector; PRIVATE means "unresolved" (e.g. the "Unknown Organization" stub) and the page is never indexed.
+      organizationSector: (data.organizationSector ?? null) as string | null,
       recruitmentId: data.recruitmentId,
       recruitmentName: data.recruitmentName,
       recruitmentSlug: data.recruitmentSlug,

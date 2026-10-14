@@ -66,7 +66,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     () => getOrganizationStats(org.id),
     { recruitmentCount: 0, examCount: 0, positionCount: 0 }
   );
-  const hasContent = stats.recruitmentCount > 0 || stats.examCount > 0;
+  // DISC-001: PRIVATE = unresolved organisation; never an indexable hub.
+  const hasContent = (stats.recruitmentCount > 0 || stats.examCount > 0) && org.sector !== "PRIVATE";
 
   return {
     title,

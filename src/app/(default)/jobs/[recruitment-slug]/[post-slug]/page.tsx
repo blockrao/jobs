@@ -172,7 +172,9 @@ export async function generateMetadata({
   // rendered on the page are the consumer protection; noindex is not needed.
   // sourceVerificationPending continues to gate salary/deadline in meta descriptions
   // and the JobPosting structured-data schema, but not page indexability.
-  const isIndexable = Boolean(post.title && post.officialSourceUrl);
+  // DISC-001: a post under an unresolved organisation (sector PRIVATE, e.g. the
+  // "Unknown Organization" stub that held 174 live recruitments) is never indexed.
+  const isIndexable = Boolean(post.title && post.officialSourceUrl) && post.organizationSector !== "PRIVATE";
 
   // article:published_time / article:modified_time for OG + SERP enrichment
   const publishedTime = post.notificationPublicationDate

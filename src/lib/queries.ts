@@ -601,7 +601,11 @@ export async function getAllCategorySlugsForSitemap() {
 export async function getAllOrganizationSlugsForSitemap() {
   if (!hasDb()) return [];
   const db = getDb();
-  return db.select({ slug: organizations.slug, nameHi: organizations.nameHi }).from(organizations);
+  // DISC-001: PRIVATE = unresolved; those organisation pages are noindex.
+  return db
+    .select({ slug: organizations.slug, nameHi: organizations.nameHi })
+    .from(organizations)
+    .where(sql`${organizations.sector} <> 'PRIVATE'`);
 }
 
 // All 68 exams have labelHi populated and /exams/[slug] + /hi/exams/[slug]
@@ -833,7 +837,9 @@ export async function getPostSlugsForSitemap() {
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
-    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL`)
+    .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+    // DISC-001: unresolved organisation (sector PRIVATE) → its pages are noindex, so never submit them.
+    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL AND ${organizations.sector} <> 'PRIVATE'`)
     .orderBy(posts.id);
   return rows;
 }
@@ -848,7 +854,8 @@ export async function getRecruitmentSlugsForSitemap() {
       (r.status IN ('ACTIVE','UPCOMING') AND (r.application_end_date IS NULL OR r.application_end_date > NOW())) AS "isLive",
       (${singlePostLeafSlug}) IS NOT NULL AS "canonicalIsLeaf"
     FROM public.recruitments r
-    WHERE r.slug IS NOT NULL
+    JOIN public.organizations o ON o.id = r.organization_id
+    WHERE r.slug IS NOT NULL AND o.sector <> 'PRIVATE'
     ORDER BY r.id
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
