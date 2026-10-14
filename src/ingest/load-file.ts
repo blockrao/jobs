@@ -17,7 +17,7 @@ function arg(name: string): string | undefined {
 }
 const flag = (name: string) => process.argv.includes(`--${name}`);
 
-async function counts(db: any) {
+async function counts(db: ReturnType<typeof import("../db").getDb>) {
   const { sql } = await import("drizzle-orm");
   const q = async (t: string) => Number((await db.execute(sql.raw(`select count(*)::int n from public.${t}`)))[0].n);
   return {
@@ -59,20 +59,22 @@ async function main() {
   const today = new Date();
   const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
 
-  let { postings: raw, stats } = loadFjaFile(file);
+  const fja = loadFjaFile(file);
+  let raw = fja.postings;
+  const { stats } = fja;
   const isOpen = (p: { validThrough?: Date }) => !!p.validThrough && p.validThrough.getTime() >= todayUtc;
   if (flag("open-only")) raw = raw.filter(isOpen);
 
   const before = await counts(db);
   const orgRowsBefore = await db.select().from(organizations);
-  const existingSlugs = new Set(orgRowsBefore.map((o: any) => o.slug));
+  const existingSlugs = new Set(orgRowsBefore.map((o) => o.slug));
 
   const run = await processRaw(raw, { runId: `wp001-dry-${today.toISOString()}` });
   const w = run.write;
   const after = await counts(db);
 
   const candidateRows = await db.select().from(organizationCandidates);
-  let second: any = null;
+  let second: Record<string, unknown> | null = null;
   if (flag("twice")) {
     const again = await processRaw(raw, { runId: `wp001-dry-again-${today.toISOString()}` });
     const a = again.write;
@@ -106,7 +108,7 @@ async function main() {
   const startAfterEnd = raw.filter((p) => p.applicationStartDate && p.validThrough && p.applicationStartDate > p.validThrough);
 
   // ---- Provenance ----
-  const linkClass = (p: any) => (!p.officialNotificationUrl ? "none" : isOfficialStyleUrl(p.officialNotificationUrl) ? "official-style" : "other-domain");
+  const linkClass = (p: (typeof raw)[number]) => (!p.officialNotificationUrl ? "none" : isOfficialStyleUrl(p.officialNotificationUrl) ? "official-style" : "other-domain");
 
   // ---- Promotion (evaluate only) ----
   const promo = await promotePending(db, { apply: false, now: today });
@@ -130,7 +132,7 @@ async function main() {
   const missingTop = await db.execute(sql`select m, count(*)::int n from public.postings, jsonb_array_elements_text(quality_missing) m group by 1 order by 2 desc`);
 
   // ---- Probe (scratch): what the public product would show after promotion ----
-  let probe: any = null;
+  let probe: Record<string, unknown> | null = null;
   if (flag("probe")) {
     const n = async (q: string) => Number((await db.execute(sql.raw(q)))[0].n);
     const listingFilter = "review_status = 'APPROVED' AND is_expired IS NOT TRUE"; // src/lib/queries.ts listPostings (/jobs, home)
@@ -211,13 +213,13 @@ async function main() {
       existingAmbiguous: w.results.filter((r) => r.orgAmbiguous).length,
       candidateNotices: w.heldCandidates,
       distinctCandidateNames: candidateRows.length,
-      candidateReasons: tally(candidateRows, (c: any) => c.reason),
+      candidateReasons: tally(candidateRows, (c) => c.reason),
       candidateCoverage: (() => {
-        const counts = candidateRows.map((c: any) => c.observationCount as number).sort((a: number, b: number) => b - a);
+        const counts = candidateRows.map((c) => c.observationCount as number).sort((a: number, b: number) => b - a);
         const top = (k: number) => counts.slice(0, k).reduce((a: number, b: number) => a + b, 0);
         return { top10: top(10), top25: top(25), top100: top(100), top200: top(200), namesWithTwoOrMoreNotices: counts.filter((c: number) => c >= 2).length, singletons: counts.filter((c: number) => c === 1).length };
       })(),
-      candidatesWithProposedOrg: candidateRows.filter((c: any) => c.proposedOrganizationId != null).length,
+      candidatesWithProposedOrg: candidateRows.filter((c) => c.proposedOrganizationId != null).length,
       newlyEstablishedCanonicalOrganizations: after.organizations - before.organizations,
       legacyWouldCreateNewOrgRows: legacyNew.length,
       legacyBadNamesPrevented: legacyBad.length,
@@ -260,8 +262,8 @@ async function main() {
       observationsNew: w.results.filter((r) => r.observationIsNew).length,
     },
     quality: {
-      indexTiers: Object.fromEntries((tiers as any[]).map((r) => [r.t, r.n])),
-      missingFieldsForIndexing: Object.fromEntries((missingTop as any[]).map((r) => [r.m, r.n])),
+      indexTiers: Object.fromEntries((tiers as unknown as Array<{ t: string; n: number }>).map((r) => [r.t, r.n])),
+      missingFieldsForIndexing: Object.fromEntries((missingTop as unknown as Array<{ m: string; n: number }>).map((r) => [r.m, r.n])),
       requiringReview: loaded.length,
       heldOrRejected: w.heldCandidates + w.rejected,
       promotionFailReasons: promo.failedReasons,

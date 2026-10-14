@@ -19,7 +19,7 @@ interface Post {
   locationCity: string | null;
   locationState: string | null;
   vacanciesTotal: number | null;
-  vacanciesByCategory: any;
+  vacanciesByCategory: unknown;
   salaryMin: number | null;
   salaryMax: number | null;
   salaryNote: string | null;
@@ -30,7 +30,7 @@ interface Post {
   resultDate: string | null;
   appointmentDate: string | null;
   selectionProcess: string | null;
-  ageRulesByCategory: any;
+  ageRulesByCategory: unknown;
   ageNote: string | null;
   education: string | null;
   experience: string | null;

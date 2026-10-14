@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb } from "@/db";
 import {
@@ -23,6 +23,11 @@ export function hasDb() {
   return Boolean(process.env.DATABASE_URL);
 }
 
+type CanonicalPostWithRelations = typeof posts.$inferSelect & {
+  recruitment: typeof recruitments.$inferSelect | null;
+  position: typeof positions.$inferSelect | null;
+};
+
 export async function getPostingBySlug(slug: string) {
   if (!hasDb()) return null;
   const db = getDb();
@@ -40,9 +45,9 @@ export async function getPostingBySlug(slug: string) {
   if (!posting) return null;
 
   // PERF-002: Fetch canonical relations in parallel, not sequentially
-  let canonicalPost: any = null;
-  let canonicalRecruitment: any = null;
-  let canonicalPosition: any = null;
+  let canonicalPost: CanonicalPostWithRelations | null = null;
+  let canonicalRecruitment: typeof recruitments.$inferSelect | null = null;
+  let canonicalPosition: typeof positions.$inferSelect | null = null;
 
   try {
     const canonicalPromises = [];
@@ -73,11 +78,11 @@ export async function getPostingBySlug(slug: string) {
     const [fetchedPost, fetchedRecruitment] = await Promise.all(canonicalPromises);
 
     if (fetchedPost) {
-      canonicalPost = fetchedPost;
-      canonicalRecruitment = (fetchedPost as any).recruitment;
-      canonicalPosition = (fetchedPost as any).position;
+      canonicalPost = fetchedPost as CanonicalPostWithRelations;
+      canonicalRecruitment = (fetchedPost as CanonicalPostWithRelations).recruitment;
+      canonicalPosition = (fetchedPost as CanonicalPostWithRelations).position;
     } else if (fetchedRecruitment) {
-      canonicalRecruitment = fetchedRecruitment as any;
+      canonicalRecruitment = fetchedRecruitment as typeof recruitments.$inferSelect;
     }
   } catch (e) {
     console.warn("Could not fetch canonical links:", e);
@@ -89,11 +94,11 @@ export async function getPostingBySlug(slug: string) {
   // Normalise postNames: the DB column is typed string[] but older ingest
   // records stored objects { name, count } instead of plain strings.
   // Every consumer (structured-data, page metadata, gate) expects strings.
-  const rawPostNames: unknown = (gated as any).postNames;
+  const rawPostNames: unknown = (gated as { postNames?: unknown }).postNames;
   const normalizedPostNames: string[] = Array.isArray(rawPostNames)
     ? rawPostNames.map((entry: unknown) => {
         if (typeof entry === "string") return entry;
-        if (entry && typeof (entry as any).name === "string") return (entry as any).name;
+        if (entry && typeof (entry as { name?: unknown }).name === "string") return (entry as { name: string }).name;
         return String(entry ?? "");
       }).filter(Boolean)
     : [];
@@ -104,7 +109,7 @@ export async function getPostingBySlug(slug: string) {
     canonicalPost,
     canonicalRecruitment,
     canonicalPosition,
-  } as any;
+  };
 }
 
 /**
@@ -131,7 +136,7 @@ export async function listPostings(opts?: {
 
   // `is_expired` is maintained by refresh_recruitment_lifecycle(). Search already honours it; the
   // listing must too, or an expired opening stays on /jobs and the home page after its last date.
-  const conditions: any[] = [inArray(postings.reviewStatus, ["APPROVED", "PENDING"]), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
+  const conditions: (SQL | undefined)[] = [inArray(postings.reviewStatus, ["APPROVED", "PENDING"]), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
   if (opts?.kind) conditions.push(eq(postings.kind, opts.kind));
   if (opts?.search) {
     conditions.push(
@@ -755,7 +760,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
       enrichmentFeeNote: recruitmentData.feeNote,
       enrichmentAgeNote: recruitmentData.ageNote,
       enrichmentSelectionProcess: recruitmentData.selectionProcess,
-    } as any,
+    },
     applyUrl: postingFields.applyUrl,
     postingEmploymentType: postingFields.employmentType,
     // Official notification URL: prefer the verified column on the recruitment
@@ -1366,6 +1371,47 @@ export async function getDailyDigestJobs(opts: {
   }));
 }
 
+type RawSqlDate = string | Date | null;
+
+/** Row shape of the posts + post_enrichments SELECT in getAllPostsWithEnrichment. */
+type PostWithEnrichmentRow = {
+  id: number;
+  title: string | null;
+  name: string | null;
+  slug: string;
+  organizationName: string | null;
+  recruitmentName: string | null;
+  recruitmentSlug: string | null;
+  description: string | null;
+  isLive: boolean;
+  postedAt: RawSqlDate;
+  updatedAt: RawSqlDate;
+  officialSourceUrl: string | null;
+  applyPortalUrl: string | null;
+  locationCity: string | null;
+  locationState: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryNote: string | null;
+  payScale: string | null;
+  payLevel: string | null;
+  ageNote: string | null;
+  ageRulesByCategory: unknown;
+  education: unknown;
+  experience: unknown;
+  selectionProcess: unknown;
+  vacanciesTotal: number | null;
+  vacanciesByCategory: unknown;
+  feeNote: string | null;
+  applicationClosingDate: RawSqlDate;
+  examDate: RawSqlDate;
+  resultDate: RawSqlDate;
+  appointmentDate: RawSqlDate;
+  sourceVerificationStatus: string | null;
+  extractionConfidence: number | null;
+  dataGaps: unknown;
+};
+
 /**
  * Fetch all posts with enrichment data for comprehensive reporting
  * Returns paginated results with all enrichment details
@@ -1375,7 +1421,7 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
 
   const db = getDb();
 
-  const results = await db.execute<any>(sql`
+  const results = await db.execute<PostWithEnrichmentRow>(sql`
     SELECT
       p.id,
       COALESCE(p.title, p.name) as title,
@@ -1423,7 +1469,7 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     OFFSET ${offset}
   `);
 
-  return (results || []).map((row: any) => ({
+  return (results || []).map((row) => ({
     id: row.id,
     title: row.title, // already COALESCE(title, name) from SQL
     name: row.name,
@@ -1469,7 +1515,7 @@ export async function getPostsCount() {
   if (!hasDb()) return 0;
 
   const db = getDb();
-  const result = await db.execute<any>(sql`
+  const result = await db.execute<{ count: number }>(sql`
     SELECT COUNT(*)::int as count FROM posts WHERE "isLive" = true
   `);
 
@@ -1492,7 +1538,7 @@ export async function getEnrichmentStats() {
   };
 
   const db = getDb();
-  const result = await db.execute<any>(sql`
+  const result = await db.execute<Record<string, number | undefined>>(sql`
     SELECT
       COUNT(*)::int as "totalPosts",
       COUNT(CASE WHEN "salaryMin" IS NOT NULL OR "salaryMax" IS NOT NULL THEN 1 END)::int as "withSalary",
@@ -1519,6 +1565,36 @@ export async function getEnrichmentStats() {
     avgConfidence: stats?.avgConfidence || stats?.[`"avgConfidence"`] || 0,
   };
 }
+
+/** Row shape of the filtered posts SELECT in listPostsEnhanced. */
+type EnhancedPostRow = {
+  id: number;
+  title: string | null;
+  slug: string;
+  description: string | null;
+  isLive: boolean;
+  postedAt: RawSqlDate;
+  updatedAt: RawSqlDate;
+  organizationName: string | null;
+  recruitmentName: string | null;
+  recruitmentSlug: string | null;
+  officialSourceUrl: string | null;
+  applyPortalUrl: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryNote: string | null;
+  ageNote: string | null;
+  education: unknown;
+  experience: unknown;
+  selectionProcess: unknown;
+  vacanciesTotal: number | null;
+  feeNote: string | null;
+  applicationClosingDate: RawSqlDate;
+  examDate: RawSqlDate;
+  locationStateCode: string | null;
+  employmentType: string | null;
+  recruitment_status: string | null;
+};
 
 /**
  * Get filtered posts with dynamic filtering support
@@ -1565,7 +1641,7 @@ export async function listPostsEnhanced(opts?: {
       }
     }
 
-    const results = await db.execute<any>(sql`
+    const results = await db.execute<EnhancedPostRow>(sql`
       SELECT
         p.id,
         p.title,
@@ -1608,7 +1684,7 @@ export async function listPostsEnhanced(opts?: {
       OFFSET ${offset}
     `);
 
-    return (results || []).map((row: any) => ({
+    return (results || []).map((row) => ({
       id: row.id,
       title: row.title,
       slug: row.slug,

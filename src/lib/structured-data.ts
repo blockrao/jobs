@@ -9,6 +9,11 @@ import type {
 import { evaluateJobPostingEligibility } from "./content-quality/gate";
 
 type Posting = typeof postings.$inferSelect;
+/** Optional fields some callers attach to a posting (e.g. getPostingBySlug). */
+type PostingWithExtras = Posting & {
+  canonicalRecruitment?: { locationStateCode?: string | null; officialNotificationNumber?: string | null } | null;
+  locationStateCode?: string | null;
+};
 type Organization = typeof organizations.$inferSelect;
 type PostingUpdate = typeof postingUpdates.$inferSelect;
 type Article = typeof articles.$inferSelect;
@@ -175,8 +180,8 @@ export function buildJobPostingSchema(
   // (e.g. "IN-CH") — plain text region names like "Chandigarh" fail schema.org
   // validation. addressCountry is always the ISO-3166-1 alpha-2 code "IN".
   const isoRegion =
-    (posting as any).canonicalRecruitment?.locationStateCode ??
-    (posting as any).locationStateCode ??
+    (posting as PostingWithExtras).canonicalRecruitment?.locationStateCode ??
+    (posting as PostingWithExtras).locationStateCode ??
     undefined;
   const jobLocation =
     posting.workplaceType === "REMOTE"
@@ -213,8 +218,8 @@ export function buildJobPostingSchema(
       "@type": "PropertyValue",
       name: org.name,
       value:
-        (posting as any).canonicalRecruitment?.officialNotificationNumber ??
-        (posting as any).externalId ??
+        (posting as PostingWithExtras).canonicalRecruitment?.officialNotificationNumber ??
+        posting.externalId ??
         String(posting.id),
     },
     datePosted: posting.datePosted?.toISOString(),
@@ -225,7 +230,7 @@ export function buildJobPostingSchema(
     // Indian government jobs are permanent positions; FULL_TIME is the correct
     // default. "OTHER" triggers a Google non-critical warning and adds no value.
     employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "FULL_TIME",
-    hiringOrganization: buildOrganizationSchema(org, (posting as any).kind),
+    hiringOrganization: buildOrganizationSchema(org, posting.kind),
     jobLocation,
     jobLocationType:
       posting.workplaceType === "REMOTE" ? "TELECOMMUTE" : undefined,

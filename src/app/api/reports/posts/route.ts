@@ -24,8 +24,8 @@ export async function GET(request: Request) {
       updatedAt: toIso(post.updatedAt),
       applicationClosingDate: toIso(post.applicationClosingDate),
       examDate: toIso(post.examDate),
-      resultDate: toIso((post as any).resultDate),
-      appointmentDate: toIso((post as any).appointmentDate),
+      resultDate: toIso(post.resultDate),
+      appointmentDate: toIso(post.appointmentDate),
     }));
 
     return NextResponse.json({

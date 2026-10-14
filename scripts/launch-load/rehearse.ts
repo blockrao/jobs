@@ -52,9 +52,9 @@ async function main() {
   const { normalizeOrgName } = await import("../../src/ingest/organization-resolution");
   // Organization names as the source labels them (parsed listing file with an `org` field per notice).
   const parsed = JSON.parse(readFileSync(arg("parsed")!, "utf8"));
-  const names = [...new Set(parsed.map((r: any) => r.org).filter(Boolean))] as string[];
+  const names = [...new Set((parsed as { org?: string }[]).map((r) => r.org).filter(Boolean))] as string[];
   const src2 = postgres(SRC, { max: 2, onnotice: () => {} });
-  const have = new Set((await src2`select alias_normalized from public.organization_aliases`).map((r: any) => r.alias_normalized));
+  const have = new Set((await src2`select alias_normalized from public.organization_aliases`).map((r) => r.alias_normalized as string));
   let seeded = 0;
   for (const n of names) {
     const norm = normalizeOrgName(n);
@@ -75,9 +75,9 @@ async function main() {
   // 4. Production keys (what the target already holds).
   const tgt = postgres(TGT, { max: 2, onnotice: () => {} });
   const prodKeys: Record<string, unknown[]> = {};
-  for (const spec of [...TABLES, { name: "exams" } as any]) {
+  for (const spec of [...TABLES, { name: "exams" } as (typeof TABLES)[number]]) {
     if (spec.name === "exams") continue;
-    prodKeys[spec.name] = (await tgt.unsafe(`select ${keyArray(spec.name)} as k from public.${spec.name} t`)).map((r: any) => r.k);
+    prodKeys[spec.name] = (await tgt.unsafe(`select ${keyArray(spec.name)} as k from public.${spec.name} t`)).map((r) => r.k as unknown);
   }
   writeFileSync(join(work, "prod_keys.json"), JSON.stringify(prodKeys));
 
@@ -87,18 +87,18 @@ async function main() {
 
   // 6. Before hashes, apply, after hashes.
   const before = await tgt.unsafe(beforeSql());
-  const beforeCounts = Object.fromEntries(before.map((r: any) => [r.tbl, r.n]));
+  const beforeCounts = Object.fromEntries(before.map((r) => [r.tbl, r.n]));
   const log = await applyDir(TGT, join(work, "out"));
   results.applyLogTail = log.slice(-4);
-  const after = await tgt.unsafe(afterSql(before as any));
-  const same = before.every((b: any, i: number) => b.n === after[i].n && b.h === after[i].h);
+  const after = await tgt.unsafe(afterSql(before as unknown as Parameters<typeof afterSql>[0]));
+  const same = before.every((b, i: number) => b.n === after[i].n && b.h === after[i].h);
   results.existingRowsUnchanged = same;
   if (!same) throw new Error("existing rows changed during the load");
 
   // 7. Rollback returns the target to the baseline.
   await rollbackDir(TGT, join(work, "out"));
   const afterRb = await tgt.unsafe(beforeSql());
-  const rbSame = before.every((b: any, i: number) => b.n === afterRb[i].n && b.h === afterRb[i].h);
+  const rbSame = before.every((b, i: number) => b.n === afterRb[i].n && b.h === afterRb[i].h);
   results.rollbackRestoresBaseline = rbSame;
   if (!rbSame) throw new Error("rollback did not restore the baseline");
 
@@ -107,18 +107,18 @@ async function main() {
   const firstChunk = manifest.chunks[0];
   appendFileSync(join(out, "chunks", firstChunk.file), "-- tampered\n");
   let tamperStopped = false;
-  try { await applyDir(TGT, out); } catch (e: any) { tamperStopped = /manifest hash/.test(e.message); }
+  try { await applyDir(TGT, out); } catch (e: unknown) { tamperStopped = /manifest hash/.test((e as Error).message); }
   results.tamperedChunkStops = tamperStopped;
   // restore the chunk file by regenerating the export
   execSync(`npx tsx scripts/launch-load/export.ts --source ${SRC} --prod-keys ${join(work, "prod_keys.json")} --out ${out}`, { stdio: "ignore", timeout: 900000 });
   const posting = manifest.tables.postings.keys[0][0];
   const orgsKeys = manifest.tables.organizations.rows;
-  await applyDir(TGT, out, { stopAfterChunk: manifest.chunks.findIndex((c: any) => c.table === "postings") });
+  await applyDir(TGT, out, { stopAfterChunk: manifest.chunks.findIndex((c: { table: string }) => c.table === "postings") });
   // a posting with the same slug appears on the target before the postings chunk is applied: the chunk must fail, not absorb it
   const o = await tgt`select id from public.organizations limit 1`;
   await tgt`insert into public.postings (slug, title, organization_id, review_status, publishing_status, description, kind) values (${posting}, 'racing row', ${o[0].id}, 'PENDING', 'DRAFT', 'x', 'GOVERNMENT')`;
   let conflictStopped = false;
-  try { await applyDir(TGT, out); } catch (e: any) { conflictStopped = true; }
+  try { await applyDir(TGT, out); } catch (e: unknown) { conflictStopped = true; }
   results.keyConflictStops = conflictStopped;
   await tgt`delete from public.postings where slug = ${posting} and title = 'racing row'`;
   await tgt.end();
@@ -127,7 +127,7 @@ async function main() {
   results.manifestTotals = Object.fromEntries(TABLES.map((s) => [s.name, manifest.tables[s.name].rows]));
   results.baselineCounts = beforeCounts;
   results.chunks = manifest.chunks.length;
-  results.bytes = manifest.chunks.reduce((a: number, c: any) => a + c.bytes, 0);
+  results.bytes = manifest.chunks.reduce((a: number, c: { bytes: number }) => a + c.bytes, 0);
   results.orgsInManifest = orgsKeys;
   writeFileSync(join(work, "rehearsal_result.json"), JSON.stringify(results, null, 1));
   console.log(JSON.stringify(results, null, 1));

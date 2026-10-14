@@ -57,14 +57,14 @@ export default async function ExamPage({ params }: Props) {
   const exam = examData.exam;
   const commission = examData.commission;
 
-  const labelHi = (exam as any).labelHi;
-  const descriptionHi = (exam as any).descriptionHi;
-  const eligibilityHi = (exam as any).eligibilityHi;
-  const commissionNameHi = (commission as any).nameHi;
+  const labelHi = exam.labelHi;
+  const descriptionHi = exam.descriptionHi;
+  const eligibilityHi = exam.eligibilityHi;
+  const commissionNameHi = commission.nameHi;
 
   const displayExamName = locale === "hi" ? labelHi || exam.label : exam.label;
   const displayExamDescription = locale === "hi" ? descriptionHi : exam.description;
-  const displayExamEligibility = locale === "hi" ? eligibilityHi : (exam as any).eligibility;
+  const displayExamEligibility = locale === "hi" ? eligibilityHi : exam.eligibility;
   const displayCommissionName = locale === "hi" ? commissionNameHi || commission.name : commission.name;
 
   const [relatedPositions, recruitmentDetails] = await Promise.all([
@@ -191,7 +191,7 @@ export default async function ExamPage({ params }: Props) {
                           {recruitment.posts.length} {locale === "hi" ? "पद" : "position(s)"}:
                         </div>
                         <div className="space-y-1">
-                          {recruitment.posts.map((item: any) => (
+                          {recruitment.posts.map((item) => (
                             <Link
                               key={item.post.id}
                               href={`/positions/${item.position.slug}`}

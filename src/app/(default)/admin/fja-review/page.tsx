@@ -166,7 +166,7 @@ export default async function FjaReviewPage({
           {mode === "verification" && <form action={verifyFjaPostAgainstOfficialSource} className="space-y-3 border-t pt-4">
             <input type="hidden" name="postInventoryId" value={post.id} />
             <h3 className="font-semibold">Official-source verification</h3>
-            <p className="text-sm text-neutral-600">Open the official notification above and compare this post's facts with the document. An official URL, source page, written note, and explicit confirmation are required.</p>
+            <p className="text-sm text-neutral-600">Open the official notification above and compare this post&apos;s facts with the document. An official URL, source page, written note, and explicit confirmation are required.</p>
             <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
               <label className="space-y-1 text-xs">Official PDF/page number
                 <input name="officialSourcePage" type="number" min="1" step="1" required defaultValue={fieldValue(post.officialSourcePage)} className="w-full rounded border px-2 py-2 text-sm" />

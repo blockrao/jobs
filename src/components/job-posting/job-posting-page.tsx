@@ -21,8 +21,8 @@ import SalaryCompensation from "./sections/salary-compensation";
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
-  recruitment: any;
-  posts: any[];
+  recruitment: Record<string, unknown> & { name?: string | null };
+  posts: Array<{ id: number | string; slug: string; title: string | null }>;
   totalPosts: number;
   isSingleJobRecruitment: boolean;
 }
@@ -86,8 +86,8 @@ export default function JobPostingPage({
     if (!pl) return null;
     if (typeof pl === "string") return `Level-${pl}`;
     if (pl && typeof pl === "object") {
-      const level = (pl as any).level;
-      const scheme = (pl as any).scheme;
+      const level = (pl as { level?: unknown }).level;
+      const scheme = (pl as { scheme?: unknown }).scheme;
       return scheme ? `Level-${level} (${scheme})` : `Level-${level}`;
     }
     return null;

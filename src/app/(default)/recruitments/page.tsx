@@ -65,7 +65,7 @@ export default async function RecruitmentsPage() {
   } catch {
     statsById = new Map();
   }
-  const recruitmentsWithStats: any[] = allRecruitments.map((rec) => ({
+  const recruitmentsWithStats = allRecruitments.map((rec) => ({
     ...rec,
     ...(statsById.get(rec.id) ?? { postCount: 0, totalVacancies: 0 }),
   }));
@@ -111,7 +111,7 @@ export default async function RecruitmentsPage() {
                       {recruitment.name}
                     </h2>
                     <p className="text-sm text-gray-600">
-                      {(recruitment.organization as any)?.name || "Unknown Organization"}
+                      {recruitment.organization?.name || "Unknown Organization"}
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ${getStatusColor(recruitment.status)}`}>

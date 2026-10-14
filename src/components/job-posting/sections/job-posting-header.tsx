@@ -126,8 +126,8 @@ export default function JobPostingHeader({
     if (!pl) return null;
     if (typeof pl === "string") return `Pay Level-${pl}`;
     if (pl && typeof pl === "object") {
-      const level = (pl as any).level;
-      const scheme = (pl as any).scheme;
+      const level = (pl as { level?: unknown }).level;
+      const scheme = (pl as { scheme?: unknown }).scheme;
       return scheme ? `Pay Level-${level} (${scheme})` : `Pay Level-${level}`;
     }
     return null;

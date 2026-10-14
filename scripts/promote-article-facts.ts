@@ -841,7 +841,7 @@ main()
   .then(() => process.exit(0))
   .catch((err) => {
     console.error("\nFatal error:", err instanceof Error ? err.message : String(err));
-    if (err instanceof Error && (err as any).cause) console.error("Caused by:", (err as any).cause);
+    if (err instanceof Error && err.cause) console.error("Caused by:", err.cause);
     if (err instanceof Error && err.stack) console.error(err.stack);
     process.exit(1);
   });

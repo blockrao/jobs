@@ -37,7 +37,7 @@ interface ExamRecord {
   id: number;
   label: string;
   description: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 async function translateExamBatch(

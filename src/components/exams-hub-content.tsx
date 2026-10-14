@@ -58,8 +58,8 @@ export function ExamsHubContent({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {commissions.map((comm) => {
             const openCount = openCounts[comm.id] || 0;
-            const nameHi = (comm as any).nameHi as string | null;
-            const descriptionHi = (comm as any).descriptionHi as
+            const nameHi = comm.nameHi as string | null;
+            const descriptionHi = comm.descriptionHi as
               | string
               | null;
             const displayName = isHi && nameHi ? nameHi : comm.name;

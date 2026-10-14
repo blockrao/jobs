@@ -23,8 +23,8 @@ export async function generateMetadata({
 
   if (!org) return {};
 
-  const nameHi = (org as any).nameHi;
-  const descriptionHi = (org as any).descriptionHi;
+  const nameHi = org.nameHi;
+  const descriptionHi = org.descriptionHi;
   const name = locale === "hi" ? nameHi || org.name : org.name;
   const description = locale === "hi" ? descriptionHi : org.description;
 
@@ -77,8 +77,8 @@ export default async function OrganizationPage({ params }: Props) {
   const recruitments = recruitmentResults.map((r) => r.recruitment);
   const exams = examResults;
 
-  const nameHi = (org as any).nameHi;
-  const descriptionHi = (org as any).descriptionHi;
+  const nameHi = org.nameHi;
+  const descriptionHi = org.descriptionHi;
   const displayName = locale === "hi" ? nameHi || org.name : org.name;
   const displayDescription = locale === "hi" ? descriptionHi : org.description;
 

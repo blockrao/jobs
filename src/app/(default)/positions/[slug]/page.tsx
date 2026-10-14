@@ -36,7 +36,7 @@ async function getRecruitmentsByPosition(positionId: number) {
 
   const uniqueRecruitments = Array.from(
     new Map(
-      postsList.map((p: any) => [p.recruitment.id, p.recruitment])
+      postsList.map((p) => [p.recruitment.id, p.recruitment])
     ).values()
   );
 

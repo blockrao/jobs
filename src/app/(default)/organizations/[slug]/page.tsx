@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!org) return {};
 
-  const hasHindi = Boolean((org as any).nameHi);
+  const hasHindi = Boolean(org.nameHi);
   const title = `${org.name} - Recruitment Campaigns & Exams`;
   const metaDescription =
     org.description ||

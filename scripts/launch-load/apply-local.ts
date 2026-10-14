@@ -12,7 +12,7 @@ import postgres from "postgres";
 import { fingerprintExpr, keyArray } from "./export";
 import { TABLES } from "./tables";
 
-export async function verifyTable(sql: postgres.Sql, manifest: any, table: string) {
+export async function verifyTable(sql: postgres.Sql, manifest: { trimRaw: boolean; tables: Record<string, { keys: unknown }> }, table: string) {
   const spec = TABLES.find((t) => t.name === table)!;
   const keys = JSON.stringify(manifest.tables[table].keys);
   const r = await sql.unsafe(

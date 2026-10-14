@@ -647,7 +647,7 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
   if (!db) return [];
 
   try {
-    const suggestions = await (db.$client as any).unsafe(
+    const suggestions: Array<{ suggestion: string }> = await db.$client.unsafe(
       `
         SELECT DISTINCT suggestion FROM (
           SELECT o.name as suggestion
@@ -672,7 +672,7 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
       [`${prefix}%`, limit]
     );
 
-    return suggestions.map((row: any) => row.suggestion);
+    return suggestions.map((row) => row.suggestion);
   } catch (error) {
     console.error("Search suggestions query error:", error);
     return [];

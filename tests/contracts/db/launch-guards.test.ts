@@ -79,7 +79,7 @@ d("entity pages and pagination", () => {
     const cat = (await sql!`insert into public.categories (slug, name) values ('k','K') returning id`)[0].id;
     for (const id of [live, undated, past]) await sql!`insert into public.posting_categories (posting_id, category_id) values (${id}, ${cat})`;
 
-    const bySlug = (rows: any[]) => rows.map((r) => r.slug).sort();
+    const bySlug = (rows: { slug: string }[]) => rows.map((r) => r.slug).sort();
     const o = await q.getOrganizationBySlug("o");
     expect(bySlug(o!.postings)).toEqual(["live", "undated"]);
     expect(bySlug(await q.getPostingsByExam("e"))).toEqual(["live", "undated"]);

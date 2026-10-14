@@ -52,6 +52,7 @@ async function robotsCheck() {
     if(rules.includes("/")) throw new Error("robots.txt disallows all crawling; stopping");
   }
 }
+type FjaRecord = Record<string,unknown> & {facts?: Record<string,string|null>};
 type Listing = {update_date:string; title:string; listing_url:string; update_page:string; listing_row_text:string};
 function parseListing(html:string, pageUrl:string): Listing[] {
   const $=cheerio.load(html); const found:Listing[]=[];
@@ -96,7 +97,7 @@ function extractDetail(html:string, url:string) {
   const dateStrings=[...text.matchAll(/(?:last date(?: to apply| for submission)?|closing date|walk[- ]?in(?: interview)? date|date of interview)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/ig)].map(m=>({label:m[0].split(/[:\-]/)[0].trim(),date:isoDate(m[1])})).filter(x=>x.date);
   const appDate=facts.application_end_date ? isoDate(facts.application_end_date) : null;
   const walkinDate=dateStrings.find(x=>/walk/i.test(x.label))?.date || null;
-  let open_status="REVIEW_DATE_UNCLEAR", close_date=appDate||walkinDate;
+  let open_status="REVIEW_DATE_UNCLEAR"; const close_date=appDate||walkinDate;
   if(close_date) open_status=close_date>=AS_OF_DATE ? "OPEN_AS_OF_CUTOFF" : "CLOSED_BY_CUTOFF";
   else if(/walk[- ]?in/i.test(title+" "+text)) open_status="REVIEW_WALKIN_DATE_UNCLEAR";
   return {page_title:title||null,page_sha256:sha(html),detail_text:text,facts,official_links,date_candidates:dateStrings,derived_close_date:close_date,open_status};
@@ -104,7 +105,7 @@ function extractDetail(html:string, url:string) {
 async function main(){
   await mkdir(path.join(OUT,"raw"),{recursive:true});
   await robotsCheck();
-  const listings:Listing[]=[]; const errors:any[]=[]; const pageHashes:any[]=[];
+  const listings:Listing[]=[]; const errors:Record<string,unknown>[]=[]; const pageHashes:{url:string;sha256:string}[]=[];
   let reachedCutoff=false;
   for(let p=0;p<MAX_LIST_PAGES;p++){
     const url=p===0?`${BASE}/new-updates/`:`${BASE}/new-updates/page/${p}/`;
@@ -122,7 +123,7 @@ async function main(){
   const discoveredUnique=[...new Map(listings.map(x=>[x.listing_url,x])).values()];
   // A bounded sample by default; increase MAX_RECORDS explicitly for a larger run.
   const unique=discoveredUnique.slice(0, MAX_RECORDS);
-  const records:any[]=[];
+  const records:FjaRecord[]=[];
   for(let i=0;i<unique.length;i++){
     const l=unique[i];
     try{
@@ -137,8 +138,8 @@ async function main(){
   }
   const eligible=records.filter(r=>r.open_status==="OPEN_AS_OF_CUTOFF");
   const fields=["update_date","title","listing_url","detail_url","open_status","derived_close_date","organization","post_name","vacancies","qualification","age_limit","salary_pay","application_start_date","application_end_date","job_location","advertisement_number","raw_html_file"];
-  const csvCell=(v:any)=>{const s=Array.isArray(v)?JSON.stringify(v):String(v??"");return '"'+s.replace(/"/g,'""')+'"';};
-  const csvValue=(r:any,f:string)=>f==="organization"?r.facts?.organization:f==="post_name"?r.facts?.post_name:f==="vacancies"?r.facts?.vacancies:f==="qualification"?r.facts?.qualification:f==="age_limit"?r.facts?.age_limit:f==="salary_pay"?r.facts?.salary_pay:f==="application_start_date"?r.facts?.application_start_date:f==="application_end_date"?r.facts?.application_end_date:f==="job_location"?r.facts?.job_location:f==="advertisement_number"?r.facts?.advertisement_number:r[f];
+  const csvCell=(v:unknown)=>{const s=Array.isArray(v)?JSON.stringify(v):String(v??"");return '"'+s.replace(/"/g,'""')+'"';};
+  const csvValue=(r:FjaRecord,f:string)=>f==="organization"?r.facts?.organization:f==="post_name"?r.facts?.post_name:f==="vacancies"?r.facts?.vacancies:f==="qualification"?r.facts?.qualification:f==="age_limit"?r.facts?.age_limit:f==="salary_pay"?r.facts?.salary_pay:f==="application_start_date"?r.facts?.application_start_date:f==="application_end_date"?r.facts?.application_end_date:f==="job_location"?r.facts?.job_location:f==="advertisement_number"?r.facts?.advertisement_number:r[f];
   const csv=[fields.join(","),...eligible.map(r=>fields.map(f=>csvCell(csvValue(r,f))).join(","))].join("\n");
   await writeFile(path.join(OUT,"all-in-window-listings.json"),JSON.stringify(records,null,2));
   await writeFile(path.join(OUT,"open-as-of-cutoff.csv"),csv+"\n");

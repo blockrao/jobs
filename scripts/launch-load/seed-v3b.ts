@@ -38,10 +38,10 @@ type Row = { rank: number; seen: string; canonical: string; target?: number; hol
 async function main() {
   const sql = postgres(db, { max: 2, onnotice: () => {} });
   const rows: Row[] = JSON.parse(readFileSync(rowsFile, "utf8"));
-  const orgs: any[] = [...(await sql`select id, slug, name from public.organizations`)];
-  const haveAlias = new Map<string, number>((await sql`select alias_normalized, organization_id from public.organization_aliases`).map((a: any) => [a.alias_normalized, a.organization_id]));
+  const orgs: { id: number; slug: string; name: string }[] = [...(await sql<{ id: number; slug: string; name: string }[]>`select id, slug, name from public.organizations`)];
+  const haveAlias = new Map<string, number>((await sql`select alias_normalized, organization_id from public.organization_aliases`).map((a) => [a.alias_normalized as string, a.organization_id as number]));
   const haveSlug = new Set(orgs.map((o) => o.slug));
-  const rep: any = { created: [], aliased: [], held: [] };
+  const rep: { created: Record<string, unknown>[]; aliased: Record<string, unknown>[]; held: Record<string, unknown>[]; counts?: unknown } = { created: [], aliased: [], held: [] };
   const addAliases = async (id: number, raw: string, canonical: string) => {
     const seen = new Set<string>();
     for (const [form, rawText] of [...lookupForms(canonical).map((f) => [f, canonical]), ...lookupForms(raw).map((f) => [f, raw])] as [string, string][]) {

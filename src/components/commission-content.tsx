@@ -37,8 +37,8 @@ export function CommissionContent({
 
   const isHi = locale === "hi";
 
-  const commissionNameHi = (commission as any).nameHi as string | null;
-  const commissionDescriptionHi = (commission as any).descriptionHi as
+  const commissionNameHi = commission.nameHi as string | null;
+  const commissionDescriptionHi = commission.descriptionHi as
     | string
     | null;
   const displayCommissionName =
@@ -103,8 +103,8 @@ export function CommissionContent({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {commission.exams.map((exam) => {
             const openCount = postingsByExam.get(exam.id) || 0;
-            const labelHi = (exam as any).labelHi as string | null;
-            const eligibilityHi = (exam as any).eligibilityHi as
+            const labelHi = exam.labelHi as string | null;
+            const eligibilityHi = exam.eligibilityHi as
               | string
               | null;
             const displayLabel = isHi && labelHi ? labelHi : exam.label;
@@ -156,11 +156,11 @@ export function CommissionContent({
         ) : (
           <ul className="divide-y divide-black/10">
             {allPostings.map((posting) => {
-              const titleHi = (posting as any).titleHi as string | null;
-              const orgNameHi = (posting.organization as any).nameHi as
+              const titleHi = posting.titleHi as string | null;
+              const orgNameHi = posting.organization.nameHi as
                 | string
                 | null;
-              const examLabelHi = (posting.exam as any)?.labelHi as
+              const examLabelHi = posting.exam?.labelHi as
                 | string
                 | null
                 | undefined;
