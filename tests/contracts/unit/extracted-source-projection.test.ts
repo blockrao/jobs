@@ -11,6 +11,7 @@ const QUICK_FACTS = "src/components/job-posting/sections/quick-facts.tsx";
 const APPLY = "src/components/job-posting/sections/how-to-apply.tsx";
 const VERIFICATION = "src/components/job-posting/sections/official-source-verification.tsx";
 const HUB = "src/components/recruitment/recruitment-hub.tsx";
+const HUB_DATES = "src/components/recruitment/sections/hub-dates.tsx";
 
 describe("extracted source projection", () => {
   test("maps inventory by its existing canonical Post mapping and keeps it separate from enrichment", () => {
@@ -36,7 +37,12 @@ describe("extracted source projection", () => {
     expect(hub).toContain("sourceDetails.application_mode");
     expect(hub).toContain("parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)");
     expect(hub).toContain("sourceDetails?.interview_date_tentative");
-    expect(hub).toContain("Tentative interview (reported; confirm in official notice)");
+    // The hub only surfaces the interview date when source facts are unverified, and
+    // the renderer labels it tentative rather than as an official schedule.
+    expect(hub).toMatch(/tentativeInterviewDate = sourceFactsUnverified &&/);
+    const hubDates = stripComments(readSource(HUB_DATES));
+    expect(hubDates).toContain("label: 'Tentative interview date'");
+    expect(hubDates).toContain("note: 'tentative'");
   });
 
   test("types source-extracted fields independently from canonical facts", () => {
@@ -77,7 +83,7 @@ describe("extracted source projection", () => {
     const source = stripComments(readSource(APPLY));
     expect(source).toContain("recruitmentResolvedFacts?.applicationUrl ?? null");
     expect(source).not.toMatch(/post\.applyPortalUrl/);
-    expect(source).toContain("Application method reported in listing");
+    expect(source).toContain("Application method (reported)");
   });
 
   test("verification UI does not claim extraction confidence is official verification", () => {
@@ -89,19 +95,23 @@ describe("extracted source projection", () => {
 
   test("recruitment hub separates lifecycle status from source-verification status", () => {
     const source = stripComments(readSource(HUB));
-    expect(source).toContain("Official verification pending");
-    expect(source).toContain("Recruitment verification notice");
-    expect(source).toContain("recruitment.sourceVerificationStatus !== \"VERIFIED\"");
-    expect(source).toContain('sourceFactsUnverified ? "Source listing published" : "Notification Published"');
-    expect(source).toContain("sourceFactsUnverified ? null : daysUntil(recruitment.applicationEndDate)");
-    expect(source).toContain('sourceFactsUnverified ? "Reported Last Date" : "Last Date"');
+    // Verification state is derived from the Recruitment's own source-verification
+    // status, never from lifecycle status.
+    expect(source).toContain("recruitment.sourceVerificationStatus !== 'VERIFIED'");
+    // Unverified facts are labelled as reported, never as official.
+    expect(source).toContain("? 'Source listing published' : 'Notification published'");
+    expect(source).toContain("sourceFactsUnverified ? 'Application deadline (reported)' : 'Application closes'");
     expect(source).toContain("The source listing reports");
-    expect(source).toContain('sourceFactsUnverified ? "Reported vacancies" : "Total Vacancies"');
+    // Lifecycle-derived claims (closed state, countdown) are suppressed while unverified.
+    expect(source).toContain("sourceFactsUnverified ? false : isRecruitmentClosed(recruitment.status)");
+    expect(source).toContain("sourceFactsUnverified ? null : daysUntil(appEndRaw)");
   });
-  test("unverified extracted Post Leaves are noindex and omit JobPosting schema", () => {
+  test("unverified extracted Post Leaves omit JobPosting schema and label vacancies as reported", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
-    expect(route).toContain("index: !sourceVerificationPending");
+    // Indexability is gated on a canonical title plus an official source; verification
+    // pending gates the structured data and meta claims, not the page itself.
+    expect(route).toContain("index: isIndexable");
     expect(route).toContain("suppressJobPostingSchema={sourceVerificationPending}");
     expect(route).toContain('"reported vacancies"');
     expect(schema).toContain("suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting]");
@@ -137,16 +147,18 @@ describe("extracted source projection", () => {
     expect(localeRoute).not.toMatch(/!post\.fjaExtract.*suppressJobPostingSchema/);
   });
 
-  test("recruitment hubs are non-indexable and only use a role canonical when unambiguous", () => {
+  test("single-role recruitment hubs canonicalise to the role hub and stay noindex; multi-role hubs are canonical and indexable", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
-    expect(route).toContain("pageSeo(canonicalPath, { index: false })");
-    expect(route).toContain("const canonicalPath = roleSlugs.length === 1 ?");
+    expect(route).toContain("const isSingleRoleHub = roleSlugs.length === 1;");
+    expect(route).toContain("const canonicalPath = isSingleRoleHub ?");
     expect(route).toContain("/posts/${roleSlugs[0]}");
     expect(route).toContain("/jobs/${recruitment.slug}");
+    expect(route).toContain("const hubIndexable = !isSingleRoleHub;");
+    expect(route).toContain("pageSeo(canonicalPath, hubIndexable ? undefined : { index: false })");
     expect(route).toContain("verificationStatus: recruitment.sourceVerificationStatus ?? null");
-    expect(schema).toContain("factsVerified ? toIso(recruitment.notificationDate) : undefined");
-    expect(schema).toContain("factsVerified ? toIso(recruitment.applicationEndDate) : undefined");
+    expect(schema).toMatch(/const datePostedIso = factsVerified\s*\?\s*toIso\(recruitment\.notificationDate\)/);
+    expect(schema).toContain("const expiresIso = factsVerified ? toIso(recruitment.applicationEndDate) : undefined;");
   });
 
 });

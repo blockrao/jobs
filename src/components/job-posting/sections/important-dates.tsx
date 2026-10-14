@@ -5,6 +5,7 @@
 
 import { JobPostingData } from "@/types/job-posting";
 import styles from "../job-posting-page.module.css";
+import { isDisplayableRecruitmentDate } from "@/lib/recruitment-dates";
 
 interface ImportantDatesProps {
   post: JobPostingData;
@@ -26,19 +27,8 @@ const KEY_DATES_LABELS: Record<string, string> = {
   source_updated_date: "Listing Updated",
 };
 
-/**
- * Reject malformed dates and known far-future sentinel values from candidate-facing
- * timelines. A sentinel is treated as unknown, never converted into an application
- * deadline. This is a rendering safeguard; source records must still be corrected
- * through official-source verification.
- */
-export function isDisplayableRecruitmentDate(value: unknown): boolean {
-  if (typeof value !== "string" && !(value instanceof Date)) return false;
-  const parsed = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(parsed.getTime())) return false;
-  const year = parsed.getFullYear();
-  return year >= 1900 && year < 2090;
-}
+// Shared guard: see src/lib/recruitment-dates.ts. Re-exported so existing imports keep working.
+export { isDisplayableRecruitmentDate } from "@/lib/recruitment-dates";
 
 export default function ImportantDates({ post, embedded }: ImportantDatesProps) {
   const enrichment = post.enrichment;

@@ -138,7 +138,22 @@ export default function JobPostingPage({
   const factRows: FactRow[] = [];
   factRows.push({ term: "Post", detail: post.title });
   if (post.organizationName) {
-    factRows.push({ term: "Employer", detail: post.organizationName });
+    // Internal Organization link keeps the Post Leaf connected to its issuing body
+    // (Phase 1 P0 #3: no orphan Posts). Falls back to plain text without a slug.
+    const organizationSlug: string | null =
+      typeof recruitment?.recruitment?.organizationSlug === "string"
+        ? recruitment.recruitment.organizationSlug
+        : null;
+    factRows.push({
+      term: "Employer",
+      detail: organizationSlug ? (
+        <Link href={`${localePrefix}/organizations/${organizationSlug}`}>
+          {post.organizationName}
+        </Link>
+      ) : (
+        post.organizationName
+      ),
+    });
   }
   if (post.sourcePostCode) {
     factRows.push({ term: "Vacancy number", detail: post.sourcePostCode });

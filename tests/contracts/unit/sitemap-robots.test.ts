@@ -74,9 +74,11 @@ describe("sitemap", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
-  test("IDX-04d noindex Recruitment hubs and colliding legacy job slugs are excluded", async () => {
+  test("IDX-04d a legacy job slug that collides with a live Recruitment hub yields one hub entry, not a duplicate", async () => {
+    // Owner decision (Oct 2026): live Recruitment hubs are listed; the legacy posting
+    // row with the same slug is dropped so the URL appears exactly once.
     const paths = (await entries()).map((e) => new URL(e.url).pathname);
-    expect(paths).not.toContain("/jobs/recruitment-collision");
+    expect(paths.filter((p) => p === "/jobs/recruitment-collision")).toHaveLength(1);
   });
 
   test("IDX-04e commission routes that render noindex are excluded from the sitemap", async () => {
