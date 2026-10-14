@@ -6,6 +6,7 @@
 import { JobPostingData } from "@/types/job-posting";
 import styles from "../job-posting-page.module.css";
 import { isDisplayableRecruitmentDate } from "@/lib/recruitment-dates";
+import { resolveDeadline } from "@/lib/resolvers/fact-resolvers";
 
 interface ImportantDatesProps {
   post: JobPostingData;
@@ -32,6 +33,10 @@ export { isDisplayableRecruitmentDate } from "@/lib/recruitment-dates";
 
 export default function ImportantDates({ post, embedded }: ImportantDatesProps) {
   const enrichment = post.enrichment;
+  const resolvedDeadline = resolveDeadline(post, new Date());
+  const deadlineLabel = resolvedDeadline.date
+    ? "Application Closing Date"
+    : "Application Closing Date (reported)";
 
   // keyDates from posts table — used when no enrichment dates are available
   const keyDateEntries: Array<{ label: string; date: string; key: string }> = [];
@@ -39,7 +44,8 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
     for (const [key, val] of Object.entries(post.keyDates)) {
       if (typeof val === "string" && val.trim() && isDisplayableRecruitmentDate(val)) {
         const label = KEY_DATES_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-        keyDateEntries.push({ label, date: val, key: `keydate-${key}` });
+        const isClosingDateKey = /application.?clos|last.?date.?to.?apply/i.test(key);
+        keyDateEntries.push({ label: isClosingDateKey ? `${label} (reported)` : label, date: val, key: `keydate-${key}` });
       }
     }
   }
@@ -63,7 +69,7 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
         { label: "Source listing published", date: post.fjaExtract?.sourcePublishedDate ?? null },
         { label: "Notification Date", date: enrichment?.notificationDate ?? null },
         { label: "Application Open Date", date: enrichment?.applicationOpenDate ?? null },
-        { label: "Application Closing Date", date: enrichment?.applicationClosingDate ?? null },
+        { label: deadlineLabel, date: resolvedDeadline.date ?? enrichment?.applicationClosingDate ?? null },
         { label: "Exam Date", date: enrichment?.examDate ?? null },
         { label: "Admit Card Date", date: enrichment?.admitCardDate ?? null },
         { label: "Result Date", date: enrichment?.resultDate ?? null },
@@ -73,7 +79,7 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
     : [
         { label: "Notification Date", date: enrichment?.notificationDate ?? post.notificationPublicationDate },
         { label: "Application Open Date", date: enrichment?.applicationOpenDate ?? post.recruitmentApplicationStartDate },
-        { label: "Application Closing Date", date: enrichment?.applicationClosingDate ?? post.recruitmentApplicationEndDate },
+        { label: deadlineLabel, date: resolvedDeadline.date ?? enrichment?.applicationClosingDate ?? post.recruitmentApplicationEndDate },
         { label: "Exam Date", date: enrichment?.examDate },
         { label: "Admit Card Date", date: enrichment?.admitCardDate },
         { label: "Result Date", date: enrichment?.resultDate },
