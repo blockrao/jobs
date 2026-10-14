@@ -20,7 +20,7 @@
 import { getDb } from "@/db";
 import { postings } from "@/db/schema";
 import { eq, inArray, and, desc } from "drizzle-orm";
-import { findAggregatorViolations } from "@/lib/approval-guard";
+import { findAggregatorViolations, hasValidOfficialNotificationUrl } from "@/lib/approval-guard";
 
 export interface PostingForPublishing {
   id: number;
@@ -143,7 +143,11 @@ export async function approvePostingForPublication(postingId: number) {
 
   // Never publish a posting that carries an aggregator name or link.
   const row = await db.query.postings.findFirst({ where: eq(postings.id, postingId) });
-  if (!row || findAggregatorViolations(row).length > 0) return false;
+  if (
+    !row ||
+    !hasValidOfficialNotificationUrl(row.officialNotificationUrl) ||
+    findAggregatorViolations(row).length > 0
+  ) return false;
 
   await db
     .update(postings)
