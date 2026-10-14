@@ -18,13 +18,19 @@ import { pageSeo } from "@/lib/seo";
 import { cache } from "react";
 import { Metadata } from "next";
 
-// Revalidate every 5 minutes so DB writes (decomposition, enrichment) appear
-// without requiring a full deployment.
+// Generate each Post Leaf on first request and cache it with ISR. Returning no
+// build-time params avoids enumerating the 2,700+ (and growing) URL inventory.
+// dynamicParams remains enabled so new canonical Post URLs can be generated.
 export const revalidate = 300;
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  return [];
+}
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
 import { getPostBySlug } from "@/db/operations/get-posts";
-import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
+import { getRecruitmentLeafContext } from "@/db/operations/get-recruitments";
 import {
   resolvePostVacancy,
   resolveSalary,
@@ -237,7 +243,7 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
   );
 
   // Fetch recruitment data with all posts for context
-  const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
+  const recruitmentData = await getRecruitmentLeafContext(recruitmentSlug);
 
   // ── Post-owned resolver facts ────────────────────────────────────────────
   // Entity ownership: Post. These facts describe the specific Post.
