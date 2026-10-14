@@ -18,3 +18,5 @@ skills-lock.json
 .agents/
 /research_notes/
 /reports/
+phase2b-discovery.log
+phase2b-discovery-checkpoint.json
