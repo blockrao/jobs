@@ -60,9 +60,32 @@ describe("resolveDeadline never turns a sentinel into an open deadline", () => {
     expect(resolveDeadline(post, NOW)).toEqual({ date: null, state: "UNKNOWN" });
   });
 
-  test("plausible past and future deadlines still resolve to CLOSED and OPEN", () => {
-    const past = { ...base, enrichment: { applicationClosingDate: new Date("2026-10-01T00:00:00Z") } } as JobPostingData;
-    const future = { ...base, enrichment: { applicationClosingDate: new Date("2026-11-01T00:00:00Z") } } as JobPostingData;
+  test("pending enrichment deadlines never become authoritative", () => {
+    const pending = {
+      ...base,
+      enrichment: {
+        applicationClosingDate: new Date("2026-11-01T00:00:00Z"),
+        sourceVerificationStatus: "PENDING",
+      },
+    } as unknown as JobPostingData;
+    expect(resolveDeadline(pending, NOW)).toEqual({ date: null, state: "UNKNOWN" });
+  });
+
+  test("plausible verified deadlines resolve to CLOSED and OPEN", () => {
+    const past = {
+      ...base,
+      enrichment: {
+        applicationClosingDate: new Date("2026-10-01T00:00:00Z"),
+        sourceVerificationStatus: "VERIFIED",
+      },
+    } as unknown as JobPostingData;
+    const future = {
+      ...base,
+      enrichment: {
+        applicationClosingDate: new Date("2026-11-01T00:00:00Z"),
+        sourceVerificationStatus: "VERIFIED",
+      },
+    } as unknown as JobPostingData;
     expect(resolveDeadline(past, NOW).state).toBe("CLOSED");
     expect(resolveDeadline(future, NOW).state).toBe("OPEN");
   });
