@@ -1,47 +1,49 @@
 import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
-import { listArticles, listPostings, getHomepageStats } from "@/lib/queries";
+import {
+  getHomeStats,
+  listClosingSoon,
+  countClosingSoon,
+  listBiggestOpen,
+  listTopHiringOrgs,
+  countLivePostsBySector,
+} from "@/lib/queries";
+import { safeQuery } from "@/lib/safe-query";
 import { HomeContent } from "@/components/home-content";
 
 export const revalidate = 300;
 
 // The home page is an English page at "/" (SEO-001 D3).
-export const metadata: Metadata = { ...pageSeo("/") };
+export const metadata: Metadata = {
+  title: "Government Jobs 2026 — Every open sarkari vacancy with last date | JobOye",
+  description:
+    "Live government job notifications ranked by vacancies and closing date. Facts from the official notification: vacancies, eligibility, fee, last date and the official apply link.",
+  ...pageSeo("/"),
+};
+
+const BIGGEST = 5;
+const OPEN = 8;
 
 export default async function Home() {
-  let govtJobs: Awaited<ReturnType<typeof listPostings>> = [];
-  let privateJobs: Awaited<ReturnType<typeof listPostings>> = [];
-  let articles: Awaited<ReturnType<typeof listArticles>> = [];
-  let homepageStats: Awaited<ReturnType<typeof getHomepageStats>> = {
-    stats: { totalVacancies: 0, activeRecruitments: 0, closingThisWeek: 0, orgsHiring: 0 },
-    closingSoon: [],
-  };
-
-  try {
-    const results = await Promise.all([
-      listPostings({ kind: "GOVERNMENT", limit: 8 }).catch(() => []),
-      listPostings({ kind: "PRIVATE", limit: 8 }).catch(() => []),
-      listArticles({ limit: 6 }).catch(() => []),
-      getHomepageStats().catch(() => ({
-        stats: { totalVacancies: 0, activeRecruitments: 0, closingThisWeek: 0, orgsHiring: 0 },
-        closingSoon: [],
-      })),
-    ]);
-    govtJobs = results[0] as typeof govtJobs;
-    privateJobs = results[1] as typeof privateJobs;
-    articles = results[2] as typeof articles;
-    homepageStats = results[3] as typeof homepageStats;
-  } catch {
-    // empty fallbacks already set above
-  }
+  const [stats, closingSoon, closingMonthCount, ranked, orgs, sectorCounts] = await Promise.all([
+    safeQuery(() => getHomeStats(), { closing7dPosts: 0, totalVacancies: 0, liveRecruitments: 0 }),
+    safeQuery(() => listClosingSoon({ days: 14, limit: 7 }), []),
+    safeQuery(() => countClosingSoon(30), 0),
+    // One ranked query feeds both "biggest" (head) and "open notifications" (next slice).
+    safeQuery(() => listBiggestOpen({ limit: BIGGEST + OPEN }), []),
+    safeQuery(() => listTopHiringOrgs(12), []),
+    safeQuery(() => countLivePostsBySector(), {}),
+  ]);
 
   return (
     <HomeContent
-      govtJobs={govtJobs}
-      privateJobs={privateJobs}
-      articles={articles}
-      homepageStats={homepageStats.stats}
-      closingSoon={homepageStats.closingSoon}
+      stats={stats}
+      closingSoon={closingSoon}
+      closingMonthCount={closingMonthCount}
+      biggest={ranked.slice(0, BIGGEST)}
+      open={ranked.slice(BIGGEST)}
+      orgs={orgs}
+      sectorCounts={sectorCounts}
     />
   );
 }

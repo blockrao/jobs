@@ -244,6 +244,161 @@ export async function listCategories() {
   return db.query.categories.findMany({ orderBy: [categories.name] });
 }
 
+// ---------- Homepage (deadline desk) ----------
+//
+// Design decision 2026-10-14 (HOMEPAGE_DESIGN_STRATEGY): the homepage ranks
+// by vacancies × urgency, never by recency or pure date — bulk ingest makes
+// "new" meaningless and date-sorted heads are dominated by 1-vacancy project
+// posts. Government sectors only; "PRIVATE" is the write-path default bucket.
+
+export interface HomeRecruitmentRow {
+  slug: string;
+  name: string;
+  orgName: string;
+  orgNameHi: string | null;
+  orgSlug: string;
+  sector: string;
+  totalVacancies: number | null;
+  applicationEndDate: Date | null;
+  postCount: number;
+  daysLeft: number | null;
+}
+
+export interface HomeOrgRow {
+  name: string;
+  nameHi: string | null;
+  slug: string;
+  vacancies: number;
+}
+
+export interface HomeStats {
+  closing7dPosts: number;
+  totalVacancies: number;
+  liveRecruitments: number;
+}
+
+const liveGovRecruitment = sql`
+  r.status IN ('ACTIVE','UPCOMING')
+  AND (r.application_end_date IS NULL OR r.application_end_date > NOW())
+  AND r.slug IS NOT NULL
+  AND o.sector <> 'PRIVATE'
+`;
+
+const homeRecruitmentSelect = sql`
+  SELECT
+    r.slug,
+    r.name,
+    o.name AS org_name,
+    o.name_hi AS org_name_hi,
+    o.slug AS org_slug,
+    o.sector,
+    r.total_vacancies,
+    r.application_end_date,
+    (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count,
+    CASE WHEN r.application_end_date IS NULL THEN NULL
+         ELSE (r.application_end_date::date - CURRENT_DATE) END AS days_left
+  FROM public.recruitments r
+  JOIN public.organizations o ON o.id = r.organization_id
+`;
+
+function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
+  return (rows as Record<string, unknown>[]).map((r) => ({
+    slug: String(r.slug),
+    name: String(r.name),
+    orgName: String(r.org_name),
+    orgNameHi: r.org_name_hi ? String(r.org_name_hi) : null,
+    orgSlug: String(r.org_slug),
+    sector: String(r.sector),
+    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
+    postCount: Number(r.post_count ?? 0),
+    daysLeft: r.days_left != null ? Number(r.days_left) : null,
+  }));
+}
+
+/** Recruitments closing within `days`, biggest first. Used by the homepage and /closing-soon. */
+export async function listClosingSoon(opts: { days: number; limit: number; offset?: number }): Promise<HomeRecruitmentRow[]> {
+  if (!hasDb()) return [];
+  const db = getDb();
+  const rows = await db.execute(sql`
+    ${homeRecruitmentSelect}
+    WHERE ${liveGovRecruitment}
+      AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${opts.days}::int)
+      AND r.total_vacancies IS NOT NULL
+    ORDER BY r.total_vacancies DESC, r.application_end_date ASC, r.id
+    LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
+  `);
+  return mapHomeRows(rows);
+}
+
+export async function countClosingSoon(days: number): Promise<number> {
+  if (!hasDb()) return 0;
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT COUNT(*)::int AS n FROM public.recruitments r
+    JOIN public.organizations o ON o.id = r.organization_id
+    WHERE ${liveGovRecruitment}
+      AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${days}::int)
+      AND r.total_vacancies IS NOT NULL
+  `);
+  return Number((rows as unknown as Record<string, unknown>[])[0]?.n ?? 0);
+}
+
+/** Live recruitments ranked by vacancies (the "biggest open now" rule). */
+export async function listBiggestOpen(opts: { limit: number; offset?: number }): Promise<HomeRecruitmentRow[]> {
+  if (!hasDb()) return [];
+  const db = getDb();
+  const rows = await db.execute(sql`
+    ${homeRecruitmentSelect}
+    WHERE ${liveGovRecruitment} AND r.total_vacancies IS NOT NULL
+    ORDER BY r.total_vacancies DESC, r.application_end_date ASC NULLS LAST, r.id
+    LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
+  `);
+  return mapHomeRows(rows);
+}
+
+export async function listTopHiringOrgs(limit = 12): Promise<HomeOrgRow[]> {
+  if (!hasDb()) return [];
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT o.name, o.name_hi, o.slug, COALESCE(SUM(r.total_vacancies), 0)::int AS vacancies
+    FROM public.organizations o
+    JOIN public.recruitments r ON r.organization_id = o.id
+    WHERE ${liveGovRecruitment}
+    GROUP BY o.id
+    HAVING COALESCE(SUM(r.total_vacancies), 0) > 0
+    ORDER BY vacancies DESC, o.name
+    LIMIT ${limit}
+  `);
+  return (rows as unknown as Record<string, unknown>[]).map((r) => ({
+    name: String(r.name),
+    nameHi: r.name_hi ? String(r.name_hi) : null,
+    slug: String(r.slug),
+    vacancies: Number(r.vacancies),
+  }));
+}
+
+export async function getHomeStats(): Promise<HomeStats> {
+  if (!hasDb()) return { closing7dPosts: 0, totalVacancies: 0, liveRecruitments: 0 };
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT
+      COUNT(p.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_7d_posts,
+      COALESCE(SUM(p.vacancy_total), 0)::int AS total_vacancies,
+      COUNT(DISTINCT r.id)::int AS live_recruitments
+    FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
+    JOIN public.organizations o ON o.id = r.organization_id
+    WHERE ${liveGovRecruitment} AND p.slug IS NOT NULL
+  `);
+  const s = (rows as unknown as Record<string, unknown>[])[0] ?? {};
+  return {
+    closing7dPosts: Number(s.closing_7d_posts ?? 0),
+    totalVacancies: Number(s.total_vacancies ?? 0),
+    liveRecruitments: Number(s.live_recruitments ?? 0),
+  };
+}
+
 // ---------- Sector hubs (/categories/[slug]) ----------
 //
 // The public category taxonomy lives in src/lib/sectors.ts and is backed by

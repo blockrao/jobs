@@ -3,76 +3,61 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
-import type { listArticles, listPostings } from "@/lib/queries";
-import type { HomepageStats, ClosingSoonJob } from "@/lib/queries";
-import { STAGE_LABELS, STAGE_LABELS_HI, formatDate } from "@/lib/labels";
+import type { HomeRecruitmentRow, HomeOrgRow, HomeStats } from "@/lib/queries";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 import { FEATURED_SECTORS, FEATURED_ORG_TILES, sectorHref } from "@/lib/sectors";
+import { RecruitmentRow, RowListHeader } from "@/components/recruitment-row";
 
-type Postings = Awaited<ReturnType<typeof listPostings>>;
-type Articles = Awaited<ReturnType<typeof listArticles>>;
+// Homepage = the deadline desk (HOMEPAGE_DESIGN_STRATEGY_2026_10_14).
+// Every block ranks by vacancies × urgency; every row shows org · vacancies ·
+// last date. The page (src/app/(default)/page.tsx) stays a static/ISR server
+// component; this client component only picks the language from the cookie.
 
-// "Browse by category" tiles derive from the single sector taxonomy
-// (src/lib/sectors.ts) plus two organization hubs people search by name.
-// Every href here is guaranteed to resolve; do not hand-type slugs.
-const CATEGORY_GRID: { label: string; labelHi: string; href: string; emoji: string }[] = [
-  ...FEATURED_SECTORS.map((s) => ({
-    label: s.label,
-    labelHi: s.labelHi,
-    href: sectorHref(s),
-    emoji: s.emoji,
-  })),
-  ...FEATURED_ORG_TILES,
-];
-
-const FAQ_EN = [
+export const HOME_FAQ = [
   {
     q: "How do I find government jobs closing soon?",
-    a: "Use the 'Closing This Week' filter on the Jobs page. JobOye shows a live countdown for every open notification — dates, application links, and vacancy counts — sourced from official government notifications.",
+    a: "The 'Closing in the next two weeks' list on this page and the Closing Soon page rank every open notification by vacancies and last date, with a live countdown. Dates come from the official notification.",
   },
   {
     q: "What is the difference between a recruitment notification and a post?",
-    a: "A recruitment notification covers an entire drive (e.g., SSC CHSL 2026). Each role within that drive — such as LDC or Postal Assistant — is a separate post with its own vacancy count and eligibility criteria.",
-  },
-  {
-    q: "How often is job data updated on JobOye?",
-    a: "Pages are refreshed automatically. Vacancy counts and deadlines reflect the latest official notifications. If you spot an error, contact us — facts here always trace back to official sources.",
+    a: "A recruitment notification covers an entire drive (for example, BPSC TRE-4.0). Each role within that drive — Primary Teacher, Middle School Teacher — is a separate post with its own vacancy count and eligibility criteria.",
   },
   {
     q: "Can I apply for government jobs directly from JobOye?",
-    a: "Each post page links directly to the official application portal on the recruiting body's website. JobOye never charges a fee and is not an intermediary — we only point you to the official source.",
+    a: "No, and that is deliberate. Each post page links directly to the official application portal on the recruiting body's website. JobOye never charges a fee and is not an intermediary.",
   },
   {
-    q: "Which organisations post the most vacancies on JobOye?",
-    a: "Consistently high-volume recruiters include SSC, Railway Recruitment Boards, State Public Service Commissions, and various defence and paramilitary bodies. Browse by organisation on the Jobs page.",
+    q: "How often is job data updated on JobOye?",
+    a: "New notifications are added daily and pages refresh automatically. Vacancy counts and deadlines reflect the official notification; if you spot an error, contact us.",
   },
   {
     q: "Is JobOye free to use?",
-    a: "Yes, completely free. JobOye is an information resource — we publish notification summaries, eligibility details, and official links. There is no registration, subscription, or fee of any kind.",
+    a: "Yes, completely free. There is no registration, subscription, or fee of any kind.",
   },
 ];
 
-function daysUntil(d: Date): number {
-  return Math.ceil((d.getTime() - Date.now()) / 86_400_000);
-}
-
-function fmtDeadline(d: Date, locale: string): string {
-  return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
-}
+const CATEGORY_GRID: { label: string; labelHi: string; href: string; emoji: string }[] = [
+  ...FEATURED_SECTORS.map((s) => ({ label: s.label, labelHi: s.labelHi, href: sectorHref(s), emoji: s.emoji })),
+  ...FEATURED_ORG_TILES,
+];
 
 export function HomeContent({
-  govtJobs,
-  privateJobs,
-  articles,
-  homepageStats,
+  stats,
   closingSoon,
+  closingMonthCount,
+  biggest,
+  open,
+  orgs,
+  sectorCounts,
 }: {
-  govtJobs: Postings;
-  privateJobs: Postings;
-  articles: Articles;
-  homepageStats: HomepageStats;
-  closingSoon: ClosingSoonJob[];
+  stats: HomeStats;
+  closingSoon: HomeRecruitmentRow[];
+  closingMonthCount: number;
+  biggest: HomeRecruitmentRow[];
+  open: HomeRecruitmentRow[];
+  orgs: HomeOrgRow[];
+  sectorCounts: Record<string, number>;
 }) {
   const [locale, setLocale] = useState<Locale>("en");
 
@@ -87,364 +72,222 @@ export function HomeContent({
   }, []);
 
   const isHi = locale === "hi";
-  const stageLabels = isHi ? STAGE_LABELS_HI : STAGE_LABELS;
-  const dateLocale = isHi ? "hi-IN" : "en-IN";
+  const nf = (n: number) => n.toLocaleString(isHi ? "hi-IN" : "en-IN");
 
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": FAQ_EN.map(({ q, a }) => ({
+    mainEntity: HOME_FAQ.map(({ q, a }) => ({
       "@type": "Question",
-      "name": q,
-      "acceptedAnswer": { "@type": "Answer", "text": a },
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
     })),
   };
 
-  const vacancyDisplay = homepageStats.totalVacancies > 0
-    ? homepageStats.totalVacancies.toLocaleString(dateLocale)
-    : "—";
-
-  const activeDisplay = homepageStats.activeRecruitments > 0
-    ? homepageStats.activeRecruitments.toLocaleString(dateLocale)
-    : "—";
-
-  const closingDisplay = homepageStats.closingThisWeek > 0
-    ? homepageStats.closingThisWeek.toLocaleString(dateLocale)
-    : "—";
-
-  const orgsDisplay = homepageStats.orgsHiring > 0
-    ? homepageStats.orgsHiring.toLocaleString(dateLocale)
-    : "—";
+  const sectionTitle = "font-semibold text-2xl tracking-tight text-neutral-900";
+  const viewAll = "text-sm font-semibold text-brand-600 hover:underline";
 
   return (
     <>
-      <Script
-        id="faq-jsonld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      <Script id="faq-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-4">
 
-        {/* ── Hero ─────────────────────────────────────────────── */}
-        <section className="text-left pb-10 border-b border-black/8">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand-600 mb-3">
-            {isHi ? "भारत का जॉब नोटिफिकेशन डेटाबेस" : "India's job notification database"}
-          </p>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 leading-tight max-w-2xl">
-            {isHi
-              ? "सरकारी नौकरी — सही जानकारी, सही समय पर"
-              : "Government jobs,\nfacts straight from\nofficial notifications."}
-          </h1>
-          <p className="mt-4 max-w-xl text-neutral-500 text-base leading-relaxed">
-            {isHi
-              ? "हर अधिसूचना का स्थायी पेज — तारीखें, पात्रता, शुल्क और आधिकारिक आवेदन लिंक।"
-              : "One permanent page per notification — dates, eligibility, fees, and the official apply link. No guesswork, no middlemen."}
-          </p>
-
-          {/* Live stats bar */}
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatPill
-              value={vacancyDisplay}
-              label={isHi ? "कुल पद" : "Positions open"}
-              live
-            />
-            <StatPill
-              value={activeDisplay}
-              label={isHi ? "सक्रिय भर्तियां" : "Active recruitments"}
-            />
-            <StatPill
-              value={closingDisplay}
-              label={isHi ? "इस सप्ताह बंद" : "Closing this week"}
-              urgent={homepageStats.closingThisWeek > 0}
-            />
-            <StatPill
-              value={orgsDisplay}
-              label={isHi ? "भर्ती करने वाले संगठन" : "Hiring organisations"}
-            />
-          </div>
-
-          {/* Search + CTA */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-xl">
-            <form action="/jobs" method="get" className="flex flex-1 gap-2">
+        {/* ── Hero: compact, functional ──────────────────────────── */}
+        <section className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-8 lg:gap-12 items-end pt-8 pb-8 sm:pt-11 sm:pb-9">
+          <div className="flex flex-col gap-4">
+            <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-brand-600">
+              {isHi ? "भारत की सरकारी नौकरियां" : "Government jobs in India"}
+            </p>
+            <h1 className="text-[28px] sm:text-[40px] lg:text-[44px] font-bold leading-[1.12] tracking-tight text-neutral-900">
+              {isHi
+                ? "हर खुली सरकारी रिक्ति — अंतिम तिथि और आधिकारिक आवेदन लिंक के साथ।"
+                : "Every open sarkari vacancy, with the last date and the official apply link."}
+            </h1>
+            <p className="text-base sm:text-lg text-neutral-600 max-w-xl">
+              {isHi
+                ? "अधिसूचना से सीधे तथ्य — रिक्तियां, पात्रता, शुल्क, तारीखें। कोई एजेंट नहीं, कोई शुल्क नहीं।"
+                : "Facts straight from the notification — vacancies, eligibility, fee, dates. No agents, no middlemen, never a charge."}
+            </p>
+            <form action="/search" method="get" className="flex gap-2 max-w-xl mt-1">
+              <label htmlFor="home-q" className="sr-only">{isHi ? "नौकरी खोजें" : "Search jobs"}</label>
               <input
+                id="home-q"
                 type="search"
                 name="q"
-                placeholder={isHi ? "नौकरी, परीक्षा, विभाग खोजें…" : "Search jobs, exams, departments…"}
-                className="w-full rounded-md border border-black/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30"
+                placeholder={isHi ? "पद, परीक्षा या विभाग खोजें" : "Search a post, exam or department — e.g. “junior engineer”, “BPSC”"}
+                className="min-w-0 flex-1 h-12 rounded-lg border border-black/20 px-4 text-base focus:outline-none focus:ring-2 focus:ring-brand-600/30"
               />
-              <button
-                type="submit"
-                className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 shrink-0"
-              >
+              <button type="submit" className="h-12 shrink-0 rounded-lg bg-brand-600 px-5 text-base font-bold text-white hover:bg-brand-700">
                 {isHi ? "खोजें" : "Search"}
               </button>
             </form>
-            <Link
-              href="/posts"
-              className="inline-flex items-center justify-center rounded-md border border-black/15 px-4 py-2 text-sm font-medium text-neutral-700 hover:border-black/30 hover:bg-neutral-50 shrink-0"
-            >
-              {isHi ? "सभी पोस्टिंग देखें →" : "Browse all postings →"}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/closing-soon" className="flex flex-col gap-1 rounded-xl border border-red-200 bg-red-50 px-4 py-4 hover:border-red-300">
+              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-red-800">{stats.closing7dPosts > 0 ? nf(stats.closing7dPosts) : "—"}</span>
+              <span className="text-[13px] sm:text-sm font-semibold text-red-900">{isHi ? "पद 7 दिन में बंद" : "posts close within 7 days"}</span>
+            </Link>
+            <Link href="/jobs" className="flex flex-col gap-1 rounded-xl border border-black/8 bg-neutral-50 px-4 py-4 hover:border-black/20">
+              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
+              <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "रिक्तियां खुली" : "vacancies open now"}</span>
+            </Link>
+            <Link href="/jobs" className="flex flex-col gap-1 rounded-xl border border-black/8 bg-neutral-50 px-4 py-4 hover:border-black/20">
+              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{stats.liveRecruitments > 0 ? nf(stats.liveRecruitments) : "—"}</span>
+              <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "सक्रिय अधिसूचनाएं" : "live notifications"}</span>
+            </Link>
+            <Link href="/categories" className="flex flex-col gap-1 rounded-xl border border-black/8 bg-neutral-50 px-4 py-4 hover:border-black/20">
+              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{FEATURED_SECTORS.length}</span>
+              <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "श्रेणियां · UPSC व SSC" : "sectors · UPSC & SSC hubs"}</span>
             </Link>
           </div>
         </section>
 
-        {/* ── Closing Soon urgency strip ────────────────────────── */}
+        {/* ── Closing in the next two weeks ─────────────────────── */}
         {closingSoon.length > 0 && (
-          <section className="mt-10">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <h2 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">
-                {isHi ? "जल्द बंद होने वाली भर्तियां" : "Closing soon — apply before it's too late"}
-              </h2>
+          <section id="closing" className="pt-2 pb-10">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 mb-2">
+              <h2 className={sectionTitle}>{isHi ? "अगले दो सप्ताह में बंद" : "Closing in the next two weeks"}</h2>
+              <Link href="/closing-soon" className={viewAll}>
+                {isHi ? `इस महीने बंद होने वाली सभी ${nf(closingMonthCount)} →` : `All ${nf(closingMonthCount)} closing this month →`}
+              </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {closingSoon.map((job) => {
-                const days = daysUntil(job.applicationEndDate);
-                const urgent = days <= 2;
+            <RowListHeader isHi={isHi} firstCol={isHi ? "समय बाकी" : "Time left"} />
+            <ul>
+              {closingSoon.map((r) => <RecruitmentRow key={r.slug} row={r} isHi={isHi} badge="countdown" />)}
+            </ul>
+            <p className="mt-3 pt-3 border-t border-black/8 text-sm text-neutral-500">
+              {isHi
+                ? "14 दिनों में बंद होने वाली अधिसूचनाओं में रिक्तियों के अनुसार क्रम, ताकि बड़ी भर्तियां पहले दिखें। तारीखें आधिकारिक अधिसूचना से।"
+                : "Ranked by vacancies among notifications closing within 14 days, so the biggest drives surface first. Dates come from the official notification; the badge counts down in IST."}
+            </p>
+          </section>
+        )}
+
+        {/* ── Biggest + categories ──────────────────────────────── */}
+        <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 lg:gap-12 pt-2 pb-10">
+          <div>
+            <div className="flex flex-wrap items-baseline justify-between gap-3 mb-2">
+              <h2 className={sectionTitle}>{isHi ? "अभी खुली सबसे बड़ी भर्तियां" : "Biggest recruitments open now"}</h2>
+              <Link href="/jobs" className={viewAll}>{isHi ? "सभी देखें →" : "All notifications →"}</Link>
+            </div>
+            <ul>
+              {biggest.map((r) => <RecruitmentRow key={r.slug} row={r} isHi={isHi} badge="vacancies" />)}
+            </ul>
+            <div className="border-t border-black/8" />
+          </div>
+
+          <aside id="sectors" className="flex flex-col gap-2.5">
+            <h2 className="text-xl font-semibold text-neutral-900 mb-1">{isHi ? "श्रेणी अनुसार देखें" : "Browse by category"}</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2.5">
+              {CATEGORY_GRID.map((cat) => {
+                const def = FEATURED_SECTORS.find((s) => sectorHref(s) === cat.href);
+                const count = def ? def.sectors.reduce((n, k) => n + (sectorCounts[k] ?? 0), 0) : null;
                 return (
                   <Link
-                    key={job.slug}
-                    href={`/jobs/${job.slug}`}
-                    className={`block rounded-lg border px-4 py-3 hover:shadow-md transition-shadow ${
-                      urgent
-                        ? "border-red-200 bg-red-50"
-                        : "border-amber-200 bg-amber-50"
-                    }`}
+                    key={cat.href}
+                    href={cat.href}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-black/12 bg-white px-4 py-3.5 font-semibold text-[15px] hover:border-brand-600/50 hover:bg-brand-50"
                   >
-                    <p className="text-xs font-medium text-neutral-500 truncate">{job.orgName}</p>
-                    <p className="mt-0.5 text-sm font-semibold text-neutral-900 line-clamp-2 leading-snug">
-                      {job.name}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between text-xs">
-                      <span className={`font-semibold ${urgent ? "text-red-600" : "text-amber-700"}`}>
-                        {days === 0
-                          ? (isHi ? "आज बंद" : "Closes today")
-                          : days === 1
-                          ? (isHi ? "कल बंद" : "Closes tomorrow")
-                          : isHi
-                          ? `${days} दिन बाकी`
-                          : `${days} days left`}
-                      </span>
-                      {job.totalVacancies != null && (
-                        <span className="text-neutral-500">
-                          {job.totalVacancies.toLocaleString(dateLocale)} {isHi ? "पद" : "posts"}
-                        </span>
-                      )}
-                    </div>
+                    <span className="truncate"><span className="mr-2" aria-hidden>{cat.emoji}</span>{isHi ? cat.labelHi : cat.label}</span>
+                    {count != null && count > 0 && <span className="tabular-nums text-sm font-semibold text-neutral-500">{nf(count)}</span>}
                   </Link>
                 );
               })}
             </div>
+          </aside>
+        </section>
+
+        {/* ── Open notifications ────────────────────────────────── */}
+        {open.length > 0 && (
+          <section className="pt-2 pb-10">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
+              <h2 className={sectionTitle}>{isHi ? "खुली अधिसूचनाएं" : "Open notifications"}</h2>
+              <div className="flex gap-2 overflow-x-auto max-w-full pb-1">
+                <span className="inline-flex h-8 items-center rounded-full bg-neutral-900 px-3 text-sm font-semibold text-white whitespace-nowrap">{isHi ? "सभी" : "All"}</span>
+                {FEATURED_SECTORS.map((s) => (
+                  <Link key={s.slug} href={sectorHref(s)} className="inline-flex h-8 items-center rounded-full border border-black/12 px-3 text-sm font-semibold whitespace-nowrap hover:border-brand-600/50">
+                    {isHi ? s.labelHi : s.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <ul>
+              {open.map((r) => <RecruitmentRow key={r.slug} row={r} isHi={isHi} badge="open" />)}
+            </ul>
+            <div className="border-t border-black/8" />
+            <div className="flex justify-center mt-5">
+              <Link href="/jobs" className="inline-flex h-11 items-center rounded-lg border-[1.5px] border-neutral-900 px-6 text-sm font-bold hover:bg-neutral-50">
+                {isHi ? `सभी ${nf(stats.liveRecruitments)} अधिसूचनाएं देखें` : `View all ${nf(stats.liveRecruitments)} live notifications`}
+              </Link>
+            </div>
           </section>
         )}
 
-        {/* ── Browse by Category ────────────────────────────────── */}
-        <section className="mt-12">
-          <h2 className="text-base font-semibold text-neutral-900 mb-4">
-            {isHi ? "श्रेणी अनुसार खोजें" : "Browse by category"}
-          </h2>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            {CATEGORY_GRID.map((cat) => (
-              <Link
-                key={cat.href}
-                href={cat.href}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-black/8 bg-white px-2 py-3 text-center hover:border-brand-600/40 hover:bg-brand-50 transition-colors"
-              >
-                <span className="text-2xl">{cat.emoji}</span>
-                <span className="text-[11px] font-medium text-neutral-700 leading-tight">
-                  {isHi ? cat.labelHi : cat.label}
-                </span>
-              </Link>
+        {/* ── Who is hiring ─────────────────────────────────────── */}
+        {orgs.length > 0 && (
+          <section id="orgs" className="pt-2 pb-11 flex flex-col gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className={sectionTitle}>{isHi ? "कौन भर्ती कर रहा है" : "Who is hiring"}</h2>
+              <Link href="/organizations" className={viewAll}>{isHi ? "सभी संगठन →" : "All organisations →"}</Link>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              {orgs.map((o) => (
+                <Link key={o.slug} href={`/organizations/${o.slug}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-black/12 bg-white px-3.5 text-[15px] font-semibold hover:border-brand-600/50">
+                  <span className="max-w-[260px] truncate">{isHi && o.nameHi ? o.nameHi : o.name}</span>
+                  <span className="tabular-nums text-neutral-500">{nf(o.vacancies)}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Trust ─────────────────────────────────────────────── */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 py-9 border-t border-black/8">
+          <TrustItem
+            icon={<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4zM9 12l2 2 4-4" />}
+            title={isHi ? "हर तथ्य आधिकारिक अधिसूचना से" : "Every fact from the official notification"}
+            body={isHi ? "रिक्तियां, तारीखें, शुल्क और पात्रता भर्ती संस्था की अपनी PDF से — कभी अनुमान नहीं, कभी किसी और पोर्टल से नहीं।" : "Vacancies, dates, fees and eligibility are taken from the recruiting body's own PDF — never guessed, never copied from another portal."}
+          />
+          <TrustItem
+            icon={<path d="M14 3h7v7M21 3l-9 9M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6" />}
+            title={isHi ? "आधिकारिक वेबसाइट पर आवेदन करें" : "Apply on the official website"}
+            body={isHi ? "हर पद सीधे सरकारी पोर्टल से जुड़ा है। JobOye कोई आवेदन, शुल्क या साइनअप नहीं लेता।" : "Each post links straight to the government portal. JobOye never takes an application, a fee or a signup."}
+          />
+          <TrustItem
+            icon={<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></>}
+            title={isHi ? "अंतिम तिथि, गिनती के साथ" : "Last date, counted down"}
+            body={isHi ? "हर पद का एक स्थायी पेज जो बताता है कितने दिन बचे हैं — और विंडो बंद होने के बाद भी सच बताता है।" : "One permanent page per post that tells you how many days are left, and stays honest after the window closes."}
+          />
+        </section>
+
+        {/* ── FAQ ───────────────────────────────────────────────── */}
+        <section className="pb-14 max-w-3xl">
+          <h2 className="text-xl font-semibold text-neutral-900 mb-3">{isHi ? "आम सवाल" : "Common questions"}</h2>
+          <div className="border-b border-black/8">
+            {HOME_FAQ.map(({ q, a }) => (
+              <details key={q} className="border-t border-black/8 py-3.5 group">
+                <summary className="cursor-pointer font-semibold text-neutral-900 list-none flex justify-between gap-4">
+                  {q}
+                  <span className="text-neutral-400 group-open:rotate-45 transition-transform" aria-hidden>+</span>
+                </summary>
+                <p className="mt-2 text-[15px] text-neutral-600">{a}</p>
+              </details>
             ))}
           </div>
         </section>
-
-        {/* ── Job listings ─────────────────────────────────────── */}
-        <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
-          <JobColumn
-            title={isHi ? "नवीनतम सरकारी नौकरियां" : "Latest government jobs"}
-            href="/jobs?kind=GOVERNMENT"
-            postings={govtJobs}
-            isHi={isHi}
-            stageLabels={stageLabels}
-            dateLocale={dateLocale}
-            viewAllLabel={isHi ? "सभी देखें" : "View all"}
-            noPostingsLabel={isHi ? "अभी कोई पोस्टिंग नहीं — जल्द आएगी।" : "No postings yet — check back soon."}
-          />
-          {privateJobs.length > 0 && (
-            <JobColumn
-              title={isHi ? "नवीनतम निजी नौकरियां" : "Latest private jobs"}
-              href="/jobs?kind=PRIVATE"
-              postings={privateJobs}
-              isHi={isHi}
-              stageLabels={stageLabels}
-              dateLocale={dateLocale}
-              viewAllLabel={isHi ? "सभी देखें" : "View all"}
-              noPostingsLabel={isHi ? "अभी कोई पोस्टिंग नहीं — जल्द आएगी।" : "No postings yet — check back soon."}
-            />
-          )}
-        </div>
-
-        {/* ── Guides & Articles ─────────────────────────────────── */}
-        {articles.length > 0 && (
-          <section className="mt-12">
-            <h2 className="text-base font-semibold text-neutral-900 mb-3">
-              {isHi ? "गाइड और लेख" : "Guides & articles"}
-            </h2>
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {articles.map((article) => {
-                const titleHi = (article as Record<string, unknown>).titleHi as string | null;
-                const dekHi = (article as Record<string, unknown>).dekHi as string | null;
-                const displayTitle = isHi && titleHi ? titleHi : article.title;
-                const displayDek = isHi && dekHi ? dekHi : article.dek;
-                const href = isHi && titleHi ? `/hi/articles/${article.slug}` : `/articles/${article.slug}`;
-                return (
-                  <li key={article.id}>
-                    <Link
-                      href={href}
-                      className="block rounded-md border border-black/10 px-4 py-3 hover:border-black/25 hover:bg-neutral-50"
-                    >
-                      <span className="font-medium text-neutral-900">{displayTitle}</span>
-                      {displayDek && (
-                        <p className="text-sm text-neutral-500 mt-0.5">{displayDek}</p>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* ── Control Center CTA ────────────────────────────────── */}
-        <section className="mt-12">
-          <Link
-            href="/posts"
-            className="flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50 px-6 py-5 hover:bg-brand-100 transition-colors"
-          >
-            <div>
-              <p className="font-semibold text-brand-800">
-                {isHi ? "सभी सरकारी नौकरी पोस्टिंग देखें" : "View all government job postings"}
-              </p>
-              <p className="text-sm text-brand-600 mt-0.5">
-                {isHi
-                  ? "रिक्तियां, अंतिम तिथियां और शीर्ष संगठन एक जगह"
-                  : "Vacancies, deadlines and top organisations — in one place"}
-              </p>
-            </div>
-            <span className="text-2xl text-brand-400 ml-4">→</span>
-          </Link>
-        </section>
-
-        {/* ── FAQ ──────────────────────────────────────────────── */}
-        <section className="mt-16 border-t border-black/8 pt-12">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-6">
-            {isHi ? "अक्सर पूछे जाने वाले सवाल" : "Frequently asked questions"}
-          </h2>
-          <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {FAQ_EN.map(({ q, a }) => (
-              <div key={q} className="rounded-lg border border-black/8 px-5 py-4">
-                <dt className="font-medium text-neutral-900 text-sm">{q}</dt>
-                <dd className="mt-2 text-sm text-neutral-600 leading-relaxed">{a}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
       </div>
     </>
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
-
-function StatPill({
-  value,
-  label,
-  live,
-  urgent,
-}: {
-  value: string;
-  label: string;
-  live?: boolean;
-  urgent?: boolean;
-}) {
+function TrustItem({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <div className={`rounded-lg border px-4 py-3 ${urgent ? "border-amber-200 bg-amber-50" : "border-black/8 bg-white"}`}>
-      <div className="flex items-center gap-1.5">
-        {live && (
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-        )}
-        <span className={`text-2xl font-bold tabular-nums tracking-tight ${urgent ? "text-amber-700" : "text-neutral-900"}`}>
-          {value}
-        </span>
-      </div>
-      <p className="text-xs text-neutral-500 mt-0.5">{label}</p>
+    <div className="flex flex-col gap-2">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600" aria-hidden="true">{icon}</svg>
+      <h3 className="font-semibold text-[17px] text-neutral-900">{title}</h3>
+      <p className="text-[15px] text-neutral-600">{body}</p>
     </div>
-  );
-}
-
-function JobColumn({
-  title,
-  href,
-  postings,
-  isHi,
-  stageLabels,
-  dateLocale,
-  viewAllLabel,
-  noPostingsLabel,
-}: {
-  title: string;
-  href: string;
-  postings: Postings;
-  isHi: boolean;
-  stageLabels: Record<string, string>;
-  dateLocale: "en-IN" | "hi-IN";
-  viewAllLabel: string;
-  noPostingsLabel: string;
-}) {
-  return (
-    <section>
-      <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
-        <Link href={href} className="text-sm text-brand-600 hover:underline">
-          {viewAllLabel}
-        </Link>
-      </div>
-      <ul className="divide-y divide-black/8">
-        {postings.map((posting) => {
-          const titleHi = (posting as Record<string, unknown>).titleHi as string | null;
-          const orgNameHi = (posting.organization as Record<string, unknown>).nameHi as string | null;
-          const displayTitle = isHi && titleHi ? titleHi : posting.title;
-          const displayOrgName = isHi && orgNameHi ? orgNameHi : posting.organization.name;
-          const detailHref =
-            isHi && titleHi ? `/hi/jobs/${posting.slug}` : `/jobs/${posting.slug}`;
-
-          return (
-            <li key={posting.id} className="py-3">
-              <Link href={detailHref} className="font-medium text-neutral-900 hover:text-brand-700 hover:underline text-sm leading-snug">
-                {displayTitle}
-              </Link>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                {displayOrgName} · {stageLabels[posting.currentStage] ?? posting.currentStage}
-              </p>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                {formatDate(posting.datePosted, dateLocale)}
-                {(posting as Record<string, unknown>).totalVacancies != null && (
-                  <> · {((posting as Record<string, unknown>).totalVacancies as number).toLocaleString(dateLocale)} {isHi ? "पद" : "posts"}</>
-                )}
-                {(posting as Record<string, unknown>).validThrough != null && (
-                  <> · {isHi ? "अंतिम तिथि" : "Last date"}: {formatDate(String((posting as Record<string, unknown>).validThrough), dateLocale)}</>
-                )}
-              </p>
-            </li>
-          );
-        })}
-        {postings.length === 0 && (
-          <li className="py-6 text-sm text-neutral-400">{noPostingsLabel}</li>
-        )}
-      </ul>
-    </section>
   );
 }

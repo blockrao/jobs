@@ -7,12 +7,16 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 
-const NAV_LINKS: { href: string; label: Record<Locale, string> }[] = [
+// Primary navigation mirrors the homepage's information architecture
+// (HOMEPAGE_DESIGN_STRATEGY_2026_10_14): urgency first, then the browse axes
+// that are actually populated. Exams/News/Guides stay reachable from the footer.
+const NAV_LINKS: { href: string; label: Record<Locale, string>; accent?: boolean }[] = [
+  { href: "/closing-soon", label: { en: "Closing soon", hi: "जल्द बंद" }, accent: true },
+  { href: "/jobs", label: { en: "All jobs", hi: "सभी नौकरियां" } },
+  { href: "/categories", label: { en: "Categories", hi: "श्रेणियां" } },
+  { href: "/organizations", label: { en: "Organisations", hi: "संगठन" } },
+  { href: "/states", label: { en: "States", hi: "राज्य" } },
   { href: "/search", label: { en: "Search", hi: "खोजें" } },
-  { href: "/jobs", label: { en: "All Jobs", hi: "सभी नौकरियां" } },
-  { href: "/exams", label: { en: "By Exam", hi: "परीक्षा अनुसार" } },
-  { href: "/news", label: { en: "News", hi: "समाचार" } },
-  { href: "/articles", label: { en: "Guides", hi: "गाइड" } },
 ];
 
 export function Header() {
@@ -60,7 +64,7 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-neutral-700 hover:text-black hover:underline"
+              className={link.accent ? "font-semibold text-red-800 hover:underline" : "text-neutral-700 hover:text-black hover:underline"}
             >
               {link.label[locale]}
             </Link>

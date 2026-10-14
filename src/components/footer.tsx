@@ -72,6 +72,12 @@ export function Footer() {
           <Link href="/articles" className="hover:underline">
             {t.articles}
           </Link>
+          <Link href="/exams" className="hover:underline">
+            {locale === "hi" ? "परीक्षा अनुसार" : "By exam"}
+          </Link>
+          <Link href="/news" className="hover:underline">
+            {locale === "hi" ? "समाचार" : "News"}
+          </Link>
         </div>
         <div className="flex flex-wrap gap-x-4 text-xs text-neutral-400">
           <Link href="/about" className="hover:underline">
