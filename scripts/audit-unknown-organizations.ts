@@ -73,7 +73,7 @@ async function main() {
   const out = resolve(outIndex >= 0 ? process.argv[outIndex + 1] : "./unknown-organization-audit.json");
   const db = postgres(process.env.DATABASE_URL, { max: 3, connect_timeout: 10, idle_timeout: 5 });
   try {
-    const targets = await db<Target[]>(
+    const targets = await db.unsafe<Target[]>(
       "select p.id as post_id, p.slug, p.name as post_name, p.title as post_title, " +
       'p."organizationName" as organization_name, p."organizationId" as organization_id, ' +
       "p.employing_organization_id, p.recruitment_id, r.name as recruitment_name, " +
@@ -82,12 +82,12 @@ async function main() {
       "from public.posts p left join public.recruitments r on r.id = p.recruitment_id " +
       "where p.\"organizationName\" is null or lower(btrim(p.\"organizationName\")) in ('unknown organization', '') order by p.id"
     );
-    const aliases = await db<Alias[]>(
+    const aliases = await db.unsafe<Alias[]>(
       "select a.organization_id, o.name as organization_name, o.slug as organization_slug, o.website_url, " +
       "a.alias_raw, a.alias_normalized from public.organization_aliases a join public.organizations o " +
       "on o.id = a.organization_id where lower(o.name) <> 'unknown organization' order by a.organization_id"
     );
-    const orgs = await db<Array<{id:number;name:string;slug:string;website_url:string|null}>>(
+    const orgs = await db.unsafe<Array<{id:number;name:string;slug:string;website_url:string|null}>>(
       "select id, name, slug, website_url from public.organizations where lower(name) <> 'unknown organization' order by id"
     );
     const urls = [...new Set(targets.flatMap((t) => [t.post_official_url, t.recruitment_official_url, t.apply_portal_url])
