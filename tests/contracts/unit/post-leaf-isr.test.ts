@@ -19,7 +19,7 @@ describe("P0 Post Leaf ISR and bounded context query", () => {
   test("leaf context only selects recruitment facts and sibling link summaries", () => {
     const source = stripComments(readSource(RECRUITMENT_QUERIES));
     const start = source.indexOf("export async function getRecruitmentLeafContext(");
-    const end = source.indexOf("/** Request-scoped memoization", start);
+    const end = source.indexOf("export const getRecruitmentWithPostsCached", start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
 
