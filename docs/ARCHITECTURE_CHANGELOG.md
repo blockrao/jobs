@@ -1334,3 +1334,20 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 
 **Guardrails.** Extracted section facts remain discovery evidence, not official verification or canonical JobOye facts. No canonical Recruitment/Post write is added. The workflow stays pilot-only pending acceptance.
 
+
+## DATA-001 — placeholder deadlines removed; enrichment deadline becomes nullable
+
+| Field | Value |
+| --- | --- |
+| Change ID | DATA-001 |
+| Date | 2026-10-14 |
+| Status | Migrations committed; applied 2026-10-14 through the recorded path (see ledger A-088 for verification) |
+| Scope | `post_enrichments` (38 rows + one column constraint + one check), `posts.key_dates` (38 rows) |
+
+**Objective.** Stop fabricated application deadlines from existing in canonical data. 38 Posts carried `2099-12-31` in both `posts.key_dates.applicationCloseDate` and `post_enrichments.applicationClosingDate`.
+
+**Cause.** `post_enrichments.applicationClosingDate` was NOT NULL, so every writer without a verified deadline had to invent one: a bulk `key_dates` write (out-of-band, not in the repository) used `2099-12-31` for recruitments with no end date, and the 2026-10-08 enrichment backfill copied it. The same constraint made the 2026-10-08 consolidation migration store `NOW()` as a deadline (20 rows, not touched here; see A-088 open findings).
+
+**Change.** Three migrations, one concern each: `20261014040000_data_001a` drops NOT NULL; `20261014040100_data_001b` nulls the 38 enrichment values and removes the `applicationCloseDate` key from the 38 `key_dates` objects (both guarded by the explicit id list and the sentinel value); `20261014040200_data_001c` adds `post_enrichments_dates_plausible` (every date column NULL or in [1900, 2090)). No replacement date is written. Application side: `src/lib/recruitment-dates.ts` guard (PR #73) already treats a missing deadline as UNKNOWN, so public rendering is unchanged by the data change.
+
+**Guardrails.** Rollback scripts in `supabase/rollback/`; the data rollback is intentionally empty (a placeholder is never restored). The 11 posts whose recruitment now has an end date (10, 11, 35, 36, 67, 147, 285, 287, 821, 1420, 1521) are queued for official-source verification, not backfilled.
