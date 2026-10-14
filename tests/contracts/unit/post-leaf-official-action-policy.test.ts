@@ -18,7 +18,7 @@ describe("Post Leaf official actions", () => {
 
     expect(source).toContain('const localePrefix = locale === "hi" ? "/hi" : "";');
     expect(source).toContain('href={`${localePrefix}/jobs`}');
-    expect(source).toContain('href={`${localePrefix}/organizations/${recruitment.recruitment.organizationSlug}`}');
+    expect(source).toContain('href={`${localePrefix}/organizations/${organizationSlug}`}');
     expect(source).toContain('href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}');
   });
   test("related-role navigation excludes the current Post Leaf", () => {
@@ -26,7 +26,7 @@ describe("Post Leaf official actions", () => {
 
     expect(source).toContain("{siblingPosts.map((p) => (");
     expect(source).not.toContain("{recruitment?.posts?.map((p) => (");
-    expect(source).toContain("Explore the other roles available under this recruitment.");
+    expect(source).toContain("Other posts in this recruitment");
   });
 
 });

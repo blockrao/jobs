@@ -21,6 +21,7 @@
 
 import { JobPostingData, PostEnrichment } from "@/types/job-posting";
 import { isAggregatorUrl } from "@/lib/aggregators";
+import { toPlausibleRecruitmentDate } from "@/lib/recruitment-dates";
 
 // ---------------------------------------------------------------------------
 // Supporting types
@@ -342,26 +343,26 @@ export function resolveDeadline(
   },
   now: Date
 ): ResolvedDeadline {
-  const enrichmentDeadline = post.enrichment?.applicationClosingDate;
+  // A placeholder deadline (e.g. 2099-12-31 written by a bulk update) is not a
+  // fact. It is treated exactly like an absent deadline so it can never resolve
+  // to OPEN, drive a countdown, or reach structured data. See src/lib/recruitment-dates.ts.
+  const enrichmentDeadline = toPlausibleRecruitmentDate(post.enrichment?.applicationClosingDate);
 
   // --- Enrichment deadline ---
-  if (enrichmentDeadline instanceof Date && !isNaN(enrichmentDeadline.getTime())) {
+  if (enrichmentDeadline) {
     const state: DeadlineState =
       enrichmentDeadline.getTime() > now.getTime() ? "OPEN" : "CLOSED";
     return { date: enrichmentDeadline, state };
   }
 
   // --- Recruitment-level fallback (only when explicitly confirmed for this Post) ---
-  if (
-    post.postDeadlineConfirmedForRecruitment &&
-    post.recruitmentApplicationEndDate instanceof Date &&
-    !isNaN(post.recruitmentApplicationEndDate.getTime())
-  ) {
+  const recruitmentDeadline = post.postDeadlineConfirmedForRecruitment
+    ? toPlausibleRecruitmentDate(post.recruitmentApplicationEndDate)
+    : null;
+  if (recruitmentDeadline) {
     const state: DeadlineState =
-      post.recruitmentApplicationEndDate.getTime() > now.getTime()
-        ? "OPEN"
-        : "CLOSED";
-    return { date: post.recruitmentApplicationEndDate, state };
+      recruitmentDeadline.getTime() > now.getTime() ? "OPEN" : "CLOSED";
+    return { date: recruitmentDeadline, state };
   }
 
   return { date: null, state: "UNKNOWN" };

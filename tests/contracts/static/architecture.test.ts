@@ -185,7 +185,7 @@ describe("entity model shape (application schema)", () => {
 });
 
 describe("trust boundary in application code (SEC-001)", () => {
-  const CRON_ENDPOINTS = ["src/pages/api/ingest.ts", "src/app/api/cron/update-recruitment-lifecycle/route.ts"];
+  const CRON_ENDPOINTS = ["src/app/api/ingest/route.ts", "src/app/api/cron/update-recruitment-lifecycle/route.ts"];
 
   // A privileged endpoint must refuse when its secret is not configured. A
   // literal fallback secret, or a comparison that passes when both sides are
