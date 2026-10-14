@@ -478,99 +478,24 @@ export async function getRecruitmentLeafContext(slug: string) {
       organizationName: row.organizationName,
       organizationSlug: row.organizationSlug,
       organizationSector: row.organizationSector as string,
-      sourceVerificationStatus: null as string | null,
-      sourceListingPublishedDate: null as Date | string | null,
-      sourceExtract: null as null | {
-        title: string | null;
-        sourceUrl: string | null;
-        applicationStartDate: Date | string | null;
-        applicationEndDate: Date | string | null;
-        vacancyCount: number | null;
-        qualification: string | null;
-        details: unknown;
-        otherInfoRaw: unknown;
-        sourceStatus: string | null;
-        detailStatus: string | null;
-      },
     };
 
-    const [sourceResult, siblingPosts] = await Promise.all([
-      db.execute(sql`
-        SELECT
-          other_info_raw->>'canonical_verification_status' AS source_verification_status,
-          published_date AS source_listing_published_date,
-          title AS source_title,
-          source_url,
-          application_start_date AS source_application_start_date,
-          application_end_date AS source_application_end_date,
-          vacancy_count AS source_vacancy_count,
-          qualification AS source_qualification,
-          details AS source_details,
-          other_info_raw AS source_other_info_raw,
-          source_status,
-          detail_status
-        FROM fja_job_inventory
-        WHERE other_info_raw->>'canonical_recruitment_id' = ${String(recruitment.id)}
-        ORDER BY id DESC
-        LIMIT 1
-      `),
-      db
-        .select({
-          id: posts.id,
-          slug: posts.slug,
-          title: posts.name,
-        })
-        .from(posts)
-        .where(eq(posts.recruitmentId, recruitment.id)),
-    ]);
-
-    const sourceRows = (sourceResult as unknown as { rows?: unknown[] }).rows ?? sourceResult;
-    const source = Array.isArray(sourceRows)
-      ? sourceRows[0] as Record<string, unknown> | undefined
-      : undefined;
-
-    if (source) {
-      Object.assign(recruitment, {
-        sourceVerificationStatus:
-          typeof source.source_verification_status === "string" ? source.source_verification_status : null,
-        sourceListingPublishedDate:
-          typeof source.source_listing_published_date === "string" ||
-          source.source_listing_published_date instanceof Date
-            ? source.source_listing_published_date as Date | string
-            : null,
-        sourceExtract: {
-          title: typeof source.source_title === "string" ? source.source_title : null,
-          sourceUrl: typeof source.source_url === "string" ? source.source_url : null,
-          applicationStartDate:
-            typeof source.source_application_start_date === "string" ||
-            source.source_application_start_date instanceof Date
-              ? source.source_application_start_date as Date | string
-              : null,
-          applicationEndDate:
-            typeof source.source_application_end_date === "string" ||
-            source.source_application_end_date instanceof Date
-              ? source.source_application_end_date as Date | string
-              : null,
-          vacancyCount: typeof source.source_vacancy_count === "number" ? source.source_vacancy_count : null,
-          qualification: typeof source.source_qualification === "string" ? source.source_qualification : null,
-          details: source.source_details ?? null,
-          otherInfoRaw: source.source_other_info_raw ?? null,
-          sourceStatus: typeof source.source_status === "string" ? source.source_status : null,
-          detailStatus: typeof source.detail_status === "string" ? source.detail_status : null,
-        },
-      });
-    }
-
-    const postsList = siblingPosts.map((post) => ({
-      ...post,
-      title: post.title,
-    }));
+    // The leaf renders sibling links only; it does not consume their detailed
+    // vacancy, eligibility, inventory, or enrichment records.
+    const siblingPosts = await db
+      .select({
+        id: posts.id,
+        slug: posts.slug,
+        title: posts.name,
+      })
+      .from(posts)
+      .where(eq(posts.recruitmentId, recruitment.id));
 
     return {
       recruitment,
-      posts: postsList,
-      totalPosts: postsList.length,
-      isSingleJobRecruitment: postsList.length === 1,
+      posts: siblingPosts,
+      totalPosts: siblingPosts.length,
+      isSingleJobRecruitment: siblingPosts.length === 1,
     };
   } catch (err) {
     console.error("Error fetching lightweight recruitment leaf context:", err);
