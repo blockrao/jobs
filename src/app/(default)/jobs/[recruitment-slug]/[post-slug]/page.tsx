@@ -102,7 +102,7 @@ function buildPostMetaDescription(params: {
 // React request memoization shares the Post lookup between generateMetadata and Page.
 // This is request-scoped, not persistent caching, so deadlines and eligibility stay fresh.
 const getPostBySlugForRequest = cache(async (recruitmentSlug: string, postSlug: string) =>
-  getPostBySlug(recruitmentSlug, postSlug)
+  getPostBySlug(recruitmentSlug, postSlug, true)
 );
 
 interface JobPostingPageRouteProps {
