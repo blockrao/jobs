@@ -61,11 +61,13 @@ describe("listings and fixed pages", () => {
     for (const f of [
       "src/app/(default)/recruitments/page.tsx",
       "src/app/(default)/positions/page.tsx",
-      "src/app/(default)/positions/[slug]/page.tsx",
     ]) {
       expect(stripComments(readSource(f)), f).toMatch(/pageSeo\([^)]*\{ index: false \}\)/);
     }
-    // This route redirects to the canonical /jobs entity; it should not render a second page.
+    // Redirect routes must not render a duplicate page or require page metadata.
+    const positionRedirect = stripComments(readSource("src/app/(default)/positions/[slug]/page.tsx"));
+    expect(positionRedirect).toContain("permanentRedirect(`/posts/${slug}`)");
+    expect(positionRedirect).not.toMatch(/pageSeo\(/);
     expect(stripComments(readSource("src/app/(default)/recruitments/[slug]/page.tsx"))).toContain("redirect(`/jobs/${slug}`)");
   });
 });
