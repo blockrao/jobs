@@ -3,25 +3,27 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
-import type { listArticles, listCategories, listPostings } from "@/lib/queries";
+import type { listArticles, listPostings } from "@/lib/queries";
 import type { HomepageStats, ClosingSoonJob } from "@/lib/queries";
 import { STAGE_LABELS, STAGE_LABELS_HI, formatDate } from "@/lib/labels";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
+import { FEATURED_SECTORS, FEATURED_ORG_TILES, sectorHref } from "@/lib/sectors";
 
 type Postings = Awaited<ReturnType<typeof listPostings>>;
-type Categories = Awaited<ReturnType<typeof listCategories>>;
 type Articles = Awaited<ReturnType<typeof listArticles>>;
 
-const CATEGORY_GRID = [
-  { label: "UPSC / IAS", labelHi: "UPSC / IAS", href: "/categories/upsc", emoji: "🏛️" },
-  { label: "SSC", labelHi: "SSC", href: "/categories/ssc", emoji: "📋" },
-  { label: "Railway", labelHi: "रेलवे", href: "/categories/railway", emoji: "🚆" },
-  { label: "Banking", labelHi: "बैंकिंग", href: "/categories/banking", emoji: "🏦" },
-  { label: "Teaching", labelHi: "शिक्षक", href: "/categories/teaching", emoji: "📚" },
-  { label: "Defence", labelHi: "रक्षा", href: "/categories/defence", emoji: "🪖" },
-  { label: "State PSC", labelHi: "राज्य PSC", href: "/categories/state-psc", emoji: "⚖️" },
-  { label: "Police", labelHi: "पुलिस", href: "/categories/police", emoji: "🛡️" },
+// "Browse by category" tiles derive from the single sector taxonomy
+// (src/lib/sectors.ts) plus two organization hubs people search by name.
+// Every href here is guaranteed to resolve; do not hand-type slugs.
+const CATEGORY_GRID: { label: string; labelHi: string; href: string; emoji: string }[] = [
+  ...FEATURED_SECTORS.map((s) => ({
+    label: s.label,
+    labelHi: s.labelHi,
+    href: sectorHref(s),
+    emoji: s.emoji,
+  })),
+  ...FEATURED_ORG_TILES,
 ];
 
 const FAQ_EN = [
@@ -62,14 +64,12 @@ function fmtDeadline(d: Date, locale: string): string {
 export function HomeContent({
   govtJobs,
   privateJobs,
-  categories,
   articles,
   homepageStats,
   closingSoon,
 }: {
   govtJobs: Postings;
   privateJobs: Postings;
-  categories: Categories;
   articles: Articles;
   homepageStats: HomepageStats;
   closingSoon: ClosingSoonJob[];
@@ -285,29 +285,6 @@ export function HomeContent({
             />
           )}
         </div>
-
-        {/* ── Dynamic categories from DB ────────────────────────── */}
-        {categories.length > 0 && (
-          <section className="mt-12">
-            <h2 className="text-base font-semibold text-neutral-900 mb-3">
-              {isHi ? "सभी श्रेणियां" : "All categories"}
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => {
-                const nameHi = (category as Record<string, unknown>).nameHi as string | null;
-                return (
-                  <Link
-                    key={category.id}
-                    href={`/categories/${category.slug}`}
-                    className="rounded-full border border-black/10 px-3 py-1.5 text-sm hover:border-black/30 hover:bg-neutral-50"
-                  >
-                    {isHi && nameHi ? nameHi : category.name}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
         {/* ── Guides & Articles ─────────────────────────────────── */}
         {articles.length > 0 && (

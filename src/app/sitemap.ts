@@ -1,11 +1,11 @@
 import { STATES } from "@/lib/states/states";
 import { countCurrentByState } from "@/lib/states/queries";
 import type { MetadataRoute } from "next";
+import { SECTORS } from "@/lib/sectors";
 import { SITE_URL } from "@/lib/site";
 import { ROLE_REGISTRY } from "@/lib/roles";
 import {
   getAllArticleSlugsForSitemap,
-  getAllCategorySlugsForSitemap,
   getAllExamSlugsForSitemap,
   getAllOrganizationSlugsForSitemap,
   getPostingSlugsPageForSitemap,
@@ -28,10 +28,9 @@ const MAX_POSTING_URLS = 45000;
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [postingRows, articleRows, categoryRows, orgRows, examRows, postLeafRows, recruitmentRows] = await Promise.all([
+  const [postingRows, articleRows, orgRows, examRows, postLeafRows, recruitmentRows] = await Promise.all([
     getPostingSlugsPageForSitemap(0, MAX_POSTING_URLS).catch(() => []),
     getAllArticleSlugsForSitemap().catch(() => []),
-    getAllCategorySlugsForSitemap().catch(() => []),
     getAllOrganizationSlugsForSitemap().catch(() => []),
     getAllExamSlugsForSitemap().catch(() => []),
     getPostSlugsForSitemap().catch(() => []),
@@ -91,10 +90,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...sitemapAlternates("/articles", row.slug, Boolean(row.titleHi)),
   }));
 
-  const categoryEntries: MetadataRoute.Sitemap = categoryRows.map((row) => ({
-    url: `${SITE_URL}/categories/${row.slug}`,
+  // Sector hubs come from the single taxonomy in src/lib/sectors.ts — the
+  // only /categories/* URLs that resolve; the old `categories` table slugs 301.
+  const categoryEntries: MetadataRoute.Sitemap = SECTORS.map((s) => ({
+    url: `${SITE_URL}/categories/${s.slug}`,
     changeFrequency: "daily",
-    priority: 0.5,
+    priority: 0.7,
   }));
 
   const orgEntries: MetadataRoute.Sitemap = orgRows.map((row) => ({

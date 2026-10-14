@@ -5,6 +5,7 @@ import { locales, defaultLocale } from "@/i18n/request";
 import legacyExamSlugs from "@/lib/legacy-exam-slugs.generated.json";
 import { getLegacyExamRedirect } from "@/lib/legacy-exam-routing";
 import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
+import { getSector, getSectorByAlias, sectorHref } from "@/lib/sectors";
 
 // Import Supabase client for redirect lookups
 import { getDb } from "@/db";
@@ -64,6 +65,16 @@ export async function proxy(request: NextRequest) {
       loginUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(loginUrl);
     }
+  }
+
+  // Legacy footer links used `/jobs?sector=<x>`, a query parameter /jobs never
+  // read, so six URLs served the same unfiltered listing. 301 them to the
+  // sector hub (src/lib/sectors.ts); unknown values drop the parameter.
+  if (pathname === "/jobs" && request.nextUrl.searchParams.has("sector")) {
+    const sectorParam = request.nextUrl.searchParams.get("sector") ?? "";
+    const target = getSector(sectorParam) ?? getSectorByAlias(sectorParam);
+    const url = new URL(target ? sectorHref(target) : "/jobs", request.url);
+    return NextResponse.redirect(url, { status: 301 });
   }
 
   // Handle URL slug redirects from old format to new semantic format

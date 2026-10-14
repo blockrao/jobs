@@ -2,19 +2,35 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { getCategoryBySlug } from "@/lib/queries";
-import { STAGE_LABELS, STAGE_LABELS_HI, formatDate } from "@/lib/labels";
+import type { SectorPostRow } from "@/lib/queries";
+import type { SectorDef } from "@/lib/sectors";
+import { SECTORS, sectorHref } from "@/lib/sectors";
+import { formatDate } from "@/lib/labels";
+import { pageHref } from "@/lib/pagination";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 
-type CategoryResult = NonNullable<Awaited<ReturnType<typeof getCategoryBySlug>>>;
+// Sector hub body. The page (src/app/(default)/categories/[slug]/page.tsx)
+// stays a static/ISR server component; this client component picks the
+// language from the visitor's saved cookie — same pattern as home-content.
 
-// Same pattern as home-content.tsx / categories-content.tsx: the page
-// (src/app/categories/[slug]/page.tsx) stays a plain static/ISR server
-// component that only fetches data, and this client component decides how
-// to render it based on the visitor's saved language cookie.
-export function CategoryContent({ result }: { result: CategoryResult }) {
-  const { category, postings, articles } = result;
+function daysUntil(d: Date): number {
+  return Math.ceil((d.getTime() - Date.now()) / 86_400_000);
+}
+
+export function CategoryContent({
+  sector,
+  posts,
+  total,
+  page,
+  hasNext,
+}: {
+  sector: SectorDef;
+  posts: SectorPostRow[];
+  total: number;
+  page: number;
+  hasNext: boolean;
+}) {
   const [locale, setLocale] = useState<Locale>("en");
 
   useEffect(() => {
@@ -28,86 +44,128 @@ export function CategoryContent({ result }: { result: CategoryResult }) {
   }, []);
 
   const isHi = locale === "hi";
-  const stageLabels = isHi ? STAGE_LABELS_HI : STAGE_LABELS;
   const dateLocale = isHi ? "hi-IN" : "en-IN";
-
-  const nameHi = (category as any).nameHi as string | null;
-  const descriptionHi = (category as any).descriptionHi as string | null;
-  const displayName = isHi && nameHi ? nameHi : category.name;
-  const displayDescription =
-    isHi && descriptionHi ? descriptionHi : category.description;
+  const base = sectorHref(sector);
 
   const L = {
-    openPostings: isHi ? "खुली पोस्टिंग" : "Open Postings",
-    noPostings: isHi
-      ? "इस श्रेणी में अभी कोई पोस्टिंग नहीं है।"
-      : "No postings in this category yet.",
-    relatedGuides: isHi ? "संबंधित गाइड" : "Related Guides",
+    title: isHi ? `${sector.labelHi} नौकरियां` : `${sector.label} Jobs`,
+    live: isHi ? "खुली भर्तियां" : "Open posts",
+    none: isHi ? "इस श्रेणी में अभी कोई खुली भर्ती नहीं है।" : "No open posts in this category right now.",
+    vacancies: isHi ? "रिक्तियां" : "vacancies",
+    lastDate: isHi ? "अंतिम तिथि" : "Last date",
+    upcoming: isHi ? "जल्द" : "Upcoming",
+    closingToday: isHi ? "आज बंद" : "Closes today",
+    daysLeft: (n: number) => (isHi ? `${n} दिन बाकी` : `${n} days left`),
+    prev: isHi ? "← पिछला" : "← Previous",
+    next: isHi ? "अगला →" : "Next →",
+    pageOf: isHi ? `पृष्ठ ${page}` : `Page ${page}`,
+    other: isHi ? "अन्य श्रेणियां" : "Other categories",
   };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
-      {displayDescription && (
-        <p className="mt-2 max-w-2xl text-neutral-600">{displayDescription}</p>
-      )}
+      <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
+        <Link href="/" className="hover:underline">{isHi ? "होम" : "Home"}</Link>
+        {" / "}
+        <Link href="/categories" className="hover:underline">{isHi ? "श्रेणियां" : "Categories"}</Link>
+        {" / "}
+        <span className="text-neutral-800">{isHi ? sector.labelHi : sector.label}</span>
+      </nav>
 
-      <h2 className="mt-8 text-lg font-semibold">{L.openPostings}</h2>
-      <ul className="mt-3 divide-y divide-black/10">
-        {postings.map((posting) => {
-          const titleHi = (posting as any).titleHi as string | null;
-          const orgNameHi = (posting.organization as any).nameHi as
-            | string
-            | null;
-          const displayTitle = isHi && titleHi ? titleHi : posting.title;
-          const displayOrgName =
-            isHi && orgNameHi ? orgNameHi : posting.organization.name;
-          const detailHref =
-            isHi && titleHi ? `/hi/jobs/${posting.slug}` : `/jobs/${posting.slug}`;
-          return (
-            <li key={posting.id} className="py-4">
-              <Link href={detailHref} className="font-semibold hover:underline">
-                {displayTitle}
-              </Link>
-              <p className="text-sm text-neutral-600">
-                {displayOrgName} ·{" "}
-                {stageLabels[posting.currentStage] ?? posting.currentStage} ·{" "}
-                {isHi ? "पोस्ट किया गया " : "Posted "}
-                {formatDate(posting.datePosted, dateLocale)}
-              </p>
-            </li>
-          );
-        })}
-        {postings.length === 0 && (
-          <li className="py-6 text-sm text-neutral-500">{L.noPostings}</li>
+      <h1 className="mt-3 text-2xl font-bold tracking-tight">
+        <span className="mr-2" aria-hidden>{sector.emoji}</span>
+        {L.title}
+      </h1>
+      <p className="mt-2 max-w-2xl text-neutral-600">
+        {isHi ? sector.descriptionHi : sector.description}
+      </p>
+
+      <h2 className="mt-8 text-lg font-semibold">
+        {L.live}
+        {total > 0 && (
+          <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700">
+            {total}
+          </span>
         )}
-      </ul>
+      </h2>
 
-      {articles.length > 0 && (
-        <>
-          <h2 className="mt-8 text-lg font-semibold">{L.relatedGuides}</h2>
-          <ul className="mt-3 space-y-2">
-            {articles.map((article) => {
-              const titleHi = (article as any).titleHi as string | null;
-              const displayTitle = isHi && titleHi ? titleHi : article.title;
-              const href =
-                isHi && titleHi
-                  ? `/hi/articles/${article.slug}`
-                  : `/articles/${article.slug}`;
-              return (
-                <li key={article.id}>
-                  <Link
-                    href={href}
-                    className="font-medium underline hover:no-underline"
-                  >
-                    {displayTitle}
+      {posts.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-500">{L.none}</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-black/10">
+          {posts.map((p) => {
+            const end = p.applicationEndDate ? new Date(p.applicationEndDate) : null;
+            const days = end ? daysUntil(end) : null;
+            const orgName = isHi && p.orgNameHi ? p.orgNameHi : p.orgName;
+            let deadline: string | null = null;
+            let deadlineTone = "text-neutral-600";
+            if (p.recruitmentStatus === "UPCOMING" && !end) {
+              deadline = L.upcoming;
+            } else if (end && days !== null) {
+              if (days <= 0) deadline = L.closingToday;
+              else if (days <= 7) deadline = L.daysLeft(days);
+              else deadline = `${L.lastDate}: ${formatDate(end, dateLocale)}`;
+              if (days <= 7) deadlineTone = "text-red-700 font-medium";
+            }
+            return (
+              <li key={p.postId} className="py-4">
+                <Link
+                  href={`/jobs/${p.recruitmentSlug}/${p.postSlug}`}
+                  className="font-semibold hover:underline"
+                >
+                  {p.postName}
+                </Link>
+                <p className="mt-0.5 text-sm text-neutral-600">
+                  <Link href={`/organizations/${p.orgSlug}`} className="hover:underline">
+                    {orgName}
                   </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </>
+                  {" · "}
+                  <Link href={`/jobs/${p.recruitmentSlug}`} className="hover:underline">
+                    {p.recruitmentName}
+                  </Link>
+                </p>
+                <p className="mt-0.5 text-sm">
+                  {p.vacancyTotal != null && (
+                    <span className="text-neutral-700">
+                      {p.vacancyTotal.toLocaleString("en-IN")} {L.vacancies}
+                      {deadline && " · "}
+                    </span>
+                  )}
+                  {deadline && <span className={deadlineTone}>{deadline}</span>}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
       )}
+
+      {(page > 1 || hasNext) && (
+        <nav aria-label="Pagination" className="mt-8 flex items-center justify-between text-sm">
+          {page > 1 ? (
+            <Link href={pageHref(base, {}, page - 1)} className="hover:underline">{L.prev}</Link>
+          ) : <span />}
+          <span className="text-neutral-500">{L.pageOf}</span>
+          {hasNext ? (
+            <Link href={pageHref(base, {}, page + 1)} className="hover:underline">{L.next}</Link>
+          ) : <span />}
+        </nav>
+      )}
+
+      <section className="mt-12">
+        <h2 className="text-base font-semibold text-neutral-900 mb-3">{L.other}</h2>
+        <div className="flex flex-wrap gap-2">
+          {SECTORS.filter((s) => s.slug !== sector.slug).map((s) => (
+            <Link
+              key={s.slug}
+              href={sectorHref(s)}
+              className="rounded-full border border-black/10 px-3 py-1.5 text-sm hover:border-black/30 hover:bg-neutral-50"
+            >
+              <span className="mr-1" aria-hidden>{s.emoji}</span>
+              {isHi ? s.labelHi : s.label}
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

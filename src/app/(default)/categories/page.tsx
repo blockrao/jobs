@@ -1,27 +1,24 @@
 import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
-import { listCategories } from "@/lib/queries";
+import { countLivePostsBySector } from "@/lib/queries";
+import { safeQuery } from "@/lib/safe-query";
+import { SECTORS } from "@/lib/sectors";
 import { CategoriesContent } from "@/components/categories-content";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Job Categories",
+  title: "Government Jobs by Category",
   description:
-    "Browse government and private job openings by category, sector, and state.",
+    "Browse live government job notifications by sector — central government, state government, railway, banking, defence and PSU.",
   ...pageSeo("/categories"),
 };
 
 export default async function CategoriesPage() {
-  let categories: Awaited<ReturnType<typeof listCategories>> = [];
-  try {
-    categories = await listCategories();
-  } catch {
-    categories = [];
-  }
-  // Rendering (including which language to show) lives in CategoriesContent,
-  // a client component that reads the visitor's saved language cookie —
-  // keeps this page a plain static/ISR server component (○ Static), same
-  // reasoning as src/app/page.tsx / home-content.tsx.
-  return <CategoriesContent categories={categories} />;
+  const counts = await safeQuery(() => countLivePostsBySector(), {});
+  const items = SECTORS.map((s) => ({
+    sector: s,
+    count: s.sectors.reduce((n, k) => n + (counts[k] ?? 0), 0),
+  }));
+  return <CategoriesContent items={items} />;
 }

@@ -244,6 +244,91 @@ export async function listCategories() {
   return db.query.categories.findMany({ orderBy: [categories.name] });
 }
 
+// ---------- Sector hubs (/categories/[slug]) ----------
+//
+// The public category taxonomy lives in src/lib/sectors.ts and is backed by
+// organizations.sector — the only sector dimension set at write time on every
+// record. These hubs list canonical Posts (/jobs/{recruitment}/{post}), using
+// the same "live" rule as the sitemap (getPostSlugsForSitemap): recruitment
+// ACTIVE/UPCOMING and application window not yet closed.
+
+const livePostCondition = sql`
+  ${recruitments.status} IN ('ACTIVE', 'UPCOMING')
+  AND (${recruitments.applicationEndDate} IS NULL OR ${recruitments.applicationEndDate} > NOW())
+  AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
+`;
+
+export interface SectorPostRow {
+  postId: number;
+  postName: string;
+  postSlug: string;
+  vacancyTotal: number | null;
+  recruitmentName: string;
+  recruitmentSlug: string;
+  recruitmentStatus: "UPCOMING" | "ACTIVE" | "RESULTS" | "ARCHIVED";
+  applicationEndDate: Date | null;
+  locationStateCode: string | null;
+  orgName: string;
+  orgNameHi: string | null;
+  orgSlug: string;
+}
+
+/** Live Posts for a set of org sectors, soonest-closing first (null end dates last). */
+export async function listLivePostsBySector(
+  sectors: readonly string[],
+  opts?: { limit?: number; offset?: number },
+): Promise<SectorPostRow[]> {
+  if (!hasDb() || sectors.length === 0) return [];
+  const db = getDb();
+  const limit = Math.min(opts?.limit ?? 50, 200);
+  const offset = Math.max(0, opts?.offset ?? 0);
+  return db
+    .select({
+      postId: posts.id,
+      postName: posts.name,
+      postSlug: posts.slug,
+      vacancyTotal: posts.vacancyTotal,
+      recruitmentName: recruitments.name,
+      recruitmentSlug: recruitments.slug,
+      recruitmentStatus: recruitments.status,
+      applicationEndDate: recruitments.applicationEndDate,
+      locationStateCode: recruitments.locationStateCode,
+      orgName: organizations.name,
+      orgNameHi: organizations.nameHi,
+      orgSlug: organizations.slug,
+    })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+    .where(and(inArray(organizations.sector, sectors as never), livePostCondition))
+    .orderBy(
+      sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
+      desc(recruitments.updatedAt),
+      posts.id,
+    )
+    .limit(limit)
+    .offset(offset);
+}
+
+/** Live Post count per org sector — drives tile/index counts in one query. */
+export const countLivePostsBySector = cache(async (): Promise<Record<string, number>> => {
+  if (!hasDb()) return {};
+  const db = getDb();
+  const rows = await db
+    .select({
+      sector: organizations.sector,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+    .where(livePostCondition)
+    .groupBy(organizations.sector);
+  const out: Record<string, number> = {};
+  for (const r of rows) out[r.sector] = r.count;
+  return out;
+});
+
 export async function listArticles(opts?: { limit?: number }) {
   if (!hasDb()) return [];
   const db = getDb();

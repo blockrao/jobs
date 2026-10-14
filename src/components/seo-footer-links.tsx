@@ -118,13 +118,14 @@ const TOPIC_LINKS: LinkItem[] = [
   { label: "Group A Officers Jobs", href: "/jobs?grade=group-a" },
   { label: "Group B Gazetted Jobs", href: "/jobs?grade=group-b" },
   { label: "Group C Non-Gazetted", href: "/jobs?grade=group-c" },
-  { label: "Defence / Army Jobs", href: "/jobs?sector=defence" },
-  { label: "Police / Paramilitary Jobs", href: "/jobs?sector=police" },
-  { label: "Banking & Finance Jobs", href: "/jobs?sector=banking" },
-  { label: "Railway Jobs 2026", href: "/jobs?sector=railways" },
-  { label: "Teaching & Education Jobs", href: "/jobs?sector=teaching" },
-  { label: "Health & Medical Sector", href: "/jobs?sector=health" },
-  { label: "PSU Jobs 2026", href: "/jobs?q=psu" },
+  // Sector hubs — the single taxonomy in src/lib/sectors.ts. The old
+  // `/jobs?sector=` links pointed at a query param /jobs never read.
+  { label: "Central Government Jobs", href: "/categories/central-government" },
+  { label: "State Government Jobs", href: "/categories/state-government" },
+  { label: "Railway Jobs 2026", href: "/categories/railway" },
+  { label: "Banking & Finance Jobs", href: "/categories/banking" },
+  { label: "Defence / Army Jobs", href: "/categories/defence" },
+  { label: "PSU Jobs 2026", href: "/categories/psu" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
