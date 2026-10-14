@@ -242,7 +242,7 @@ export default async function Page({ params }: JobPostingPageRouteProps) {
     post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
   );
 
-  // Fetch recruitment data with all posts for context
+  // Fetch only recruitment facts and sibling Post link summaries for context
   const recruitmentData = await getRecruitmentLeafContext(recruitmentSlug);
 
   // ── Post-owned resolver facts ────────────────────────────────────────────
