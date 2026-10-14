@@ -343,10 +343,13 @@ export function resolveDeadline(
   },
   now: Date
 ): ResolvedDeadline {
-  // A placeholder deadline (e.g. 2099-12-31 written by a bulk update) is not a
-  // fact. It is treated exactly like an absent deadline so it can never resolve
-  // to OPEN, drive a countdown, or reach structured data. See src/lib/recruitment-dates.ts.
-  const enrichmentDeadline = toPlausibleRecruitmentDate(post.enrichment?.applicationClosingDate);
+  // Plausibility is necessary but not sufficient: an enrichment deadline is
+  // authoritative only after the source-verification gate has passed. Pending
+  // values may be shown as reported in the timeline, but must never drive OPEN /
+  // CLOSED state, countdowns, or structured data. Sentinels resolve as absent.
+  const enrichmentDeadline = post.enrichment?.sourceVerificationStatus === "VERIFIED"
+    ? toPlausibleRecruitmentDate(post.enrichment.applicationClosingDate)
+    : null;
 
   // --- Enrichment deadline ---
   if (enrichmentDeadline) {
