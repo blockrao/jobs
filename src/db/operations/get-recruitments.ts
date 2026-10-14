@@ -425,5 +425,83 @@ export async function getRecruitmentWithPosts(slug: string) {
 }
 
 
+/**
+ * Minimal recruitment context for a Post Leaf.
+ *
+ * Unlike getRecruitmentWithPosts(), this deliberately avoids loading every
+ * sibling Post's vacancies, eligibility rows, FJA inventory and enrichment
+ * details. The leaf only needs Recruitment facts plus sibling link summaries.
+ */
+export async function getRecruitmentLeafContext(slug: string) {
+  try {
+    const db = getDb();
+
+    let result = await db
+      .select({
+        recruitment: recruitments,
+        organizationName: organizations.name,
+        organizationSlug: organizations.slug,
+        organizationSector: organizations.sector,
+      })
+      .from(recruitments)
+      .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
+      .where(eq(recruitments.slug, slug))
+      .limit(1);
+
+    if (result.length === 0) {
+      const redirectRecord = await db
+        .select()
+        .from(recruitment_slug_redirects)
+        .where(eq(recruitment_slug_redirects.old_slug, slug))
+        .limit(1);
+
+      if (redirectRecord.length > 0) {
+        result = await db
+          .select({
+            recruitment: recruitments,
+            organizationName: organizations.name,
+            organizationSlug: organizations.slug,
+            organizationSector: organizations.sector,
+          })
+          .from(recruitments)
+          .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
+          .where(eq(recruitments.slug, redirectRecord[0].new_slug))
+          .limit(1);
+      }
+    }
+
+    if (result.length === 0) return null;
+
+    const row = result[0];
+    const recruitment = {
+      ...row.recruitment,
+      organizationName: row.organizationName,
+      organizationSlug: row.organizationSlug,
+      organizationSector: row.organizationSector as string,
+    };
+
+    // The leaf renders sibling links only; it does not consume their detailed
+    // vacancy, eligibility, inventory, or enrichment records.
+    const siblingPosts = await db
+      .select({
+        id: posts.id,
+        slug: posts.slug,
+        title: posts.name,
+      })
+      .from(posts)
+      .where(eq(posts.recruitmentId, recruitment.id));
+
+    return {
+      recruitment,
+      posts: siblingPosts,
+      totalPosts: siblingPosts.length,
+      isSingleJobRecruitment: siblingPosts.length === 1,
+    };
+  } catch (err) {
+    console.error("Error fetching lightweight recruitment leaf context:", err);
+    return null;
+  }
+}
+
 /** Request-scoped memoization shared by generateMetadata and page rendering. */
 export const getRecruitmentWithPostsCached = cache(getRecruitmentWithPosts);
