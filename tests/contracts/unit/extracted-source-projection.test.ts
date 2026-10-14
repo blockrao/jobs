@@ -147,15 +147,16 @@ describe("extracted source projection", () => {
     expect(localeRoute).not.toMatch(/!post\.fjaExtract.*suppressJobPostingSchema/);
   });
 
-  test("single-role recruitment hubs canonicalise to the role hub and stay noindex; multi-role hubs are canonical and indexable", () => {
+  test("a recruitment hub canonicalises to its single indexable Post leaf and stays noindex; otherwise it is canonical and indexable", () => {
+    // Owner decision, Oct 2026 (implemented 2026-10-14): a single-Post recruitment
+    // canonicalises to its own Post page; multi-Post hubs are the canonical unit.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
-    expect(route).toContain("const isSingleRoleHub = roleSlugs.length === 1;");
-    expect(route).toContain("const canonicalPath = isSingleRoleHub ?");
-    expect(route).toContain("/posts/${roleSlugs[0]}");
-    expect(route).toContain("/jobs/${recruitment.slug}");
-    expect(route).toContain("const hubIndexable = !isSingleRoleHub;");
+    expect(route).toContain("const singleLeafSlug = await getSinglePostLeafSlug(recruitment.id);");
+    expect(route).toContain("const canonicalPath = singleLeafSlug ? `/jobs/${recruitment.slug}/${singleLeafSlug}` : `/jobs/${recruitment.slug}`;");
+    expect(route).toContain("const hubIndexable = !singleLeafSlug;");
     expect(route).toContain("pageSeo(canonicalPath, hubIndexable ? undefined : { index: false })");
+    expect(route).not.toContain("/posts/${roleSlugs[0]}");
     expect(route).toContain("verificationStatus: recruitment.sourceVerificationStatus ?? null");
     expect(schema).toMatch(/const datePostedIso = factsVerified\s*\?\s*toIso\(recruitment\.notificationDate\)/);
     expect(schema).toContain("const expiresIso = factsVerified ? toIso(recruitment.applicationEndDate) : undefined;");

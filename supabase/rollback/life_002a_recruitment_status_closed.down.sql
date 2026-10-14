@@ -1,0 +1,4 @@
+-- Rollback for 20261014050000_life_002a_recruitment_status_closed.sql.
+-- Never applied automatically. PostgreSQL cannot drop an enum value; the
+-- rollback is to stop writing it (life_002b down) and, if required, to map
+-- rows back: UPDATE recruitments SET status='ACTIVE' WHERE status='CLOSED';
