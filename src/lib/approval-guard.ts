@@ -40,6 +40,17 @@ const TEXT_FIELDS = [
 ] as const;
 const URL_FIELDS = ["applyUrl", "officialNotificationUrl"] as const;
 
+/** A publication-ready official source must be a parseable HTTP(S) URL, not an aggregator. */
+export function hasValidOfficialNotificationUrl(value?: string | null): boolean {
+  if (!value) return false;
+  try {
+    const protocol = new URL(value).protocol;
+    return (protocol === "http:" || protocol === "https:") && !isAggregatorUrl(value);
+  } catch {
+    return false;
+  }
+}
+
 /** Names of the public fields that reference an aggregator; empty means approvable. */
 export function findAggregatorViolations(p: ApprovalSubject, updates: ApprovalUpdateRow[] = []): string[] {
   const bad: string[] = [];
@@ -68,6 +79,9 @@ export interface ApprovalDeps {
 export async function approveIfClean(deps: ApprovalDeps, postingId: number): Promise<ApprovalResult> {
   const row = await deps.load(postingId);
   if (!row) return { ok: false, error: "Posting not found." };
+  if (!hasValidOfficialNotificationUrl(row.posting.officialNotificationUrl)) {
+    return { ok: false, error: "Approval refused: a valid official notification URL is required." };
+  }
   const bad = findAggregatorViolations(row.posting, row.updates);
   if (bad.length > 0) {
     return { ok: false, error: `Approval refused: aggregator reference in ${bad.join(", ")}. Remove it first.` };
