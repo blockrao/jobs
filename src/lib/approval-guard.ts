@@ -80,7 +80,7 @@ export async function approveIfClean(deps: ApprovalDeps, postingId: number): Pro
   const row = await deps.load(postingId);
   if (!row) return { ok: false, error: "Posting not found." };
   if (!hasValidOfficialNotificationUrl(row.posting.officialNotificationUrl)) {
-    return { ok: false, error: "Approval refused: a valid official notification URL is required." };
+    return { ok: false, error: "Approval refused: officialNotificationUrl must be a valid HTTP(S) URL." };
   }
   const bad = findAggregatorViolations(row.posting, row.updates);
   if (bad.length > 0) {
