@@ -10,10 +10,8 @@ import { pageHref } from "@/lib/pagination";
 import { recruitmentHref } from "@/lib/recruitment-href";
 
 function PostRow({ row, isHi }: { row: QualificationPostRow; isHi: boolean }) {
-  const href = row.recruitmentSlug && row.postSlug
-    ? recruitmentHref({ slug: row.recruitmentSlug, singlePostSlug: null })
-    : row.recruitmentSlug
-    ? `/jobs/${row.recruitmentSlug}`
+  const href = row.recruitmentSlug
+    ? recruitmentHref({ slug: row.recruitmentSlug, singlePostSlug: row.postSlug ?? null })
     : "#";
 
   const endDate = row.applicationEndDate ? new Date(row.applicationEndDate) : null;

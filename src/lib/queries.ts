@@ -1738,7 +1738,6 @@ export interface QualificationPostRow {
   recruitmentSlug: string | null;
   applicationEndDate: Date | null;
   orgName: string | null;
-  orgSlug: string | null;
 }
 
 /**
@@ -1763,7 +1762,6 @@ export async function listLivePostsByQualification(
       recruitmentSlug: recruitments.slug,
       applicationEndDate: recruitments.applicationEndDate,
       orgName: organizations.name,
-      orgSlug: organizations.slug,
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))

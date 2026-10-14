@@ -61,14 +61,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Qualification hub pages — education-level aggregation pages, e.g. /qualifications/10th-pass
-  const qualificationEntries: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/qualifications`, changeFrequency: "daily" as const, priority: 0.8 },
-    ...QUALIFICATIONS.map((q) => ({
-      url: `${SITE_URL}/qualifications/${q.slug}`,
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-    })),
-  ];
+  // Note: /qualifications index is already in staticEntries; only add individual hub slugs here
+  const qualificationEntries: MetadataRoute.Sitemap = QUALIFICATIONS.map((q) => ({
+    url: `${SITE_URL}/qualifications/${q.slug}`,
+    changeFrequency: "daily" as const,
+    priority: 0.8,
+  }));
 
   // Include all URLs for maximum discoverability: recruitment hubs + posting pages
   const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.filter((row) => !row.canonicalIsLeaf).map((row) => ({

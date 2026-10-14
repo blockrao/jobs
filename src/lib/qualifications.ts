@@ -2,11 +2,16 @@
  * Qualification hub taxonomy.
  *
  * Each entry defines an education-level hub page at /qualifications/{slug}.
- * The `namePattern` regex is matched against posts.name/title (case-insensitive)
+ * The `namePattern` regex is matched against posts.name (case-insensitive)
  * to determine whether a post belongs on a hub page. A post may match multiple
  * levels (e.g. "8th to Graduate" matches 10th-pass AND graduate AND more).
  *
  * Pattern order matters only for display; matching is independent per hub.
+ *
+ * IMPORTANT: Patterns are POSIX ERE (not JavaScript regex). They use \m and \M
+ * for word boundaries (Postgres-specific). Do NOT pass these patterns to
+ * JavaScript RegExp constructors; they will fail or produce wrong results.
+ * Patterns are database-only; never use in client-side code.
  */
 
 export interface QualificationHub {
@@ -29,7 +34,7 @@ export const QUALIFICATIONS: QualificationHub[] = [
     description:
       "Government jobs open to 10th pass / Matriculation candidates. No college degree required.",
     namePattern:
-      "\\m(10th|matricul|class[- ]x[^i]|class[- ]10|high school|sslc|hslc|secondary school certificate)\\M|\\m10\\s*pass",
+      "\\m(10th|matricul|class[- ]x[^i]|class[- ]10|high school|sslc|hslc|secondary school certificate|10th?\\s*pass)\\M",
     priority: 1,
   },
   {
@@ -49,7 +54,7 @@ export const QUALIFICATIONS: QualificationHub[] = [
     description:
       "Government jobs requiring a bachelor's degree — BA, B.Sc, B.Com, BCA, BBA or any graduation.",
     namePattern:
-      "\\m(graduate|graduation|b\\.?a\\.?|b\\.?sc|b\\.?com|b\\.?c\\.?a|b\\.?b\\.?a|bachelor|degree holder|degree pass|any degree)\\M",
+      "\\m(graduate|graduation|b\\.a\\b|b\\.sc|b\\.com|b\\.c\\.a|b\\.b\\.a|ba\\b|bsc\\b|bcom\\b|bca\\b|bba\\b|bachelor|degree holder|degree pass|any degree)\\M",
     priority: 1,
   },
   {
