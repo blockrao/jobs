@@ -91,7 +91,8 @@ type PostRow = Omit<
  */
 export async function getPostBySlug(
   recruitmentSlug: string,
-  postSlug: string
+  postSlug: string,
+  throwOnError = false
 ): Promise<JobPostingData | null> {
   try {
     const db = getDb();
@@ -368,6 +369,9 @@ export async function getPostBySlug(
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", err);
+    // The Post Leaf opts into strict errors so ISR cannot cache a transient DB
+    // failure as a misleading 404. Preserve null-on-error for legacy callers.
+    if (throwOnError) throw err;
     return null;
   }
 }
