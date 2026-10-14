@@ -2,6 +2,7 @@ import { STATES } from "@/lib/states/states";
 import { countCurrentByState } from "@/lib/states/queries";
 import type { MetadataRoute } from "next";
 import { SECTORS } from "@/lib/sectors";
+import { QUALIFICATIONS } from "@/lib/qualifications";
 import { SITE_URL } from "@/lib/site";
 import { ROLE_REGISTRY } from "@/lib/roles";
 import {
@@ -41,6 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/`, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/jobs`, changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE_URL}/closing-soon`, changeFrequency: "hourly", priority: 0.9 },
+    { url: `${SITE_URL}/qualifications`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/posts`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/categories`, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE_URL}/articles`, changeFrequency: "daily", priority: 0.6 },
@@ -57,6 +59,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "daily" as const,
     priority: 0.85,
   }));
+
+  // Qualification hub pages — education-level aggregation pages, e.g. /qualifications/10th-pass
+  const qualificationEntries: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/qualifications`, changeFrequency: "daily" as const, priority: 0.8 },
+    ...QUALIFICATIONS.map((q) => ({
+      url: `${SITE_URL}/qualifications/${q.slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.8,
+    })),
+  ];
 
   // Include all URLs for maximum discoverability: recruitment hubs + posting pages
   const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.filter((row) => !row.canonicalIsLeaf).map((row) => ({
@@ -141,6 +153,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const allEntries: MetadataRoute.Sitemap = [
     ...staticEntries,
     ...roleEntries,
+    ...qualificationEntries,
     ...stateEntries,
     ...postingEntries,
     ...recruitmentEntries,

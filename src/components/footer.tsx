@@ -66,6 +66,9 @@ export function Footer() {
           <Link href="/states" className="hover:underline">
             {t.states}
           </Link>
+          <Link href="/qualifications" className="hover:underline">
+            {locale === "hi" ? "योग्यता अनुसार" : "By qualification"}
+          </Link>
           <Link href="/categories" className="hover:underline">
             {t.categories}
           </Link>

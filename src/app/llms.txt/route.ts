@@ -1,5 +1,6 @@
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { SECTORS } from "@/lib/sectors";
+import { QUALIFICATIONS } from "@/lib/qualifications";
 
 // GEO (Generative Engine Optimization) manifest — tells LLM/answer-engine
 // crawlers how this site is structured so they cite the correct canonical
@@ -9,6 +10,7 @@ export const revalidate = 3600;
 
 export async function GET() {
   const sectorLines = SECTORS.map((s) => `  - ${SITE_URL}/categories/${s.slug} — ${s.label}: ${s.description}`).join("\n");
+  const qualificationLines = QUALIFICATIONS.map((q) => `  - ${SITE_URL}/qualifications/${q.slug} — ${q.label}: ${q.description}`).join("\n");
 
   const body = `# ${SITE_NAME}
 
@@ -33,6 +35,8 @@ export async function GET() {
   ${SITE_URL}/organizations/{slug}
 - Sector hubs — live posts by sector:
 ${sectorLines}
+- Qualification hubs — live posts by education level required:
+${qualificationLines}
 - State hubs: ${SITE_URL}/states/{state-slug}
 - Closing soon — every government recruitment whose last date is within 30
   days, biggest first: ${SITE_URL}/closing-soon

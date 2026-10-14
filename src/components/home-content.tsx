@@ -6,6 +6,7 @@ import type { HomeRecruitmentRow, HomeOrgRow, HomeStats } from "@/lib/queries";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 import { FEATURED_SECTORS, FEATURED_ORG_TILES, sectorHref } from "@/lib/sectors";
+import { FEATURED_QUALIFICATIONS, qualificationHref } from "@/lib/qualifications";
 import { RecruitmentRow, RowListHeader } from "@/components/recruitment-row";
 import { recruitmentHref } from "@/lib/recruitment-href";
 import { SITE_URL } from "@/lib/site";
@@ -244,6 +245,30 @@ export function HomeContent({
             </div>
           </section>
         )}
+
+        {/* ── Jobs by qualification ─────────────────────────────── */}
+        <section className="pt-2 pb-10">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className={sectionTitle}>{isHi ? "योग्यता अनुसार सरकारी नौकरी" : "Jobs by qualification"}</h2>
+            <Link href="/qualifications" className={viewAll}>{isHi ? "सभी देखें →" : "All qualifications →"}</Link>
+          </div>
+          <p className="mt-1 mb-4 text-sm text-neutral-500 max-w-xl">
+            {isHi
+              ? "अपनी शैक्षणिक योग्यता के अनुसार सरकारी नौकरियां खोजें।"
+              : "Filter government jobs by your education level — 10th pass, graduate, B.Tech, MBBS and more."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {FEATURED_QUALIFICATIONS.map((q) => (
+              <Link
+                key={q.slug}
+                href={qualificationHref(q.slug)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-800 hover:border-red-400 hover:text-red-600 transition-colors shadow-sm"
+              >
+                {q.shortLabel}
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* ── Who is hiring ─────────────────────────────────────── */}
         {orgs.length > 0 && (

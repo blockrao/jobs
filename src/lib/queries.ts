@@ -1725,3 +1725,111 @@ export async function listPostsEnhanced(opts?: {
 
 /** Request-scoped memoization for metadata/page lookups of the same posting. */
 export const getPostingBySlugCached = cache(getPostingBySlug);
+
+// ---------------------------------------------------------------------------
+// Qualification hub queries
+// ---------------------------------------------------------------------------
+
+export interface QualificationPostRow {
+  postId: number;
+  postName: string | null;
+  postSlug: string | null;
+  vacancyTotal: number | null;
+  recruitmentSlug: string | null;
+  applicationEndDate: Date | null;
+  orgName: string | null;
+  orgSlug: string | null;
+}
+
+/**
+ * List live government posts whose name matches a POSIX ERE pattern.
+ * Used by /qualifications/[slug] hub pages.
+ */
+export async function listLivePostsByQualification(
+  pattern: string,
+  opts?: { limit?: number; offset?: number },
+): Promise<QualificationPostRow[]> {
+  if (!hasDb()) return [];
+  const db = getDb();
+  const limit = Math.min(opts?.limit ?? 50, 200);
+  const offset = Math.max(0, opts?.offset ?? 0);
+
+  return db
+    .select({
+      postId: posts.id,
+      postName: posts.name,
+      postSlug: posts.slug,
+      vacancyTotal: posts.vacancyTotal,
+      recruitmentSlug: recruitments.slug,
+      applicationEndDate: recruitments.applicationEndDate,
+      orgName: organizations.name,
+      orgSlug: organizations.slug,
+    })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+    .where(
+      and(
+        livePostCondition,
+        sql`${posts.name} ~* ${pattern}`,
+        sql`${organizations.sector} <> 'PRIVATE'`,
+      ),
+    )
+    .orderBy(
+      sql`COALESCE(${posts.vacancyTotal}, 0) DESC`,
+      sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
+    )
+    .limit(limit)
+    .offset(offset);
+}
+
+/** Count of live posts matching a qualification pattern. */
+export async function countLivePostsByQualification(
+  pattern: string,
+): Promise<number> {
+  if (!hasDb()) return 0;
+  const db = getDb();
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(posts)
+    .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+    .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+    .where(
+      and(
+        livePostCondition,
+        sql`${posts.name} ~* ${pattern}`,
+        sql`${organizations.sector} <> 'PRIVATE'`,
+      ),
+    );
+  return rows[0]?.count ?? 0;
+}
+
+/**
+ * Counts for multiple qualification hubs in parallel — used for homepage tiles.
+ * Not cached at module level since patterns change; caller may cache.
+ */
+export async function countLivePostsByAllQualifications(
+  qualifications: Array<{ slug: string; namePattern: string }>,
+): Promise<Record<string, number>> {
+  if (!hasDb()) return {};
+  const db = getDb();
+  const out: Record<string, number> = {};
+  await Promise.all(
+    qualifications.map(async (q) => {
+      const rows = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(posts)
+        .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
+        .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
+        .where(
+          and(
+            livePostCondition,
+            sql`${posts.name} ~* ${q.namePattern}`,
+            sql`${organizations.sector} <> 'PRIVATE'`,
+          ),
+        );
+      out[q.slug] = rows[0]?.count ?? 0;
+    }),
+  );
+  return out;
+}

@@ -13,6 +13,7 @@ import type { Locale } from "@/i18n/request";
 const NAV_LINKS: { href: string; label: Record<Locale, string>; accent?: boolean }[] = [
   { href: "/closing-soon", label: { en: "Closing soon", hi: "जल्द बंद" }, accent: true },
   { href: "/jobs", label: { en: "All jobs", hi: "सभी नौकरियां" } },
+  { href: "/qualifications", label: { en: "By qualification", hi: "योग्यता अनुसार" } },
   { href: "/categories", label: { en: "Categories", hi: "श्रेणियां" } },
   { href: "/organizations", label: { en: "Organisations", hi: "संगठन" } },
   { href: "/states", label: { en: "States", hi: "राज्य" } },
