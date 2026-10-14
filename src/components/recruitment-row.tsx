@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { HomeRecruitmentRow } from "@/lib/queries";
+import { recruitmentHref } from "@/lib/recruitment-href";
 import { formatDate } from "@/lib/labels";
 import { SECTORS } from "@/lib/sectors";
 
@@ -61,7 +62,7 @@ export function RecruitmentRow({
         </span>
       )}
       <div className="min-w-0 col-span-2 sm:col-span-1">
-        <Link href={`/jobs/${row.slug}`} className="block font-semibold text-[17px] leading-snug text-neutral-900 hover:text-brand-700">
+        <Link href={recruitmentHref(row)} className="block font-semibold text-[17px] leading-snug text-neutral-900 hover:text-brand-700">
           {row.name}
         </Link>
         <p className="mt-0.5 text-sm text-neutral-600 truncate">

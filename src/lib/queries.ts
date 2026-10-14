@@ -262,6 +262,8 @@ export interface HomeRecruitmentRow {
   applicationEndDate: Date | null;
   postCount: number;
   daysLeft: number | null;
+  /** Set when the recruitment's canonical page is its single Post leaf. */
+  singlePostSlug: string | null;
 }
 
 export interface HomeOrgRow {
@@ -284,9 +286,27 @@ const liveGovRecruitment = sql`
   AND o.sector <> 'PRIVATE'
 `;
 
+/**
+ * When a recruitment has exactly one Post whose leaf page is indexable
+ * (title + official source URL — the leaf's own gate), that leaf is the
+ * canonical URL for the whole recruitment (owner decision, Oct 2026: a
+ * single-post recruitment canonicalises to its own Post page; the catch-all
+ * "Other" role never counts as a role). Everything that links to a
+ * recruitment uses this to link to the canonical page, not the noindex hub.
+ */
+const singlePostLeafSlug = sql`
+  (SELECT p1.slug FROM public.posts p1
+    WHERE p1.recruitment_id = r.id
+      AND (SELECT COUNT(*) FROM public.posts p2 WHERE p2.recruitment_id = r.id) = 1
+      AND p1.slug IS NOT NULL AND p1.title IS NOT NULL
+      AND p1."officialSourceUrl" ~ '^https?://'
+    LIMIT 1)
+`;
+
 const homeRecruitmentSelect = sql`
   SELECT
     r.slug,
+    ${singlePostLeafSlug} AS single_post_slug,
     r.name,
     o.name AS org_name,
     o.name_hi AS org_name_hi,
@@ -313,7 +333,20 @@ function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
     applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
     postCount: Number(r.post_count ?? 0),
     daysLeft: r.days_left != null ? Number(r.days_left) : null,
+    singlePostSlug: r.single_post_slug ? String(r.single_post_slug) : null,
   }));
+}
+
+/** For the recruitment hub's canonical decision: the single indexable Post leaf slug, if any. */
+export async function getSinglePostLeafSlug(recruitmentId: number): Promise<string | null> {
+  if (!hasDb()) return null;
+  const db = getDb();
+  const rows = await db.execute(sql`
+    SELECT ${singlePostLeafSlug} AS single_post_slug
+    FROM public.recruitments r WHERE r.id = ${recruitmentId}
+  `);
+  const v = (rows as unknown as Record<string, unknown>[])[0]?.single_post_slug;
+  return v ? String(v) : null;
 }
 
 /** Recruitments closing within `days`, biggest first. Used by the homepage and /closing-soon. */
@@ -805,20 +838,21 @@ export async function getRecruitmentSlugsForSitemap() {
   const db = getDb();
   // All recruitments with a slug are included in the sitemap.
   // is_live drives changeFrequency and priority.
-  const rows = await db
-    .select({
-      slug: recruitments.slug,
-      updatedAt: recruitments.updatedAt,
-      isLive: sql<boolean>`
-        (${recruitments.status} IN ('ACTIVE', 'UPCOMING')
-         AND (${recruitments.applicationEndDate} IS NULL
-              OR ${recruitments.applicationEndDate} > NOW()))
-      `,
-    })
-    .from(recruitments)
-    .where(sql`${recruitments.slug} IS NOT NULL`)
-    .orderBy(recruitments.id);
-  return rows;
+  const rows = await db.execute(sql`
+    SELECT r.slug, r.updated_at AS "updatedAt",
+      (r.status IN ('ACTIVE','UPCOMING') AND (r.application_end_date IS NULL OR r.application_end_date > NOW())) AS "isLive",
+      (${singlePostLeafSlug}) IS NOT NULL AS "canonicalIsLeaf"
+    FROM public.recruitments r
+    WHERE r.slug IS NOT NULL
+    ORDER BY r.id
+  `);
+  return (rows as unknown as Record<string, unknown>[]).map((r) => ({
+    slug: String(r.slug),
+    updatedAt: new Date(String(r.updatedAt)),
+    isLive: Boolean(r.isLive),
+    // A single-post hub canonicalises to its Post leaf (already in the sitemap as a leaf); listing the hub too would submit a noindex URL.
+    canonicalIsLeaf: Boolean(r.canonicalIsLeaf),
+  }));
 }
 
 // Get postings for a specific commission (all exams under it)

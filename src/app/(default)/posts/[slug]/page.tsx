@@ -28,7 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const seo = pageSeo(`/posts/${position.slug}`);
 
     const stats = await safeQuery(() => getPositionStats(position.id), { totalVacancies: 0, activeRecruitments: 0, totalRecruitments: 0 });
-    const hasContent = stats.totalRecruitments > 0;
+    // The catch-all "Other" position is not a role; it must never be an indexable hub.
+    const hasContent = stats.totalRecruitments > 0 && position.slug !== "category-other";
 
     return {
       title,

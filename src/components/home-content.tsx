@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Script from "next/script";
 import type { HomeRecruitmentRow, HomeOrgRow, HomeStats } from "@/lib/queries";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 import { FEATURED_SECTORS, FEATURED_ORG_TILES, sectorHref } from "@/lib/sectors";
 import { RecruitmentRow, RowListHeader } from "@/components/recruitment-row";
+import { recruitmentHref } from "@/lib/recruitment-href";
+import { SITE_URL } from "@/lib/site";
 
 // Homepage = the deadline desk (HOMEPAGE_DESIGN_STRATEGY_2026_10_14).
 // Every block ranks by vacancies × urgency; every row shows org · vacancies ·
@@ -84,12 +85,31 @@ export function HomeContent({
     })),
   };
 
+  // ItemList of the closing-soon block: lets search engines and answer engines
+  // read the ranked list and its canonical URLs directly.
+  const closingListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Government jobs closing in the next two weeks",
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: closingSoon.length,
+    itemListElement: closingSoon.map((r, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: r.name,
+      url: `${SITE_URL}${recruitmentHref(r)}`,
+    })),
+  };
+
   const sectionTitle = "font-semibold text-2xl tracking-tight text-neutral-900";
   const viewAll = "text-sm font-semibold text-brand-600 hover:underline";
 
   return (
     <>
-      <Script id="faq-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      {closingSoon.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(closingListJsonLd) }} />
+      )}
 
       <div className="mx-auto max-w-6xl px-4">
 

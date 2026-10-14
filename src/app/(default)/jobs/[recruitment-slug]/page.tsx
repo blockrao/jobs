@@ -10,6 +10,7 @@
 
 import { notFound } from "next/navigation";
 import { pageSeo, noindexRobots } from "@/lib/seo";
+import { getSinglePostLeafSlug } from "@/lib/queries";
 import { Metadata } from "next";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
@@ -147,13 +148,17 @@ export async function generateMetadata({
   const ogDescription = metaVacancies
     ? `${metaVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · ${recruitment.name} on JobOye`
     : `${recruitment.name} on JobOye`;
-  const roleSlugs = [...new Set(posts.map((post) => post.position?.slug).filter((slug): slug is string => Boolean(slug)))];
-  // Single-role hub: canonical authority lives at the role hub (/posts/{slug}).
-  // Hub is a near-duplicate; keep it non-indexable to avoid splitting signals.
-  // Multi-role or no-role hub: this page IS the canonical unit. Index it.
-  const isSingleRoleHub = roleSlugs.length === 1;
-  const canonicalPath = isSingleRoleHub ? `/posts/${roleSlugs[0]}` : `/jobs/${recruitment.slug}`;
-  const hubIndexable = !isSingleRoleHub;
+  // Canonical rule (owner decision, Oct 2026; implemented 2026-10-14):
+  //   - exactly one Post whose leaf page is indexable → that leaf is the
+  //     canonical unit; this hub is a near-duplicate, noindex.
+  //   - otherwise (zero posts, several posts, or a single post whose leaf is
+  //     not indexable) → this hub IS the canonical unit; index it.
+  // The previous rule canonicalised every single-ROLE hub to /posts/{role},
+  // which sent 814 live recruitments to the catch-all /posts/category-other
+  // as noindex pages. The "Other" role never counts as a role.
+  const singleLeafSlug = await getSinglePostLeafSlug(recruitment.id);
+  const canonicalPath = singleLeafSlug ? `/jobs/${recruitment.slug}/${singleLeafSlug}` : `/jobs/${recruitment.slug}`;
+  const hubIndexable = !singleLeafSlug;
 
   // article:published_time — notificationDate (verified) or sourceListingPublishedDate (unverified)
   const publishedTime = factsVerified

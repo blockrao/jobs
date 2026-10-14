@@ -59,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Include all URLs for maximum discoverability: recruitment hubs + posting pages
-  const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.map((row) => ({
+  const recruitmentEntries: MetadataRoute.Sitemap = recruitmentRows.filter((row) => !row.canonicalIsLeaf).map((row) => ({
     url: `${SITE_URL}/jobs/${row.slug}`,
     lastModified: row.updatedAt,
     changeFrequency: "daily" as const,
