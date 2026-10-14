@@ -31,7 +31,7 @@ describe("official notification URL publication gate", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: "Approval refused: a valid official notification URL is required.",
+      error: "Approval refused: officialNotificationUrl must be a valid HTTP(S) URL.",
     });
     expect(markedApproved).toBe(false);
   });
