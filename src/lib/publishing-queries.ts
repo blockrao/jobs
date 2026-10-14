@@ -67,7 +67,10 @@ export async function getActivePostings(limit = 50, offset = 0) {
           "AUTOMATED_VALIDATION_PASS",
           "PUBLISHED",
         ]),
-        eq(postings.dataCompletenessStatus, "COMPLETE")
+        eq(postings.dataCompletenessStatus, "COMPLETE"),
+        // Publication status and application lifecycle are separate: never
+        // return a posting the lifecycle system has marked expired.
+        eq(postings.isExpired, false)
       )
     )
     .orderBy(desc(postings.createdAt))
