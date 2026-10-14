@@ -301,7 +301,8 @@ def main():
 
     # Load checkpoint if resuming
     checkpoint = load_checkpoint() if IS_RESUME else {}
-    skip_until_id = max(checkpoint.get("matched_ids", [])) if IS_RESUME else 0
+    matched_ids = checkpoint.get("matched_ids", [])
+    skip_until_id = max(matched_ids) if IS_RESUME and matched_ids else 0
 
     # Fetch all recruitments
     logger.info("Fetching recruitments from Supabase...")
