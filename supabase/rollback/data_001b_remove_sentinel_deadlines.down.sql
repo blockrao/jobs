@@ -1,0 +1,5 @@
+-- Rollback for 20261014040100_data_001b_remove_sentinel_deadlines.sql.
+-- Never applied automatically. There is deliberately no SQL here: the removed
+-- value was a placeholder, not a fact, and must not be restored. Recovery of a
+-- real deadline for any of the 38 posts goes through official-source
+-- verification (ledger A-088).
