@@ -149,15 +149,20 @@ export default function JobPostingHeader({
     (typeof post.fjaExtract?.locationRaw === "string" ? post.fjaExtract.locationRaw : null) ??
     null;
 
-  // Get exam type from enrichment
-  const examType = post.enrichment?.examType ?? null;
+  // Get exam type from post
+  const examType = post.examType ?? null;
 
-  // Get fee if available
-  const applicationFee = post.enrichment?.applicationFee ?? null;
+  // Get fee if available (take first category fee for display)
+  const applicationFee = post.enrichment?.feesByCategory
+    ? Object.values(post.enrichment.feesByCategory)[0] ?? null
+    : null;
 
-  // Get age limits if available
-  const ageMin = post.enrichment?.ageMinimum ?? null;
-  const ageMax = post.enrichment?.ageMaximum ?? null;
+  // Get age limits if available (take first category for display)
+  const ageRules = post.enrichment?.ageRulesByCategory
+    ? Object.values(post.enrichment.ageRulesByCategory)[0] ?? null
+    : null;
+  const ageMin = ageRules?.min ?? null;
+  const ageMax = ageRules?.max ?? null;
 
   return (
     <header className={`${styles.card} ${styles.hero}`}>
