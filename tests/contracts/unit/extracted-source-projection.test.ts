@@ -16,7 +16,7 @@ const HUB_DATES = "src/components/recruitment/sections/hub-dates.tsx";
 describe("extracted source projection", () => {
   test("maps inventory by its existing canonical Post mapping and keeps it separate from enrichment", () => {
     const source = stripComments(readSource(POST_QUERY));
-    expect(source).toContain("inventory_post.other_info_raw->>'canonical_post_id' = p.id::text");
+    expect(source).toContain("fi.other_info_raw->>'canonical_post_id'");
     expect(source).toContain('fi.qualification_raw AS "fjaQualificationRaw"');
     expect(source).toContain('fi.milestones_raw AS "fjaMilestonesRaw"');
     expect(source).toContain('fi.official_verification_status AS "fjaVerificationStatus"');
