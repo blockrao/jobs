@@ -116,11 +116,12 @@ export default function JobPostingHeader({
     post.notificationPublicationDate
   );
 
-  // Lead: show employment type, pay level, vacancy count
+  // Employment type
   const employmentType = post.employmentType
     ? post.employmentType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
+  // Pay level
   const payLevel = (() => {
     const pl = post.enrichment?.payLevel || post.payLevel;
     if (!pl) return null;
@@ -128,120 +129,145 @@ export default function JobPostingHeader({
     if (pl && typeof pl === "object") {
       const level = (pl as { level?: unknown }).level;
       const scheme = (pl as { scheme?: unknown }).scheme;
-      return scheme ? `Pay Level-${level} (${scheme})` : `Pay Level-${level}`;
+      return scheme ? `Level-${level} (${scheme})` : `Level-${level}`;
     }
     return null;
   })();
 
   const vacancyCount = resolvedFacts?.vacancyCount;
 
-  // Build a compact lead sentence from available facts
-  const leadParts: string[] = [];
-  if (vacancyCount != null) {
-    leadParts.push(`${vacancyCount.toLocaleString("en-IN")} ${vacancyCount === 1 ? "vacancy" : "vacancies"}`);
-  }
-  if (payLevel) leadParts.push(payLevel);
-  if (employmentType) leadParts.push(employmentType.toLowerCase());
-
   const deadlineDatetimeStr = effectiveDeadlineDate ? fmtDatetime(effectiveDeadlineDate) : null;
 
-  // Eligibility summary for lead (Phase 1: display text only — no eligibility engine)
+  // Eligibility summary (Phase 1: display text only — no eligibility engine)
   const qualText: string | null =
     post.fjaExtract?.eligibilityRaw ?? post.fjaExtract?.qualificationRaw ?? null;
   const expText: string | null = post.fjaExtract?.experienceRaw ?? null;
 
+  // Location
+  const location: string | null =
+    post.locationCity ??
+    (typeof post.fjaExtract?.locationRaw === "string" ? post.fjaExtract.locationRaw : null) ??
+    null;
+
+  // Get exam type from enrichment
+  const examType = post.enrichment?.examType ?? null;
+
+  // Get fee if available
+  const applicationFee = post.enrichment?.applicationFee ?? null;
+
+  // Get age limits if available
+  const ageMin = post.enrichment?.ageMinimum ?? null;
+  const ageMax = post.enrichment?.ageMaximum ?? null;
+
   return (
     <header className={`${styles.card} ${styles.hero}`}>
-      {/* Status + category chips */}
+      {/* Status chip — single, minimal */}
       <ul className={styles.chips}>
-        <li
-          className={getChipClass(effectiveState)}
-          data-status="true"
-        >
+        <li className={getChipClass(effectiveState)} data-status="true">
           {getChipText(effectiveState)}{isDeadlineUnknown && effectiveState !== "UNKNOWN" ? " (reported)" : ""}
         </li>
-        {employmentType && (
-          <li className={styles.chip}>{employmentType}</li>
-        )}
-        {post.organizationName && (
-          <li className={styles.chip}>{post.organizationName}</li>
-        )}
       </ul>
 
-      {/* H1 */}
+      {/* H1 — main title */}
       <h1 className={styles.jobTitle}>{richH1}</h1>
 
-      {/* Lead paragraph */}
-      {leadParts.length > 0 && (
-        <p className={styles.lead}>
-          {leadParts.join(", ").replace(/^./, (c) => c.toUpperCase())}.
-          {effectiveDeadlineDateStr && effectiveState === "OPEN" && (
-            <> Apply by <strong>{effectiveDeadlineDateStr}</strong>{isDeadlineUnknown ? " (reported)" : ""}.</>
+      {/* ENRICHMENT FACTS ROW — Fee, Age, Vacancy, Exam inline for immediate visibility */}
+      {(applicationFee !== null || (ageMin && ageMax) || vacancyCount !== null || examType) && (
+        <div className={styles.enrichmentRow}>
+          {applicationFee !== null && (
+            <div className={styles.enrichmentItem}>
+              <span className={styles.enrichmentLabel}>Fee</span>
+              <span className={styles.enrichmentValue}>
+                {typeof applicationFee === "number" ? `₹${applicationFee.toLocaleString("en-IN")}` : applicationFee}
+              </span>
+            </div>
           )}
-          {qualText && (
-            <> Requires: {qualText}.</>
+          {ageMin && ageMax && (
+            <div className={styles.enrichmentItem}>
+              <span className={styles.enrichmentLabel}>Age</span>
+              <span className={styles.enrichmentValue}>{ageMin}–{ageMax} yrs</span>
+            </div>
           )}
-        </p>
+          {vacancyCount !== null && (
+            <div className={styles.enrichmentItem}>
+              <span className={styles.enrichmentLabel}>Vacancies</span>
+              <span className={styles.enrichmentValue}>{vacancyCount.toLocaleString("en-IN")}</span>
+            </div>
+          )}
+          {examType && (
+            <div className={styles.enrichmentItem}>
+              <span className={styles.enrichmentLabel}>Exam</span>
+              <span className={styles.enrichmentValue}>{examType}</span>
+            </div>
+          )}
+          {location && (
+            <div className={styles.enrichmentItem}>
+              <span className={styles.enrichmentLabel}>Location</span>
+              <span className={styles.enrichmentValue}>{location}</span>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Deadline box */}
-      {effectiveDeadlineDateStr && (
+      {/* Context paragraph — organization, employment type, pay, deadline */}
+      <p className={styles.contextPara}>
+        {post.organizationName && <span>{post.organizationName}</span>}
+        {employmentType && <span>{employmentType}</span>}
+        {payLevel && <span>{payLevel}</span>}
+        {effectiveDeadlineDateStr && effectiveState === "OPEN" && (
+          <span className={styles.deadlineInline}>
+            Apply by <strong>{effectiveDeadlineDateStr}</strong>
+          </span>
+        )}
+        {effectiveState === "CLOSED" && effectiveDeadlineDateStr && (
+          <span className={styles.closedInline}>
+            Closed {effectiveDeadlineDateStr}
+          </span>
+        )}
+      </p>
+
+      {/* Deadline box — prominent only if needed */}
+      {effectiveDeadlineDateStr && effectiveState !== "CLOSED" && (
         <div className={styles.deadline}>
           <strong className={styles.deadlineLabel}>
-            Last date to apply{isDeadlineUnknown ? " (reported)" : ""}
+            Last date to apply
           </strong>
-          <time
-            className={styles.deadlineDate}
-            dateTime={deadlineDatetimeStr ?? undefined}
-          >
+          <time className={styles.deadlineDate} dateTime={deadlineDatetimeStr ?? undefined}>
             {effectiveDeadlineDateStr}
           </time>
           <span className={styles.deadlineCountdown} data-countdown="true">
-            {effectiveState === "CLOSED"
-              ? "Applications are closed."
-              : `Closing ${effectiveDeadlineDateStr}`}
+            {`Closing ${effectiveDeadlineDateStr}`}
           </span>
         </div>
       )}
 
       {/* Closed notice */}
       {effectiveState === "CLOSED" && (
-        <p
-          className={styles.closedNote}
-          style={{ display: "block" }}
-        >
+        <p className={styles.closedNote} style={{ display: "block" }}>
           Applications for this post are closed. This page will be updated when results or next steps are announced.
         </p>
       )}
 
       {/* Action buttons */}
       <p className={styles.actions}>
-        {applyUrl && deadline?.state !== "CLOSED" && (
+        {applyUrl && effectiveState !== "CLOSED" && (
           <a
             className={`${styles.btn} ${styles.btnPrimary}`}
             href={applyUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
-            Apply on official portal
+            Apply on official portal →
           </a>
         )}
         {sourceUrl && (
-          <a
-            className={styles.btn}
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a className={styles.btn} href={sourceUrl} target="_blank" rel="noopener noreferrer">
             Official notification
           </a>
         )}
         {post.recruitmentSlug && (
-          <a
-            className={styles.btnQuiet}
-            href={`${localePrefix}/jobs/${post.recruitmentSlug}`}
-          >
-            All posts in this recruitment
+          <a className={styles.btnQuiet} href={`${localePrefix}/jobs/${post.recruitmentSlug}`}>
+            All posts in recruitment
           </a>
         )}
       </p>
