@@ -124,7 +124,7 @@ begin
       values (org.org_id, 2026, rec_name, rec_slug, rec_slug, st, st::text, now(),
         notif_d, start_d, end_d, case when h->>'exam_or_interview_date' is not null then (h->>'exam_or_interview_date')::date::timestamp at time zone 'Asia/Kolkata' end, total,
         h->>'official_url', h->>'official_url', h->>'apply_url', h->>'apply_url',
-        'AGGREGATOR_DISCOVERED', case when h->>'posts_source' = 'document' then 'VERIFIED' else 'UNVERIFIED' end, case when h->>'posts_source' = 'document' then now() end,
+        'AGGREGATOR_DISCOVERED', case when h->>'posts_source' = 'document' then 'VERIFIED' else 'UNVERIFIABLE' end, case when h->>'posts_source' = 'document' then now() end,
         h->>'advertisement_number', h->>'advertisement_number',
         coalesce((h->>'employment_type')::employment_type, 'OTHER'), h->>'state_code',
         (h->>'fee_general')::int, (h->>'fee_reserved')::int, h->>'fee_note', h->>'selection_process', h->>'age_note',
@@ -175,7 +175,7 @@ begin
           notif_d, start_d, end_d, case when h->>'exam_or_interview_date' is not null then (h->>'exam_or_interview_date')::date::timestamp at time zone 'Asia/Kolkata' end,
           case when p->>'qualification_text' is not null then jsonb_build_object('text', p->>'qualification_text') end,
           case when p->>'experience_text' is not null then jsonb_build_object('text', p->>'experience_text') end,
-          case when h->>'posts_source' = 'document' then 'VERIFIED' else 'UNVERIFIED' end, now(), case when h->>'posts_source' = 'document' then 85 else 40 end, now(), now());
+          case when h->>'posts_source' = 'document' then 'VERIFIED' else 'UNVERIFIABLE' end, now(), case when h->>'posts_source' = 'document' then 85 else 40 end, now(), now());
       end loop;
       update official_digest_promote set status='PROMOTED', organization_id = org.org_id, recruitment_id = rec_id, post_ids = pids, org_match_method = org.method, promoted_at = now() where id = s.id;
       rownum := s.rownum; status := 'PROMOTED'; recruitment_id := rec_id; n_posts := i; org_method := org.method; note := rec_slug; return next;
