@@ -64,6 +64,40 @@
   padding: 32px;
 }
 
+/* ── Trust badges ── */
+.trustBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.trustBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(18, 184, 134, 0.25);
+  border: 1px solid rgba(18, 184, 134, 0.6);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.trustBadge:nth-child(2) {
+  background: rgba(255, 214, 10, 0.15);
+  border-color: rgba(255, 214, 10, 0.5);
+}
+
+.trustBadge:nth-child(3) {
+  background: rgba(185, 164, 255, 0.2);
+  border-color: rgba(185, 164, 255, 0.6);
+}
+
 .hero a {
   color: #fff;
 }
@@ -119,38 +153,41 @@
 
 /* ── Enrichment facts row (Fee, Age, Vacancy, Exam, Location) ── */
 .enrichmentRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 20px;
-  margin-top: 18px;
-  margin-bottom: 16px;
-  padding: 16px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.25);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
 }
 
 .enrichmentItem {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 0 0 auto;
+  gap: 6px;
+  flex: 1;
 }
 
 .enrichmentLabel {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  opacity: 0.85;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .enrichmentValue {
   display: block;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1.2;
   color: #fff;
+  word-break: break-word;
 }
 
 /* ── Context paragraph (organization, type, pay, deadline) ── */
@@ -238,16 +275,16 @@
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 8px 20px;
+  min-height: 52px;
+  padding: 12px 24px;
   border: 2px solid var(--ink);
   border-radius: 12px;
   background: #fff;
@@ -258,29 +295,71 @@
   text-align: center;
   box-shadow: 0 3px 0 var(--ink);
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 0 var(--ink);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 0 var(--ink);
 }
 
 .btnPrimary {
   background: var(--yellow);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
+  min-height: 56px;
 }
 
 .btnQuiet {
   box-shadow: none;
   background: transparent;
   color: #fff !important;
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.6);
   font-size: 15px;
+  min-height: 48px;
+  transition: all 0.2s ease;
 }
 
 .btnQuiet:hover {
   border-color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Quick Requirements Section ── */
+.quickReqs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quickReqItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quickReqLabel {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.quickReqText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #fff;
+  margin: 0;
 }
 
 /* ── Meta line under hero ── */
@@ -719,17 +798,62 @@
   }
 
   .hero {
-    padding: 24px;
+    padding: 20px 20px;
+  }
+
+  .jobTitle {
+    font-size: clamp(24px, 5vw, 32px);
+  }
+
+  .trustBadges {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+
+  .trustBadge {
+    font-size: 12px;
+    padding: 5px 10px;
   }
 
   .enrichmentRow {
-    gap: 12px 16px;
-    padding: 12px 0;
+    gap: 12px;
+    padding: 14px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .enrichmentValue {
+    font-size: 18px;
   }
 
   .contextPara {
-    font-size: 15px;
+    font-size: 14px;
     gap: 8px;
+  }
+
+  .deadline {
+    margin-top: 14px;
+    padding: 14px 16px;
+  }
+
+  .deadlineDate {
+    font-size: 20px;
+  }
+
+  .actions {
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .btn {
+    min-height: 48px;
+    font-size: 15px;
+    padding: 10px 16px;
+  }
+
+  .btnPrimary {
+    min-height: 52px;
+    font-size: 16px;
   }
 }
 

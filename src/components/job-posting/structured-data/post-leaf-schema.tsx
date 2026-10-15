@@ -250,6 +250,32 @@ export default function PostLeafStructuredData({
     jobPosting["qualifications"] = post.qualificationText;
   }
 
+  // Extract skills from qualifications text for better discoverability
+  // This helps AI search engines understand required competencies
+  const skillKeywords = [
+    "English", "Hindi", "Data", "IT", "Programming", "Java", "Python", "SQL",
+    "Communication", "Analysis", "Management", "Planning", "Coordination",
+    "Report writing", "Office", "Excel", "Word", "Administrative",
+    "Clerical", "Legal", "Medical", "Engineering", "Statistics",
+    "Accounting", "Finance", "HR", "Logistics", "Transportation"
+  ];
+
+  const extractedSkills: Set<string> = new Set();
+  if (post.qualificationText) {
+    skillKeywords.forEach(skill => {
+      // Case-insensitive word boundary matching
+      const regex = new RegExp(`\\b${skill}\\b`, 'i');
+      if (regex.test(post.qualificationText!)) {
+        extractedSkills.add(skill);
+      }
+    });
+  }
+
+  // Emit skills array if any were found (AEO optimization for AI search)
+  if (extractedSkills.size > 0) {
+    jobPosting["skills"] = Array.from(extractedSkills);
+  }
+
   // educationRequirements — intentionally omitted in Phase 1.
   // Phase 2 will derive the credentialCategory from qualificationExpr.
   // A hardcoded "bachelor degree" would be a fabricated fact for posts that
@@ -263,6 +289,10 @@ export default function PostLeafStructuredData({
       description: post.experienceText,
     };
   }
+
+  // jobLocationType — Indian government jobs are typically ON_SITE
+  // Not remote or hybrid; always on-site employment at the workplace
+  jobPosting["jobLocationType"] = "ON_SITE";
 
   const graph = {
     "@context": "https://schema.org",

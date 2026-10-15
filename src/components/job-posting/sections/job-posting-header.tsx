@@ -166,6 +166,23 @@ export default function JobPostingHeader({
 
   return (
     <header className={`${styles.card} ${styles.hero}`}>
+      {/* Trust signal badges — government verification status */}
+      <div className={styles.trustBadges}>
+        {sourceUrl && (
+          <span className={styles.trustBadge} title="Verified against official source">
+            ✓ Official Source Verified
+          </span>
+        )}
+        {post.fjaExtract?.verificationStatus === "VERIFIED" && (
+          <span className={styles.trustBadge} title="Verified against official notification">
+            ✓ Government Verified
+          </span>
+        )}
+        <span className={styles.trustBadge} title="Government of India position">
+          🏛️ Government Job
+        </span>
+      </div>
+
       {/* Status chip — single, minimal */}
       <ul className={styles.chips}>
         <li className={getChipClass(effectiveState)} data-status="true">
@@ -230,6 +247,24 @@ export default function JobPostingHeader({
           </span>
         )}
       </p>
+
+      {/* Quick Requirements Section — Key qualification/experience upfront */}
+      {(qualText || expText) && (
+        <div className={styles.quickReqs}>
+          {qualText && (
+            <div className={styles.quickReqItem}>
+              <h3 className={styles.quickReqLabel}>Qualifications Required</h3>
+              <p className={styles.quickReqText}>{qualText.substring(0, 150)}{qualText.length > 150 ? '...' : ''}</p>
+            </div>
+          )}
+          {expText && (
+            <div className={styles.quickReqItem}>
+              <h3 className={styles.quickReqLabel}>Experience Required</h3>
+              <p className={styles.quickReqText}>{expText.substring(0, 120)}{expText.length > 120 ? '...' : ''}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Deadline box — prominent only if needed */}
       {effectiveDeadlineDateStr && effectiveState !== "CLOSED" && (
