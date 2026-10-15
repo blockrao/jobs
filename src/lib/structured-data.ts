@@ -67,6 +67,7 @@ export function buildOrganizationSchema(org: Organization, kind?: string | null)
     url: org.websiteUrl ?? absoluteUrl(`/organizations/${org.slug}`),
     logo: org.logoUrl ?? undefined,
     description: org.description ?? undefined,
+    ...(org.websiteUrl && { sameAs: org.websiteUrl }),
   };
 }
 
@@ -234,11 +235,8 @@ export function buildJobPostingSchema(
     ? new Date(extraContent.appointmentDate).toISOString()
     : undefined;
 
-  // Enhance hiringOrganization with sameAs (organization website) for entity linking
+  // Enhance hiringOrganization with entity linking
   const hiringOrg = buildOrganizationSchema(org, posting.kind);
-  if (org.websiteUrl) {
-    hiringOrg.sameAs = org.websiteUrl;
-  }
 
   return {
     "@type": "JobPosting",
