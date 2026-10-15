@@ -16,6 +16,10 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
   const enrichment = post.enrichment;
   // Use resolver output for salary range — never raw enrichment salaryMin/Max
   const resolvedSalary = resolvedFacts?.salary ?? null;
+
+  // PENDING policy: check resolver verificationStatus for PENDING facts
+  // Also maintain backward compatibility with FJA extract verification status
+  const salaryIsPending = resolvedSalary?.verificationStatus === "PENDING";
   const sourceFactsUnverified = Boolean(
     post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
   );
@@ -69,7 +73,9 @@ export default function SalaryCompensation({ post, resolvedFacts }: SalaryCompen
       {/* Salary Range — only from resolver, never raw enrichment */}
       {resolvedSalary && (!sourceFactsUnverified || !post.fjaExtract?.salaryRaw) && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>{sourceFactsUnverified ? "Salary range reported in current record" : "Salary Range"}</div>
+          <div className={styles.infoLabel}>
+            {salaryIsPending ? "Salary range (reported)" : sourceFactsUnverified ? "Salary range reported in current record" : "Salary Range"}
+          </div>
           <div className={styles.infoValue}>
             {resolvedSalary.min && resolvedSalary.max ? (
               <>

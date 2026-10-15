@@ -32,12 +32,20 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
   const resolvedTotal = resolvedFacts?.vacancyCount ?? extractedTotal;
 
   const isReported = post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED";
+  // PENDING policy: check resolver's vacancyCount for verification status
+  // The resolver now returns vacancy counts for PENDING facts as well
+  const vacancyIsPending = resolvedFacts?.vacancyCount != null &&
+    post.enrichment?.sourceVerificationStatus === "PENDING";
 
   if (!hasDetails) {
     if (resolvedTotal == null) return null;
     return (
       <div className={embedded ? undefined : styles.section}>
-        {!embedded && <h2 className={styles.sectionTitle}>Vacancy Details{isReported ? " (reported)" : ""}</h2>}
+        {!embedded && (
+          <h2 className={styles.sectionTitle}>
+            Vacancy Details{vacancyIsPending ? " (reported)" : isReported ? " (reported)" : ""}
+          </h2>
+        )}
         <p style={{ color: "#334155" }}>
           Total Vacancies: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
         </p>
@@ -47,7 +55,11 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
 
   return (
     <div className={embedded ? undefined : styles.section}>
-      {!embedded && <h2 className={styles.sectionTitle}>Vacancy Details{isReported ? " (reported)" : ""}</h2>}
+      {!embedded && (
+        <h2 className={styles.sectionTitle}>
+          Vacancy Details{vacancyIsPending ? " (reported)" : isReported ? " (reported)" : ""}
+        </h2>
+      )}
       <table className={styles.table}>
         <thead>
           <tr>

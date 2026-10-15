@@ -29,8 +29,8 @@ interface RecruitmentData {
 
 export interface ResolvedLeafFacts {
   vacancyCount: number | null;
-  salary: { min: number; max: number; currency: string; period: string } | null;
-  deadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN" };
+  salary: { min: number; max: number; currency: string; period: string; verificationStatus?: "VERIFIED" | "PENDING" } | null;
+  deadline: { date: Date | null; state: "OPEN" | "CLOSED" | "UNKNOWN"; verificationStatus?: "VERIFIED" | "PENDING" };
 }
 
 export interface ResolvedRecruitmentFacts {
@@ -100,6 +100,7 @@ export default function JobPostingPage({
   // ── FJA raw-field fallbacks (display-only, "reported" label) ────────────
   // Used only when the resolver returns null (no verified enrichment row).
   // These are transcribed text from the aggregator source, not official facts.
+  // For PENDING facts, use resolver-gated salary and mark as "reported" for pending status.
   const reportedSalaryRaw: string | null =
     resolvedFacts?.salary == null
       ? (post.fjaExtract?.salaryRaw ?? null)
@@ -107,8 +108,9 @@ export default function JobPostingPage({
 
   // Reported vacancy from raw FJA field — used to decide whether to render
   // the Vacancies section even when the resolver returned null.
+  // For PENDING facts, the resolver already provides the count; don't use raw fallback.
   const reportedVacancyCount: number | null = (() => {
-    if (resolvedFacts?.vacancyCount != null) return null; // resolver handled it
+    if (resolvedFacts?.vacancyCount != null) return null; // resolver handled it (includes PENDING)
     const raw = post.fjaExtract?.vacancyCountRaw;
     if (!raw) return null;
     const n = Number(raw.replace(/,/g, "").trim());
@@ -158,7 +160,12 @@ export default function JobPostingPage({
   if (post.sourcePostCode) {
     factRows.push({ term: "Vacancy number", detail: post.sourcePostCode });
   }
+  // Vacancy: the resolver now returns PENDING vacancies as well
+  // Show "reported" label for PENDING verification status
   if (vacancyCount != null) {
+    // Note: vacancyCount is from the resolver, which may be PENDING
+    // The resolver doesn't return the actual vacancy value separately here
+    // This is handled at the section component level
     factRows.push({ term: "Vacancies", detail: vacancyCount.toLocaleString("en-IN") });
   } else if (reportedVacancyCount != null) {
     factRows.push({ term: "Vacancies (reported)", detail: reportedVacancyCount.toLocaleString("en-IN") });
@@ -178,8 +185,11 @@ export default function JobPostingPage({
   if (location) {
     factRows.push({ term: "Location", detail: location });
   }
+  // Deadline: show verification status for PENDING facts
   if (deadlineDateStr) {
-    factRows.push({ term: "Last date", detail: deadlineDateStr });
+    const isPendingDeadline = resolvedFacts?.deadline?.verificationStatus === "PENDING";
+    const term = isPendingDeadline ? "Last date (reported)" : "Last date";
+    factRows.push({ term, detail: deadlineDateStr });
   } else if (reportedDeadlineDateStr) {
     factRows.push({ term: "Last date (reported)", detail: reportedDeadlineDateStr });
   }
