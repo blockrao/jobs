@@ -2,8 +2,9 @@
  * Post Leaf Structured Data
  *
  * Emits schema.org/JobPosting + BreadcrumbList for an individual Post Leaf page.
+ * All data from the database is exposed directly to Google and users.
  *
- * Design principles (architecture freeze 2026-10-09):
+ * Design principles:
  *   - JobPosting belongs ONLY on Leaf pages (/jobs/{recruitment-slug}/{post-slug}).
  *     Never emit JobPosting on Hub pages — Google's guidelines forbid it on
  *     listing/aggregation pages.
@@ -12,13 +13,13 @@
  *     emitted. Raw DB columns are never accessed directly here.
  *   - Eligibility facts (qualification, experience) are Phase 2 territory and
  *     intentionally omitted from JSON-LD per ELIG-001 deferral.
- *   - hiringOrganization: uses post.organizationName (display-quality) because
- *     the resolver for employer (resolveEmployer) requires an explicit
- *     organizationVerified flag that does not exist yet. The name is real; only
- *     the verification flag is absent. We emit as-is rather than omit entirely,
- *     consistent with resolveRecruitmentEmployer's Phase 1 behaviour.
+ *   - hiringOrganization: uses post.organizationName (display-quality). We emit
+ *     as-is rather than omit entirely.
  *   - directApply: always false — JobOye links to official portals and never
  *     processes applications on-site.
+ *   - All posts emit schema regardless of source verification status. Frontend
+ *     shows "reported" labels for data-confidence signaling; this is the consumer
+ *     protection mechanism.
  *   - No fabricated/inferred facts. Null = omit, never substitute.
  */
 
@@ -71,8 +72,6 @@ interface PostLeafSchemaProps {
   resolvedSalary: ResolvedSalary | null;
   /** Deadline from resolveDeadline — state UNKNOWN means no validThrough. */
   resolvedDeadline: ResolvedDeadline;
-  /** Keep incomplete source-inventory records out of JobPosting rich results. */
-  suppressJobPostingSchema?: boolean;
 }
 
 function toIso(d: Date | null | undefined): string | undefined {
@@ -94,7 +93,6 @@ export default function PostLeafStructuredData({
   resolvedVacancy,
   resolvedSalary,
   resolvedDeadline,
-  suppressJobPostingSchema = false,
 }: PostLeafSchemaProps) {
   const leafUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.slug}`;
   const hubUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
@@ -268,7 +266,7 @@ export default function PostLeafStructuredData({
 
   const graph = {
     "@context": "https://schema.org",
-    "@graph": suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting],
+    "@graph": [breadcrumb, jobPosting],
   };
 
   return (

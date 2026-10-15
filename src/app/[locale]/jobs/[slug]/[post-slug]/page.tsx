@@ -41,11 +41,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // Unverified-inventory posts must not be indexed — mirrors (default) route.
-  const sourceVerificationPending = Boolean(
-    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
-  );
-
   // Use the canonical relationship returned by the database, not the
   // potentially historical recruitment slug from the incoming URL.
   const canonicalSlug = post.recruitmentSlug + "/" + post.slug;
@@ -64,8 +59,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: seo.alternates,
-    // When source verification is pending, suppress indexing regardless of locale SEO defaults.
-    robots: sourceVerificationPending ? { index: false, follow: true } : seo.robots,
+    // All posts are exposed to indexing. Frontend shows "reported" labels for data-confidence signaling.
+    robots: seo.robots,
     openGraph: {
       title,
       description,
@@ -82,14 +77,7 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   if (!post) notFound();
 
-  // Mirror (default) route: suppress JobPosting schema when source verification is pending.
-  // fjaExtract is null only for posts that have no fja_post_inventory link — i.e. posts
-  // created through the canonical write path, not scraped from aggregators. Those posts
-  // are safe to index. Inventory-linked posts are always joined (LEFT JOIN LATERAL ON TRUE),
-  // so fjaExtract being non-null is the reliable signal that an inventory record exists.
-  const sourceVerificationPending = Boolean(
-    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
-  );
+  // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
 
   const recruitmentData = await getRecruitmentWithPosts(post.recruitmentSlug);
   const now = new Date();
@@ -143,7 +131,6 @@ export default async function LocaleJobPostingPage({ params }: Props) {
         resolvedVacancy={resolvedFacts.vacancyCount}
         resolvedSalary={resolvedFacts.salary}
         resolvedDeadline={resolvedFacts.deadline}
-        suppressJobPostingSchema={sourceVerificationPending}
       />
       )}
       <JobPostingPage
