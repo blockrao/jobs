@@ -1511,7 +1511,10 @@ WITH official_posts_with_org AS (
     opr.official_name,
     opr.post_title,
     opr.vacancies,
-    TO_DATE(opr.last_date, 'DD-MM-YYYY') as deadline,
+    CASE 
+      WHEN opr.last_date ~ '^\d{2}-\d{2}-\d{4}$' THEN TO_DATE(opr.last_date, 'DD-MM-YYYY')
+      ELSE NULL
+    END as deadline,
     opr.official_url,
     om.canonical_org_id,
     -- Generate unique slugs with row counter for duplicates
@@ -1558,6 +1561,7 @@ WITH official_posts_with_org AS (
     END AS slug
   FROM official_posts_raw opr
   LEFT JOIN organization_mapping om ON opr.official_name = om.official_name
+  WHERE om.canonical_org_id IS NOT NULL
 ),
 created_recruitments AS (
   INSERT INTO recruitments (
@@ -1574,7 +1578,7 @@ created_recruitments AS (
   SELECT
     opwo.post_title,
     opwo.canonical_org_id,
-    EXTRACT(YEAR FROM opwo.deadline)::smallint,
+    COALESCE(EXTRACT(YEAR FROM opwo.deadline)::smallint, 2026),
     opwo.slug,
     CASE
       WHEN opwo.deadline > NOW()::DATE THEN 'ACTIVE'::recruitment_status
