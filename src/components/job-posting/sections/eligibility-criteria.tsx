@@ -34,8 +34,8 @@ export default function EligibilityCriteria({ post, resolvedFacts, embedded }: E
   const enrichment = post.enrichment;
   const extracted = post.fjaExtract;
 
-  // Check if eligibility facts are PENDING from resolver
-  const eligibilityIsPending = resolvedFacts?.eligibility?.verificationStatus === "PENDING";
+  // Phase 1: eligibility facts from fjaExtract are display-only; ResolvedLeafFacts does not include eligibility
+  // All extracted eligibility facts are labeled as "reported in listing"
 
   // Normalize variable-shape enrichment fields upfront
   const education = enrichment?.education
@@ -99,13 +99,13 @@ export default function EligibilityCriteria({ post, resolvedFacts, embedded }: E
       {/* Raw extracted eligibility — shown only when no canonical enrichment field exists */}
       {extractedEligibility && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>{eligibilityIsPending ? "Qualification (reported)" : "Qualification reported in listing"}</div>
+          <div className={styles.infoLabel}>Qualification reported in listing</div>
           <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedEligibility}</div>
         </div>
       )}
       {extractedExperience && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>{eligibilityIsPending ? "Experience (reported)" : "Experience reported in listing"}</div>
+          <div className={styles.infoLabel}>Experience reported in listing</div>
           <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedExperience}</div>
         </div>
       )}
@@ -117,13 +117,13 @@ export default function EligibilityCriteria({ post, resolvedFacts, embedded }: E
       )}
       {extractedAge && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>{eligibilityIsPending ? "Age limit (reported)" : "Age limit reported in listing"}</div>
+          <div className={styles.infoLabel}>Age limit reported in listing</div>
           <div className={styles.infoValue}>{extractedAge}</div>
         </div>
       )}
       {!enrichment?.ageRelaxationRules && extracted?.ageRelaxationRulesRaw && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>{eligibilityIsPending ? "Age relaxation (reported)" : "Age relaxation reported in listing"}</div>
+          <div className={styles.infoLabel}>Age relaxation reported in listing</div>
           <div className={styles.infoValue}>{extracted.ageRelaxationRulesRaw}</div>
         </div>
       )}

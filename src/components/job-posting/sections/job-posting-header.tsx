@@ -193,7 +193,7 @@ export default function JobPostingHeader({
               <span className={styles.enrichmentValue}>{ageMin}–{ageMax} yrs</span>
             </div>
           )}
-          {vacancyCount !== null && (
+          {typeof vacancyCount === 'number' && (
             <div className={styles.enrichmentItem}>
               <span className={styles.enrichmentLabel}>Vacancies</span>
               <span className={styles.enrichmentValue}>{vacancyCount.toLocaleString("en-IN")}</span>
