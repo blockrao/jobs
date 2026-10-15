@@ -177,7 +177,7 @@ export default function JobPostingHeader({
       <h1 className={styles.jobTitle}>{richH1}</h1>
 
       {/* ENRICHMENT FACTS ROW — Fee, Age, Vacancy, Exam inline for immediate visibility */}
-      {(applicationFee !== null || (ageMin && ageMax) || vacancyCount !== null || examType) && (
+      {(applicationFee !== null || (ageMin && ageMax) || typeof vacancyCount === 'number' || examType) && (
         <div className={styles.enrichmentRow}>
           {applicationFee !== null && (
             <div className={styles.enrichmentItem}>
