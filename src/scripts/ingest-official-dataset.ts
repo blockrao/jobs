@@ -1,17 +1,24 @@
 /**
  * Official Dataset Phase 1 Ingest
  * Purpose: Ingest FreeJobAlert official notifications into posts table
- * 
+ *
+ * NOTE: This script is deferred to Phase 2 pending owner decision (DATA-000).
+ * It requires 'csv-parser' and 'uuid' npm packages not currently installed.
+ *
  * Usage:
+ *   npm install csv-parser uuid
  *   DRY_RUN=true npm run ts-node src/scripts/ingest-official-dataset.ts
  *   DRY_RUN=false npm run ts-node src/scripts/ingest-official-dataset.ts
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as csv from 'csv-parser';
-import { v4 as uuidv4 } from 'uuid';
+// import * as csv from 'csv-parser';  // Deferred: requires npm install csv-parser
+// import { v4 as uuidv4 } from 'uuid';  // Deferred: requires npm install uuid
 import { createClient } from '@supabase/supabase-js';
+
+// Stub implementations for deferred dependencies
+const uuidv4 = () => Math.random().toString(36).substr(2, 9);
 
 interface CategoryARecord {
   post_title: string;
@@ -97,39 +104,16 @@ async function loadCategoryA(): Promise<PostRecord[]> {
 
 async function loadCategoryBC(): Promise<PostRecord[]> {
   console.log('\n📂 Loading Categories B & C records...');
-  
-  const filePath = path.join(DATA_DIR, 'decomposition_data_final_clean.csv');
+  console.log('  ⚠️  CSV loading is deferred (requires npm install csv-parser)');
+
+  // Deferred: CSV parsing requires 'csv-parser' package
+  // Returning empty array for now - this script is not used in Phase 2
   const records: PostRecord[] = [];
-  
-  return new Promise((resolve, reject) => {
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (record: any) => {
-        const postRecord: PostRecord = {
-          id: uuidv4(),
-          post_title: record.decomposed_role || record.original_post,
-          organization: record.organization,
-          vacancy_total: parseFloat(record.vacancy_total) || 0,
-          is_official_source: true,
-          original_recruitment_url: record.official_notification_url || '',
-          official_notification_url: record.official_notification_url,
-          apply_portal_url: record.apply_portal_url,
-          posted_date: record.posted_date,
-          last_date: record.last_date,
-          location: record.location,
-          source_name: 'FreeJobAlert',
-          source_reference: `FreeJobAlert_row_${record.source_row}_role_${record.role_index}`,
-          created_at: new Date().toISOString()
-        };
-        records.push(postRecord);
-      })
-      .on('end', () => {
-        console.log(`  ✓ Loaded ${records.length} Categories B & C records`);
-        console.log(`  ✓ Total vacancies: ${records.reduce((sum, r) => sum + r.vacancy_total, 0).toFixed(0)}`);
-        resolve(records);
-      })
-      .on('error', reject);
-  });
+
+  console.log(`  ✓ Loaded ${records.length} Categories B & C records`);
+  console.log(`  ✓ Total vacancies: ${records.reduce((sum, r) => sum + r.vacancy_total, 0).toFixed(0)}`);
+
+  return records;
 }
 
 async function executeDryRun(allRecords: PostRecord[]): Promise<void> {
@@ -229,30 +213,40 @@ async function main() {
   console.log('═'.repeat(70));
   console.log(`Mode: ${DRY_RUN ? 'DRY-RUN' : 'PRODUCTION'}`);
   console.log(`Timestamp: ${new Date().toISOString()}`);
-  
+  console.log('\n⚠️  DEFERRED: This script is deferred to Phase 2 (DATA-000)');
+  console.log('   See HANDOFF.md for status and pending owner decision.');
+
   try {
     // Load data
     const categoryA = await loadCategoryA();
     const categoryBC = await loadCategoryBC();
     const allRecords = [...categoryA, ...categoryBC];
-    
+
     console.log('\n📊 Summary:');
     console.log(`   Category A posts: ${categoryA.length}`);
     console.log(`   Categories B & C posts: ${categoryBC.length}`);
     console.log(`   Total posts: ${allRecords.length}`);
     console.log(`   Total vacancies: ${allRecords.reduce((sum, r) => sum + r.vacancy_total, 0).toFixed(0)}`);
-    
+
+    if (allRecords.length === 0) {
+      console.log('\n   ℹ️  No records to ingest - script is deferred.');
+      console.log('═'.repeat(70));
+      console.log('✓ Script completed (deferred - no data to process)');
+      console.log('═'.repeat(70));
+      return;
+    }
+
     // Execute based on mode
     if (DRY_RUN) {
       await executeDryRun(allRecords);
     } else {
       await executeProduction(allRecords);
     }
-    
+
     console.log('═'.repeat(70));
     console.log('✓ Ingest completed successfully');
     console.log('═'.repeat(70));
-    
+
   } catch (error) {
     console.error('\n❌ Error:', error instanceof Error ? error.message : String(error));
     process.exit(1);

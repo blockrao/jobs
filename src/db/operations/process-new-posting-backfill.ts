@@ -6,9 +6,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { buildJobPostingSchema } from '@/lib/structured-data';
-import type { Database } from '@/lib/database.types';
 
-const supabase = createClient<Database>(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -117,25 +116,23 @@ function normalizePosting(raw: RawPostingInput) {
 async function resolveOrganization(name: string, slug?: string) {
   // Try to find by slug or name
   if (slug) {
-    const { data: existing } = await supabase
+    const result = await supabase
       .from('organizations')
       .select('*')
       .eq('slug', slug)
-      .single()
-      .catch(() => ({ data: null }));
+      .single();
 
-    if (existing) return existing;
+    if (result.data) return result.data;
   }
 
   // Try to find by name (case-insensitive)
-  const { data: byName } = await supabase
+  const result = await supabase
     .from('organizations')
     .select('*')
     .ilike('name', name)
-    .single()
-    .catch(() => ({ data: null }));
+    .single();
 
-  if (byName) return byName;
+  if (result.data) return result.data;
 
   // Create new organization
   const newSlug = slug || name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -154,15 +151,14 @@ async function resolveOrganization(name: string, slug?: string) {
 
 async function getOrCreateRecruitment(title: string, organizationId: number) {
   // Try to find matching recruitment
-  const { data: existing } = await supabase
+  const result = await supabase
     .from('recruitments')
     .select('*')
     .eq('name', title)
     .eq('organization_id', organizationId)
-    .single()
-    .catch(() => ({ data: null }));
+    .single();
 
-  if (existing) return existing;
+  if (result.data) return result.data;
 
   // Create new recruitment
   const slug = title.toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -182,15 +178,14 @@ async function getOrCreateRecruitment(title: string, organizationId: number) {
 
 async function getOrCreatePost(recruitmentId: number, positionTitle: string) {
   // Try to find matching post
-  const { data: existing } = await supabase
+  const result = await supabase
     .from('posts')
     .select('*')
     .eq('recruitment_id', recruitmentId)
     .ilike('title', positionTitle)
-    .single()
-    .catch(() => ({ data: null }));
+    .single();
 
-  if (existing) return existing;
+  if (result.data) return result.data;
 
   // Create new post
   const { data: created } = await supabase
