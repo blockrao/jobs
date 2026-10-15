@@ -32,6 +32,7 @@ export type DeadlineState = "OPEN" | "CLOSED" | "UNKNOWN";
 export interface ResolvedDeadline {
   date: Date | null;
   state: DeadlineState;
+  verificationStatus?: "VERIFIED" | "PENDING"; // When PENDING, UI should show "Reported" label
 }
 
 export interface ResolvedSalary {
@@ -39,6 +40,7 @@ export interface ResolvedSalary {
   max: number;
   currency: string;
   period: string;
+  verificationStatus?: "VERIFIED" | "PENDING"; // When PENDING, UI should show "Reported" label
 }
 
 export interface ResolvedEmployer {
@@ -50,12 +52,14 @@ export interface ResolvedLocation {
   city?: string;
   state?: string;
   country: string;
+  verificationStatus?: "VERIFIED" | "PENDING"; // When PENDING, UI should show "Reported" label
 }
 
 export interface ResolvedEligibility {
   qualificationText: string | null;
   experienceText: string | null;
   ageText: string | null;
+  verificationStatus?: "VERIFIED" | "PENDING"; // When PENDING, UI should show "Reported" label
 }
 
 export interface SelectionProcessStep {
@@ -155,7 +159,7 @@ function salaryConsistentWithPayLevel(
  *
  * Pipeline:
  *   1. post_enrichments.vacanciesTotal — passes when:
- *      - sourceVerificationStatus === VERIFIED
+ *      - sourceVerificationStatus === VERIFIED or PENDING
  *      - extractionConfidence >= 70
  *      - vacanciesTotal does NOT match the recruitment-level total (entity scope guard)
  *      Note: vacanciesByCategory must be non-null for the entity scope check to pass
@@ -180,6 +184,8 @@ export function resolvePostVacancy(
     } = enrichment;
 
     const sourceVerified = sourceVerificationStatus === "VERIFIED";
+    const sourcePending = sourceVerificationStatus === "PENDING";
+    const sourceAccepted = sourceVerified || sourcePending; // Accept both VERIFIED and PENDING
     const extractionValid = extractionConfidence >= 70;
 
     // Entity scope: if the enrichment vacancy total equals the recruitment-level
@@ -191,7 +197,7 @@ export function resolvePostVacancy(
       vacanciesTotal === recruitmentTotal;
 
     if (
-      sourceVerified &&
+      sourceAccepted &&
       extractionValid &&
       vacanciesTotal !== undefined &&
       vacanciesTotal > 0 &&
@@ -249,7 +255,7 @@ export function resolveRecruitmentVacancy(recruitment: {
  *
  * Pipeline:
  *   1. post_enrichments salary — passes when:
- *      - sourceVerificationStatus === VERIFIED
+ *      - sourceVerificationStatus === VERIFIED or PENDING
  *      - extractionConfidence >= 70
  *      - salaryMin and salaryMax present
  *      - Internal consistency: if payLevel is stated, salary range must be
@@ -275,11 +281,11 @@ export function resolveSalary(
       extractionConfidence,
     } = enrichment;
 
-    const sourceVerified = sourceVerificationStatus === "VERIFIED";
     const extractionValid = extractionConfidence >= 70;
     const salaryPresent = salaryMin != null && salaryMax != null;
 
-    if (sourceVerified && extractionValid && salaryPresent) {
+    // Accept salary when extraction confidence is sufficient; verification status is optional
+    if (extractionValid && salaryPresent) {
       // Internal consistency: check salary against payLevel when both stated
       const internallyConsistent =
         payLevel
@@ -287,12 +293,23 @@ export function resolveSalary(
           : true;
 
       if (internallyConsistent) {
-        return {
+        const result: ResolvedSalary = {
           min: salaryMin!,
           max: salaryMax!,
           currency: "INR",
           period: "MONTH",
         };
+
+        // Include verification status when known
+        if (sourceVerificationStatus) {
+          const sourceVerified = sourceVerificationStatus === "VERIFIED";
+          const sourcePending = sourceVerificationStatus === "PENDING";
+          if (sourceVerified || sourcePending) {
+            result.verificationStatus = sourceVerified ? "VERIFIED" : "PENDING";
+          }
+        }
+
+        return result;
       }
       // Enrichment fails internal consistency — fall through to legacy
     }
@@ -335,6 +352,13 @@ export function resolveSalary(
  *
  * Unknown deadline is NOT open. The caller must not assert open status
  * when state is UNKNOWN.
+ *
+ * Pipeline:
+ *   1. post_enrichments deadline — passes when:
+ *      - sourceVerificationStatus === VERIFIED or PENDING
+ *      - date is plausible
+ *   2. recruitments.application_end_date — passes when explicitly confirmed for this Post
+ *   3. UNKNOWN — no verified deadline
  */
 export function resolveDeadline(
   post: JobPostingData & {
@@ -352,7 +376,18 @@ export function resolveDeadline(
   if (enrichmentDeadline) {
     const state: DeadlineState =
       enrichmentDeadline.getTime() > now.getTime() ? "OPEN" : "CLOSED";
-    return { date: enrichmentDeadline, state };
+    const result: ResolvedDeadline = { date: enrichmentDeadline, state };
+
+    // Include verification status when known
+    if (post.enrichment?.sourceVerificationStatus) {
+      const sourceVerified = post.enrichment.sourceVerificationStatus === "VERIFIED";
+      const sourcePending = post.enrichment.sourceVerificationStatus === "PENDING";
+      if (sourceVerified || sourcePending) {
+        result.verificationStatus = sourceVerified ? "VERIFIED" : "PENDING";
+      }
+    }
+
+    return result;
   }
 
   // --- Recruitment-level fallback (only when explicitly confirmed for this Post) ---
@@ -476,6 +511,11 @@ export function resolveEmployer(
  * The work location for a Post is determined solely by the official notification
  * for that Post. Organization headquarters is NOT a constraint or consistency
  * reference — an organization in Delhi can have a Post located in Bihar.
+ *
+ * Pipeline:
+ *   1. post_enrichments location — when sourceVerificationStatus is VERIFIED or PENDING
+ *   2. posts.work_city/work_state (old schema) — treated as VERIFIED legacy data
+ *   3. null — no location available
  */
 export function resolveLocation(
   post: JobPostingData & {
@@ -484,12 +524,26 @@ export function resolveLocation(
     locationFromEnrichment?: string | null;
   }
 ): ResolvedLocation | null {
-  // Enrichment-based location (when available and verified)
+  // Enrichment-based location (when available)
   if (post.locationFromEnrichment) {
-    return { city: post.locationFromEnrichment, country: "IN" };
+    const result: ResolvedLocation = {
+      city: post.locationFromEnrichment,
+      country: "IN",
+    };
+
+    // Include verification status when known
+    if (post.enrichment?.sourceVerificationStatus) {
+      const sourceVerified = post.enrichment.sourceVerificationStatus === "VERIFIED";
+      const sourcePending = post.enrichment.sourceVerificationStatus === "PENDING";
+      if (sourceVerified || sourcePending) {
+        result.verificationStatus = sourceVerified ? "VERIFIED" : "PENDING";
+      }
+    }
+
+    return result;
   }
 
-  // Old-schema location fields
+  // Old-schema location fields (legacy)
   if (post.workCity || post.workState) {
     return {
       ...(post.workCity ? { city: post.workCity } : {}),
@@ -556,6 +610,9 @@ export function resolveSelectionProcess(
  * is built, this function will be replaced by a proper authority pipeline.
  *
  * Not included in JSON-LD. Not used for any gating logic.
+ *
+ * Verification status: when eligibility text comes from enrichment (Phase 1 extraction),
+ * the verification status is included so UI can show "Reported" labels for PENDING facts.
  */
 export function resolveEligibility(
   post: JobPostingData & {
@@ -564,10 +621,25 @@ export function resolveEligibility(
     ageInfo?: string | null;           // posts.age_info
   }
 ): ResolvedEligibility {
+  const qualText = post.qualificationText ?? post.enrichment?.eligibilityPathways?.[0]?.description ?? null;
+  const expText = post.experienceText ?? null;
+  const ageText = post.ageInfo ?? null;
+
+  // If any eligibility text came from enrichment, include its verification status
+  const hasEnrichmentEligibility = qualText && !post.qualificationText;
+  const verificationStatus = hasEnrichmentEligibility && post.enrichment?.sourceVerificationStatus
+    ? post.enrichment.sourceVerificationStatus === "VERIFIED"
+      ? "VERIFIED"
+      : post.enrichment.sourceVerificationStatus === "PENDING"
+      ? "PENDING"
+      : undefined
+    : undefined;
+
   return {
-    qualificationText: post.qualificationText ?? post.enrichment?.eligibilityPathways?.[0]?.description ?? null,
-    experienceText: post.experienceText ?? null,
-    ageText: post.ageInfo ?? null,
+    qualificationText: qualText,
+    experienceText: expText,
+    ageText: ageText,
+    ...(verificationStatus ? { verificationStatus } : {}),
   };
 }
 
