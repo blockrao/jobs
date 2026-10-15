@@ -1,4 +1,6 @@
 import { permanentRedirect } from "next/navigation";
+import type { Metadata } from "next";
+import { pageSeo } from "@/lib/seo";
 
 /**
  * /positions/[slug] → 301 → /posts/[slug]
@@ -8,6 +10,13 @@ import { permanentRedirect } from "next/navigation";
  * is one canonical URL per position. This had been left as a noindex duplicate.
  */
 type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  return {
+    ...pageSeo(`/posts/${slug}`, { index: false }),
+  };
+}
 
 export default async function PositionRedirectPage({ params }: Props) {
   const { slug } = await params;

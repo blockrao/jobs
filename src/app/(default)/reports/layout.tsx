@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { pageSeo } from "@/lib/seo";
 
 // Internal reporting view: never indexed (DISC-001, G).
 export const metadata: Metadata = {
-  title: "Reports",
-  robots: { index: false, follow: false },
+  ...pageSeo("/reports", { index: false }),
 };
 
 export default function ReportsLayout({ children }: { children: React.ReactNode }) {

@@ -158,9 +158,7 @@ export async function generateMetadata({
   // as noindex pages. The "Other" role never counts as a role.
   const singleLeafSlug = await getSinglePostLeafSlug(recruitment.id);
   const canonicalPath = singleLeafSlug ? `/jobs/${recruitment.slug}/${singleLeafSlug}` : `/jobs/${recruitment.slug}`;
-  // DISC-001: unresolved organisation (sector PRIVATE, e.g. "Unknown Organization") → never indexed.
-  const unresolvedOrg = (recruitment as { organizationSector?: string }).organizationSector === "PRIVATE";
-  const hubIndexable = !singleLeafSlug && !unresolvedOrg;
+  const hubIndexable = !singleLeafSlug;
 
   // article:published_time — notificationDate (verified) or sourceListingPublishedDate (unverified)
   const publishedTime = factsVerified

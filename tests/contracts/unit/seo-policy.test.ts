@@ -66,7 +66,8 @@ describe("listings and fixed pages", () => {
       expect(stripComments(readSource(f)), f).toMatch(/pageSeo\([^)]*\{ index: false \}\)/);
     }
     // This route redirects to the canonical /jobs entity; it should not render a second page.
-    expect(stripComments(readSource("src/app/(default)/recruitments/[slug]/page.tsx"))).toContain("redirect(`/jobs/${slug}`)");
+    // permanentRedirect (308/301) instead of redirect (307) to signal crawlers the move is permanent (SEO/DISC-001).
+    expect(stripComments(readSource("src/app/(default)/recruitments/[slug]/page.tsx"))).toContain("permanentRedirect(`/jobs/${slug}`)");
   });
 });
 
