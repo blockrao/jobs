@@ -1497,7 +1497,7 @@ INSERT INTO official_posts_raw (official_name, post_title, vacancies, last_date,
 ('Jamia Millia Islamia (JMI)', 'Professor, Associate Professor and more', 1, '16-10-2026', 'https://ssc.gov.in/')
 ;
 
--- Stage 3: Create recruitment records from official posts
+-- Stage 3: Create recruitment records from official posts with slug generation
 WITH official_posts_with_org AS (
   SELECT
     opr.official_name,
@@ -1510,15 +1510,39 @@ WITH official_posts_with_org AS (
   LEFT JOIN organization_mapping om ON opr.official_name = om.official_name
 ),
 created_recruitments AS (
-  INSERT INTO recruitments (name, organization_id, source, status, created_at, updated_at)
+  INSERT INTO recruitments (
+    name,
+    organization_id,
+    year,
+    slug,
+    status,
+    application_end_date,
+    notification_url,
+    created_at,
+    updated_at
+  )
   SELECT
     opwo.post_title,
     opwo.canonical_org_id,
-    'official_freejobalert',
+    EXTRACT(YEAR FROM opwo.deadline)::smallint,
+    LOWER(
+      TRIM(
+        REGEXP_REPLACE(
+          REGEXP_REPLACE(
+            REGEXP_REPLACE(opwo.post_title, '[^a-zA-Z0-9\s-]', '', 'g'),
+            '\s+', '-', 'g'
+          ),
+          '-+', '-', 'g'
+        ),
+        '-'
+      )
+    ),
     CASE
-      WHEN opwo.deadline > NOW()::DATE THEN 'ACTIVE'
-      ELSE 'CLOSED'
+      WHEN opwo.deadline > NOW()::DATE THEN 'ACTIVE'::recruitment_status
+      ELSE 'CLOSED'::recruitment_status
     END,
+    opwo.deadline,
+    opwo.official_url,
     NOW(),
     NOW()
   FROM official_posts_with_org opwo
@@ -1526,13 +1550,26 @@ created_recruitments AS (
 )
 
 -- Stage 4: Insert posts with recruitment_id references
-INSERT INTO posts (recruitment_id, name, title, vacancy_count, deadline, original_recruitment_url, is_official_source, created_at, updated_at)
+INSERT INTO posts (recruitment_id, position_id, name, slug, title, vacancy_total, key_dates, original_recruitment_url, is_official_source, created_at, updated_at)
 SELECT
   cr.id,
+  6,  -- Default position_id for "Other" category
   cr.name,
+  LOWER(
+    TRIM(
+      REGEXP_REPLACE(
+        REGEXP_REPLACE(
+          REGEXP_REPLACE(cr.name, '[^a-zA-Z0-9\s-]', '', 'g'),
+          '\s+', '-', 'g'
+        ),
+        '-+', '-', 'g'
+      ),
+      '-'
+    )
+  ),
   cr.name,
   (SELECT vacancies FROM official_posts_raw WHERE post_title = cr.name LIMIT 1),
-  (SELECT TO_DATE(last_date, 'DD-MM-YYYY') FROM official_posts_raw WHERE post_title = cr.name LIMIT 1),
+  jsonb_build_object('application_end_date', (SELECT TO_DATE(last_date, 'DD-MM-YYYY') FROM official_posts_raw WHERE post_title = cr.name LIMIT 1)::text),
   (SELECT official_url FROM official_posts_raw WHERE post_title = cr.name LIMIT 1),
   true,
   NOW(),
