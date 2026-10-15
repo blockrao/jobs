@@ -7,6 +7,7 @@ import type {
   postings,
 } from "@/db/schema";
 import { evaluateJobPostingEligibility } from "./content-quality/gate";
+import { parseQualification, educationToSchema, experienceToSchema } from "./parsers/qualification-parser";
 
 type Posting = typeof postings.$inferSelect;
 /** Optional fields some callers attach to a posting (e.g. getPostingBySlug). */
@@ -201,6 +202,44 @@ export function buildJobPostingSchema(
       ? { "@type": "Country", name: "IN" }
       : undefined;
 
+  // Phase 2: Parse qualifications and extract education/experience requirements
+  // Uses posting.eligibility + posting.requirements combined for comprehensive parsing
+  const qualificationText = [posting.eligibility, posting.requirements]
+    .filter(Boolean)
+    .join(" ");
+
+  const parsedQualification = qualificationText
+    ? parseQualification(qualificationText)
+    : { educations: [], experience: undefined, skills: [] };
+
+  const educationRequirements = parsedQualification.educations.length > 0
+    ? parsedQualification.educations.map(educationToSchema)
+    : undefined;
+
+  const experienceRequirements = parsedQualification.experience
+    ? experienceToSchema(parsedQualification.experience)
+    : undefined;
+
+  // Phase 2: Job benefits (from extraContent when available)
+  const extraContent = posting.extraContent as any;
+  const jobBenefits = extraContent?.benefits?.length
+    ? extraContent.benefits.map((benefit: string) => ({
+        "@type": "JobBenefit",
+        name: benefit,
+      }))
+    : undefined;
+
+  // Phase 2: Job start date (mapped from extraContent appointmentDate when available)
+  const jobStartDate = extraContent?.appointmentDate
+    ? new Date(extraContent.appointmentDate).toISOString()
+    : undefined;
+
+  // Enhance hiringOrganization with sameAs (organization website) for entity linking
+  const hiringOrg = buildOrganizationSchema(org, posting.kind);
+  if (org.websiteUrl) {
+    hiringOrg.sameAs = org.websiteUrl;
+  }
+
   return {
     "@type": "JobPosting",
     "@id": `${url}#jobposting`,
@@ -230,7 +269,7 @@ export function buildJobPostingSchema(
     // Indian government jobs are permanent positions; FULL_TIME is the correct
     // default. "OTHER" triggers a Google non-critical warning and adds no value.
     employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "FULL_TIME",
-    hiringOrganization: buildOrganizationSchema(org, posting.kind),
+    hiringOrganization: hiringOrg,
     jobLocation,
     jobLocationType:
       posting.workplaceType === "REMOTE" ? "TELECOMMUTE" : undefined,
@@ -241,6 +280,11 @@ export function buildJobPostingSchema(
     // apply links go to the official site, so it is true only for a link on
     // this site (PQ-004).
     directApply: isOnSiteUrl(posting.applyUrl),
+    // Phase 2 fields: Education, experience, benefits, and job start date
+    ...(educationRequirements && { educationRequirements }),
+    ...(experienceRequirements && { experienceRequirements }),
+    ...(jobBenefits && { jobBenefits }),
+    ...(jobStartDate && { jobStartDate }),
     // Reciprocal graph link: articles that cover this posting reference the
     // JobPosting @id above; this closes the loop so crawlers can walk both
     // directions. Uses canonical (non-locale) article URLs to match the
