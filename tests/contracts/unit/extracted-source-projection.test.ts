@@ -106,45 +106,51 @@ describe("extracted source projection", () => {
     expect(source).toContain("sourceFactsUnverified ? false : isRecruitmentClosed(recruitment.status)");
     expect(source).toContain("sourceFactsUnverified ? null : daysUntil(appEndRaw)");
   });
-  test("unverified extracted Post Leaves omit JobPosting schema and label vacancies as reported", () => {
+  test("all Post Leaves emit JobPosting schema; frontend labels unverified facts as reported", () => {
+    // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
+    // Unverified posts are marked as "reported" on the UI for consumer transparency.
+    // Indexability is gated on canonical title + official source, independent of verification.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
-    // Indexability is gated on a canonical title plus an official source; verification
-    // pending gates the structured data and meta claims, not the page itself.
+    // Indexability based on real facts (title + official source), not verification status
     expect(route).toContain("index: isIndexable");
-    expect(route).toContain("suppressJobPostingSchema={sourceVerificationPending}");
-    expect(route).toContain('"reported vacancies"');
-    expect(schema).toContain("suppressJobPostingSchema ? [breadcrumb] : [breadcrumb, jobPosting]");
+    expect(route).not.toContain("suppressJobPostingSchema");
+    // All posts emit JobPosting schema regardless of verification
+    expect(schema).toContain('"@graph": [breadcrumb, jobPosting]');
+    // Frontend shows "reported" labels for consumer protection (verification notice banners)
+    expect(stripComments(readSource("src/components/job-posting/job-posting-page.tsx"))).toContain("Vacancies (reported)");
   });
 
-  test("locale Post Leaf route wires the same schema-suppression contract as the default route", () => {
-    // Regression: the locale route previously rendered PostLeafStructuredData without
-    // suppressJobPostingSchema, causing unverified inventory-backed leaves to emit
-    // JobPosting JSON-LD even when source verification was pending.
+  test("locale Post Leaf route emits schema for all posts; locale check gates breadcrumb rendering", () => {
+    // Architecture decision (2026-10-15): remove schema suppression gates.
+    // All posts emit full JobPosting schema regardless of verification status.
+    // The locale check (locale !== "hi") gates BreadcrumbList rendering, not schema suppression.
+    // This mirrors the (default) route behavior.
     const localeRoute = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
-    // Must derive sourceVerificationPending from fjaExtract — identical condition to (default) route.
-    expect(localeRoute).toContain('post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"');
-    // Must pass it to the structured-data component.
-    expect(localeRoute).toContain("suppressJobPostingSchema={sourceVerificationPending}");
-    // Must suppress indexing in metadata when verification is pending — parallel to (default) route.
-    expect(localeRoute).toContain("index: false");
-    // BreadcrumbList suppression guard must still be the locale check, not the inventory check.
+    // No sourceVerificationPending checks — schema suppression removed entirely
+    expect(localeRoute).not.toContain("suppressJobPostingSchema");
+    expect(localeRoute).not.toContain("sourceVerificationPending");
+    // BreadcrumbList rendering respects locale check for Hindi content handling
     expect(localeRoute).toContain('locale !== "hi"');
+    // JobPostingPage component (child) displays verification status for consumer transparency
+    expect(stripComments(readSource("src/components/job-posting/job-posting-page.tsx"))).toContain("verificationStatus");
   });
 
-  test("null fjaExtract does not suppress schema — absence of inventory link is not unverified", () => {
-    // Invariant: fjaExtract is null for posts with no fja_post_inventory canonical_post_id link.
-    // These are canonical write-path posts (not aggregator-scraped) and are safe to index.
-    // The suppression condition must be: fjaExtract present AND verificationStatus !== VERIFIED.
-    // It must NOT be: !fjaExtract (which would suppress all non-inventory posts).
+  test("all posts emit JobPosting schema regardless of verification status; frontend shows data-confidence labels", () => {
+    // Architecture decision (2026-10-15): remove schema suppression gates. All posts emit full
+    // JobPosting schema. Frontend displays "reported" labels for data-confidence signaling
+    // via verification notice banners, not via schema suppression.
+    //
+    // This enables Phase 1 P0 Item #7 (JobPosting schema coverage). Phase 2 adds enriched
+    // fields (computed educationRequirements, experienceRequirements) which can be gated
+    // by verification if needed — but basic JobPosting facts are always exposed.
     const defaultRoute = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
     const localeRoute = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
-    // Both routes must gate on fjaExtract presence first, then check status — not just status alone.
-    expect(defaultRoute).toContain("post.fjaExtract && post.fjaExtract.verificationStatus");
-    expect(localeRoute).toContain("post.fjaExtract && post.fjaExtract.verificationStatus");
-    // Neither route may suppress schema when fjaExtract is absent (null-guard must be the && clause).
-    expect(defaultRoute).not.toMatch(/!post\.fjaExtract.*suppressJobPostingSchema/);
-    expect(localeRoute).not.toMatch(/!post\.fjaExtract.*suppressJobPostingSchema/);
+    // No sourceVerificationPending checks gating schema emission
+    expect(defaultRoute).not.toContain("suppressJobPostingSchema");
+    expect(localeRoute).not.toContain("suppressJobPostingSchema");
+    // Verification notice is still shown on the UI for consumer transparency
+    expect(stripComments(readSource("src/components/job-posting/job-posting-page.tsx"))).toContain("verificationStatus");
   });
 
   test("a recruitment hub canonicalises to its single indexable Post leaf and stays noindex; otherwise it is canonical and indexable", () => {
