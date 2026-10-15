@@ -30,67 +30,41 @@ async function backfillPhase2Qualifications() {
 
   console.log("🚀 Starting Phase 2 qualification backfill...");
 
-  // Step 1: Fetch all posts with enrichment
-  console.log("\n📊 Fetching all posts with enrichment data...");
-  const { data: posts, error: postsError } = await supabase
-    .from("posts")
-    .select(
-      `
-      id,
-      post_enrichments!inner(id),
-      inferred_post_id
-    `
-    )
-    .limit(1);
-
-  if (postsError) {
-    console.error("❌ Error fetching posts:", postsError);
-    return;
-  }
-
-  console.log(`✅ Found ${posts?.length || 0} posts with enrichment`);
-
-  // Step 2: Fetch all postings with eligibility/requirements text
-  console.log("\n📋 Fetching postings with qualification text...");
+  // Step 1: Fetch all postings with eligibility/requirements text and inferred_post_id
+  console.log("\n📋 Fetching postings with qualification text and linked posts...");
   const { data: postings, error: postingsError } = await supabase
     .from("postings")
     .select(`id, eligibility, requirements, inferred_post_id`)
-    .not("inferred_post_id", "is", null);
+    .not("inferred_post_id", "is", null)
+    .not("eligibility", "is", null);
 
   if (postingsError) {
     console.error("❌ Error fetching postings:", postingsError);
     return;
   }
 
-  console.log(`✅ Found ${postings?.length || 0} postings`);
+  console.log(`✅ Found ${postings?.length || 0} postings with qualification text`);
 
-  // Step 3: Build a map of post_id -> posting for faster lookup
-  const postingsByPostId = new Map<string | null, (typeof postings)[0]>();
-  postings?.forEach((p) => {
-    if (!postingsByPostId.has(p.inferred_post_id)) {
-      postingsByPostId.set(p.inferred_post_id, p);
-    }
-  });
+  // Step 2: Get unique post IDs from postings
+  const uniquePostIds = new Set(
+    postings?.filter((p) => p.inferred_post_id).map((p) => p.inferred_post_id) || []
+  );
+  console.log(`📌 Found ${uniquePostIds.size} unique linked posts`);
 
-  console.log(`📌 Built lookup map with ${postingsByPostId.size} unique posts`);
-
-  // Step 4: Process posts in batches
-  console.log("\n⚙️  Processing posts and parsing qualifications...");
+  // Step 3: Process postings in batches
+  console.log("\n⚙️  Processing postings and parsing qualifications...");
 
   let processed = 0;
   let updated = 0;
   let errors = 0;
+  const postingsList = postings || [];
 
-  const postsList = posts || [];
-  for (let i = 0; i < postsList.length; i += BATCH_SIZE) {
-    const batch = postsList.slice(i, i + BATCH_SIZE);
-    const updates: { post_id: string; data: EnrichmentUpdate }[] = [];
+  for (let i = 0; i < postingsList.length; i += BATCH_SIZE) {
+    const batch = postingsList.slice(i, i + BATCH_SIZE);
+    const updates: { post_id: number; data: EnrichmentUpdate }[] = [];
 
-    for (const post of batch) {
-      const posting = postingsByPostId.get(post.id);
-
-      if (!posting) {
-        // No linked posting with qualification text
+    for (const posting of batch) {
+      if (!posting.inferred_post_id) {
         processed++;
         continue;
       }
@@ -121,7 +95,7 @@ async function backfillPhase2Qualifications() {
 
         // Prepare update
         updates.push({
-          post_id: post.id,
+          post_id: posting.inferred_post_id,
           data: {
             parsed_education_requirements: educationRequirements,
             parsed_experience_requirements: experienceRequirements,
@@ -131,7 +105,7 @@ async function backfillPhase2Qualifications() {
 
         processed++;
       } catch (err) {
-        console.error(`⚠️  Error parsing post ${post.id}:`, err);
+        console.error(`⚠️  Error parsing posting ${posting.id}:`, err);
         errors++;
         processed++;
       }
@@ -157,8 +131,8 @@ async function backfillPhase2Qualifications() {
     }
 
     // Progress indicator
-    const progress = Math.round((processed / postsList.length) * 100);
-    console.log(`  ✓ Progress: ${processed}/${postsList.length} (${progress}%)`);
+    const progress = Math.round((processed / postingsList.length) * 100);
+    console.log(`  ✓ Progress: ${processed}/${postingsList.length} (${progress}%)`);
   }
 
   // Step 5: Verify results
