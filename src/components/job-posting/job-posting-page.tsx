@@ -397,7 +397,7 @@ export default function JobPostingPage({
                 <p>{expText}</p>
               </>
             )}
-            <EligibilityCriteria post={post} embedded />
+            <EligibilityCriteria post={post} resolvedFacts={resolvedFacts} embedded />
           </section>
         )}
 
@@ -406,7 +406,7 @@ export default function JobPostingPage({
           <h2 id="dates-h" className={styles.sectionTitle}>
             Important dates
           </h2>
-          <ImportantDates post={post} embedded />
+          <ImportantDates post={post} resolvedFacts={resolvedFacts} embedded />
         </section>
 
         {/* Vacancy Details */}

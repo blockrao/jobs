@@ -4,11 +4,13 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedLeafFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
 import { isDisplayableRecruitmentDate } from "@/lib/recruitment-dates";
 
 interface ImportantDatesProps {
   post: JobPostingData;
+  resolvedFacts?: ResolvedLeafFacts;
   embedded?: boolean;
 }
 
@@ -30,8 +32,11 @@ const KEY_DATES_LABELS: Record<string, string> = {
 // Shared guard: see src/lib/recruitment-dates.ts. Re-exported so existing imports keep working.
 export { isDisplayableRecruitmentDate } from "@/lib/recruitment-dates";
 
-export default function ImportantDates({ post, embedded }: ImportantDatesProps) {
+export default function ImportantDates({ post, resolvedFacts, embedded }: ImportantDatesProps) {
   const enrichment = post.enrichment;
+
+  // Check if deadline is PENDING from resolver
+  const isDeadlinePending = resolvedFacts?.deadline?.verificationStatus === "PENDING";
 
   // keyDates from posts table — used when no enrichment dates are available
   const keyDateEntries: Array<{ label: string; date: string; key: string }> = [];
@@ -58,27 +63,33 @@ export default function ImportantDates({ post, embedded }: ImportantDatesProps) 
     : [];
 
   const hasExtractedListing = Boolean(post.fjaExtract);
+
+  // Apply PENDING status to enrichment dates if deadline is pending
+  const enrichmentDates = [
+    { label: "Notification Date", date: enrichment?.notificationDate ?? null },
+    { label: isDeadlinePending ? "Application Open Date (reported)" : "Application Open Date", date: enrichment?.applicationOpenDate ?? null },
+    { label: isDeadlinePending ? "Application Closing Date (reported)" : "Application Closing Date", date: enrichment?.applicationClosingDate ?? null },
+    { label: isDeadlinePending ? "Exam Date (reported)" : "Exam Date", date: enrichment?.examDate ?? null },
+    { label: isDeadlinePending ? "Admit Card Date (reported)" : "Admit Card Date", date: enrichment?.admitCardDate ?? null },
+    { label: isDeadlinePending ? "Result Date (reported)" : "Result Date", date: enrichment?.resultDate ?? null },
+    { label: isDeadlinePending ? "Interview Schedule (reported)" : "Interview Schedule", date: enrichment?.interviewScheduleDate ?? null },
+    { label: isDeadlinePending ? "Appointment Date (reported)" : "Appointment Date", date: enrichment?.appointmentDate ?? null },
+  ];
+
   const dates = hasExtractedListing
     ? [
         { label: "Source listing published", date: post.fjaExtract?.sourcePublishedDate ?? null },
-        { label: "Notification Date", date: enrichment?.notificationDate ?? null },
-        { label: "Application Open Date", date: enrichment?.applicationOpenDate ?? null },
-        { label: "Application Closing Date", date: enrichment?.applicationClosingDate ?? null },
-        { label: "Exam Date", date: enrichment?.examDate ?? null },
-        { label: "Admit Card Date", date: enrichment?.admitCardDate ?? null },
-        { label: "Result Date", date: enrichment?.resultDate ?? null },
-        { label: "Interview Schedule", date: enrichment?.interviewScheduleDate ?? null },
-        { label: "Appointment Date", date: enrichment?.appointmentDate ?? null },
+        ...enrichmentDates,
       ]
     : [
         { label: "Notification Date", date: enrichment?.notificationDate ?? post.notificationPublicationDate },
-        { label: "Application Open Date", date: enrichment?.applicationOpenDate ?? post.recruitmentApplicationStartDate },
-        { label: "Application Closing Date", date: enrichment?.applicationClosingDate ?? post.recruitmentApplicationEndDate },
-        { label: "Exam Date", date: enrichment?.examDate },
-        { label: "Admit Card Date", date: enrichment?.admitCardDate },
-        { label: "Result Date", date: enrichment?.resultDate },
-        { label: "Interview Schedule", date: enrichment?.interviewScheduleDate },
-        { label: "Appointment Date", date: enrichment?.appointmentDate },
+        { label: isDeadlinePending ? "Application Open Date (reported)" : "Application Open Date", date: enrichment?.applicationOpenDate ?? post.recruitmentApplicationStartDate },
+        { label: isDeadlinePending ? "Application Closing Date (reported)" : "Application Closing Date", date: enrichment?.applicationClosingDate ?? post.recruitmentApplicationEndDate },
+        { label: isDeadlinePending ? "Exam Date (reported)" : "Exam Date", date: enrichment?.examDate },
+        { label: isDeadlinePending ? "Admit Card Date (reported)" : "Admit Card Date", date: enrichment?.admitCardDate },
+        { label: isDeadlinePending ? "Result Date (reported)" : "Result Date", date: enrichment?.resultDate },
+        { label: isDeadlinePending ? "Interview Schedule (reported)" : "Interview Schedule", date: enrichment?.interviewScheduleDate },
+        { label: isDeadlinePending ? "Appointment Date (reported)" : "Appointment Date", date: enrichment?.appointmentDate },
       ];
 
   const enrichmentOrFjaDates = dates.filter((d) => isDisplayableRecruitmentDate(d.date));

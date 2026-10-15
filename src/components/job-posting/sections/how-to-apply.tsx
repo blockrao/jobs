@@ -18,6 +18,11 @@ interface HowToApplyProps {
 export default function HowToApply({ post, recruitmentResolvedFacts, embedded }: HowToApplyProps) {
   const applyPortalUrl = recruitmentResolvedFacts?.applicationUrl ?? null;
 
+  // Check if application facts are unverified from source extraction
+  const sourceFactsUnverified = Boolean(
+    post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED"
+  );
+
   // Posts table application fields
   const applicationMethod = post.applicationMethod ?? null;
   const applicationEmail = post.applicationEmail ?? null;
@@ -44,7 +49,7 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
       {/* Application method */}
       {applicationMethod && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Application Method</div>
+          <div className={styles.infoLabel}>{sourceFactsUnverified ? "Application Method (reported)" : "Application Method"}</div>
           <div className={styles.infoValue}>{applicationMethod}</div>
         </div>
       )}

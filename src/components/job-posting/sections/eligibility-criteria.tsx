@@ -16,6 +16,7 @@
  */
 
 import { JobPostingData } from "@/types/job-posting";
+import { ResolvedLeafFacts } from "../job-posting-page";
 import {
   normalizeEducation,
   normalizeExperience,
@@ -25,12 +26,16 @@ import styles from "../job-posting-page.module.css";
 
 interface EligibilityCriteriaProps {
   post: JobPostingData;
+  resolvedFacts?: ResolvedLeafFacts;
   embedded?: boolean;
 }
 
-export default function EligibilityCriteria({ post, embedded }: EligibilityCriteriaProps) {
+export default function EligibilityCriteria({ post, resolvedFacts, embedded }: EligibilityCriteriaProps) {
   const enrichment = post.enrichment;
   const extracted = post.fjaExtract;
+
+  // Check if eligibility facts are PENDING from resolver
+  const eligibilityIsPending = resolvedFacts?.eligibility?.verificationStatus === "PENDING";
 
   // Normalize variable-shape enrichment fields upfront
   const education = enrichment?.education
@@ -94,13 +99,13 @@ export default function EligibilityCriteria({ post, embedded }: EligibilityCrite
       {/* Raw extracted eligibility — shown only when no canonical enrichment field exists */}
       {extractedEligibility && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Qualification reported in listing</div>
+          <div className={styles.infoLabel}>{eligibilityIsPending ? "Qualification (reported)" : "Qualification reported in listing"}</div>
           <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedEligibility}</div>
         </div>
       )}
       {extractedExperience && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Experience reported in listing</div>
+          <div className={styles.infoLabel}>{eligibilityIsPending ? "Experience (reported)" : "Experience reported in listing"}</div>
           <div className={styles.infoValue} style={{ whiteSpace: "pre-line" }}>{extractedExperience}</div>
         </div>
       )}
@@ -112,13 +117,13 @@ export default function EligibilityCriteria({ post, embedded }: EligibilityCrite
       )}
       {extractedAge && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Age limit reported in listing</div>
+          <div className={styles.infoLabel}>{eligibilityIsPending ? "Age limit (reported)" : "Age limit reported in listing"}</div>
           <div className={styles.infoValue}>{extractedAge}</div>
         </div>
       )}
       {!enrichment?.ageRelaxationRules && extracted?.ageRelaxationRulesRaw && (
         <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Age relaxation reported in listing</div>
+          <div className={styles.infoLabel}>{eligibilityIsPending ? "Age relaxation (reported)" : "Age relaxation reported in listing"}</div>
           <div className={styles.infoValue}>{extracted.ageRelaxationRulesRaw}</div>
         </div>
       )}
