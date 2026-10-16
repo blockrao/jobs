@@ -5,8 +5,6 @@
  * This is what the job posting page component receives.
  */
 
-import { EnrichmentSchema } from "./enrichment-schema";
-
 export interface JobPostingData {
   // Post Basic Info
   id: string;
@@ -98,8 +96,8 @@ export interface JobPostingData {
     verificationStatus?: string | null;
   };
 
-  // Enrichment Data (from posts.enrichment JSONB column)
-  enrichment?: EnrichmentSchema;
+  // Enrichment Data (from post_enrichments table)
+  enrichment?: PostEnrichment;
 }
 
 export interface PostEnrichment {
