@@ -33,6 +33,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
         <div className="flex items-center gap-4">
+          <Link href="/admin/posts" className="text-sm underline">Posts Management</Link>
           <Link href="/admin/fja-review" className="text-sm underline">FJA candidate review</Link>
           <form action={logoutAction}>
           <SubmitButton className="text-sm underline" pendingText="Logging out…">
