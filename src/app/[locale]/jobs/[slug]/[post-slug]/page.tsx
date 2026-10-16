@@ -22,6 +22,7 @@ import { entitySeo } from "@/lib/seo";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
+import JobPostingPageClient from "@/components/job-posting/job-posting-page-client";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
 
 // ===== NEW: Enterprise schema components =====
@@ -195,14 +196,19 @@ export default async function LocaleJobPostingPage({ params }: Props) {
         </>
       )}
 
-      <JobPostingPage
-        post={post}
-        recruitment={recruitmentData}
-        isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
-        locale={locale}
-        resolvedFacts={resolvedFacts}
-        recruitmentResolvedFacts={recruitmentResolvedFacts}
-      />
+      <JobPostingPageClient
+        applyUrl={recruitmentResolvedFacts?.applicationUrl}
+        postTitle={post.title}
+      >
+        <JobPostingPage
+          post={post}
+          recruitment={recruitmentData}
+          isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
+          locale={locale}
+          resolvedFacts={resolvedFacts}
+          recruitmentResolvedFacts={recruitmentResolvedFacts}
+        />
+      </JobPostingPageClient>
     </>
   );
 }

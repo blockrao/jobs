@@ -765,17 +765,22 @@ export default function JobPostingPage({
         {siblingPosts.length > 0 && (
           <section id="other" className={styles.section} aria-labelledby="other-h">
             <h2 id="other-h" className={styles.sectionTitle}>
-              Other posts in this recruitment
+              Other posts in this recruitment ({siblingPosts.length})
             </h2>
-            <ul className={styles.links}>
+            <div className={styles.postsGrid}>
               {siblingPosts.map((p) => (
-                <li key={p.id}>
-                  <Link href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}>
-                    {p.title}
-                  </Link>
-                </li>
+                <Link
+                  key={p.id}
+                  href={`${localePrefix}/jobs/${post.recruitmentSlug}/${p.slug}`}
+                  className={styles.postCard}
+                >
+                  <div className={styles.postCardTitle}>{p.title}</div>
+                  <div className={styles.postCardMeta}>
+                    <span>View details →</span>
+                  </div>
+                </Link>
               ))}
-            </ul>
+            </div>
           </section>
         )}
 
