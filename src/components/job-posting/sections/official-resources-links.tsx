@@ -50,28 +50,22 @@ export default function OfficialResourcesLinks({
     });
   }
 
-  // 3. Organization Website
-  if (post.organizationWebsite) {
-    resources.push({
-      title: "Organization Website",
-      url: post.organizationWebsite,
-      description: "Official organization website",
-      icon: "🏢",
-    });
-  }
-
-  // 4. Enrichment Links
-  if (post.enrichment?.officialLinks && Array.isArray(post.enrichment.officialLinks)) {
-    (post.enrichment.officialLinks as Array<{ title?: string; url?: string; description?: string }>).forEach((link) => {
-      if (link.url) {
-        resources.push({
-          title: link.title || "Official Link",
-          url: link.url,
-          description: link.description || "Related official resource",
-          icon: "🔗",
-        });
-      }
-    });
+  // 3. Additional links from enrichment (if available)
+  // Note: officialLinks property availability depends on enrichment schema
+  if (post.enrichment && typeof post.enrichment === 'object') {
+    const enrichment = post.enrichment as Record<string, any>;
+    if (enrichment.officialLinks && Array.isArray(enrichment.officialLinks)) {
+      enrichment.officialLinks.forEach((link: any) => {
+        if (link?.url) {
+          resources.push({
+            title: link.title || "Official Link",
+            url: link.url,
+            description: link.description || "Related official resource",
+            icon: "🔗",
+          });
+        }
+      });
+    }
   }
 
   if (resources.length === 0) {
