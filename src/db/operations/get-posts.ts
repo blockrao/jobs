@@ -216,7 +216,9 @@ async function getPostEnrichmentData(postId: number | string): Promise<any> {
 
   try {
     const result = await db.execute<any>(sql`
-      SELECT *
+      SELECT
+        *,
+        id AS "enrichmentId"
       FROM post_enrichments
       WHERE post_id = ${postId}
       LIMIT 1
