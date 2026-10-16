@@ -31,6 +31,15 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
   const contactPerson = post.contactPerson ?? null;
   const applicationChecklist = post.applicationChecklist ?? null;
 
+  // FJA Enrichment: detailed how-to-apply with steps
+  const enrichmentHowToApply = post.enrichment?.howToApply ?
+    (post.enrichment.howToApply as {
+      method?: string;
+      steps?: string[];
+      address?: string;
+    })
+    : null;
+
   // Extracted modes from fjaExtract as last resort
   const extractedApplicationModes = Array.isArray(post.fjaExtract?.applicationSelectionRaw)
     ? post.fjaExtract!.applicationSelectionRaw
@@ -46,11 +55,33 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
     <div className={embedded ? undefined : styles.section}>
       {!embedded && <h2 className={styles.sectionTitle}>How to Apply</h2>}
 
+      {/* FJA Enrichment: detailed steps from extraction */}
+      {enrichmentHowToApply?.steps && enrichmentHowToApply.steps.length > 0 && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Application Process (Step-by-Step)</div>
+          <ol style={{ paddingLeft: "20px", color: "#374151", margin: 0 }}>
+            {enrichmentHowToApply.steps.map((step, idx) => (
+              <li key={idx} style={{ marginBottom: "10px", lineHeight: 1.5 }}>{step}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* FJA Enrichment: postal address */}
+      {enrichmentHowToApply?.address && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Send Application To</div>
+          <div className={styles.infoValue} style={{ whiteSpace: "pre-wrap", color: "#374151" }}>
+            {enrichmentHowToApply.address}
+          </div>
+        </div>
+      )}
+
       {/* Application method */}
-      {applicationMethod && (
+      {(applicationMethod || enrichmentHowToApply?.method) && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>{sourceFactsUnverified ? "Application Method (reported)" : "Application Method"}</div>
-          <div className={styles.infoValue}>{applicationMethod}</div>
+          <div className={styles.infoValue}>{applicationMethod || enrichmentHowToApply?.method}</div>
         </div>
       )}
 

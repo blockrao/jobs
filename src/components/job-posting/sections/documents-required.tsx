@@ -13,6 +13,12 @@ interface DocumentsRequiredProps {
 
 export default function DocumentsRequired({ post, embedded }: DocumentsRequiredProps) {
   const docsRequired = post.enrichment?.documentsRequired;
+
+  // FJA enrichment: simple array format (from extraction)
+  const enrichmentDocsList = Array.isArray(post.enrichment?.documents)
+    ? (post.enrichment.documents as string[]).filter(doc => typeof doc === "string")
+    : [];
+
   const recruitmentOtherInfo = post.fjaExtract?.recruitmentOtherInfoRaw;
   const extractedDocs = recruitmentOtherInfo && typeof recruitmentOtherInfo === "object" && !Array.isArray(recruitmentOtherInfo)
     ? (recruitmentOtherInfo as Record<string, unknown>).application_documents
@@ -23,15 +29,30 @@ export default function DocumentsRequired({ post, embedded }: DocumentsRequiredP
 
   const hasRequired = Boolean(docsRequired?.required && docsRequired.required.length > 0);
   const hasCommon = Boolean(docsRequired?.common && docsRequired.common.length > 0);
+  const hasEnrichment = enrichmentDocsList.length > 0;
   const hasExtracted = extractedDocumentList.length > 0;
 
-  if (!hasRequired && !hasCommon && !hasExtracted) return null;
+  if (!hasRequired && !hasCommon && !hasEnrichment && !hasExtracted) return null;
 
   return (
     <div className={embedded ? undefined : styles.section}>
       {!embedded && <h2 className={styles.sectionTitle}>Documents Required</h2>}
 
-      {!hasRequired && !hasCommon && hasExtracted && (
+      {/* FJA Enrichment: documents from extraction */}
+      {!hasRequired && !hasCommon && hasEnrichment && (
+        <div className={styles.infoGroup}>
+          <div className={styles.infoLabel}>Required Documents</div>
+          <div className={styles.checklist}>
+            {enrichmentDocsList.map((doc, index) => (
+              <div key={index} className={styles.checklistItemRequired}>
+                <span>{doc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!hasRequired && !hasCommon && !hasEnrichment && hasExtracted && (
         <div className={styles.infoGroup}>
           <div className={styles.infoLabel}>Documents reported in listing · confirm against official notice</div>
           <ul className={styles.infoList}>
