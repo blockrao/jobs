@@ -18,30 +18,32 @@
   gap: 12px;
 }
 
-/* Individual Card */
+/* Individual Card - Phase 2 Enhanced */
 .card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .card:hover {
-  background: #f0f2f5;
-  border-color: #dee2e6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(135deg, #f0f2f5 0%, #f8f9fa 100%);
+  border-color: #d1d5db;
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.12);
+  transform: translateY(-2px);
 }
 
-/* Icon */
+/* Icon - Phase 2 Larger */
 .icon {
-  font-size: 24px;
+  font-size: 32px;
   line-height: 1;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 /* Content Container */
@@ -49,31 +51,32 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
-/* Label */
+/* Label - Phase 2 Bolder */
 .label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #6c757d;
+  letter-spacing: 0.6px;
+  color: #6b7280;
 }
 
-/* Value (main number/text) */
+/* Value (main number/text) - Phase 2 Larger & Bolder */
 .value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #212529;
+  font-size: 20px;
+  font-weight: 900;
+  color: #111827;
   line-height: 1.2;
 }
 
 /* Subtext */
 .subtext {
-  font-size: 12px;
-  color: #868e96;
+  font-size: 13px;
+  color: #9ca3af;
   line-height: 1.4;
+  font-weight: 500;
 }
 
 /* Responsive: Tablet (2 columns) */

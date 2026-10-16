@@ -4,6 +4,9 @@
  * Matches the BhartiDesk post-leaf reference design.
  */
 
+"use client";
+
+import { useState } from "react";
 import { JobPostingData } from "@/types/job-posting";
 import { ResolvedLeafFacts, ResolvedRecruitmentFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
@@ -275,6 +278,11 @@ export default function JobPostingHeader({
         </div>
       )}
 
+      {/* Phase 2: Documents Checklist Collapsible */}
+      {post.enrichment?.documentsRequired && Array.isArray(post.enrichment.documentsRequired) && post.enrichment.documentsRequired.length > 0 && (
+        <DocumentsChecklistToggle documents={post.enrichment.documentsRequired} />
+      )}
+
       {/* Deadline box — prominent only if needed */}
       {effectiveDeadlineDateStr && effectiveState !== "CLOSED" && (
         <div className={styles.deadline}>
@@ -328,5 +336,47 @@ export default function JobPostingHeader({
         </p>
       )}
     </header>
+  );
+}
+
+// Phase 2: Documents Checklist Toggle Component
+interface DocumentsChecklistToggleProps {
+  documents: (string | { name?: string; [key: string]: unknown })[];
+}
+
+function DocumentsChecklistToggle({ documents }: DocumentsChecklistToggleProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const docList = documents
+    .map((doc) => (typeof doc === "string" ? doc : doc.name || "Document"))
+    .filter(Boolean);
+
+  if (docList.length === 0) return null;
+
+  return (
+    <div className={styles.documentsToggle}>
+      <button
+        className={styles.documentsToggleButton}
+        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+      >
+        <span className={styles.documentsIcon}>{isOpen ? "▼" : "▶"}</span>
+        <span className={styles.documentsLabel}>
+          📋 Required Documents ({docList.length})
+        </span>
+      </button>
+      {isOpen && (
+        <div className={styles.documentsContent}>
+          <ul className={styles.documentsList}>
+            {docList.map((doc, idx) => (
+              <li key={idx} className={styles.documentsItem}>
+                <span className={styles.documentsCheckmark}>✓</span>
+                {doc}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

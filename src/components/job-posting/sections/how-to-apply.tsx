@@ -57,15 +57,23 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
   const effectiveApplyUrl = applyPortalUrl ?? applicationUrl;
 
   // Build application steps array
-  const steps: Array<{ title: string; description: string; icon: string }> = [];
+  const steps: Array<{
+    title: string;
+    description: string;
+    icon: string;
+    action?: { label: string; url: string };
+  }> = [];
 
   if (enrichmentHowToApply?.steps && enrichmentHowToApply.steps.length > 0) {
     // Use enrichment steps directly
     enrichmentHowToApply.steps.forEach((step, idx) => {
+      const title = typeof step === "string" ? step.split("\n")[0] : step;
       steps.push({
-        title: typeof step === "string" ? step.split("\n")[0] : step,
+        title,
         description: typeof step === "string" ? step : "",
         icon: getStepIcon(idx),
+        // Add action buttons for key steps
+        action: getStepAction(title, effectiveApplyUrl),
       });
     });
   } else if (applicationChecklist && applicationChecklist.length > 0) {
@@ -75,6 +83,8 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
         title: step,
         description: "",
         icon: getStepIcon(idx),
+        // Add action buttons for key steps
+        action: getStepAction(step, effectiveApplyUrl),
       });
     });
   } else {
@@ -110,6 +120,17 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
               <div className={stepsStyles.stepTitle}>{step.title}</div>
               {step.description && (
                 <div className={stepsStyles.stepDescription}>{step.description}</div>
+              )}
+              {/* Phase 2: Action Button for interactive steps */}
+              {step.action && (
+                <a
+                  href={step.action.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.applyStepAction}
+                >
+                  {step.action.label} →
+                </a>
               )}
             </div>
           </div>
@@ -178,4 +199,38 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
 function getStepIcon(index: number): string {
   const icons = ["📝", "📋", "📎", "✓", "🎯", "💾", "🔔"];
   return icons[index % icons.length];
+}
+
+function getStepAction(
+  stepTitle: string,
+  applyUrl: string | null
+): { label: string; url: string } | undefined {
+  const title = stepTitle.toLowerCase();
+
+  // Match step titles and provide action buttons
+  if (
+    title.includes("register") ||
+    title.includes("sign up") ||
+    title.includes("create account")
+  ) {
+    return applyUrl ? { label: "Register Now", url: applyUrl } : undefined;
+  }
+
+  if (title.includes("fill") || title.includes("form") || title.includes("details")) {
+    return applyUrl ? { label: "Start Application", url: applyUrl } : undefined;
+  }
+
+  if (title.includes("upload") || title.includes("document") || title.includes("submit")) {
+    return applyUrl ? { label: "Submit Application", url: applyUrl } : undefined;
+  }
+
+  if (
+    title.includes("apply") ||
+    title.includes("application") ||
+    title.includes("portal")
+  ) {
+    return applyUrl ? { label: "Open Portal", url: applyUrl } : undefined;
+  }
+
+  return undefined;
 }
