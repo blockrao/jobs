@@ -21,6 +21,7 @@ import DutiesResponsibilities from "./sections/duties-responsibilities";
 import SalaryCompensation from "./sections/salary-compensation";
 import FAQSection from "./sections/faq-section";
 import OfficialResourcesLinks from "./sections/official-resources-links";
+import JobPostingTabs from "./job-posting-tabs";
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
@@ -249,26 +250,8 @@ export default function JobPostingPage({
         />
         <QuickFactsGrid post={post} resolvedFacts={resolvedFacts} />
 
-        {/* Sticky Navigation Tabs */}
-        <nav className={styles.toc} aria-label="On this page">
-          <a href="#quick">Quick Facts</a>
-          <a href="#role-details">About Role</a>
-          {(qualText || expText ||
-            post.enrichment?.education ||
-            post.enrichment?.experience ||
-            post.enrichment?.ageRulesByCategory ||
-            post.enrichment?.ageNote ||
-            post.enrichment?.ageRelaxationRules ||
-            post.enrichment?.eligibilityPathways) && <a href="#eligibility">Eligibility</a>}
-          {(vacancyCount != null || reportedVacancyCount != null ||
-            post.enrichment?.vacanciesTotal != null ||
-            (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && <a href="#vacancies">Vacancies</a>}
-          {(post.enrichment?.payScale || resolvedFacts?.salary || post.fjaExtract?.salaryRaw || post.fjaExtract?.payLevelRaw || post.enrichment?.benefits) && <a href="#salary">Salary & Benefits</a>}
-          <a href="#selection">Selection</a>
-          <a href="#dates">Important Dates</a>
-          <a href="#apply">How to Apply</a>
-          {post.enrichment?.documentsRequired && <a href="#documents-enriched">Documents</a>}
-        </nav>
+        {/* Phase 2: Tab Navigation (replaces old TOC) */}
+        <JobPostingTabs defaultTab="quick">
 
         {/* Verification notice */}
         {post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" && (
@@ -801,6 +784,7 @@ export default function JobPostingPage({
           </section>
         )}
 
+        </JobPostingTabs>
       </article>
 
       {/* Footer note */}
