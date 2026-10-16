@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getDb } from "@/db";
-import { posts, postEnrichments, recruitments, organizations } from "@/db/schema";
+import { posts, recruitments, organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { updatePostAction } from "../actions";
 import { SubmitButton } from "@/components/submit-button";
@@ -14,36 +14,36 @@ interface EditPostPageProps {
 }
 
 export default async function EditPostPage({ params, searchParams }: EditPostPageProps) {
-  const { id } = await params;
+  const { id: idParam } = await params;
   const { saved } = await searchParams;
   const db = getDb();
+
+  const postId = parseInt(idParam, 10);
+  if (isNaN(postId)) notFound();
 
   // Fetch post with related data
   const postData = await db
     .select({
       id: posts.id,
-      title: posts.title,
+      name: posts.name,
       slug: posts.slug,
       description: posts.description,
-      organizationName: posts.organizationName,
-      organizationSector: posts.organizationSector,
-      employmentType: posts.employmentType,
-      locationCity: posts.locationCity,
-      locationState: posts.locationState,
-      locationCountry: posts.locationCountry,
       vacancyTotal: posts.vacancyTotal,
-      isLive: posts.isLive,
-      officialSourceUrl: posts.officialSourceUrl,
+      salaryMin: posts.salaryMin,
+      salaryMax: posts.salaryMax,
       recruitmentId: posts.recruitmentId,
+      positionId: posts.positionId,
       recruitmentName: recruitments.name,
       recruitmentSlug: recruitments.slug,
       organizationId: organizations.id,
       orgName: organizations.name,
+      createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
     })
     .from(posts)
     .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
     .leftJoin(organizations, eq(recruitments.organizationId, organizations.id))
-    .where(eq(posts.id, id))
+    .where(eq(posts.id, postId))
     .limit(1);
 
   if (postData.length === 0) {
@@ -62,8 +62,8 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{post.title || "Untitled Post"}</h1>
-          <p className="text-sm text-neutral-600 mt-1">ID: {id}</p>
+          <h1 className="text-2xl font-bold">{post.name || "Untitled Post"}</h1>
+          <p className="text-sm text-neutral-600 mt-1">ID: {postId}</p>
         </div>
         <Link href="/admin/posts" className="text-sm text-blue-600 hover:underline">
           ← Back to Posts
@@ -116,16 +116,16 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
 
       {/* Edit Form */}
       <form action={updatePostAction} className="rounded-md border border-neutral-200 p-6 space-y-4">
-        <input type="hidden" name="id" value={id} />
+        <input type="hidden" name="id" value={postId} />
 
         <div>
           <label className="block text-sm font-semibold text-neutral-700 mb-2">
-            Title *
+            Post Name *
           </label>
           <input
             type="text"
-            name="title"
-            defaultValue={post.title || ""}
+            name="name"
+            defaultValue={post.name || ""}
             required
             className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -159,104 +159,37 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              Organization Name
-            </label>
-            <input
-              type="text"
-              name="organizationName"
-              defaultValue={post.organizationName || ""}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              Employment Type
-            </label>
-            <input
-              type="text"
-              name="employmentType"
-              defaultValue={post.employmentType || ""}
-              placeholder="e.g., FULL_TIME, CONTRACT"
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              City
-            </label>
-            <input
-              type="text"
-              name="locationCity"
-              defaultValue={post.locationCity || ""}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              State
-            </label>
-            <input
-              type="text"
-              name="locationState"
-              defaultValue={post.locationState || ""}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              Country
-            </label>
-            <input
-              type="text"
-              name="locationCountry"
-              defaultValue={post.locationCountry || ""}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              Vacancies
+              Salary Min (₹)
             </label>
             <input
               type="number"
-              name="vacancyTotal"
-              defaultValue={post.vacancyTotal || ""}
+              name="salaryMin"
+              defaultValue={post.salaryMin || ""}
               className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-2">
-              Status
+              Salary Max (₹)
             </label>
-            <select
-              name="isLive"
-              defaultValue={post.isLive ? "true" : "false"}
+            <input
+              type="number"
+              name="salaryMax"
+              defaultValue={post.salaryMax || ""}
               className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="true">Live</option>
-              <option value="false">Inactive</option>
-            </select>
+            />
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-neutral-700 mb-2">
-            Official Source URL
+            Vacancies
           </label>
           <input
-            type="url"
-            name="officialSourceUrl"
-            defaultValue={post.officialSourceUrl || ""}
+            type="number"
+            name="vacancyTotal"
+            defaultValue={post.vacancyTotal || ""}
             className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -278,9 +211,11 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
       <div className="rounded-md bg-neutral-50 border border-neutral-200 p-4">
         <h3 className="text-sm font-semibold text-neutral-700 mb-2">Debug Info</h3>
         <div className="text-xs text-neutral-600 space-y-1 font-mono">
-          <div>Post ID: {id}</div>
-          <div>Slug: {post.slug}</div>
-          <div>Is Live: {post.isLive ? "Yes" : "No"}</div>
+          <div>Post ID: {postId}</div>
+          <div>Recruitment ID: {post.recruitmentId}</div>
+          <div>Position ID: {post.positionId}</div>
+          <div>Created: {post.createdAt.toLocaleDateString("en-IN")}</div>
+          <div>Updated: {post.updatedAt.toLocaleDateString("en-IN")}</div>
         </div>
       </div>
     </div>

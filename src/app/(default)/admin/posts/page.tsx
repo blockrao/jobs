@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/db";
 import { posts, recruitments, organizations } from "@/db/schema";
-import { desc, ilike, or, sql } from "drizzle-orm";
+import { desc, ilike, or, sql, eq } from "drizzle-orm";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -21,53 +21,57 @@ async function PostsList({ searchParams }: PostsListProps) {
   const limitNum = Math.min(parseInt(limit) || 50, 200);
   const offsetNum = Math.max(parseInt(offset) || 0, 0);
 
-  // Build search query
-  let query = db
+  // Build search query with proper joins
+  const baseQuery = db
     .select({
       id: posts.id,
-      title: posts.title,
+      name: posts.name,
       slug: posts.slug,
-      organizationName: posts.organizationName,
+      organizationName: organizations.name,
       recruitmentSlug: recruitments.slug,
       recruitmentName: recruitments.name,
       vacancyTotal: posts.vacancyTotal,
-      isLive: posts.isLive,
       updatedAt: posts.updatedAt,
     })
     .from(posts)
-    .innerJoin(recruitments, sql`${posts.recruitmentId} = ${recruitments.id}`)
-    .leftJoin(organizations, sql`${recruitments.organizationId} = ${organizations.id}`)
-    .orderBy(desc(posts.updatedAt))
-    .limit(limitNum)
-    .offset(offsetNum);
+    .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+    .leftJoin(organizations, eq(recruitments.organizationId, organizations.id))
+    .orderBy(desc(posts.updatedAt));
 
   // Apply search filter
+  let query = baseQuery;
   if (q) {
     query = query.where(
       or(
-        ilike(posts.title, `%${q}%`),
+        ilike(posts.name, `%${q}%`),
         ilike(posts.slug, `%${q}%`),
         ilike(recruitments.name, `%${q}%`),
-        ilike(posts.organizationName, `%${q}%`)
+        ilike(organizations.name, `%${q}%`)
       )
     );
   }
 
+  query = query.limit(limitNum).offset(offsetNum);
+
   // Get total count
-  const countResult = await db
+  let countQuery = db
     .select({ count: sql<number>`count(*)::int` })
     .from(posts)
-    .where(
-      q
-        ? or(
-            ilike(posts.title, `%${q}%`),
-            ilike(posts.slug, `%${q}%`),
-            ilike(recruitments.name, `%${q}%`),
-            ilike(posts.organizationName, `%${q}%`)
-          )
-        : undefined
-    );
+    .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+    .leftJoin(organizations, eq(recruitments.organizationId, organizations.id));
 
+  if (q) {
+    countQuery = countQuery.where(
+      or(
+        ilike(posts.name, `%${q}%`),
+        ilike(posts.slug, `%${q}%`),
+        ilike(recruitments.name, `%${q}%`),
+        ilike(organizations.name, `%${q}%`)
+      )
+    );
+  }
+
+  const countResult = await countQuery;
   const total = countResult[0]?.count ?? 0;
   const postsList = await query;
 
@@ -89,11 +93,10 @@ async function PostsList({ searchParams }: PostsListProps) {
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 border-b">
                 <tr>
-                  <th className="px-4 py-2 text-left font-semibold">Title</th>
+                  <th className="px-4 py-2 text-left font-semibold">Post Name</th>
                   <th className="px-4 py-2 text-left font-semibold">Recruitment</th>
                   <th className="px-4 py-2 text-left font-semibold">Organization</th>
                   <th className="px-4 py-2 text-center font-semibold">Vacancies</th>
-                  <th className="px-4 py-2 text-left font-semibold">Status</th>
                   <th className="px-4 py-2 text-left font-semibold">Updated</th>
                   <th className="px-4 py-2 text-left font-semibold">Actions</th>
                 </tr>
@@ -102,7 +105,7 @@ async function PostsList({ searchParams }: PostsListProps) {
                 {postsList.map((post) => (
                   <tr key={post.id} className="border-b hover:bg-neutral-50">
                     <td className="px-4 py-3">
-                      <div className="font-medium truncate max-w-xs">{post.title || "—"}</div>
+                      <div className="font-medium truncate max-w-xs">{post.name || "—"}</div>
                       <div className="text-xs text-neutral-500">{post.slug}</div>
                     </td>
                     <td className="px-4 py-3">
@@ -115,15 +118,6 @@ async function PostsList({ searchParams }: PostsListProps) {
                     </td>
                     <td className="px-4 py-3 text-sm">{post.organizationName || "Unknown"}</td>
                     <td className="px-4 py-3 text-center text-sm">{post.vacancyTotal || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                        post.isLive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}>
-                        {post.isLive ? "Live" : "Inactive"}
-                      </span>
-                    </td>
                     <td className="px-4 py-3 text-xs text-neutral-500">
                       {post.updatedAt ? new Date(post.updatedAt).toLocaleDateString("en-IN") : "—"}
                     </td>
