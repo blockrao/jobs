@@ -142,14 +142,14 @@ function extractSalary(
     return `₹${resolvedFacts.salary.min.toLocaleString("en-IN")}-${resolvedFacts.salary.max.toLocaleString("en-IN")}`;
   }
 
-  // 2. Try enrichment payLevel
-  if (post.enrichment?.payLevel?.monthly) {
-    return post.enrichment.payLevel.monthly;
+  // 2. Try enrichment salary range
+  if (post.enrichment?.salaryMin && post.enrichment?.salaryMax) {
+    return `₹${post.enrichment.salaryMin.toLocaleString("en-IN")}-${post.enrichment.salaryMax.toLocaleString("en-IN")}`;
   }
 
-  // 3. Try legacy fields
-  if (post.legacySalaryMin && post.legacySalaryMax) {
-    return `₹${post.legacySalaryMin.toLocaleString("en-IN")}-${post.legacySalaryMax.toLocaleString("en-IN")}`;
+  // 3. Try enrichment payLevel
+  if (post.enrichment?.payLevel && typeof post.enrichment.payLevel === "string") {
+    return post.enrichment.payLevel;
   }
 
   // 4. Default

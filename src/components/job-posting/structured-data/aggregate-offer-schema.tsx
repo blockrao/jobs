@@ -133,15 +133,9 @@ export default function AggregateOfferSchema({ post }: AggregateOfferSchemaProps
  * HELPER: Extract minimum salary
  */
 function extractSalaryMin(post: JobPostingData): number {
-  if (post.enrichment?.payLevel?.monthly) {
-    const match = post.enrichment.payLevel.monthly.match(/₹?(\d+,?\d*)/);
-    if (match) {
-      return parseInt(match[1].replace(/,/g, ""), 10);
-    }
-  }
-
-  if (post.legacySalaryMin) {
-    return parseInt(post.legacySalaryMin.toString(), 10);
+  // Use enrichment salary data (primary source)
+  if (post.enrichment?.salaryMin && post.enrichment.salaryMin > 0) {
+    return post.enrichment.salaryMin;
   }
 
   // Default: Government minimum salary ~25K
@@ -152,15 +146,9 @@ function extractSalaryMin(post: JobPostingData): number {
  * HELPER: Extract maximum salary
  */
 function extractSalaryMax(post: JobPostingData): number {
-  if (post.enrichment?.payLevel?.monthly) {
-    const matches = post.enrichment.payLevel.monthly.match(/₹?(\d+,?\d*)/g);
-    if (matches && matches.length > 1) {
-      return parseInt(matches[1].replace(/,/g, ""), 10);
-    }
-  }
-
-  if (post.legacySalaryMax) {
-    return parseInt(post.legacySalaryMax.toString(), 10);
+  // Use enrichment salary data (primary source)
+  if (post.enrichment?.salaryMax && post.enrichment.salaryMax > 0) {
+    return post.enrichment.salaryMax;
   }
 
   // Default: Government maximum salary ~60K

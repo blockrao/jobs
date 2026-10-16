@@ -185,8 +185,8 @@ function generatePageDescription(post: JobPostingData): string {
       })
     : "See notification";
 
-  const salary = post.legacySalaryMin
-    ? `₹${post.legacySalaryMin}-${post.legacySalaryMax}/month`
+  const salary = (post.enrichment?.salaryMin && post.enrichment?.salaryMax)
+    ? `₹${post.enrichment.salaryMin.toLocaleString("en-IN")}-${post.enrichment.salaryMax.toLocaleString("en-IN")}/month`
     : "As per government norms";
 
   return (

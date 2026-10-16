@@ -87,11 +87,11 @@ export function EnrichedPostRow({
                 </>
               )}
 
-              {post.vacancyTotal && (
+              {post.enrichment?.vacanciesTotal && (
                 <>
                   <span className="text-neutral-300">·</span>
                   <span className="text-neutral-600">
-                    <span className="font-medium text-neutral-800">{post.vacancyTotal.toLocaleString('en-IN')}</span> vacancies
+                    <span className="font-medium text-neutral-800">{post.enrichment.vacanciesTotal.toLocaleString('en-IN')}</span> vacancies
                   </span>
                 </>
               )}

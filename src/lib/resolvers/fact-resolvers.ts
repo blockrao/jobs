@@ -207,18 +207,18 @@ export function resolvePostVacancy(
     }
   }
 
-  // --- Branch 2: posts.vacancy_total with scope check ---
-  // Accept vacancy_total when it does NOT equal the recruitment's total_vacancies.
-  // A vacancy_total that matches the recruitment total on a multi-post recruitment
+  // --- Branch 2: enrichment.vacancies_total with scope check ---
+  // Accept vacancies_total when it does NOT equal the recruitment's total_vacancies.
+  // A vacancies_total that matches the recruitment total on a multi-post recruitment
   // is almost certainly a scope leak (the aggregator scraped the full-recruitment
   // figure onto this individual Post). Our DB audit confirmed zero such cases exist
   // in the current dataset, but the guard is retained for correctness as new data arrives.
-  if (post.vacancyTotal != null && post.vacancyTotal > 0) {
+  if (post.enrichment?.vacanciesTotal != null && post.enrichment.vacanciesTotal > 0) {
     const recruitmentTotal = post.recruitmentVacancyTotal ?? null;
     const scopeViolation =
-      recruitmentTotal !== null && post.vacancyTotal === recruitmentTotal;
+      recruitmentTotal !== null && post.enrichment.vacanciesTotal === recruitmentTotal;
     if (!scopeViolation) {
-      return post.vacancyTotal;
+      return post.enrichment.vacanciesTotal;
     }
   }
 
@@ -264,14 +264,11 @@ export function resolveRecruitmentVacancy(recruitment: {
  *   3. null — insufficient evidence.
  */
 export function resolveSalary(
-  post: JobPostingData & {
-    legacySalaryMin?: number | null; // posts.salary_min (old schema)
-    legacySalaryMax?: number | null; // posts.salary_max (old schema)
-  }
+  post: JobPostingData
 ): ResolvedSalary | null {
   const enrichment = post.enrichment;
 
-  // --- Branch 1: enrichment pipeline ---
+  // --- Enrichment pipeline (primary source) ---
   if (enrichment) {
     const {
       salaryMin,
@@ -311,25 +308,7 @@ export function resolveSalary(
 
         return result;
       }
-      // Enrichment fails internal consistency — fall through to legacy
     }
-  }
-
-  // --- Branch 2: reconciled legacy fallback ---
-  const postIdNum =
-    typeof post.id === "string" ? parseInt(post.id, 10) : (post.id as unknown as number);
-  if (
-    RECONCILED_SALARY_POST_IDS.has(postIdNum) &&
-    post.legacySalaryMin != null &&
-    post.legacySalaryMax != null &&
-    post.legacySalaryMin > 0
-  ) {
-    return {
-      min: post.legacySalaryMin,
-      max: post.legacySalaryMax,
-      currency: "INR",
-      period: "MONTH",
-    };
   }
 
   return null;

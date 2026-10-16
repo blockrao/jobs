@@ -273,7 +273,7 @@ function buildHubData(props: Required<RecruitmentHubProps>): HubData {
     const et = formatEmploymentType(postAny.employmentType ?? null);
     const vacancies = post.resolvedVacancyCount
       ?? parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)
-      ?? postAny.vacancyTotal
+      ?? post.enrichment?.vacanciesTotal
       ?? null;
     const vacanciesVerified = post.resolvedVacancyCount != null
       && post.fjaExtract?.verificationStatus === 'VERIFIED';

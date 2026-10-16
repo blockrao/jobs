@@ -123,7 +123,7 @@ export default function JobPostingHeader({
 
   // Pay level
   const payLevel = (() => {
-    const pl = post.enrichment?.payLevel || post.payLevel;
+    const pl = post.enrichment?.payLevel;
     if (!pl) return null;
     if (typeof pl === "string") return `Pay Level-${pl}`;
     if (pl && typeof pl === "object") {

@@ -65,9 +65,15 @@ export function generateFAQs({ post }: FAQPageSchemaProps): FAQItem[] {
   }
 
   // FAQ 5: Salary
-  if (post.enrichment?.payLevel?.monthly || post.legacySalaryMin) {
-    const salary = post.enrichment?.payLevel?.monthly ||
-      `₹${post.legacySalaryMin || 0}-${post.legacySalaryMax || 0}`;
+  if (post.enrichment?.payLevel || (post.enrichment?.salaryMin && post.enrichment?.salaryMax)) {
+    let salary: string;
+    if (post.enrichment.payLevel && typeof post.enrichment.payLevel === "string") {
+      salary = post.enrichment.payLevel;
+    } else if (post.enrichment.salaryMin && post.enrichment.salaryMax) {
+      salary = `₹${post.enrichment.salaryMin.toLocaleString("en-IN")}-${post.enrichment.salaryMax.toLocaleString("en-IN")}`;
+    } else {
+      salary = "As per government norms";
+    }
     faqs.push({
       question: `What is the salary for ${post.title} position?`,
       answer: `The salary ranges from ${salary} per month. This includes basic pay, dearness allowance (DA), and house rent allowance (HRA) as per government norms. Additional benefits include medical coverage, pension scheme, and annual leave benefits.`,

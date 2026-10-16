@@ -85,7 +85,7 @@ export default function JobPostingPage({
   const vacancyCount = resolvedFacts?.vacancyCount;
 
   const payLevel = (() => {
-    const pl = post.enrichment?.payLevel || post.payLevel;
+    const pl = post.enrichment?.payLevel;
     if (!pl) return null;
     if (typeof pl === "string") return `Level-${pl}`;
     if (pl && typeof pl === "object") {
