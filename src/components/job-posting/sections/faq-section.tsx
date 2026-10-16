@@ -7,6 +7,7 @@
  * Questions cover: age limit, qualifications, fee, vacancies, salary, deadline, experience, selection
  */
 
+import React from "react";
 import { JobPostingData } from "@/types/job-posting";
 import { generateFAQs } from "../structured-data/faq-page-schema";
 import styles from "./faq-section.module.css";
@@ -73,6 +74,3 @@ function FAQItem({ question, answer }: FAQItemProps) {
     </div>
   );
 }
-
-// Import React for useState
-import React from "react";
