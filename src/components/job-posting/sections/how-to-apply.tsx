@@ -1,13 +1,18 @@
 /**
  * How to Apply Section
- * Displays step-by-step application instructions.
+ *
+ * REFACTORED (Phase 2): Changed from info-group layout → numbered steps timeline
+ *
+ * Displays step-by-step application instructions in a visual numbered timeline.
  * Uses posts table fields (applicationMethod, applicationChecklist, applicationEmail,
  * contactDepartment, contactPerson) plus recruitmentResolvedFacts for the apply URL.
+ * Enrichment data (howToApply.steps) takes priority for detailed step information.
  */
 
 import { JobPostingData } from "@/types/job-posting";
 import { ResolvedRecruitmentFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
+import stepsStyles from "./how-to-apply.module.css";
 
 interface HowToApplyProps {
   post: JobPostingData;
@@ -51,115 +56,126 @@ export default function HowToApply({ post, recruitmentResolvedFacts, embedded }:
   const hasApplyUrl = Boolean(applyPortalUrl || applicationUrl);
   const effectiveApplyUrl = applyPortalUrl ?? applicationUrl;
 
+  // Build application steps array
+  const steps: Array<{ title: string; description: string; icon: string }> = [];
+
+  if (enrichmentHowToApply?.steps && enrichmentHowToApply.steps.length > 0) {
+    // Use enrichment steps directly
+    enrichmentHowToApply.steps.forEach((step, idx) => {
+      steps.push({
+        title: typeof step === "string" ? step.split("\n")[0] : step,
+        description: typeof step === "string" ? step : "",
+        icon: getStepIcon(idx),
+      });
+    });
+  } else if (applicationChecklist && applicationChecklist.length > 0) {
+    // Fallback to application checklist
+    applicationChecklist.forEach((step, idx) => {
+      steps.push({
+        title: step,
+        description: "",
+        icon: getStepIcon(idx),
+      });
+    });
+  } else {
+    // Default generic steps
+    steps.push(
+      { title: "Register on Portal", description: "Create an account on the official application website", icon: "📝" },
+      { title: "Fill Basic Details", description: "Enter your personal information, email, phone, and education details", icon: "📋" },
+      { title: "Upload Documents", description: "Upload scanned copies of certificates and required documents", icon: "📎" },
+      { title: "Review & Confirm", description: "Check all details carefully before final submission", icon: "✓" },
+      { title: "Submit Application", description: "Submit your application before the deadline", icon: "🎯" },
+      { title: "Save Confirmation", description: "Download and save your confirmation number for reference", icon: "💾" }
+    );
+  }
+
   return (
     <div className={embedded ? undefined : styles.section}>
       {!embedded && <h2 className={styles.sectionTitle}>How to Apply</h2>}
 
-      {/* FJA Enrichment: detailed steps from extraction */}
-      {enrichmentHowToApply?.steps && enrichmentHowToApply.steps.length > 0 && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Application Process (Step-by-Step)</div>
-          <ol style={{ paddingLeft: "20px", color: "#374151", margin: 0 }}>
-            {enrichmentHowToApply.steps.map((step, idx) => (
-              <li key={idx} style={{ marginBottom: "10px", lineHeight: 1.5 }}>{step}</li>
-            ))}
-          </ol>
-        </div>
-      )}
+      {/* Numbered Steps Timeline */}
+      <div className={stepsStyles.stepsContainer}>
+        {steps.map((step, idx) => (
+          <div key={idx} className={stepsStyles.step}>
+            {/* Step Connector */}
+            {idx < steps.length - 1 && <div className={stepsStyles.connector} />}
 
-      {/* FJA Enrichment: postal address */}
-      {enrichmentHowToApply?.address && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Send Application To</div>
-          <div className={styles.infoValue} style={{ whiteSpace: "pre-wrap", color: "#374151" }}>
-            {enrichmentHowToApply.address}
+            {/* Step Badge */}
+            <div className={stepsStyles.stepBadge}>
+              <div className={stepsStyles.stepNumber}>{idx + 1}</div>
+            </div>
+
+            {/* Step Content */}
+            <div className={stepsStyles.stepContent}>
+              <div className={stepsStyles.stepTitle}>{step.title}</div>
+              {step.description && (
+                <div className={stepsStyles.stepDescription}>{step.description}</div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Application method */}
-      {(applicationMethod || enrichmentHowToApply?.method) && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>{sourceFactsUnverified ? "Application Method (reported)" : "Application Method"}</div>
-          <div className={styles.infoValue}>{applicationMethod || enrichmentHowToApply?.method}</div>
-        </div>
-      )}
-
-      {/* Application checklist (posts table) */}
-      {applicationChecklist && applicationChecklist.length > 0 && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Steps to Apply</div>
-          <ol style={{ paddingLeft: "20px", color: "#374151", margin: 0 }}>
-            {applicationChecklist.map((step, idx) => (
-              <li key={idx} style={{ marginBottom: "6px" }}>{step}</li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {/* Application link */}
-      <div className={styles.infoGroup}>
-        <div className={styles.infoLabel}>Application Portal</div>
-        <div className={styles.infoValue}>
-          {effectiveApplyUrl ? (
-            <a
-              href={effectiveApplyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: "#1e40af",
-                textDecoration: "underline",
-                fontWeight: 600,
-              }}
-            >
-              Click here to apply on official portal →
-            </a>
-          ) : (
-            "Application link is not available. Check the official notification for instructions."
-          )}
-        </div>
+        ))}
       </div>
 
-      {/* Application email */}
-      {applicationEmail && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Application Email</div>
-          <div className={styles.infoValue}>
-            <a
-              href={`mailto:${applicationEmail}`}
-              style={{ color: "#1e40af", textDecoration: "underline" }}
-            >
-              {applicationEmail}
-            </a>
+      {/* Application Portal Link - Prominent CTA */}
+      <div className={stepsStyles.ctaSection}>
+        <div className={stepsStyles.ctaLabel}>Ready to Apply?</div>
+        {effectiveApplyUrl ? (
+          <a
+            href={effectiveApplyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={stepsStyles.ctaButton}
+          >
+            Open Application Portal →
+          </a>
+        ) : (
+          <div className={stepsStyles.ctaFallback}>
+            Application link is not available. Check the official notification for instructions.
           </div>
+        )}
+      </div>
+
+      {/* Additional Contact Info */}
+      {(applicationEmail || contactPerson || contactDepartment || enrichmentHowToApply?.address) && (
+        <div className={stepsStyles.contactInfo}>
+          <div className={stepsStyles.contactLabel}>Need Help?</div>
+          {applicationEmail && (
+            <div className={stepsStyles.contactItem}>
+              <strong>Email:</strong>{" "}
+              <a href={`mailto:${applicationEmail}`}>{applicationEmail}</a>
+            </div>
+          )}
+          {contactPerson && (
+            <div className={stepsStyles.contactItem}>
+              <strong>Contact:</strong> {contactPerson}
+            </div>
+          )}
+          {contactDepartment && (
+            <div className={stepsStyles.contactItem}>
+              <strong>Department:</strong> {contactDepartment}
+            </div>
+          )}
+          {enrichmentHowToApply?.address && (
+            <div className={stepsStyles.contactItem}>
+              <strong>Address:</strong> {enrichmentHowToApply.address}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Contact */}
-      {(contactDepartment || contactPerson) && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Contact</div>
-          <div className={styles.infoValue}>
-            {contactPerson && <div>{contactPerson}</div>}
-            {contactDepartment && <div style={{ color: "#6b7280" }}>{contactDepartment}</div>}
-          </div>
-        </div>
-      )}
-
-      {/* Extracted modes fallback — only when no structured data */}
-      {!applicationMethod && extractedApplicationModes.length > 0 && !hasApplyUrl && (
-        <div className={styles.infoGroup}>
-          <div className={styles.infoLabel}>Application method (reported)</div>
-          <div className={styles.infoValue}>
-            {extractedApplicationModes.join(", ")} — a usable direct application link was not captured. Check the official notification for submission instructions.
-          </div>
-        </div>
-      )}
-
-      <div className={styles.featureBox} style={{ marginTop: "20px" }}>
-        <strong>Important:</strong> JobOye does not process applications. Confirm requirements,
-        account setup, documents, and payment steps with the official notice and portal before applying.
+      {/* Important Notice */}
+      <div className={stepsStyles.importantNotice}>
+        <strong>⚠️ Important:</strong> JobOye does not process applications. Confirm all requirements,
+        account setup, documents, and deadlines with the official notice and portal before applying.
       </div>
     </div>
   );
+}
+
+/**
+ * HELPER: Get icon for step based on index
+ */
+function getStepIcon(index: number): string {
+  const icons = ["📝", "📋", "📎", "✓", "🎯", "💾", "🔔"];
+  return icons[index % icons.length];
 }
