@@ -80,38 +80,20 @@ export default async function EditPostPage({ params, searchParams }: EditPostPag
           </div>
           <div>
             <span className="text-xs font-semibold text-neutral-600">Organization</span>
-            <p className="text-sm mt-1">{post.orgName || post.organizationName || "Unknown"}</p>
-            <p className="text-xs text-neutral-500">Sector: {post.organizationSector}</p>
-          </div>
-          <div>
-            <span className="text-xs font-semibold text-neutral-600">Status</span>
-            <p className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${
-              post.isLive
-                ? "bg-green-100 text-green-800"
-                : "bg-gray-100 text-gray-800"
-            }`}>
-              {post.isLive ? "Live" : "Inactive"}
-            </p>
+            <p className="text-sm mt-1">{post.orgName || "Unknown"}</p>
           </div>
           <div>
             <span className="text-xs font-semibold text-neutral-600">Vacancies</span>
             <p className="text-sm mt-1">{post.vacancyTotal || "—"}</p>
           </div>
-        </div>
-
-        {post.officialSourceUrl && (
           <div>
-            <span className="text-xs font-semibold text-neutral-600">Official Source</span>
-            <a
-              href={post.officialSourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline mt-1 block truncate"
-            >
-              {post.officialSourceUrl}
-            </a>
+            <span className="text-xs font-semibold text-neutral-600">Salary Range</span>
+            <p className="text-sm mt-1">
+              {post.salaryMin ? `₹${post.salaryMin.toLocaleString("en-IN")}` : "—"}
+              {post.salaryMax ? ` – ₹${post.salaryMax.toLocaleString("en-IN")}` : ""}
+            </p>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Edit Form */}

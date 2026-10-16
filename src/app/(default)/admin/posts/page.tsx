@@ -21,59 +21,68 @@ async function PostsList({ searchParams }: PostsListProps) {
   const limitNum = Math.min(parseInt(limit) || 50, 200);
   const offsetNum = Math.max(parseInt(offset) || 0, 0);
 
-  // Build search query with proper joins
-  const baseQuery = db
-    .select({
-      id: posts.id,
-      name: posts.name,
-      slug: posts.slug,
-      organizationName: organizations.name,
-      recruitmentSlug: recruitments.slug,
-      recruitmentName: recruitments.name,
-      vacancyTotal: posts.vacancyTotal,
-      updatedAt: posts.updatedAt,
-    })
-    .from(posts)
-    .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
-    .leftJoin(organizations, eq(recruitments.organizationId, organizations.id))
-    .orderBy(desc(posts.updatedAt));
-
-  // Apply search filter
-  let query = baseQuery;
-  if (q) {
-    query = query.where(
-      or(
+  // Build filter condition
+  const filterCondition = q
+    ? or(
         ilike(posts.name, `%${q}%`),
         ilike(posts.slug, `%${q}%`),
         ilike(recruitments.name, `%${q}%`),
         ilike(organizations.name, `%${q}%`)
       )
-    );
-  }
+    : undefined;
 
-  query = query.limit(limitNum).offset(offsetNum);
+  // Build and execute main query with conditional filter
+  const postsList = await (filterCondition
+    ? db
+        .select({
+          id: posts.id,
+          name: posts.name,
+          slug: posts.slug,
+          organizationName: organizations.name,
+          recruitmentSlug: recruitments.slug,
+          recruitmentName: recruitments.name,
+          vacancyTotal: posts.vacancyTotal,
+          updatedAt: posts.updatedAt,
+        })
+        .from(posts)
+        .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+        .leftJoin(organizations, eq(recruitments.organizationId, organizations.id))
+        .where(filterCondition)
+        .orderBy(desc(posts.updatedAt))
+        .limit(limitNum)
+        .offset(offsetNum)
+    : db
+        .select({
+          id: posts.id,
+          name: posts.name,
+          slug: posts.slug,
+          organizationName: organizations.name,
+          recruitmentSlug: recruitments.slug,
+          recruitmentName: recruitments.name,
+          vacancyTotal: posts.vacancyTotal,
+          updatedAt: posts.updatedAt,
+        })
+        .from(posts)
+        .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+        .leftJoin(organizations, eq(recruitments.organizationId, organizations.id))
+        .orderBy(desc(posts.updatedAt))
+        .limit(limitNum)
+        .offset(offsetNum));
 
-  // Get total count
-  let countQuery = db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(posts)
-    .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
-    .leftJoin(organizations, eq(recruitments.organizationId, organizations.id));
-
-  if (q) {
-    countQuery = countQuery.where(
-      or(
-        ilike(posts.name, `%${q}%`),
-        ilike(posts.slug, `%${q}%`),
-        ilike(recruitments.name, `%${q}%`),
-        ilike(organizations.name, `%${q}%`)
-      )
-    );
-  }
-
-  const countResult = await countQuery;
+  // Get total count with conditional filter
+  const countResult = await (filterCondition
+    ? db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(posts)
+        .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+        .leftJoin(organizations, eq(recruitments.organizationId, organizations.id))
+        .where(filterCondition)
+    : db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(posts)
+        .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
+        .leftJoin(organizations, eq(recruitments.organizationId, organizations.id)));
   const total = countResult[0]?.count ?? 0;
-  const postsList = await query;
 
   return (
     <div className="space-y-4">
