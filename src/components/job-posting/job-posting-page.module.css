@@ -122,7 +122,7 @@
 /* ────────────────────────────────────────────────── */
 
 .card {
-  background: var(--bg-primary);
+  background: #ffffff;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
@@ -311,7 +311,7 @@
   gap: var(--spacing-md);
   margin: var(--spacing-2xl) 0;
   padding: var(--spacing-lg);
-  background: var(--bg-secondary);
+  background: #f3f4f6;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
   font-size: 14px;
@@ -388,7 +388,7 @@
 .section {
   margin: var(--spacing-3xl) 0;
   padding: var(--spacing-xl);
-  background: var(--bg-primary);
+  background: #ffffff;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
@@ -462,7 +462,7 @@
   grid-template-columns: 120px 1fr;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
-  background: var(--bg-secondary);
+  background: #ffffff;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
   transition: all 200ms ease;
@@ -521,7 +521,7 @@
 .footerNote {
   margin: var(--spacing-3xl) 0 var(--spacing-xl);
   padding: var(--spacing-xl);
-  background: var(--bg-secondary);
+  background: #f3f4f6;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
   font-size: 14px;
