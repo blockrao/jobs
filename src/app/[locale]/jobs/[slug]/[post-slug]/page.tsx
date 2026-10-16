@@ -14,7 +14,8 @@
  * verified Post translations are part of the canonical Post read contract.
  */
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { checkSlugRedirect } from "@/lib/slug-redirects";
 
 export const revalidate = 300;
 import { entitySeo } from "@/lib/seo";
@@ -52,6 +53,16 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
+
+  // Check for slug redirects and redirect if needed
+  const newRecruitmentSlug = await checkSlugRedirect(recruitmentSlug, "recruitment");
+  const newPostSlug = await checkSlugRedirect(postSlug, "post");
+
+  if (newRecruitmentSlug || newPostSlug) {
+    const redirectUrl = `/jobs/${newRecruitmentSlug || recruitmentSlug}/${newPostSlug || postSlug}`;
+    // Note: can't actually redirect in generateMetadata, but the page function will handle it
+  }
+
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) {
@@ -86,6 +97,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LocaleJobPostingPage({ params }: Props) {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
+
+  // Check for slug redirects (malformed slugs that have been cleaned)
+  const newRecruitmentSlug = await checkSlugRedirect(recruitmentSlug, "recruitment");
+  const newPostSlug = await checkSlugRedirect(postSlug, "post");
+
+  if (newRecruitmentSlug || newPostSlug) {
+    const localePrefix = locale === "hi" ? "/hi" : "";
+    const redirectUrl = `${localePrefix}/jobs/${newRecruitmentSlug || recruitmentSlug}/${newPostSlug || postSlug}`;
+    redirect(redirectUrl);
+  }
+
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) notFound();
