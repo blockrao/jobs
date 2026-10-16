@@ -25,8 +25,8 @@ export async function checkSlugRedirect(
       LIMIT 1
     `);
 
-    if (result.rows && result.rows.length > 0) {
-      return (result.rows[0] as any).new_slug;
+    if (result && result.length > 0) {
+      return (result[0] as any).new_slug;
     }
 
     return null;
@@ -52,7 +52,7 @@ export async function getAllSlugRedirects(
       ORDER BY created_at DESC
     `);
 
-    return (results.rows || []).map((row: any) => ({
+    return (results || []).map((row: any) => ({
       old_slug: row.old_slug,
       new_slug: row.new_slug,
     }));
