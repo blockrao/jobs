@@ -209,53 +209,51 @@ async function getFjaExtractForPost(postId: number): Promise<any> {
 
 /**
  * Fetch post enrichment data from post_enrichments table
+ * Returns all columns as-is from the database
  */
 async function getPostEnrichmentData(postId: number | string): Promise<any> {
   const db = getDb();
 
   try {
     const result = await db.execute<any>(sql`
-      SELECT
-        id AS "enrichmentId",
-        "vacanciesByCategory",
-        "vacanciesTotal",
-        "feesByCategory",
-        "feeNote",
-        "ageRulesByCategory",
-        "ageNote",
-        "ageRelaxationRules",
-        "ageReferenceDate",
-        "payScale",
-        "salaryMin",
-        "salaryMax",
-        "salaryNote",
-        "payLevel",
-        "selectionProcess",
-        "notificationDate",
-        "applicationOpenDate",
-        "applicationClosingDate",
-        "examDate",
-        "admitCardDate",
-        "resultDate",
-        "interviewScheduleDate",
-        "appointmentDate",
-        "eligibilityPathways",
-        "documentsRequired",
-        "duties",
-        "responsibilities",
-        "sourceVerificationStatus",
-        "sourceVerificationDate",
-        "extractionConfidence",
-        "dataGaps",
-        "education",
-        "experience",
-        "benefits"
+      SELECT *
       FROM post_enrichments
       WHERE post_id = ${postId}
       LIMIT 1
     `);
 
-    return result && result.length > 0 ? result[0] : null;
+    if (result && result.length > 0) {
+      const enrichment = result[0];
+      // Convert date strings to Date objects for fields we know are dates
+      const dateFields = [
+        'ageReferenceDate',
+        'notificationDate',
+        'applicationOpenDate',
+        'applicationClosingDate',
+        'examDate',
+        'admitCardDate',
+        'resultDate',
+        'interviewScheduleDate',
+        'appointmentDate',
+        'sourceVerificationDate',
+        'created_at',
+        'updated_at'
+      ];
+
+      for (const field of dateFields) {
+        if (enrichment[field] && typeof enrichment[field] === 'string') {
+          try {
+            enrichment[field] = new Date(enrichment[field]);
+          } catch (e) {
+            // Leave as-is if date parsing fails
+          }
+        }
+      }
+
+      return enrichment;
+    }
+
+    return null;
   } catch (err) {
     console.warn("Error fetching enrichment data for post", postId, ":", err);
     return null;
@@ -385,41 +383,7 @@ export async function getPostBySlug(
       // Do not gate the entire enrichment object on vacanciesTotal: other
       // valid enrichment fields (dates, fees, eligibility, salary) can exist
       // independently of a vacancy count.
-      enrichment: data.enrichmentId != null ? {
-        vacanciesByCategory: data.vacanciesByCategory,
-        vacanciesTotal: data.vacanciesTotal,
-        feesByCategory: data.feesByCategory,
-        feeNote: data.feeNote,
-        ageRulesByCategory: data.ageRulesByCategory,
-        ageNote: data.ageNote,
-        ageRelaxationRules: data.ageRelaxationRules,
-        ageReferenceDate: data.ageReferenceDate ? new Date(data.ageReferenceDate) : undefined,
-        payScale: data.payScale,
-        salaryMin: data.salaryMin,
-        salaryMax: data.salaryMax,
-        salaryNote: data.salaryNote,
-        payLevel: data.payLevel,
-        selectionProcess: data.selectionProcess,
-        notificationDate: data.notificationDate ? new Date(data.notificationDate) : undefined,
-        applicationOpenDate: data.applicationOpenDate ? new Date(data.applicationOpenDate) : undefined,
-        applicationClosingDate: data.applicationClosingDate ? new Date(data.applicationClosingDate) : undefined,
-        examDate: data.examDate ? new Date(data.examDate) : undefined,
-        admitCardDate: data.admitCardDate ? new Date(data.admitCardDate) : undefined,
-        resultDate: data.resultDate ? new Date(data.resultDate) : undefined,
-        interviewScheduleDate: data.interviewScheduleDate ? new Date(data.interviewScheduleDate) : undefined,
-        appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
-        eligibilityPathways: data.eligibilityPathways,
-        documentsRequired: data.documentsRequired,
-        duties: data.duties,
-        responsibilities: data.responsibilities,
-        sourceVerificationStatus: data.sourceVerificationStatus,
-        sourceVerificationDate: data.sourceVerificationDate ? new Date(data.sourceVerificationDate) : undefined,
-        extractionConfidence: data.extractionConfidence,
-        dataGaps: data.dataGaps,
-        education: data.education,
-        experience: data.experience,
-        benefits: data.benefits,
-      } : undefined,
+      enrichment: enrichmentData ?? undefined,
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", {
