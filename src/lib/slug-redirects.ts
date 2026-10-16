@@ -5,7 +5,7 @@
  * Used in route handlers to check if a slug needs redirecting.
  */
 
-import { getDb } from "@/db/client";
+import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
 
 /**
