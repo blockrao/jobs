@@ -1,0 +1,323 @@
+/**
+ * Selection Process Timeline Styles (Phase 2 Refactor)
+ *
+ * Visual timeline showing selection stages with markers, connectors, and details
+ */
+
+.timeline {
+  position: relative;
+  padding: 20px 0;
+}
+
+/* Timeline Item Container */
+.timelineItem {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-left: 60px;
+}
+
+.timelineItem:last-child {
+  margin-bottom: 0;
+}
+
+/* Vertical Connector Line (between stages) */
+.connector {
+  position: absolute;
+  left: 27px;
+  top: 50px;
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(180deg, #0066cc 0%, #0052a3 100%);
+}
+
+/* Stage Marker (circle on the left) */
+.stageMarker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.markerCircle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+  color: white;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.25);
+  border: 3px solid white;
+}
+
+/* Stage Content Card */
+.stageCard {
+  flex: 1;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.stageCard:hover {
+  background: #f0f2f5;
+  border-color: #adb5bd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Stage Name */
+.stageName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 12px;
+}
+
+/* Details Grid (marks, duration) */
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.detail {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.detailLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detailValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: #212529;
+}
+
+/* Description */
+.description {
+  font-size: 14px;
+  color: #495057;
+  margin: 12px 0;
+  line-height: 1.6;
+}
+
+/* Qualifying Marks Section */
+.qualifyingMarks {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+}
+
+.qualifyingMarksLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.qualifyingMarksList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.qualifyingMarksItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  font-size: 13px;
+}
+
+.qualifyingMarksItem span {
+  color: #6c757d;
+}
+
+.qualifyingMarksItem strong {
+  color: #212529;
+  font-weight: 700;
+}
+
+/* Responsive: Tablet */
+@media (max-width: 768px) {
+  .timelineItem {
+    gap: 16px;
+    padding-left: 50px;
+    margin-bottom: 24px;
+  }
+
+  .stageMarker {
+    width: 50px;
+    height: 50px;
+  }
+
+  .markerCircle {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .connector {
+    left: 21px;
+    height: 50px;
+  }
+
+  .stageCard {
+    padding: 12px;
+  }
+
+  .stageName {
+    font-size: 15px;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .qualifyingMarksList {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+}
+
+/* Responsive: Mobile */
+@media (max-width: 640px) {
+  .timelineItem {
+    gap: 12px;
+    padding-left: 44px;
+    margin-bottom: 20px;
+  }
+
+  .stageMarker {
+    width: 44px;
+    height: 44px;
+  }
+
+  .markerCircle {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .connector {
+    left: 18px;
+    height: 44px;
+  }
+
+  .stageCard {
+    padding: 10px;
+  }
+
+  .stageName {
+    font-size: 14px;
+  }
+
+  .detail {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .qualifyingMarksList {
+    grid-template-columns: 1fr;
+  }
+
+  .qualifyingMarksItem {
+    font-size: 12px;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .markerCircle {
+    background: linear-gradient(135deg, #0088ff 0%, #0066cc 100%);
+    border-color: #2d3139;
+  }
+
+  .stageCard {
+    background: #2d3139;
+    border-color: #3d4452;
+  }
+
+  .stageCard:hover {
+    background: #3d4452;
+    border-color: #4d5564;
+  }
+
+  .stageName {
+    color: #f8f9fa;
+  }
+
+  .detail {
+    background: #3d4452;
+    border-color: #495057;
+  }
+
+  .detailLabel {
+    color: #adb5bd;
+  }
+
+  .detailValue {
+    color: #f8f9fa;
+  }
+
+  .description {
+    color: #adb5bd;
+  }
+
+  .qualifyingMarks {
+    border-top-color: #495057;
+  }
+
+  .qualifyingMarksLabel {
+    color: #adb5bd;
+  }
+
+  .qualifyingMarksItem {
+    background: #3d4452;
+    border-color: #495057;
+  }
+
+  .qualifyingMarksItem span {
+    color: #868e96;
+  }
+
+  .qualifyingMarksItem strong {
+    color: #f8f9fa;
+  }
+}
