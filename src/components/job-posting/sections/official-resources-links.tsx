@@ -92,7 +92,15 @@ export default function OfficialResourcesLinks({
             <div className={styles.resourceContent}>
               <div className={styles.resourceTitle}>{resource.title}</div>
               <div className={styles.resourceDescription}>{resource.description}</div>
-              <div className={styles.resourceUrl}>{new URL(resource.url).hostname}</div>
+              <div className={styles.resourceUrl}>
+                {(() => {
+                  try {
+                    return new URL(resource.url).hostname;
+                  } catch {
+                    return resource.url;
+                  }
+                })()}
+              </div>
             </div>
             <div className={styles.resourceArrow}>→</div>
           </a>
