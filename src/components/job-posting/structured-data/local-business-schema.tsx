@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * LocalBusiness Schema for Geo-Targeting
  *

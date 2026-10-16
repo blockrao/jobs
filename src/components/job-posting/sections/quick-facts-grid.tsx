@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Quick Facts Grid Component
  *

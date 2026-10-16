@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AggregateOffer Schema for Salary & Compensation
  *

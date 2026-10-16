@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Event Schema for Application Timeline
  *

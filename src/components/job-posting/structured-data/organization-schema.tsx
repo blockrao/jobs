@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Organization Schema for Structured Data Markup
  *

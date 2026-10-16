@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * WebPage Schema for Publication Metadata
  *

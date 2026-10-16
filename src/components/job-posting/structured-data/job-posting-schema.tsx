@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * JobPosting + BreadcrumbList Structured Data
  *

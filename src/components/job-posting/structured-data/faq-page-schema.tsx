@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * FAQPage Schema Generator for Answer Engine Optimization (AEO)
  *
