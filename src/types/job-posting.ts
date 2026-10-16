@@ -180,4 +180,19 @@ export interface PostEnrichment {
   };
 
   benefits?: string[];
+
+  // EnrichmentSchema fields (for enriched content tabs)
+  documents?: string[];
+  howToApply?: {
+    method?: string;
+    steps?: string[];
+    address?: string;
+    email?: string;
+    portal_url?: string;
+    contact?: {
+      person?: string;
+      department?: string;
+      phone?: string;
+    };
+  };
 }

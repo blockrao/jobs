@@ -21,7 +21,6 @@ type PostRow = Omit<
   | "recruitmentApplicationEndDate"
   | "notificationPublicationDate"
   | "fjaExtract"
-  | "enrichment"
   | "payLevel"
 > &
   Omit<
