@@ -213,48 +213,53 @@ async function getFjaExtractForPost(postId: number): Promise<any> {
 async function getPostEnrichmentData(postId: number | string): Promise<any> {
   const db = getDb();
 
-  const result = await db.execute<any>(sql`
-    SELECT
-      id AS "enrichmentId",
-      "vacanciesByCategory",
-      "vacanciesTotal",
-      "feesByCategory",
-      "feeNote",
-      "ageRulesByCategory",
-      "ageNote",
-      "ageRelaxationRules",
-      "ageReferenceDate",
-      "payScale",
-      "salaryMin",
-      "salaryMax",
-      "salaryNote",
-      "payLevel",
-      "selectionProcess",
-      "notificationDate",
-      "applicationOpenDate",
-      "applicationClosingDate",
-      "examDate",
-      "admitCardDate",
-      "resultDate",
-      "interviewScheduleDate",
-      "appointmentDate",
-      "eligibilityPathways",
-      "documentsRequired",
-      "duties",
-      "responsibilities",
-      "sourceVerificationStatus",
-      "sourceVerificationDate",
-      "extractionConfidence",
-      "dataGaps",
-      "education",
-      "experience",
-      "benefits"
-    FROM post_enrichments
-    WHERE post_id = ${postId}
-    LIMIT 1
-  `);
+  try {
+    const result = await db.execute<any>(sql`
+      SELECT
+        id AS "enrichmentId",
+        "vacanciesByCategory",
+        "vacanciesTotal",
+        "feesByCategory",
+        "feeNote",
+        "ageRulesByCategory",
+        "ageNote",
+        "ageRelaxationRules",
+        "ageReferenceDate",
+        "payScale",
+        "salaryMin",
+        "salaryMax",
+        "salaryNote",
+        "payLevel",
+        "selectionProcess",
+        "notificationDate",
+        "applicationOpenDate",
+        "applicationClosingDate",
+        "examDate",
+        "admitCardDate",
+        "resultDate",
+        "interviewScheduleDate",
+        "appointmentDate",
+        "eligibilityPathways",
+        "documentsRequired",
+        "duties",
+        "responsibilities",
+        "sourceVerificationStatus",
+        "sourceVerificationDate",
+        "extractionConfidence",
+        "dataGaps",
+        "education",
+        "experience",
+        "benefits"
+      FROM post_enrichments
+      WHERE post_id = ${postId}
+      LIMIT 1
+    `);
 
-  return result && result.length > 0 ? result[0] : null;
+    return result && result.length > 0 ? result[0] : null;
+  } catch (err) {
+    console.warn("Error fetching enrichment data for post", postId, ":", err);
+    return null;
+  }
 }
 
 /**
@@ -417,7 +422,12 @@ export async function getPostBySlug(
       } : undefined,
     };
   } catch (err) {
-    console.error("Exception in getPostBySlug:", err);
+    console.error("Exception in getPostBySlug:", {
+      recruitmentSlug,
+      postSlug,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     return null;
   }
 }
