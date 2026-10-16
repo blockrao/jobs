@@ -445,6 +445,254 @@ export default function JobPostingPage({
         {/* Salary and Compensation */}
         <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
 
+        {/* Benefits & Perks */}
+        {post.enrichment?.benefits && post.enrichment.benefits.length > 0 && (
+          <section id="benefits" className={styles.section} aria-labelledby="ben-h">
+            <h2 id="ben-h" className={styles.sectionTitle}>
+              Benefits & Perks
+            </h2>
+            <ul style={{ marginLeft: "20px", color: "var(--text-secondary)" }}>
+              {post.enrichment.benefits.map((benefit, idx) => (
+                <li key={idx} style={{ marginBottom: "8px", fontSize: "15px", lineHeight: "1.6" }}>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Experience Requirements (Structured) */}
+        {post.enrichment?.experience && (
+          <section id="experience-detail" className={styles.section} aria-labelledby="exp-detail-h">
+            <h2 id="exp-detail-h" className={styles.sectionTitle}>
+              Experience Requirements
+            </h2>
+            <div style={{ marginBottom: "16px" }}>
+              <p style={{ fontWeight: 600, marginBottom: "8px", color: "var(--text-primary)" }}>
+                Minimum: {post.enrichment.experience.minYears} year{post.enrichment.experience.minYears !== 1 ? 's' : ''}
+              </p>
+              {post.enrichment.experience.countedFrom && (
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                  Counted from: {post.enrichment.experience.countedFrom}
+                </p>
+              )}
+            </div>
+            {post.enrichment.experience.domains && post.enrichment.experience.domains.length > 0 && (
+              <div>
+                <p style={{ fontWeight: 600, marginBottom: "8px", color: "var(--text-primary)" }}>
+                  Relevant domains:
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {post.enrichment.experience.domains.map((domain, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        background: "var(--bg-secondary)",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        fontSize: "14px",
+                        color: "var(--text-secondary)",
+                        border: "1px solid var(--border-light)",
+                      }}
+                    >
+                      {domain}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Eligibility Pathways */}
+        {post.enrichment?.eligibilityPathways && post.enrichment.eligibilityPathways.length > 0 && (
+          <section id="pathways" className={styles.section} aria-labelledby="path-h">
+            <h2 id="path-h" className={styles.sectionTitle}>
+              Eligibility Pathways
+            </h2>
+            <div style={{ display: "grid", gap: "16px" }}>
+              {post.enrichment.eligibilityPathways.map((pathway, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: "16px",
+                    background: "var(--bg-secondary)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-light)",
+                  }}
+                >
+                  <h4 style={{ fontWeight: 700, marginBottom: "8px", color: "var(--text-primary)" }}>
+                    Pathway {pathway.pathway}: {pathway.description}
+                  </h4>
+                  {pathway.qualifications && pathway.qualifications.length > 0 && (
+                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                      <strong>Qualifications:</strong> {pathway.qualifications.join(", ")}
+                    </p>
+                  )}
+                  {pathway.experienceYears && (
+                    <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                      <strong>Experience:</strong> {pathway.experienceYears} year{pathway.experienceYears !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Education Requirements */}
+        {post.enrichment?.education && (
+          <section id="education" className={styles.section} aria-labelledby="edu-h">
+            <h2 id="edu-h" className={styles.sectionTitle}>
+              Education Requirements
+            </h2>
+            <div style={{ display: "grid", gap: "12px" }}>
+              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "var(--text-primary)" }}>
+                  {post.enrichment.education.degree}
+                </p>
+                {post.enrichment.education.university && (
+                  <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+                    University: {post.enrichment.education.university}
+                  </p>
+                )}
+                {post.enrichment.education.registration && (
+                  <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+                    Registration: {post.enrichment.education.registration}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Enhanced Documents Required Section */}
+        {post.enrichment?.documentsRequired && (
+          (post.enrichment.documentsRequired.required?.length > 0 ||
+          post.enrichment.documentsRequired.common?.length > 0)
+        ) && (
+          <section id="documents-enriched" className={styles.section} aria-labelledby="docs-enrich-h">
+            <h2 id="docs-enrich-h" className={styles.sectionTitle}>
+              Complete Document List
+            </h2>
+            <div style={{ display: "grid", gap: "16px" }}>
+              {post.enrichment.documentsRequired.required?.length > 0 && (
+                <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                  <h4 style={{ fontWeight: 700, marginBottom: "8px", color: "var(--text-primary)" }}>
+                    ✓ Mandatory Documents:
+                  </h4>
+                  <ul style={{ marginLeft: "20px", margin: 0, color: "var(--text-secondary)" }}>
+                    {post.enrichment.documentsRequired.required.map((doc, idx) => (
+                      <li key={idx} style={{ marginBottom: "6px", fontSize: "15px", lineHeight: "1.5" }}>
+                        {doc}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {post.enrichment.documentsRequired.common?.length > 0 && (
+                <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                  <h4 style={{ fontWeight: 700, marginBottom: "8px", color: "var(--text-primary)" }}>
+                    📋 Commonly Required Documents:
+                  </h4>
+                  <ul style={{ marginLeft: "20px", margin: 0, color: "var(--text-secondary)" }}>
+                    {post.enrichment.documentsRequired.common.map((doc, idx) => (
+                      <li key={idx} style={{ marginBottom: "6px", fontSize: "15px", lineHeight: "1.5" }}>
+                        {doc}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Data Quality & Verification */}
+        {post.enrichment && (
+          <section id="dataQuality" className={styles.section} aria-labelledby="quality-h">
+            <h2 id="quality-h" className={styles.sectionTitle}>
+              Data Quality & Verification
+            </h2>
+            <div style={{ display: "grid", gap: "12px" }}>
+              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                <p style={{ margin: "0 0 4px 0", fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                  Verification Status
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "var(--text-secondary)",
+                    fontSize: "15px",
+                    fontWeight: 500,
+                  }}
+                >
+                  {post.enrichment.sourceVerificationStatus || "PENDING"}
+                </p>
+                {post.enrichment.sourceVerificationDate && (
+                  <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "var(--text-tertiary)" }}>
+                    Last verified:{" "}
+                    {new Date(post.enrichment.sourceVerificationDate).toLocaleDateString("en-IN", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
+                  Data Extraction Confidence
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      height: "8px",
+                      flex: 1,
+                      background: "var(--bg-tertiary)",
+                      borderRadius: "4px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${post.enrichment.extractionConfidence || 0}%`,
+                        background:
+                          post.enrichment.extractionConfidence >= 80
+                            ? "var(--success)"
+                            : post.enrichment.extractionConfidence >= 60
+                              ? "var(--warning)"
+                              : "var(--danger)",
+                        transition: "width 300ms ease",
+                      }}
+                    />
+                  </div>
+                  <span style={{ fontWeight: 600, color: "var(--text-secondary)", minWidth: "50px", fontSize: "14px" }}>
+                    {post.enrichment.extractionConfidence || 0}%
+                  </span>
+                </div>
+              </div>
+
+              {post.enrichment.dataGaps && post.enrichment.dataGaps.length > 0 && (
+                <div style={{ padding: "12px", background: "#fef3c7", borderRadius: "6px", borderLeft: "4px solid var(--warning)" }}>
+                  <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "#92400e", fontSize: "14px" }}>
+                    ⚠️ Data Gaps Identified:
+                  </p>
+                  <ul style={{ marginLeft: "20px", margin: 0, color: "#78350f" }}>
+                    {post.enrichment.dataGaps.map((gap, idx) => (
+                      <li key={idx} style={{ marginBottom: "4px", fontSize: "13px" }}>
+                        {gap}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* FAQ Section (NEW - temporarily disabled) */}
         {/* TODO: Fix React SSR issue with useState in FAQSection
         <section id="faq" className={styles.section} aria-labelledby="faq-h">
