@@ -143,9 +143,7 @@ async function getPostCoreData(
       r.application_end_date AS "recruitmentApplicationEndDate",
       r.application_start_date AS "recruitmentApplicationStartDate",
       r.notification_date AS "notificationPublicationDate",
-      r.selection_process AS "recruitmentSelectionProcess",
-      -- Clean architecture: enrichment is a single JSONB column, not a separate table
-      p.enrichment
+      r.selection_process AS "recruitmentSelectionProcess"
     FROM posts p
     LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
     LEFT JOIN organizations o ON o.id = r.organization_id
@@ -210,17 +208,53 @@ async function getFjaExtractForPost(postId: number): Promise<any> {
 }
 
 /**
- * Fetch post enrichment data separately (can be lazy-loaded)
+ * Fetch post enrichment data from post_enrichments table
  */
-/**
- * Enrichment data is now read directly from posts.enrichment JSONB column.
- * No separate table query needed — cleaner architecture.
- * This function is deprecated; enrichment comes via getPostCoreData.
- */
-function getPostEnrichmentDataLegacy(enrichmentJsonb: any): any {
-  if (!enrichmentJsonb) return null;
-  // Map JSONB enrichment schema to legacy field names for backward compatibility
-  return enrichmentJsonb;
+async function getPostEnrichmentData(postId: number | string): Promise<any> {
+  const db = getDb();
+
+  const result = await db.execute<any>(sql`
+    SELECT
+      id AS "enrichmentId",
+      "vacanciesByCategory",
+      "vacanciesTotal",
+      "feesByCategory",
+      "feeNote",
+      "ageRulesByCategory",
+      "ageNote",
+      "ageRelaxationRules",
+      "ageReferenceDate",
+      "payScale",
+      "salaryMin",
+      "salaryMax",
+      "salaryNote",
+      "payLevel",
+      "selectionProcess",
+      "notificationDate",
+      "applicationOpenDate",
+      "applicationClosingDate",
+      "examDate",
+      "admitCardDate",
+      "resultDate",
+      "interviewScheduleDate",
+      "appointmentDate",
+      "eligibilityPathways",
+      "documentsRequired",
+      "duties",
+      "responsibilities",
+      "sourceVerificationStatus",
+      "sourceVerificationDate",
+      "extractionConfidence",
+      "dataGaps",
+      "education",
+      "experience",
+      "benefits"
+    FROM post_enrichments
+    WHERE post_id = ${postId}
+    LIMIT 1
+  `);
+
+  return result && result.length > 0 ? result[0] : null;
 }
 
 /**
@@ -245,13 +279,17 @@ export async function getPostBySlug(
 
     const postId = coreData.id;
 
-    // SECONDARY PATH: Fetch FJA data (enrichment already in coreData.enrichment JSONB)
-    const fjaData = await getFjaExtractForPost(postId);
+    // SECONDARY PATH: Fetch FJA and enrichment data in parallel
+    const [fjaData, enrichmentData] = await Promise.all([
+      getFjaExtractForPost(postId),
+      getPostEnrichmentData(postId),
+    ]);
 
-    // Merge results (enrichment already included in coreData)
+    // Merge results
     const data = {
       ...coreData,
       ...fjaData,
+      ...enrichmentData,
     } as PostRow;
 
     return {
@@ -342,8 +380,41 @@ export async function getPostBySlug(
       // Do not gate the entire enrichment object on vacanciesTotal: other
       // valid enrichment fields (dates, fees, eligibility, salary) can exist
       // independently of a vacancy count.
-      // Clean architecture: enrichment is a single JSONB column, typed by enrichment-schema.ts
-      enrichment: data.enrichment ?? undefined,
+      enrichment: data.enrichmentId != null ? {
+        vacanciesByCategory: data.vacanciesByCategory,
+        vacanciesTotal: data.vacanciesTotal,
+        feesByCategory: data.feesByCategory,
+        feeNote: data.feeNote,
+        ageRulesByCategory: data.ageRulesByCategory,
+        ageNote: data.ageNote,
+        ageRelaxationRules: data.ageRelaxationRules,
+        ageReferenceDate: data.ageReferenceDate ? new Date(data.ageReferenceDate) : undefined,
+        payScale: data.payScale,
+        salaryMin: data.salaryMin,
+        salaryMax: data.salaryMax,
+        salaryNote: data.salaryNote,
+        payLevel: data.payLevel,
+        selectionProcess: data.selectionProcess,
+        notificationDate: data.notificationDate ? new Date(data.notificationDate) : undefined,
+        applicationOpenDate: data.applicationOpenDate ? new Date(data.applicationOpenDate) : undefined,
+        applicationClosingDate: data.applicationClosingDate ? new Date(data.applicationClosingDate) : undefined,
+        examDate: data.examDate ? new Date(data.examDate) : undefined,
+        admitCardDate: data.admitCardDate ? new Date(data.admitCardDate) : undefined,
+        resultDate: data.resultDate ? new Date(data.resultDate) : undefined,
+        interviewScheduleDate: data.interviewScheduleDate ? new Date(data.interviewScheduleDate) : undefined,
+        appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
+        eligibilityPathways: data.eligibilityPathways,
+        documentsRequired: data.documentsRequired,
+        duties: data.duties,
+        responsibilities: data.responsibilities,
+        sourceVerificationStatus: data.sourceVerificationStatus,
+        sourceVerificationDate: data.sourceVerificationDate ? new Date(data.sourceVerificationDate) : undefined,
+        extractionConfidence: data.extractionConfidence,
+        dataGaps: data.dataGaps,
+        education: data.education,
+        experience: data.experience,
+        benefits: data.benefits,
+      } : undefined,
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", err);
