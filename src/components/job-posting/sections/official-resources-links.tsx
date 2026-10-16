@@ -27,52 +27,53 @@ export default function OfficialResourcesLinks({
   recruitmentResolvedFacts,
   embedded = false,
 }: OfficialResourcesLinksProps) {
-  const resources: ResourceLink[] = [];
+  try {
+    const resources: ResourceLink[] = [];
 
-  // 1. Official Notification PDF
-  if (post.officialSourceUrl) {
-    resources.push({
-      title: "Official Notification",
-      url: post.officialSourceUrl,
-      description: "PDF of the official recruitment notification",
-      icon: "📄",
-    });
-  }
-
-  // 2. Application Portal
-  const appUrl = recruitmentResolvedFacts?.applicationUrl || post.applicationUrl;
-  if (appUrl) {
-    resources.push({
-      title: "Application Portal",
-      url: appUrl,
-      description: "Submit your application here",
-      icon: "🌐",
-    });
-  }
-
-  // 3. Additional links from enrichment (if available)
-  // Note: officialLinks property availability depends on enrichment schema
-  if (post.enrichment && typeof post.enrichment === 'object') {
-    const enrichment = post.enrichment as Record<string, any>;
-    if (enrichment.officialLinks && Array.isArray(enrichment.officialLinks)) {
-      enrichment.officialLinks.forEach((link: any) => {
-        if (link?.url) {
-          resources.push({
-            title: link.title || "Official Link",
-            url: link.url,
-            description: link.description || "Related official resource",
-            icon: "🔗",
-          });
-        }
+    // 1. Official Notification PDF
+    if (post?.officialSourceUrl) {
+      resources.push({
+        title: "Official Notification",
+        url: post.officialSourceUrl,
+        description: "PDF of the official recruitment notification",
+        icon: "📄",
       });
     }
-  }
 
-  if (resources.length === 0) {
-    return null;
-  }
+    // 2. Application Portal
+    const appUrl = recruitmentResolvedFacts?.applicationUrl || post?.applicationUrl;
+    if (appUrl) {
+      resources.push({
+        title: "Application Portal",
+        url: appUrl,
+        description: "Submit your application here",
+        icon: "🌐",
+      });
+    }
 
-  return (
+    // 3. Additional links from enrichment (if available)
+    // Note: officialLinks property availability depends on enrichment schema
+    if (post?.enrichment && typeof post.enrichment === 'object') {
+      const enrichment = post.enrichment as Record<string, any>;
+      if (enrichment.officialLinks && Array.isArray(enrichment.officialLinks)) {
+        enrichment.officialLinks.forEach((link: any) => {
+          if (link?.url) {
+            resources.push({
+              title: link.title || "Official Link",
+              url: link.url,
+              description: link.description || "Related official resource",
+              icon: "🔗",
+            });
+          }
+        });
+      }
+    }
+
+    if (resources.length === 0) {
+      return null;
+    }
+
+    return (
     <section className={styles.officialResourcesSection}>
       <div className={styles.header}>
         <h2 className={styles.title}>Official Resources</h2>
@@ -111,5 +112,9 @@ export default function OfficialResourcesLinks({
         <strong>Note:</strong> All links open in a new window. Always verify official documents before submitting your application.
       </div>
     </section>
-  );
+    );
+  } catch (error) {
+    console.error("Error rendering official resources links:", error);
+    return null;
+  }
 }

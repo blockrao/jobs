@@ -18,7 +18,13 @@ interface FAQSectionProps {
 }
 
 export default function FAQSection({ post, embedded = false }: FAQSectionProps) {
-  const faqs = generateFAQs({ post });
+  let faqs;
+  try {
+    faqs = generateFAQs({ post });
+  } catch (error) {
+    console.error("Error generating FAQs:", error);
+    return null;
+  }
 
   if (!faqs || faqs.length === 0) {
     return null;
