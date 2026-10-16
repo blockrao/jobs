@@ -19,6 +19,8 @@ import DocumentsRequired from "./sections/documents-required";
 import OfficialSourceVerification from "./sections/official-source-verification";
 import DutiesResponsibilities from "./sections/duties-responsibilities";
 import SalaryCompensation from "./sections/salary-compensation";
+import FAQSection from "./sections/faq-section";
+import OfficialResourcesLinks from "./sections/official-resources-links";
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
@@ -443,6 +445,14 @@ export default function JobPostingPage({
         {/* Salary and Compensation */}
         <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
 
+        {/* FAQ Section (NEW) */}
+        <section id="faq" className={styles.section} aria-labelledby="faq-h">
+          <h2 id="faq-h" className={styles.sectionTitle}>
+            Frequently Asked Questions
+          </h2>
+          <FAQSection post={post} />
+        </section>
+
         {/* Application Fee */}
         <section id="fee" className={styles.section} aria-labelledby="fee-h">
           <h2 id="fee-h" className={styles.sectionTitle}>
@@ -505,6 +515,17 @@ export default function JobPostingPage({
             </p>
           </section>
         )}
+
+        {/* Official Resources Links (NEW) */}
+        <section id="resources" className={styles.section} aria-labelledby="res-h">
+          <h2 id="res-h" className={styles.sectionTitle} style={{ display: "none" }}>
+            Official Resources
+          </h2>
+          <OfficialResourcesLinks
+            post={post}
+            recruitmentResolvedFacts={recruitmentResolvedFacts}
+          />
+        </section>
 
         {/* Source and verification */}
         <section id="source" className={styles.section} aria-labelledby="src-h">

@@ -1,0 +1,245 @@
+/**
+ * Official Resources Links Styles
+ *
+ * Table-like grid of clickable resource links
+ */
+
+.officialResourcesSection {
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* Resources Table */
+.resourcesTable {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Resource Row (Link) */
+.resourceRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.resourceRow:hover {
+  background: #f0f2f5;
+  border-color: #0066cc;
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
+  transform: translateX(4px);
+}
+
+/* Resource Icon */
+.resourceIcon {
+  font-size: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+/* Resource Content */
+.resourceContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.resourceTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #212529;
+}
+
+.resourceDescription {
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.resourceUrl {
+  font-size: 12px;
+  color: #0066cc;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Resource Arrow */
+.resourceArrow {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: #0066cc;
+  font-weight: 700;
+  transition: transform 0.2s ease;
+}
+
+.resourceRow:hover .resourceArrow {
+  transform: translateX(4px);
+}
+
+/* Note */
+.note {
+  font-size: 12px;
+  color: #6c757d;
+  padding: 12px;
+  background: #f8f9fa;
+  border-left: 4px solid #dee2e6;
+  border-radius: 4px;
+  line-height: 1.6;
+}
+
+.note strong {
+  color: #495057;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .title {
+    font-size: 20px;
+  }
+
+  .resourceRow {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .resourceIcon {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+
+  .resourceTitle {
+    font-size: 14px;
+  }
+
+  .resourceDescription {
+    font-size: 12px;
+  }
+
+  .resourceArrow {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resourcesTable {
+    gap: 8px;
+  }
+
+  .resourceRow {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .resourceIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .resourceTitle {
+    font-size: 13px;
+  }
+
+  .resourceDescription {
+    font-size: 11px;
+  }
+
+  .resourceUrl {
+    font-size: 11px;
+  }
+
+  .note {
+    font-size: 11px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .title {
+    color: #f8f9fa;
+  }
+
+  .subtitle {
+    color: #adb5bd;
+  }
+
+  .resourceRow {
+    background: #2d3139;
+    border-color: #3d4452;
+  }
+
+  .resourceRow:hover {
+    background: #3d4452;
+    border-color: #0088ff;
+    box-shadow: 0 4px 12px rgba(0, 136, 255, 0.2);
+  }
+
+  .resourceTitle {
+    color: #f8f9fa;
+  }
+
+  .resourceDescription {
+    color: #adb5bd;
+  }
+
+  .resourceUrl {
+    color: #60a5fa;
+  }
+
+  .resourceArrow {
+    color: #60a5fa;
+  }
+
+  .note {
+    background: #2d3139;
+    border-left-color: #3d4452;
+    color: #adb5bd;
+  }
+
+  .note strong {
+    color: #f8f9fa;
+  }
+}
