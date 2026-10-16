@@ -252,7 +252,7 @@ export default function JobPostingPage({
         {/* Sticky Navigation Tabs */}
         <nav className={styles.toc} aria-label="On this page">
           <a href="#quick">Quick Facts</a>
-          <a href="#role-details">Role Details</a>
+          <a href="#role-details">About Role</a>
           {(qualText || expText ||
             post.enrichment?.education ||
             post.enrichment?.experience ||
@@ -260,8 +260,14 @@ export default function JobPostingPage({
             post.enrichment?.ageNote ||
             post.enrichment?.ageRelaxationRules ||
             post.enrichment?.eligibilityPathways) && <a href="#eligibility">Eligibility</a>}
-          <a href="#selection">Process</a>
+          {(vacancyCount != null || reportedVacancyCount != null ||
+            post.enrichment?.vacanciesTotal != null ||
+            (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && <a href="#vacancies">Vacancies</a>}
+          {(post.enrichment?.payScale || resolvedFacts?.salary || post.fjaExtract?.salaryRaw || post.fjaExtract?.payLevelRaw || post.enrichment?.benefits) && <a href="#salary">Salary & Benefits</a>}
+          <a href="#selection">Selection</a>
+          <a href="#dates">Important Dates</a>
           <a href="#apply">How to Apply</a>
+          {post.enrichment?.documentsRequired && <a href="#documents-enriched">Documents</a>}
         </nav>
 
         {/* Verification notice */}
@@ -462,7 +468,9 @@ export default function JobPostingPage({
         )}
 
         {/* Salary & Compensation */}
-        <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
+        <div id="salary">
+          <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
+        </div>
 
         {/* Application Fee */}
         <section id="fee" className={styles.section} aria-labelledby="fee-h">
@@ -770,6 +778,9 @@ export default function JobPostingPage({
             </ul>
           </section>
         )}
+
+        {/* FAQs */}
+        <FAQSection post={post} embedded={false} />
 
         {/* Back to hub for single-job recruitments */}
         {isSingleJobRecruitment && post.recruitmentSlug && (
