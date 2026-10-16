@@ -445,13 +445,15 @@ export default function JobPostingPage({
         {/* Salary and Compensation */}
         <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
 
-        {/* FAQ Section (NEW) */}
+        {/* FAQ Section (NEW - temporarily disabled) */}
+        {/* TODO: Fix React SSR issue with useState in FAQSection
         <section id="faq" className={styles.section} aria-labelledby="faq-h">
           <h2 id="faq-h" className={styles.sectionTitle}>
             Frequently Asked Questions
           </h2>
           <FAQSection post={post} />
         </section>
+        */}
 
         {/* Application Fee */}
         <section id="fee" className={styles.section} aria-labelledby="fee-h">
