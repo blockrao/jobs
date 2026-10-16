@@ -1,0 +1,217 @@
+/**
+ * Vacancy Details Grid Styles (Phase 2 Refactor)
+ *
+ * Card-based grid showing vacancy breakdown by category
+ * Responsive: 4 columns (desktop) → 2 columns (tablet) → 1 column (mobile)
+ */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 20px 0 24px;
+}
+
+/* Individual Vacancy Card */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  background: linear-gradient(135deg, #f0f2f5 0%, #e9ecef 100%);
+  border-color: #adb5bd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Category Name */
+.categoryName {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #495057;
+}
+
+/* Vacancy Count (main number) */
+.count {
+  font-size: 32px;
+  font-weight: 800;
+  color: #212529;
+  line-height: 1;
+  margin: 4px 0;
+}
+
+/* Percentage Text */
+.percentage {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Progress Bar */
+.progressBar {
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #0066cc, #0052a3);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Total Bar Below Grid */
+.totalBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.totalLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.totalValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #212529;
+}
+
+/* Responsive: Tablet (2 columns) */
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin: 18px 0 20px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .count {
+    font-size: 28px;
+  }
+
+  .categoryName {
+    font-size: 11px;
+  }
+
+  .percentage {
+    font-size: 12px;
+  }
+
+  .totalBar {
+    padding: 12px;
+  }
+
+  .totalValue {
+    font-size: 20px;
+  }
+}
+
+/* Responsive: Mobile (1 column) */
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 16px 0 18px;
+  }
+
+  .card {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .count {
+    font-size: 24px;
+  }
+
+  .categoryName {
+    font-size: 10px;
+  }
+
+  .percentage {
+    font-size: 11px;
+  }
+
+  .totalBar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .totalLabel {
+    font-size: 12px;
+  }
+
+  .totalValue {
+    font-size: 18px;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: linear-gradient(135deg, #2d3139 0%, #3d4452 100%);
+    border-color: #495057;
+  }
+
+  .card:hover {
+    background: linear-gradient(135deg, #3d4452 0%, #4d5564 100%);
+    border-color: #6c757d;
+  }
+
+  .categoryName {
+    color: #adb5bd;
+  }
+
+  .count {
+    color: #f8f9fa;
+  }
+
+  .percentage {
+    color: #868e96;
+  }
+
+  .progressBar {
+    background: #495057;
+  }
+
+  .progressFill {
+    background: linear-gradient(90deg, #0088ff, #0066cc);
+  }
+
+  .totalBar {
+    background: #2d3139;
+    border-color: #495057;
+  }
+
+  .totalLabel {
+    color: #adb5bd;
+  }
+
+  .totalValue {
+    color: #f8f9fa;
+  }
+}

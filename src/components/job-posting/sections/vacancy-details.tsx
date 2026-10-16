@@ -1,11 +1,15 @@
 /**
  * Vacancy Details Section
- * Displays category-wise vacancy breakdown
+ * Displays category-wise vacancy breakdown in card grid format
+ *
+ * REFACTORED (Phase 2): Changed from table layout → card-based grid
+ * Shows each category as a card with count and percentage
  */
 
 import { JobPostingData } from "@/types/job-posting";
 import { ResolvedLeafFacts } from "../job-posting-page";
 import styles from "../job-posting-page.module.css";
+import gridStyles from "./vacancy-details.module.css";
 
 interface VacancyDetailsProps {
   post: JobPostingData;
@@ -22,6 +26,7 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
         ? post.vacancyDetails
         : {};
   const hasDetails = Object.keys(vacanciesByCategory).length > 0;
+
   // Use resolver output — never display raw enrichment vacanciesTotal
   const reportedCount = post.fjaExtract?.vacancyCountRaw
     ? Number(post.fjaExtract.vacancyCountRaw.replace(/,/g, "").trim())
@@ -33,7 +38,6 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
 
   const isReported = post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED";
   // PENDING policy: check resolver's vacancyCount for verification status
-  // The resolver now returns vacancy counts for PENDING facts as well
   const vacancyIsPending = resolvedFacts?.vacancyCount != null &&
     post.enrichment?.sourceVerificationStatus === "PENDING";
 
@@ -43,11 +47,11 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
       <div className={embedded ? undefined : styles.section}>
         {!embedded && (
           <h2 className={styles.sectionTitle}>
-            Vacancy Details{vacancyIsPending ? " (reported)" : isReported ? " (reported)" : ""}
+            Vacancies{vacancyIsPending ? " (reported)" : isReported ? " (reported)" : ""}
           </h2>
         )}
-        <p style={{ color: "#334155" }}>
-          Total Vacancies: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
+        <p style={{ color: "#334155", fontSize: "16px" }}>
+          Total vacancies available: <strong>{resolvedTotal.toLocaleString("en-IN")}</strong>
         </p>
       </div>
     );
@@ -57,43 +61,37 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
     <div className={embedded ? undefined : styles.section}>
       {!embedded && (
         <h2 className={styles.sectionTitle}>
-          Vacancy Details{vacancyIsPending ? " (reported)" : isReported ? " (reported)" : ""}
+          Vacancies by Category{vacancyIsPending ? " (reported)" : isReported ? " (reported)" : ""}
         </h2>
       )}
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th className={styles.tableHead}>Category</th>
-            <th className={styles.tableHead} style={{ textAlign: "right" }}>
-              Vacancies
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(vacanciesByCategory).map(([category, count]) => (
-            <tr key={category} className={styles.tableRow}>
-              <td className={styles.tableCell}>{category}</td>
-              <td
-                className={styles.tableCell}
-                style={{ textAlign: "right", fontWeight: 600 }}
-              >
-                {count}
-              </td>
-            </tr>
-          ))}
-          <tr className={styles.tableRow} style={{ fontWeight: 700 }}>
-            <td className={styles.tableCell}>Total</td>
-            <td
-              className={styles.tableCell}
-              style={{ textAlign: "right", fontWeight: 700 }}
-            >
-              {resolvedTotal != null
-                ? resolvedTotal.toLocaleString("en-IN")
-                : "See Notification"}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div className={gridStyles.grid}>
+        {Object.entries(vacanciesByCategory).map(([category, count]) => {
+          const percentage = resolvedTotal && resolvedTotal > 0
+            ? Math.round((count / resolvedTotal) * 100)
+            : 0;
+          return (
+            <div key={category} className={gridStyles.card}>
+              <div className={gridStyles.categoryName}>{category}</div>
+              <div className={gridStyles.count}>{count}</div>
+              <div className={gridStyles.percentage}>{percentage}% of total</div>
+              <div className={gridStyles.progressBar}>
+                <div
+                  className={gridStyles.progressFill}
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className={gridStyles.totalBar}>
+        <span className={gridStyles.totalLabel}>Total Vacancies</span>
+        <span className={gridStyles.totalValue}>
+          {resolvedTotal != null
+            ? resolvedTotal.toLocaleString("en-IN")
+            : "See Notification"}
+        </span>
+      </div>
     </div>
   );
 }
