@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Job Posting Page Component
  *
