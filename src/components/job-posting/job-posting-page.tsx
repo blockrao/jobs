@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { JobPostingData } from "@/types/job-posting";
 import JobPostingHeader from "./sections/job-posting-header";
+import QuickFactsGrid from "./sections/quick-facts-grid";
 import ImportantDates from "./sections/important-dates";
 import EligibilityCriteria from "./sections/eligibility-criteria";
 import VacancyDetails from "./sections/vacancy-details";
@@ -18,7 +19,6 @@ import DocumentsRequired from "./sections/documents-required";
 import OfficialSourceVerification from "./sections/official-source-verification";
 import DutiesResponsibilities from "./sections/duties-responsibilities";
 import SalaryCompensation from "./sections/salary-compensation";
-import EnrichedContentTabs from "./sections/enriched-content-tabs";
 import styles from "./job-posting-page.module.css";
 
 interface RecruitmentData {
@@ -245,6 +245,9 @@ export default function JobPostingPage({
           reportedDeadline={reportedDeadline}
         />
 
+        {/* Quick Facts Grid (4-card overview) */}
+        <QuickFactsGrid post={post} resolvedFacts={resolvedFacts} />
+
         {/* TOC strip */}
         <nav className={styles.toc} aria-label="On this page">
           <a href="#quick">Quick answers</a>
@@ -439,16 +442,6 @@ export default function JobPostingPage({
 
         {/* Salary and Compensation */}
         <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
-
-        {/* Enriched Content Tabs (from FJA extraction) */}
-        {post.enrichment && typeof post.enrichment === "object" && (
-          <section id="enriched" className={styles.section} aria-labelledby="enriched-h">
-            <h2 id="enriched-h" className={styles.sectionTitle}>
-              Detailed information
-            </h2>
-            <EnrichedContentTabs enrichment={post.enrichment as any} />
-          </section>
-        )}
 
         {/* Application Fee */}
         <section id="fee" className={styles.section} aria-labelledby="fee-h">

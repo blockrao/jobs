@@ -1,0 +1,156 @@
+/**
+ * Quick Facts Grid Styles
+ *
+ * 4-card grid showing key facts at a glance
+ * Responsive: 4 columns (desktop), 2 columns (tablet), 1 column (mobile)
+ */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 32px 0;
+  padding: 0;
+}
+
+.grid.embedded {
+  margin: 24px 0;
+  gap: 12px;
+}
+
+/* Individual Card */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  background: #f0f2f5;
+  border-color: #dee2e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Icon */
+.icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Content Container */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Label */
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+}
+
+/* Value (main number/text) */
+.value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #212529;
+  line-height: 1.2;
+}
+
+/* Subtext */
+.subtext {
+  font-size: 12px;
+  color: #868e96;
+  line-height: 1.4;
+}
+
+/* Responsive: Tablet (2 columns) */
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .icon {
+    font-size: 20px;
+  }
+
+  .value {
+    font-size: 16px;
+  }
+}
+
+/* Responsive: Mobile (1 column) */
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .grid.embedded {
+    margin: 16px 0;
+  }
+
+  .card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+
+  .value {
+    font-size: 15px;
+  }
+
+  .label {
+    font-size: 11px;
+  }
+
+  .subtext {
+    font-size: 11px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: #2d3139;
+    border-color: #3d4452;
+  }
+
+  .card:hover {
+    background: #3d4452;
+    border-color: #4d5564;
+  }
+
+  .label {
+    color: #adb5bd;
+  }
+
+  .value {
+    color: #f8f9fa;
+  }
+
+  .subtext {
+    color: #868e96;
+  }
+}
