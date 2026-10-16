@@ -193,43 +193,52 @@ export default function JobPostingHeader({
       {/* H1 — main title */}
       <h1 className={styles.jobTitle}>{richH1}</h1>
 
-      {/* ENRICHMENT FACTS ROW — Fee, Age, Vacancy, Exam inline for immediate visibility */}
-      {(applicationFee !== null || (ageMin && ageMax) || typeof vacancyCount === 'number' || examType) && (
-        <div className={styles.enrichmentRow}>
-          {applicationFee !== null && (
-            <div className={styles.enrichmentItem}>
-              <span className={styles.enrichmentLabel}>Fee</span>
-              <span className={styles.enrichmentValue}>
-                {typeof applicationFee === "number" ? `₹${applicationFee.toLocaleString("en-IN")}` : applicationFee}
-              </span>
+      {/* ENRICHMENT FACTS ROW — Large dark cards with key metrics */}
+      <div className={styles.enrichmentCardsRow}>
+        {/* Salary Card */}
+        <div className={styles.enrichmentCard}>
+          <div className={styles.cardIcon}>₹</div>
+          <div className={styles.cardContent}>
+            <div className={styles.cardLabel}>Monthly Salary</div>
+            <div className={styles.cardValue}>
+              {resolvedFacts?.salary
+                ? `₹${resolvedFacts.salary.min?.toLocaleString("en-IN")}${resolvedFacts.salary.max ? `–${resolvedFacts.salary.max.toLocaleString("en-IN")}` : ''}`
+                : 'As per norms'}
             </div>
-          )}
-          {ageMin && ageMax && (
-            <div className={styles.enrichmentItem}>
-              <span className={styles.enrichmentLabel}>Age</span>
-              <span className={styles.enrichmentValue}>{ageMin}–{ageMax} yrs</span>
-            </div>
-          )}
-          {typeof vacancyCount === 'number' && (
-            <div className={styles.enrichmentItem}>
-              <span className={styles.enrichmentLabel}>Vacancies</span>
-              <span className={styles.enrichmentValue}>{vacancyCount.toLocaleString("en-IN")}</span>
-            </div>
-          )}
-          {examType && (
-            <div className={styles.enrichmentItem}>
-              <span className={styles.enrichmentLabel}>Exam</span>
-              <span className={styles.enrichmentValue}>{examType}</span>
-            </div>
-          )}
-          {location && (
-            <div className={styles.enrichmentItem}>
-              <span className={styles.enrichmentLabel}>Location</span>
-              <span className={styles.enrichmentValue}>{location}</span>
-            </div>
-          )}
+          </div>
         </div>
-      )}
+
+        {/* Vacancies Card */}
+        {typeof vacancyCount === 'number' && (
+          <div className={styles.enrichmentCard}>
+            <div className={styles.cardIcon}>📋</div>
+            <div className={styles.cardContent}>
+              <div className={styles.cardLabel}>Posts Available</div>
+              <div className={styles.cardValue}>{vacancyCount.toLocaleString("en-IN")}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Deadline Card */}
+        {effectiveDeadlineDateStr && (
+          <div className={styles.enrichmentCard}>
+            <div className={styles.cardIcon}>📅</div>
+            <div className={styles.cardContent}>
+              <div className={styles.cardLabel}>Last Date to Apply</div>
+              <div className={styles.cardValue}>{effectiveDeadlineDateStr}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Card */}
+        <div className={`${styles.enrichmentCard} ${styles.statusCard} ${styles[`status${effectiveState}`]}`}>
+          <div className={styles.cardIcon}>✓</div>
+          <div className={styles.cardContent}>
+            <div className={styles.cardLabel}>Application Status</div>
+            <div className={styles.cardValue}>{getChipText(effectiveState)}</div>
+          </div>
+        </div>
+      </div>
 
       {/* Context paragraph — organization, employment type, pay, deadline */}
       <p className={styles.contextPara}>
