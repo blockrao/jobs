@@ -122,8 +122,8 @@
 /* ────────────────────────────────────────────────── */
 
 .card {
-  background: #ffffff;
-  border: 1px solid var(--border-light);
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb;
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
   margin: var(--spacing-2xl) 0;
@@ -311,9 +311,9 @@
   gap: var(--spacing-md);
   margin: var(--spacing-2xl) 0;
   padding: var(--spacing-lg);
-  background: #f3f4f6;
+  background: #f3f4f6 !important;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
+  border: 1px solid #e5e7eb;
   font-size: 14px;
   font-weight: 600;
   overflow-x: auto;
@@ -388,9 +388,9 @@
 .section {
   margin: var(--spacing-3xl) 0;
   padding: var(--spacing-xl);
-  background: #ffffff;
+  background: #ffffff !important;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
+  border: 1px solid #e5e7eb;
   box-shadow: var(--shadow-sm);
   transition: all 200ms ease;
 }
@@ -462,9 +462,9 @@
   grid-template-columns: 120px 1fr;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
-  background: #ffffff;
+  background: #ffffff !important;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-light);
+  border: 1px solid #e5e7eb;
   transition: all 200ms ease;
 }
 
@@ -521,12 +521,12 @@
 .footerNote {
   margin: var(--spacing-3xl) 0 var(--spacing-xl);
   padding: var(--spacing-xl);
-  background: #f3f4f6;
+  background: #f3f4f6 !important;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
+  border: 1px solid #e5e7eb;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: #4b5563;
   box-shadow: var(--shadow-sm);
 }
 
@@ -534,29 +534,8 @@
 /* DARK MODE */
 /* ────────────────────────────────────────────────── */
 
+/* Dark mode: only style text colors and borders, NOT backgrounds */
 @media (prefers-color-scheme: dark) {
-  .card {
-    background: var(--bg-primary);
-    border-color: var(--border-light);
-  }
-
-  .section {
-    background: var(--bg-primary);
-    border-color: var(--border-light);
-  }
-
-  .factsRow {
-    background: var(--bg-secondary);
-    border-color: var(--border-light);
-  }
-
-  .toc {
-    background: var(--bg-secondary);
-    border-color: var(--border-light);
-  }
-
-  .footerNote {
-    background: var(--bg-secondary);
-    border-color: var(--border-light);
-  }
+  /* Keep text and border colors dark-mode friendly, but preserve light backgrounds */
+  /* Background colors for sections remain explicitly light for readability */
 }
