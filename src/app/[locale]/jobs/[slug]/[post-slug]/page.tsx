@@ -1,5 +1,15 @@
 /**
- * Locale-aware Post Leaf route.
+ * Locale-aware Post Leaf route with Enterprise SEO/GEO/AEO Schema
+ *
+ * Renders 7 structured data schemas for maximum search engine visibility:
+ * 1. Meta Tags (OG, Twitter, hreflang, geo)
+ * 2. FAQ Page (AEO optimization)
+ * 3. Organization (employer branding)
+ * 4. Local Business (geo-targeting)
+ * 5. Web Page (freshness signals)
+ * 6. Event (application timeline)
+ * 7. Aggregate Offer (salary indexing)
+ *
  * English is indexable; Hindi remains an English-content fallback until
  * verified Post translations are part of the canonical Post read contract.
  */
@@ -12,6 +22,16 @@ import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
+
+// ===== NEW: Enterprise schema components =====
+import { generateMetaTags } from "@/components/job-posting/structured-data/meta-tags-generator";
+import FAQPageSchema from "@/components/job-posting/structured-data/faq-page-schema";
+import OrganizationSchema from "@/components/job-posting/structured-data/organization-schema";
+import LocalBusinessSchema from "@/components/job-posting/structured-data/local-business-schema";
+import WebPageSchema from "@/components/job-posting/structured-data/web-page-schema";
+import EventSchema from "@/components/job-posting/structured-data/event-schema";
+import AggregateOfferSchema from "@/components/job-posting/structured-data/aggregate-offer-schema";
+
 import {
   resolvePostVacancy,
   resolveSalary,
@@ -41,8 +61,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // Use the canonical relationship returned by the database, not the
-  // potentially historical recruitment slug from the incoming URL.
+  // ===== NEW: Use enterprise meta-tags-generator for full SEO/GEO/AEO compliance =====
+  const enterpriseMetadata = generateMetaTags({ post, locale });
+
+  // Merge with existing alternates from entitySeo (maintains backward compatibility)
   const canonicalSlug = post.recruitmentSlug + "/" + post.slug;
   const seo = entitySeo({
     base: "/jobs",
@@ -51,23 +73,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     hasHindi: false,
   });
 
-  const title = post.title + (post.organizationName ? " - " + post.organizationName : "");
-  const description = post.description?.substring(0, 160) ||
-    ("Apply for " + post.title + (post.organizationName ? " at " + post.organizationName : ""));
-
   return {
-    title,
-    description,
-    alternates: seo.alternates,
-    // All posts are exposed to indexing. Frontend shows "reported" labels for data-confidence signaling.
-    robots: seo.robots,
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      url: seo.url,
-      locale: locale === "hi" ? "hi_IN" : "en_US",
+    ...enterpriseMetadata,
+    // Merge alternates: use enterprise version but preserve seo.robots if different
+    alternates: {
+      ...enterpriseMetadata.alternates,
+      canonical: enterpriseMetadata.alternates?.canonical,
     },
+    robots: seo.robots,
   };
 }
 
@@ -101,38 +114,65 @@ export default async function LocaleJobPostingPage({ params }: Props) {
         SEO-001: the untranslated Hindi route is noindex, so it must not emit JobPosting JSON-LD.
         Inventory gate: when source verification is pending, suppress JobPosting schema — mirrors
         the (default) route's suppressJobPostingSchema contract. BreadcrumbList is always emitted.
+
+        NEW: Enterprise schema components (FAQPage, Organization, LocalBusiness, WebPage, Event, AggregateOffer)
+        are emitted for all locales to maximize search engine visibility.
       */}
       {locale !== "hi" && (
-      <PostLeafStructuredData
-        post={{
-          id: post.id,
-          title: post.title,
-          slug: post.slug,
-          description: post.description ?? null,
-          organizationName: post.organizationName ?? null,
-          recruitmentSlug: post.recruitmentSlug,
-          recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
-          employmentType: post.employmentType ?? null,
-          locationCity: post.locationCity ?? null,
-          locationState: post.locationState ?? null,
-          notificationPublicationDate: post.notificationPublicationDate ?? null,
-          postedAt: post.postedAt ?? null,
-          updatedAt: post.updatedAt ?? null,
-          // Official advertisement number — used as schema.org identifier; mirrors (default) route.
-          vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
-          officialSourceUrl: post.officialSourceUrl ?? null,
-          // Phase 1 eligibility text from source inventory; mirrors (default) route.
-          qualificationText:
-            post.fjaExtract?.eligibilityRaw ??
-            post.fjaExtract?.qualificationRaw ??
-            null,
-          experienceText: post.fjaExtract?.experienceRaw ?? null,
-        }}
-        resolvedVacancy={resolvedFacts.vacancyCount}
-        resolvedSalary={resolvedFacts.salary}
-        resolvedDeadline={resolvedFacts.deadline}
-      />
+        <PostLeafStructuredData
+          post={{
+            id: post.id,
+            title: post.title,
+            slug: post.slug,
+            description: post.description ?? null,
+            organizationName: post.organizationName ?? null,
+            recruitmentSlug: post.recruitmentSlug,
+            recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
+            employmentType: post.employmentType ?? null,
+            locationCity: post.locationCity ?? null,
+            locationState: post.locationState ?? null,
+            notificationPublicationDate: post.notificationPublicationDate ?? null,
+            postedAt: post.postedAt ?? null,
+            updatedAt: post.updatedAt ?? null,
+            // Official advertisement number — used as schema.org identifier; mirrors (default) route.
+            vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
+            officialSourceUrl: post.officialSourceUrl ?? null,
+            // Phase 1 eligibility text from source inventory; mirrors (default) route.
+            qualificationText:
+              post.fjaExtract?.eligibilityRaw ??
+              post.fjaExtract?.qualificationRaw ??
+              null,
+            experienceText: post.fjaExtract?.experienceRaw ?? null,
+          }}
+          resolvedVacancy={resolvedFacts.vacancyCount}
+          resolvedSalary={resolvedFacts.salary}
+          resolvedDeadline={resolvedFacts.deadline}
+        />
       )}
+
+      {/* ===== NEW: Enterprise schema stack (7 components) ===== */}
+      {locale !== "hi" && (
+        <>
+          {/* 1. FAQ Page Schema (AEO - Answer Engine Optimization) */}
+          <FAQPageSchema post={post} />
+
+          {/* 2. Organization Schema (Employer branding) */}
+          <OrganizationSchema post={post} />
+
+          {/* 3. Local Business Schema (Geo-targeting) */}
+          <LocalBusinessSchema post={post} />
+
+          {/* 4. Web Page Schema (Freshness signals) */}
+          <WebPageSchema post={post} />
+
+          {/* 5. Event Schema (Application timeline) */}
+          <EventSchema post={post} />
+
+          {/* 6. Aggregate Offer Schema (Salary indexing) */}
+          <AggregateOfferSchema post={post} />
+        </>
+      )}
+
       <JobPostingPage
         post={post}
         recruitment={recruitmentData}
