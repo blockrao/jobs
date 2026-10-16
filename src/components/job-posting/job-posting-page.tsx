@@ -519,15 +519,10 @@ export default function JobPostingPage({
         )}
 
         {/* Official Resources Links (NEW) */}
-        <section id="resources" className={styles.section} aria-labelledby="res-h">
-          <h2 id="res-h" className={styles.sectionTitle} style={{ display: "none" }}>
-            Official Resources
-          </h2>
-          <OfficialResourcesLinks
-            post={post}
-            recruitmentResolvedFacts={recruitmentResolvedFacts}
-          />
-        </section>
+        <OfficialResourcesLinks
+          post={post}
+          recruitmentResolvedFacts={recruitmentResolvedFacts}
+        />
 
         {/* Source and verification */}
         <section id="source" className={styles.section} aria-labelledby="src-h">

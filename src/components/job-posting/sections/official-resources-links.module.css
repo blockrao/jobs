@@ -1,29 +1,49 @@
 /**
- * Official Resources Links Styles
- *
- * Table-like grid of clickable resource links
+ * Official Resources Links — Premium Design
+ * Modern, mobile-first component with professional styling
  */
+
+:root {
+  --primary: #1e40af;
+  --primary-light: #3b82f6;
+  --primary-dark: #1e3a8a;
+  --accent: #059669;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-tertiary: #9ca3af;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-hover: #eff6ff;
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
 
 .officialResourcesSection {
   width: 100%;
+  margin: 0;
 }
 
+/* Header */
 .header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--primary);
 }
 
 .title {
   font-size: 24px;
-  font-weight: 700;
-  color: #212529;
+  font-weight: 800;
+  color: var(--text-primary);
   margin: 0 0 8px 0;
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .subtitle {
   font-size: 14px;
-  color: #6c757d;
+  color: var(--text-secondary);
   margin: 0;
+  font-weight: 500;
 }
 
 /* Resources Table */
@@ -34,26 +54,43 @@
   margin-bottom: 16px;
 }
 
-/* Resource Row (Link) */
+/* Resource Row (Link Card) */
 .resourceRow {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   text-decoration: none;
   color: inherit;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.resourceRow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
 }
 
 .resourceRow:hover {
-  background: #f0f2f5;
-  border-color: #0066cc;
-  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
-  transform: translateX(4px);
+  background: var(--bg-hover);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.resourceRow:hover::before {
+  left: 100%;
 }
 
 /* Resource Icon */
@@ -63,8 +100,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  border-radius: 10px;
+  color: white;
+}
+
+.resourceRow:hover .resourceIcon {
+  transform: scale(1.1);
 }
 
 /* Resource Content */
@@ -77,52 +121,62 @@
 }
 
 .resourceTitle {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: #212529;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .resourceDescription {
   font-size: 13px;
-  color: #6c757d;
+  color: var(--text-secondary);
   line-height: 1.4;
+  margin: 0;
 }
 
 .resourceUrl {
   font-size: 12px;
-  color: #0066cc;
-  font-weight: 500;
+  color: var(--primary);
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin: 0;
 }
 
 /* Resource Arrow */
 .resourceArrow {
   flex-shrink: 0;
-  font-size: 16px;
-  color: #0066cc;
+  font-size: 18px;
+  color: var(--primary);
   font-weight: 700;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
+  opacity: 0.7;
 }
 
 .resourceRow:hover .resourceArrow {
   transform: translateX(4px);
+  opacity: 1;
 }
 
 /* Note */
 .note {
   font-size: 12px;
-  color: #6c757d;
-  padding: 12px;
-  background: #f8f9fa;
-  border-left: 4px solid #dee2e6;
-  border-radius: 4px;
+  color: var(--text-secondary);
+  padding: 12px 16px;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
   line-height: 1.6;
+  margin: 0;
 }
 
 .note strong {
-  color: #495057;
+  color: #92400e;
+  font-weight: 700;
 }
 
 /* Responsive */
@@ -132,8 +186,48 @@
   }
 
   .resourceRow {
-    padding: 12px;
+    padding: 14px;
     gap: 12px;
+  }
+
+  .resourceIcon {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+  }
+
+  .resourceTitle {
+    font-size: 15px;
+  }
+
+  .resourceDescription {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+  }
+
+  .title {
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .resourcesTable {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .resourceRow {
+    padding: 12px;
+    gap: 10px;
   }
 
   .resourceIcon {
@@ -147,35 +241,6 @@
   }
 
   .resourceDescription {
-    font-size: 12px;
-  }
-
-  .resourceArrow {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 640px) {
-  .resourcesTable {
-    gap: 8px;
-  }
-
-  .resourceRow {
-    padding: 10px;
-    gap: 10px;
-  }
-
-  .resourceIcon {
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
-  }
-
-  .resourceTitle {
-    font-size: 13px;
-  }
-
-  .resourceDescription {
     font-size: 11px;
   }
 
@@ -183,46 +248,43 @@
     font-size: 11px;
   }
 
+  .resourceArrow {
+    font-size: 16px;
+  }
+
   .note {
     font-size: 11px;
-  }
-
-  .title {
-    font-size: 18px;
-  }
-
-  .subtitle {
-    font-size: 12px;
+    padding: 10px 12px;
   }
 }
 
 /* Dark Mode */
 @media (prefers-color-scheme: dark) {
   .title {
-    color: #f8f9fa;
+    color: #f9fafb;
   }
 
   .subtitle {
-    color: #adb5bd;
+    color: #d1d5db;
   }
 
   .resourceRow {
-    background: #2d3139;
-    border-color: #3d4452;
+    background: #374151;
+    border-color: #4b5563;
   }
 
   .resourceRow:hover {
-    background: #3d4452;
-    border-color: #0088ff;
-    box-shadow: 0 4px 12px rgba(0, 136, 255, 0.2);
+    background: #1e3a8a;
+    border-color: var(--primary-light);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
   }
 
   .resourceTitle {
-    color: #f8f9fa;
+    color: #f9fafb;
   }
 
   .resourceDescription {
-    color: #adb5bd;
+    color: #d1d5db;
   }
 
   .resourceUrl {
@@ -234,12 +296,12 @@
   }
 
   .note {
-    background: #2d3139;
-    border-left-color: #3d4452;
-    color: #adb5bd;
+    background: #7c2d12;
+    border-left-color: #f59e0b;
+    color: #fed7aa;
   }
 
   .note strong {
-    color: #f8f9fa;
+    color: #fef3c7;
   }
 }
