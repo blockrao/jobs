@@ -514,7 +514,7 @@ export default function JobPostingPage({
                     <span
                       key={idx}
                       style={{
-                        background: "var(--bg-secondary)",
+                        background: "#ffffff",
                         padding: "6px 12px",
                         borderRadius: "6px",
                         fontSize: "14px",
@@ -538,7 +538,7 @@ export default function JobPostingPage({
               Education Requirements
             </h2>
             <div style={{ display: "grid", gap: "12px" }}>
-              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+              <div style={{ padding: "12px", background: "#ffffff", borderRadius: "6px" }}>
                 <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "var(--text-primary)" }}>
                   {post.enrichment.education.degree}
                 </p>
@@ -569,7 +569,7 @@ export default function JobPostingPage({
                   key={idx}
                   style={{
                     padding: "16px",
-                    background: "var(--bg-secondary)",
+                    background: "#ffffff",
                     borderRadius: "8px",
                     border: "1px solid var(--border-light)",
                   }}
@@ -615,7 +615,7 @@ export default function JobPostingPage({
             </h2>
             <div style={{ display: "grid", gap: "16px" }}>
               {post.enrichment.documentsRequired.required?.length > 0 && (
-                <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                <div style={{ padding: "12px", background: "#ffffff", borderRadius: "6px" }}>
                   <h4 style={{ fontWeight: 700, marginBottom: "8px", color: "var(--text-primary)" }}>
                     ✓ Mandatory Documents:
                   </h4>
@@ -629,7 +629,7 @@ export default function JobPostingPage({
                 </div>
               )}
               {post.enrichment.documentsRequired.common?.length > 0 && (
-                <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                <div style={{ padding: "12px", background: "#ffffff", borderRadius: "6px" }}>
                   <h4 style={{ fontWeight: 700, marginBottom: "8px", color: "var(--text-primary)" }}>
                     📋 Commonly Required Documents:
                   </h4>
@@ -657,7 +657,7 @@ export default function JobPostingPage({
               Data Quality & Verification
             </h2>
             <div style={{ display: "grid", gap: "12px" }}>
-              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+              <div style={{ padding: "12px", background: "#ffffff", borderRadius: "6px" }}>
                 <p style={{ margin: "0 0 4px 0", fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
                   Verification Status
                 </p>
@@ -683,7 +683,7 @@ export default function JobPostingPage({
                 )}
               </div>
 
-              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+              <div style={{ padding: "12px", background: "#ffffff", borderRadius: "6px" }}>
                 <p style={{ margin: "0 0 8px 0", fontWeight: 600, color: "var(--text-primary)", fontSize: "14px" }}>
                   Data Extraction Confidence
                 </p>
@@ -692,7 +692,7 @@ export default function JobPostingPage({
                     style={{
                       height: "8px",
                       flex: 1,
-                      background: "var(--bg-tertiary)",
+                      background: "#f3f4f6",
                       borderRadius: "4px",
                       overflow: "hidden",
                     }}
