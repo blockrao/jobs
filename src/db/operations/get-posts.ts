@@ -145,40 +145,8 @@ async function getPostCoreData(
       r.application_start_date AS "recruitmentApplicationStartDate",
       r.notification_date AS "notificationPublicationDate",
       r.selection_process AS "recruitmentSelectionProcess",
-      NULL::integer AS "enrichmentId",
-      NULL::jsonb AS "vacanciesByCategory",
-      NULL::integer AS "vacanciesTotal",
-      NULL::jsonb AS "feesByCategory",
-      NULL::text AS "feeNote",
-      NULL::jsonb AS "ageRulesByCategory",
-      NULL::text AS "ageNote",
-      NULL::text AS "ageRelaxationRules",
-      NULL::timestamp AS "ageReferenceDate",
-      NULL::text AS "payScale",
-      NULL::integer AS "salaryMin",
-      NULL::integer AS "salaryMax",
-      NULL::text AS "salaryNote",
-      NULL::text AS "payLevel",
-      NULL::text AS "selectionProcess",
-      NULL::timestamp AS "notificationDate",
-      NULL::timestamp AS "applicationOpenDate",
-      NULL::timestamp AS "applicationClosingDate",
-      NULL::timestamp AS "examDate",
-      NULL::timestamp AS "admitCardDate",
-      NULL::timestamp AS "resultDate",
-      NULL::timestamp AS "interviewScheduleDate",
-      NULL::timestamp AS "appointmentDate",
-      NULL::jsonb AS "eligibilityPathways",
-      NULL::jsonb AS "documentsRequired",
-      NULL::text AS "duties",
-      NULL::text AS "responsibilities",
-      NULL::text AS "sourceVerificationStatus",
-      NULL::timestamp AS "sourceVerificationDate",
-      NULL::numeric AS "extractionConfidence",
-      NULL::jsonb AS "dataGaps",
-      NULL::text AS "education",
-      NULL::text AS "experience",
-      NULL::text AS "benefits"
+      -- Clean architecture: enrichment is a single JSONB column, not a separate table
+      p.enrichment
     FROM posts p
     LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
     LEFT JOIN organizations o ON o.id = r.organization_id
@@ -245,51 +213,15 @@ async function getFjaExtractForPost(postId: number): Promise<any> {
 /**
  * Fetch post enrichment data separately (can be lazy-loaded)
  */
-async function getPostEnrichmentData(postId: number): Promise<any> {
-  const db = getDb();
-
-  const result = await db.execute<any>(sql`
-    SELECT
-      e.id AS "enrichmentId",
-      e."vacanciesByCategory",
-      e."vacanciesTotal",
-      e."feesByCategory",
-      e."feeNote",
-      e."ageRulesByCategory",
-      e."ageNote",
-      e."ageRelaxationRules",
-      e."ageReferenceDate",
-      e."payScale",
-      e."salaryMin",
-      e."salaryMax",
-      e."salaryNote",
-      e."payLevel",
-      e."selectionProcess",
-      e."notificationDate",
-      e."applicationOpenDate",
-      e."applicationClosingDate",
-      e."examDate",
-      e."admitCardDate",
-      e."resultDate",
-      e."interviewScheduleDate",
-      e."appointmentDate",
-      e."eligibilityPathways",
-      e."documentsRequired",
-      e."duties",
-      e."responsibilities",
-      e."sourceVerificationStatus",
-      e."sourceVerificationDate",
-      e."extractionConfidence",
-      e."dataGaps",
-      e."education",
-      e."experience",
-      e."benefits"
-    FROM post_enrichments e
-    WHERE e.post_id = ${postId}
-    LIMIT 1
-  `);
-
-  return result && result.length > 0 ? result[0] : null;
+/**
+ * Enrichment data is now read directly from posts.enrichment JSONB column.
+ * No separate table query needed — cleaner architecture.
+ * This function is deprecated; enrichment comes via getPostCoreData.
+ */
+function getPostEnrichmentDataLegacy(enrichmentJsonb: any): any {
+  if (!enrichmentJsonb) return null;
+  // Map JSONB enrichment schema to legacy field names for backward compatibility
+  return enrichmentJsonb;
 }
 
 /**
@@ -314,16 +246,12 @@ export async function getPostBySlug(
 
     const postId = coreData.id;
 
-    // SECONDARY PATH: Fetch enrichment + FJA in parallel (can complete after ISR cache)
-    const [enrichmentData, fjaData] = await Promise.all([
-      getPostEnrichmentData(postId),
-      getFjaExtractForPost(postId),
-    ]);
+    // SECONDARY PATH: Fetch FJA data (enrichment already in coreData.enrichment JSONB)
+    const fjaData = await getFjaExtractForPost(postId);
 
-    // Merge results
+    // Merge results (enrichment already included in coreData)
     const data = {
       ...coreData,
-      ...enrichmentData,
       ...fjaData,
     } as PostRow;
 
@@ -415,41 +343,8 @@ export async function getPostBySlug(
       // Do not gate the entire enrichment object on vacanciesTotal: other
       // valid enrichment fields (dates, fees, eligibility, salary) can exist
       // independently of a vacancy count.
-      enrichment: data.enrichmentId != null ? {
-        vacanciesByCategory: data.vacanciesByCategory,
-        vacanciesTotal: data.vacanciesTotal,
-        feesByCategory: data.feesByCategory,
-        feeNote: data.feeNote,
-        ageRulesByCategory: data.ageRulesByCategory,
-        ageNote: data.ageNote,
-        ageRelaxationRules: data.ageRelaxationRules,
-        ageReferenceDate: data.ageReferenceDate ? new Date(data.ageReferenceDate) : undefined,
-        payScale: data.payScale,
-        salaryMin: data.salaryMin,
-        salaryMax: data.salaryMax,
-        salaryNote: data.salaryNote,
-        payLevel: data.payLevel,
-        selectionProcess: data.selectionProcess,
-        notificationDate: data.notificationDate ? new Date(data.notificationDate) : undefined,
-        applicationOpenDate: data.applicationOpenDate ? new Date(data.applicationOpenDate) : undefined,
-        applicationClosingDate: data.applicationClosingDate ? new Date(data.applicationClosingDate) : undefined,
-        examDate: data.examDate ? new Date(data.examDate) : undefined,
-        admitCardDate: data.admitCardDate ? new Date(data.admitCardDate) : undefined,
-        resultDate: data.resultDate ? new Date(data.resultDate) : undefined,
-        interviewScheduleDate: data.interviewScheduleDate ? new Date(data.interviewScheduleDate) : undefined,
-        appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
-        eligibilityPathways: data.eligibilityPathways,
-        documentsRequired: data.documentsRequired,
-        duties: data.duties,
-        responsibilities: data.responsibilities,
-        sourceVerificationStatus: data.sourceVerificationStatus,
-        sourceVerificationDate: data.sourceVerificationDate ? new Date(data.sourceVerificationDate) : undefined,
-        extractionConfidence: data.extractionConfidence,
-        dataGaps: data.dataGaps,
-        education: data.education,
-        experience: data.experience,
-        benefits: data.benefits,
-      } : undefined,
+      // Clean architecture: enrichment is a single JSONB column, typed by enrichment-schema.ts
+      enrichment: data.enrichment ?? undefined,
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", err);
