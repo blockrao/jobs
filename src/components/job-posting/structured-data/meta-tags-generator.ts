@@ -38,11 +38,12 @@ export function generateMetaTags({
   // ========== OPEN GRAPH (Job Platform Detection) ==========
   const ogImage = `${baseUrl}/images/og/job-posting-${post.id}.jpg`;
 
-  // @ts-ignore - "job.job_opening" is a valid OG type for job platforms but not in Next.js Metadata type
+  // Note: Using "website" type since Next.js Metadata doesn't support custom "job.job_opening" type
+  // Job platforms still detect this via structured data schema
   const openGraph: Metadata["openGraph"] = {
     title,
     description,
-    type: "job.job_opening",
+    type: "website",
     url: postUrl,
     images: [
       {
