@@ -105,10 +105,10 @@ export function generateMetaTags({
 
     // ========== CUSTOM META TAGS ==========
     // These will be rendered as-is
-    // @ts-ignore - other allows string | undefined values
     other: {
       "geo.placename": post.locationCity || "India",
       "geo.region": post.locationState ? `IN-${post.locationState}` : "IN",
+      // @ts-ignore - geo.position is intentionally undefined for non-mapped cities
       "geo.position": post.locationCity === "Mumbai" ? "19.0760;72.8777" : undefined,
       "date": new Date(post.postedAt || Date.now()).toISOString().split("T")[0],
       "last-modified": new Date(post.updatedAt || Date.now()).toISOString().split("T")[0],
