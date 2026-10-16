@@ -1417,6 +1417,16 @@ type PostWithEnrichmentRow = {
   sourceVerificationStatus: string | null;
   extractionConfidence: number | null;
   dataGaps: unknown;
+  documentsRequired: unknown;
+  benefits: unknown;
+  duties: unknown;
+  responsibilities: unknown;
+  eligibilityPathways: unknown;
+  notificationDate: RawSqlDate;
+  applicationOpenDate: RawSqlDate;
+  admitCardDate: RawSqlDate;
+  interviewScheduleDate: RawSqlDate;
+  parsedSkills: unknown;
 };
 
 /**
@@ -1464,7 +1474,17 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       e."appointmentDate",
       e."sourceVerificationStatus",
       e."extractionConfidence",
-      e."dataGaps"
+      e."dataGaps",
+      e."documentsRequired",
+      e.benefits,
+      e.duties,
+      e.responsibilities,
+      e."eligibilityPathways",
+      e."notificationDate",
+      e."applicationOpenDate",
+      e."admitCardDate",
+      e."interviewScheduleDate",
+      e."parsed_skills" as "parsedSkills"
     FROM public.posts p
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
@@ -1512,6 +1532,16 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     sourceVerificationStatus: row.sourceVerificationStatus,
     extractionConfidence: row.extractionConfidence,
     dataGaps: row.dataGaps,
+    documentsRequired: row.documentsRequired,
+    benefits: row.benefits,
+    duties: row.duties,
+    responsibilities: row.responsibilities,
+    eligibilityPathways: row.eligibilityPathways,
+    notificationDate: row.notificationDate ? new Date(row.notificationDate) : null,
+    applicationOpenDate: row.applicationOpenDate ? new Date(row.applicationOpenDate) : null,
+    admitCardDate: row.admitCardDate ? new Date(row.admitCardDate) : null,
+    interviewScheduleDate: row.interviewScheduleDate ? new Date(row.interviewScheduleDate) : null,
+    parsedSkills: row.parsedSkills,
   }));
 }
 

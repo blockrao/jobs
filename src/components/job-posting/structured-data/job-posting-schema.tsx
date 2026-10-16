@@ -172,31 +172,107 @@ export default function JobPostingStructuredData({
         }
       : undefined;
 
+    // Extract enrichment data
+    const enrichment = post.enrichment as Record<string, unknown> | undefined;
+
+    // Qualifications from enrichment
+    const qualifications = enrichment?.education
+      ? (typeof enrichment.education === 'string'
+          ? enrichment.education
+          : Array.isArray(enrichment.education)
+          ? enrichment.education.join(', ')
+          : JSON.stringify(enrichment.education))
+      : null;
+
+    // Experience from enrichment
+    const experienceRequirements = enrichment?.experience
+      ? (typeof enrichment.experience === 'string'
+          ? enrichment.experience
+          : Array.isArray(enrichment.experience)
+          ? enrichment.experience.join(', ')
+          : JSON.stringify(enrichment.experience))
+      : null;
+
+    // Responsibilities/duties
+    const responsibilities = enrichment?.responsibilities
+      ? Array.isArray(enrichment.responsibilities) ? enrichment.responsibilities : [String(enrichment.responsibilities)]
+      : enrichment?.duties
+      ? Array.isArray(enrichment.duties) ? enrichment.duties : [String(enrichment.duties)]
+      : [];
+
+    // Benefits
+    const jobBenefits = enrichment?.benefits
+      ? Array.isArray(enrichment.benefits) ? enrichment.benefits : [String(enrichment.benefits)]
+      : [];
+
+    // Skills
+    const skills = enrichment?.parsed_skills
+      ? Array.isArray(enrichment.parsed_skills) ? enrichment.parsed_skills : [String(enrichment.parsed_skills)]
+      : [];
+
+    // Selection process details
+    const selectionStages = enrichment?.selectionProcess
+      ? Array.isArray(enrichment.selectionProcess) ? enrichment.selectionProcess : [enrichment.selectionProcess]
+      : [];
+
+    // Documents required
+    const documentsRequired = enrichment?.documentsRequired
+      ? Array.isArray(enrichment.documentsRequired) ? enrichment.documentsRequired : [String(enrichment.documentsRequired)]
+      : [];
+
     jobPosting = {
       "@type": "JobPosting",
       "@id": `${postUrl}#jobposting`,
-      // url: the official notification URL when verified; falls back to post URL
       url: officialSourceUrl ?? postUrl,
       title: post.title,
       description:
         post.description ||
         `${post.title} vacancy. See official notification for full details.`,
-      // datePosted: official publication date only; omit when unavailable
+
+      // ── Complete enrichment fields ──
+      ...(qualifications ? { qualifications } : {}),
+      ...(experienceRequirements ? {
+        experienceRequirements: {
+          "@type": "OccupationalExperienceRequirements",
+          description: experienceRequirements,
+        }
+      } : {}),
+      ...(responsibilities.length > 0 ? { responsibilities } : {}),
+      ...(jobBenefits.length > 0 ? { jobBenefits } : {}),
+      ...(skills.length > 0 ? { skills } : {}),
+
+      // ── Dates ──
       ...(datePosted ? { datePosted: datePosted.toISOString() } : {}),
       dateModified: post.updatedAt?.toISOString(),
-      // validThrough: ONLY when deadline state is OPEN (verified future date)
       ...(deadline.state === "OPEN" && deadline.date
         ? { validThrough: deadline.date.toISOString() }
         : {}),
-      // employmentType: only from official source; never assumed
+      ...(enrichment?.applicationOpenDate ? {
+        applicationStartDate: new Date(enrichment.applicationOpenDate as string).toISOString()
+      } : {}),
+      ...(enrichment?.applicationClosingDate ? {
+        applicationDeadline: new Date(enrichment.applicationClosingDate as string).toISOString()
+      } : {}),
+      ...(enrichment?.examDate ? {
+        examDate: new Date(enrichment.examDate as string).toISOString()
+      } : {}),
+
+      // ── Standard fields ──
       ...(employmentType ? { employmentType } : {}),
-      // hiringOrganization: only when employer is verified; never inferred
       ...(hiringOrganization ? { hiringOrganization } : {}),
       ...(jobLocation ? { jobLocation } : {}),
-      // totalJobOpenings: only when resolvePostVacancy() returns a value
       ...(vacancyCount != null ? { totalJobOpenings: vacancyCount } : {}),
       ...(baseSalary ? { baseSalary } : {}),
       ...(applicationContact ? { applicationContact } : {}),
+
+      // ── Additional enrichment ──
+      ...(enrichment?.vacanciesByCategory ? {
+        vacanciesByCategory: enrichment.vacanciesByCategory
+      } : {}),
+      ...(documentsRequired.length > 0 ? {
+        applicantLocationRequirements: documentsRequired
+      } : {}),
+
       identifier: {
         "@type": "PropertyValue",
         name: "JobOye",
