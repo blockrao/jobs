@@ -12,7 +12,7 @@ export interface JobPostingData {
   slug: string;
   organizationId: string;
   organizationName: string;
-  /** org_sector of the issuing body; PRIVATE = unresolved (never indexed). */
+  /** org_sector of the issuing body; PRIVATE = unresolved (data quality signal). */
   organizationSector?: string | null;
   recruitmentId: string;
   recruitmentName: string;

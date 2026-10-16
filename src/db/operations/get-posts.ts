@@ -303,7 +303,7 @@ export async function getPostBySlug(
       slug: data.slug,
       organizationId: data.organizationId,
       organizationName: data.organizationName,
-      // org_sector; PRIVATE means "unresolved" (e.g. the "Unknown Organization" stub) and the page is never indexed.
+      // org_sector; PRIVATE indicates unresolved organization (data quality signal).
       organizationSector: (data.organizationSector ?? null) as string | null,
       recruitmentId: data.recruitmentId,
       recruitmentName: data.recruitmentName,

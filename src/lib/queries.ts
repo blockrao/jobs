@@ -288,7 +288,6 @@ const liveGovRecruitment = sql`
   r.status IN ('ACTIVE','UPCOMING')
   AND (r.application_end_date IS NULL OR r.application_end_date > NOW())
   AND r.slug IS NOT NULL
-  AND o.sector <> 'PRIVATE'
 `;
 
 /**
@@ -601,11 +600,10 @@ export async function getAllCategorySlugsForSitemap() {
 export async function getAllOrganizationSlugsForSitemap() {
   if (!hasDb()) return [];
   const db = getDb();
-  // DISC-001: PRIVATE = unresolved; those organisation pages are noindex.
+  // All organizations are included in sitemap; consumer protection via frontend labels.
   return db
     .select({ slug: organizations.slug, nameHi: organizations.nameHi })
-    .from(organizations)
-    .where(sql`${organizations.sector} <> 'PRIVATE'`);
+    .from(organizations);
 }
 
 // All 68 exams have labelHi populated and /exams/[slug] + /hi/exams/[slug]
@@ -838,8 +836,8 @@ export async function getPostSlugsForSitemap() {
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
-    // DISC-001: unresolved organisation (sector PRIVATE) → its pages are noindex, so never submit them.
-    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL AND ${organizations.sector} <> 'PRIVATE'`)
+    // All posts are included in sitemap; consumer protection via frontend labels.
+    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL`)
     .orderBy(posts.id);
   return rows;
 }
@@ -855,7 +853,7 @@ export async function getRecruitmentSlugsForSitemap() {
       (${singlePostLeafSlug}) IS NOT NULL AS "canonicalIsLeaf"
     FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
-    WHERE r.slug IS NOT NULL AND o.sector <> 'PRIVATE'
+    WHERE r.slug IS NOT NULL
     ORDER BY r.id
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
@@ -1800,7 +1798,6 @@ export async function listLivePostsByQualification(
       and(
         livePostCondition,
         sql`${posts.name} ~* ${pattern}`,
-        sql`${organizations.sector} <> 'PRIVATE'`,
       ),
     )
     .orderBy(
@@ -1826,7 +1823,6 @@ export async function countLivePostsByQualification(
       and(
         livePostCondition,
         sql`${posts.name} ~* ${pattern}`,
-        sql`${organizations.sector} <> 'PRIVATE'`,
       ),
     );
   return rows[0]?.count ?? 0;
@@ -1853,7 +1849,6 @@ export async function countLivePostsByAllQualifications(
           and(
             livePostCondition,
             sql`${posts.name} ~* ${q.namePattern}`,
-            sql`${organizations.sector} <> 'PRIVATE'`,
           ),
         );
       out[q.slug] = rows[0]?.count ?? 0;

@@ -161,13 +161,8 @@ export async function generateMetadata({
   const pageTitle = `${post.title}${titleOrg}${titleYearPart}${titleSuffix}`;
 
   // Indexing gate: a post is indexable when it has a canonical title and an official
-  // source URL — regardless of FJA extract verification status. The "reported" labels
-  // rendered on the page are the consumer protection; noindex is not needed.
-  // sourceVerificationPending continues to gate salary/deadline in meta descriptions
-  // and the JobPosting structured-data schema, but not page indexability.
-  // DISC-001: a post under an unresolved organisation (sector PRIVATE, e.g. the
-  // "Unknown Organization" stub that held 174 live recruitments) is never indexed.
-  const isIndexable = Boolean(post.title && post.officialSourceUrl) && post.organizationSector !== "PRIVATE";
+  // source URL. All posts are visible; consumer protection is via frontend "reported" labels.
+  const isIndexable = Boolean(post.title && post.officialSourceUrl);
 
   // article:published_time / article:modified_time for OG + SERP enrichment
   const publishedTime = post.notificationPublicationDate
