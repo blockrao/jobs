@@ -239,6 +239,7 @@ export default function JobPostingPage({
         {...(dataStart ? { "data-start": dataStart } : {})}
         {...(dataEnd ? { "data-end": dataEnd } : {})}
       >
+        {/* Hero Section (JobPostingHeader + QuickFactsGrid combined) */}
         <JobPostingHeader
           post={post}
           resolvedFacts={resolvedFacts}
@@ -246,14 +247,12 @@ export default function JobPostingPage({
           localePrefix={localePrefix}
           reportedDeadline={reportedDeadline}
         />
-
-        {/* Quick Facts Grid (4-card overview) */}
         <QuickFactsGrid post={post} resolvedFacts={resolvedFacts} />
 
-        {/* TOC strip */}
+        {/* Sticky Navigation Tabs */}
         <nav className={styles.toc} aria-label="On this page">
-          <a href="#quick">Quick answers</a>
-          <a href="#facts">Post facts</a>
+          <a href="#quick">Quick Facts</a>
+          <a href="#role-details">Role Details</a>
           {(qualText || expText ||
             post.enrichment?.education ||
             post.enrichment?.experience ||
@@ -261,13 +260,8 @@ export default function JobPostingPage({
             post.enrichment?.ageNote ||
             post.enrichment?.ageRelaxationRules ||
             post.enrichment?.eligibilityPathways) && <a href="#eligibility">Eligibility</a>}
-          <a href="#dates">Dates</a>
-          {(vacancyCount != null || reportedVacancyCount != null ||
-            post.enrichment?.vacanciesTotal != null ||
-            (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && <a href="#vacancies">Vacancies</a>}
-          <a href="#selection">Selection</a>
-          <a href="#apply">How to apply</a>
-          <a href="#documents">Documents</a>
+          <a href="#selection">Process</a>
+          <a href="#apply">How to Apply</a>
         </nav>
 
         {/* Verification notice */}
@@ -286,6 +280,10 @@ export default function JobPostingPage({
             </p>
           </aside>
         )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* PRIORITY 1 SECTIONS (always show)                                   */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
 
         {/* Quick Answers */}
         <section id="quick" className={styles.section} aria-labelledby="quick-h">
@@ -350,7 +348,7 @@ export default function JobPostingPage({
           </div>
         </section>
 
-        {/* Post at a glance (dl.facts) */}
+        {/* Post at a glance (dl.facts) - Quick Facts Detailed */}
         {factRows.length > 0 && (
           <section id="facts" className={styles.section} aria-labelledby="facts-h">
             <h2 id="facts-h" className={styles.sectionTitle}>
@@ -375,7 +373,15 @@ export default function JobPostingPage({
           </section>
         )}
 
-        {/* Eligibility */}
+        {/* About the Role - Duties and Responsibilities */}
+        <section id="role-details" className={styles.section} aria-labelledby="role-h">
+          <h2 id="role-h" className={styles.sectionTitle}>
+            About the role
+          </h2>
+          <DutiesResponsibilities post={post} />
+        </section>
+
+        {/* Eligibility Requirements */}
         {(qualText || expText ||
           post.enrichment?.education ||
           post.enrichment?.experience ||
@@ -385,7 +391,7 @@ export default function JobPostingPage({
           post.enrichment?.eligibilityPathways) && (
           <section id="eligibility" className={styles.section} aria-labelledby="elig-h">
             <h2 id="elig-h" className={styles.sectionTitle}>
-              Eligibility
+              Eligibility Requirements
             </h2>
             {qualText && (
               <>
@@ -407,30 +413,10 @@ export default function JobPostingPage({
           </section>
         )}
 
-        {/* Important Dates */}
-        <section id="dates" className={styles.section} aria-labelledby="dates-h">
-          <h2 id="dates-h" className={styles.sectionTitle}>
-            Important dates
-          </h2>
-          <ImportantDates post={post} resolvedFacts={resolvedFacts} embedded />
-        </section>
-
-        {/* Vacancy Details */}
-        {(vacancyCount != null || reportedVacancyCount != null ||
-          post.enrichment?.vacanciesTotal != null ||
-          (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && (
-          <section id="vacancies" className={styles.section} aria-labelledby="vac-h">
-            <h2 id="vac-h" className={styles.sectionTitle}>
-              Seats and vacancies{reportedVacancyCount != null && vacancyCount == null ? " (reported)" : ""}
-            </h2>
-            <VacancyDetails post={post} resolvedFacts={resolvedFacts} embedded />
-          </section>
-        )}
-
         {/* Selection Process */}
         <section id="selection" className={styles.section} aria-labelledby="sel-h">
           <h2 id="sel-h" className={styles.sectionTitle}>
-            How this post is filled
+            Selection Process
           </h2>
           <SelectionProcess
             post={post}
@@ -439,11 +425,52 @@ export default function JobPostingPage({
           />
         </section>
 
-        {/* Duties and Responsibilities */}
-        <DutiesResponsibilities post={post} />
+        {/* Important Dates */}
+        <section id="dates" className={styles.section} aria-labelledby="dates-h">
+          <h2 id="dates-h" className={styles.sectionTitle}>
+            Important Dates
+          </h2>
+          <ImportantDates post={post} resolvedFacts={resolvedFacts} embedded />
+        </section>
 
-        {/* Salary and Compensation */}
+        {/* How to Apply */}
+        <section id="apply" className={styles.section} aria-labelledby="apply-h">
+          <h2 id="apply-h" className={styles.sectionTitle}>
+            How to Apply
+          </h2>
+          <HowToApply
+            post={post}
+            recruitmentResolvedFacts={recruitmentResolvedFacts}
+            embedded
+          />
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* PRIORITY 2 SECTIONS (if data exists)                               */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+
+        {/* Vacancy Details */}
+        {(vacancyCount != null || reportedVacancyCount != null ||
+          post.enrichment?.vacanciesTotal != null ||
+          (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory as object).length > 0)) && (
+          <section id="vacancies" className={styles.section} aria-labelledby="vac-h">
+            <h2 id="vac-h" className={styles.sectionTitle}>
+              Vacancy Details{reportedVacancyCount != null && vacancyCount == null ? " (reported)" : ""}
+            </h2>
+            <VacancyDetails post={post} resolvedFacts={resolvedFacts} embedded />
+          </section>
+        )}
+
+        {/* Salary & Compensation */}
         <SalaryCompensation post={post} resolvedFacts={resolvedFacts} />
+
+        {/* Application Fee */}
+        <section id="fee" className={styles.section} aria-labelledby="fee-h">
+          <h2 id="fee-h" className={styles.sectionTitle}>
+            Application Fee
+          </h2>
+          <ApplicationFee post={post} embedded />
+        </section>
 
         {/* Benefits & Perks */}
         {post.enrichment?.benefits && post.enrichment.benefits.length > 0 && (
@@ -504,6 +531,32 @@ export default function JobPostingPage({
           </section>
         )}
 
+        {/* Education Requirements */}
+        {post.enrichment?.education && (
+          <section id="education" className={styles.section} aria-labelledby="edu-h">
+            <h2 id="edu-h" className={styles.sectionTitle}>
+              Education Requirements
+            </h2>
+            <div style={{ display: "grid", gap: "12px" }}>
+              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
+                <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "var(--text-primary)" }}>
+                  {post.enrichment.education.degree}
+                </p>
+                {post.enrichment.education.university && (
+                  <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+                    University: {post.enrichment.education.university}
+                  </p>
+                )}
+                {post.enrichment.education.registration && (
+                  <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+                    Registration: {post.enrichment.education.registration}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Eligibility Pathways */}
         {post.enrichment?.eligibilityPathways && post.enrichment.eligibilityPathways.length > 0 && (
           <section id="pathways" className={styles.section} aria-labelledby="path-h">
@@ -540,31 +593,16 @@ export default function JobPostingPage({
           </section>
         )}
 
-        {/* Education Requirements */}
-        {post.enrichment?.education && (
-          <section id="education" className={styles.section} aria-labelledby="edu-h">
-            <h2 id="edu-h" className={styles.sectionTitle}>
-              Education Requirements
-            </h2>
-            <div style={{ display: "grid", gap: "12px" }}>
-              <div style={{ padding: "12px", background: "var(--bg-secondary)", borderRadius: "6px" }}>
-                <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "var(--text-primary)" }}>
-                  {post.enrichment.education.degree}
-                </p>
-                {post.enrichment.education.university && (
-                  <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
-                    University: {post.enrichment.education.university}
-                  </p>
-                )}
-                {post.enrichment.education.registration && (
-                  <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
-                    Registration: {post.enrichment.education.registration}
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Documents Checklist */}
+        <section id="documents" className={styles.section} aria-labelledby="docs-h">
+          <h2 id="docs-h" className={styles.sectionTitle}>
+            Documents Checklist
+          </h2>
+          <p className={styles.note}>
+            Tick the ones that apply to you. Your progress is saved on this device.
+          </p>
+          <DocumentsRequired post={post} embedded />
+        </section>
 
         {/* Enhanced Documents Required Section */}
         {post.enrichment?.documentsRequired && (
@@ -607,6 +645,10 @@ export default function JobPostingPage({
             </div>
           </section>
         )}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* PRIORITY 3 SECTIONS (meta)                                         */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
 
         {/* Data Quality & Verification */}
         {post.enrichment && (
@@ -693,45 +735,22 @@ export default function JobPostingPage({
           </section>
         )}
 
-        {/* FAQ Section (NEW - temporarily disabled) */}
-        {/* TODO: Fix React SSR issue with useState in FAQSection
-        <section id="faq" className={styles.section} aria-labelledby="faq-h">
-          <h2 id="faq-h" className={styles.sectionTitle}>
-            Frequently Asked Questions
-          </h2>
-          <FAQSection post={post} />
-        </section>
-        */}
+        {/* Official Resources Links */}
+        <OfficialResourcesLinks
+          post={post}
+          recruitmentResolvedFacts={recruitmentResolvedFacts}
+        />
 
-        {/* Application Fee */}
-        <section id="fee" className={styles.section} aria-labelledby="fee-h">
-          <h2 id="fee-h" className={styles.sectionTitle}>
-            Application fee
+        {/* Source and verification */}
+        <section id="source" className={styles.section} aria-labelledby="src-h">
+          <h2 id="src-h" className={styles.sectionTitle}>
+            Where this information comes from
           </h2>
-          <ApplicationFee post={post} embedded />
-        </section>
-
-        {/* How to Apply */}
-        <section id="apply" className={styles.section} aria-labelledby="apply-h">
-          <h2 id="apply-h" className={styles.sectionTitle}>
-            How to apply
-          </h2>
-          <HowToApply
+          <OfficialSourceVerification
             post={post}
             recruitmentResolvedFacts={recruitmentResolvedFacts}
             embedded
           />
-        </section>
-
-        {/* Documents */}
-        <section id="documents" className={styles.section} aria-labelledby="docs-h">
-          <h2 id="docs-h" className={styles.sectionTitle}>
-            Documents checklist
-          </h2>
-          <p className={styles.note}>
-            Tick the ones that apply to you. Your progress is saved on this device.
-          </p>
-          <DocumentsRequired post={post} embedded />
         </section>
 
         {/* Other posts in this recruitment */}
@@ -765,24 +784,6 @@ export default function JobPostingPage({
             </p>
           </section>
         )}
-
-        {/* Official Resources Links (NEW) */}
-        <OfficialResourcesLinks
-          post={post}
-          recruitmentResolvedFacts={recruitmentResolvedFacts}
-        />
-
-        {/* Source and verification */}
-        <section id="source" className={styles.section} aria-labelledby="src-h">
-          <h2 id="src-h" className={styles.sectionTitle}>
-            Where this information comes from
-          </h2>
-          <OfficialSourceVerification
-            post={post}
-            recruitmentResolvedFacts={recruitmentResolvedFacts}
-            embedded
-          />
-        </section>
 
       </article>
 
