@@ -278,9 +278,13 @@ export default function EnrichPostsPage() {
 
           <div className="flex items-center gap-4 pt-4">
             <SubmitButton
-              disabled={!selectedPostId || submitting}
+              
               pendingText={submitting ? "Saving..." : undefined}
-              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-neutral-300"
+              className={`rounded px-4 py-2 text-white ${
+                !selectedPostId || submitting
+                  ? "bg-neutral-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               Save Enrichment
             </SubmitButton>

@@ -152,49 +152,56 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           salaryRaw: post.fjaExtract?.salaryRaw,
         },
         // Phase 1 P0: Detail enrichment data
-        vacanciesByCategory: (enrichment?.vacancies || []).map((v: any) => ({
+        vacanciesByCategory: Array.isArray(enrichment?.vacancies) ? enrichment.vacancies.map((v: any) => ({
           category: v.category,
-          total: v.total_vacancies,
+          total: v.count || v.total_vacancies,
           location: v.location,
-        })),
-        educationRequirements: (enrichment?.education || []).map((e: any) => ({
+        })) : [],
+        educationRequirements: Array.isArray(enrichment?.education) ? enrichment.education.map((e: any) => ({
           degree: e.degree,
           subject: e.subject,
           specialization: e.specialization,
-          minimumPercentage: e.minimum_percentage,
-          minimumMarks: e.minimum_marks,
-          confidenceScore: e.confidence_score,
-        })),
-        experienceRequirements: (enrichment?.experience || []).map((e: any) => ({
-          totalYears: e.total_years,
-          minYears: e.min_years,
-          type: e.experience_type,
-          confidenceScore: e.confidence_score,
-        })),
-        selectionProcessStages: (enrichment?.selectionProcess || []).map((s: any) => ({
-          order: s.stage_order,
-          name: typeof s.stage_name === 'string' ? s.stage_name : JSON.stringify(s.stage_name),
-          scheduledDate: s.scheduled_date,
-          durationMinutes: s.duration_minutes,
-          totalMarks: s.total_marks,
-          minimumMarks: s.minimum_marks,
-        })),
-        requiredDocuments: (enrichment?.documents || []).map((d: any) => ({
-          name: d.document_name,
-          category: d.document_category,
-          isRequired: d.is_required,
-        })),
-        importantDates: (enrichment?.importantDates || []).map((d: any) => ({
-          type: d.date_type,
-          date: d.date_value,
-        })),
-        ageRules: (enrichment?.ageRules || []).map((a: any) => ({
+          minimumPercentage: e.minimumPercentage,
+          minimumMarks: e.minimumMarks,
+          confidenceScore: e.confidenceScore,
+        })) : [],
+        experienceRequirements: Array.isArray(enrichment?.experience) ? enrichment.experience.map((e: any) => ({
+          totalYears: e.totalYears,
+          minYears: e.minYears,
+          type: e.experienceType,
+          confidenceScore: e.confidenceScore,
+        })) : [],
+        selectionProcessStages: Array.isArray(enrichment?.selectionProcessStages) ? enrichment.selectionProcessStages.map((s: any) => ({
+          order: s.step,
+          name: s.name,
+          scheduledDate: s.scheduledDate,
+          durationMinutes: s.durationMinutes,
+          totalMarks: s.totalMarks,
+          minimumMarks: s.minimumMarks,
+        })) : (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => ({
+          order: s.step,
+          name: s.name,
+          scheduledDate: undefined,
+          durationMinutes: undefined,
+          totalMarks: s.totalMarks,
+          minimumMarks: s.minQualifyingMarks,
+        })) : []),
+        requiredDocuments: Array.isArray(enrichment?.requiredDocuments) ? enrichment.requiredDocuments.map((d: any) => ({
+          name: d.name,
+          category: d.category,
+          isRequired: d.required,
+        })) : [],
+        importantDates: Array.isArray(enrichment?.importantDates) ? enrichment.importantDates.map((d: any) => ({
+          type: d.label,
+          date: d.date || d.dateStr,
+        })) : [],
+        ageRules: Array.isArray(enrichment?.ageRules) ? enrichment.ageRules.map((a: any) => ({
           category: a.category,
-          maxAge: a.max_age,
-          relaxationYears: a.relaxation_years,
-          ruleType: a.rule_type,
+          maxAge: a.max,
+          relaxationYears: a.relaxationYears,
+          ruleType: a.ruleType,
           note: a.note,
-        })),
+        })) : [],
       }}
       locale={locale}
       canonicalUrl={canonicalUrl}
