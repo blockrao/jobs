@@ -129,7 +129,7 @@ async function main() {
 
       // Live log for monitoring long runs
       const fieldCount = Object.keys(facts).filter(
-        (k) => !["unparsed", "review", "debug"].includes(k) && (facts as Record<string, unknown>)[k] != null
+        (k) => !["unparsed", "review", "debug"].includes(k) && (facts as unknown as Record<string, unknown>)[k] != null
       ).length;
       console.log(`✓ ${logPrefix} — ${fieldCount} fields, review: [${facts.review.join(",")}]`);
 
