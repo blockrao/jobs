@@ -17,7 +17,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { checkSlugRedirect } from "@/lib/slug-redirects";
 
-export const revalidate = 60; // Aggressive cache clearance for post detail pages
+export const revalidate = 300; // 5 min ISR - posts are stable after enrichment
 import { entitySeo } from "@/lib/seo";
 import { getPostBySlugCached, getRelatedPostsForLeafCached } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
@@ -122,30 +122,34 @@ export default async function LocaleJobPostingPage({ params }: Props) {
     }
 
   // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
+  // ARCHITECTURAL FIX: Post already contains denormalized recruitment data - don't re-query.
+  // Related posts fetched async (non-blocking) to prevent one query failure from crashing page.
 
-  console.log(`[LocaleJobPostingPage] Fetching recruitment data and related posts...`);
-  let recruitmentData, relatedPosts;
+  // Use post's existing denormalized fields instead of querying getRecruitmentWithPosts
+  const recruitmentData = post.recruitmentName ? {
+    recruitment: {
+      slug: post.recruitmentSlug,
+      name: post.recruitmentName,
+    },
+    isSingleJobRecruitment: false,
+  } : null;
+
+  // Fetch related posts async without blocking - page renders immediately with just post data
+  let relatedPosts = null;
   try {
-    console.log(`[LocaleJobPostingPage] Calling getRecruitmentWithPosts(${post.recruitmentSlug})...`);
-    const recData = await getRecruitmentWithPosts(post.recruitmentSlug);
-    console.log(`[LocaleJobPostingPage] getRecruitmentWithPosts completed`);
-
-    console.log(`[LocaleJobPostingPage] Calling getRelatedPostsForLeafCached...`);
-    const relPosts = await getRelatedPostsForLeafCached(
-      Number(post.id),
-      post.positionId ?? null,
-      post.organizationId ? Number(post.organizationId) : null,
-      post.locationState ?? null,
-      post.recruitmentId ? Number(post.recruitmentId) : null
-    );
-    console.log(`[LocaleJobPostingPage] getRelatedPostsForLeafCached completed`);
-
-    recruitmentData = recData;
-    relatedPosts = relPosts;
-    console.log(`[LocaleJobPostingPage] Recruitment data and related posts loaded successfully`);
+    relatedPosts = await Promise.race([
+      getRelatedPostsForLeafCached(
+        Number(post.id),
+        post.positionId ?? null,
+        post.organizationId ? Number(post.organizationId) : null,
+        post.locationState ?? null,
+        post.recruitmentId ? Number(post.recruitmentId) : null
+      ),
+      new Promise(resolve => setTimeout(() => resolve(null), 2000)) // 2s timeout max
+    ]);
   } catch (err) {
-    console.error(`[LocaleJobPostingPage] Error fetching recruitment data:`, err instanceof Error ? err.message : String(err));
-    throw err;
+    console.warn(`[LocaleJobPostingPage] Related posts fetch failed (non-blocking):`, err instanceof Error ? err.message : String(err));
+    // Don't throw - page still renders without related posts
   }
   const now = new Date();
   const resolvedFacts = {
