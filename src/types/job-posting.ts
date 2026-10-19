@@ -224,4 +224,8 @@ export interface PostEnrichment {
       phone?: string;
     };
   };
+
+  // Application Fee and Official Links (Phase 1 P0)
+  applicationFees?: Array<{ category?: string; amount?: number | null; currency?: string; isExempted?: boolean; exemptionCategory?: string; note?: string }>;
+  officialLinks?: Array<{ type?: string; url?: string; title?: string; source?: string }>;
 }

@@ -69,8 +69,8 @@ interface JobDetailPageProps {
     importantDates?: Array<{ type: string; date: string }>;
     ageRules?: Array<{ category: string; maxAge?: number; relaxationYears?: number; ruleType: string; note?: string }>;
     // Phase 1 P0: Application Fee and Official Links (new)
-    applicationFees?: Array<{ category: string; amount: number | null; note?: string }>;
-    officialLinks?: Array<{ label: string; url: string; linkType: string }>;
+    applicationFees?: Array<{ category?: string; amount?: number | null; currency?: string; isExempted?: boolean; exemptionCategory?: string; note?: string }>;
+    officialLinks?: Array<{ type?: string; url?: string; title?: string; source?: string }>;
     fjaExtract?: {
       qualificationRaw?: string | null;
       experienceRaw?: string | null;
@@ -555,7 +555,7 @@ export default function JobDetailPageProduction({
                     // Display official links if available
                     post.officialLinks.map((link, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">{link.label}</th>
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">{link.title || link.type || 'Link'}</th>
                         <td className="px-4 py-3">
                           <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
                             Open Link

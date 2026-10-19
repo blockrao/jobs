@@ -278,7 +278,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
   const db = getDb();
 
   try {
-    const [vacancies, education, experience, selectionProcess, documents, importantDates, ageRules] = await Promise.all([
+    const [vacancies, education, experience, selectionProcess, documents, importantDates, ageRules, applicationFees, officialLinks] = await Promise.all([
       // Vacancies by category
       db.execute<any>(sql`
         SELECT id, total_vacancies, category, location, location_count, category_count, source
@@ -328,6 +328,20 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
         WHERE post_id = ${postId}
         ORDER BY category
       `),
+      // Application fees by category
+      db.execute<any>(sql`
+        SELECT id, category, fee_amount, fee_currency, is_exempted, exemption_category
+        FROM posts_application_fee
+        WHERE post_id = ${postId}
+        ORDER BY category
+      `),
+      // Official links (notification, apply, admit card, result, etc.)
+      db.execute<any>(sql`
+        SELECT id, link_type, link_url, link_title, source
+        FROM posts_official_links
+        WHERE post_id = ${postId}
+        ORDER BY link_type
+      `),
     ]);
 
     return {
@@ -338,6 +352,8 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       documents: documents || [],
       importantDates: importantDates || [],
       ageRules: ageRules || [],
+      applicationFees: applicationFees || [],
+      officialLinks: officialLinks || [],
     };
   } catch (err) {
     console.warn("Error fetching detail enrichment for post", postId, ":", err);
@@ -349,6 +365,8 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       documents: [],
       importantDates: [],
       ageRules: [],
+      applicationFees: [],
+      officialLinks: [],
     };
   }
 }

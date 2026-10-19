@@ -202,6 +202,19 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           ruleType: a.ruleType,
           note: a.note,
         })) : [],
+        applicationFees: Array.isArray(enrichment?.applicationFees) ? enrichment.applicationFees.map((f: any) => ({
+          category: f.category,
+          amount: f.fee_amount || f.amount,
+          currency: f.fee_currency || f.currency || "INR",
+          isExempted: f.is_exempted || f.isExempted,
+          exemptionCategory: f.exemption_category || f.exemptionCategory,
+        })) : [],
+        officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
+          type: l.link_type || l.type,
+          url: l.link_url || l.url,
+          title: l.link_title || l.title,
+          source: l.source,
+        })) : [],
       }}
       locale={locale}
       canonicalUrl={canonicalUrl}
