@@ -168,10 +168,14 @@ export default function PostLeafStructuredData({
     },
   };
 
-  // description — required by Google for rich results; omit when absent
-  if (post.description) {
-    jobPosting["description"] = post.description;
-  }
+  // description — REQUIRED by Google for rich results; generate fallback if absent
+  const description = post.description ||
+    `${post.title} position at ${post.organizationName || 'a government organization'} in ${post.locationCity || post.locationState || 'India'}. ` +
+    `This is a ${post.employmentType?.toLowerCase() || 'full-time'} role. ` +
+    `For complete details including qualifications, experience requirements, salary, and how to apply, ` +
+    `please visit the official job posting.`;
+
+  jobPosting["description"] = description;
 
   // datePosted — prefer notificationPublicationDate (when this role was announced),
   // fall back to postedAt (when we first listed it on JobOye)

@@ -624,7 +624,8 @@ export default function JobDetailPageProduction({
                   </tbody>
                 </table>
               </div>
-          </section>
+            </section>
+          )}
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
