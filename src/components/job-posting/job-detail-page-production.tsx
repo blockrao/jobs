@@ -23,6 +23,18 @@ import type React from 'react';
 import { formatDate, formatCurrency, formatDeadlineStatus } from '@/lib/formatting';
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
 
+// Helper: Parse JSON strings safely
+function safeJsonParse<T>(value: unknown, fallback: T): T {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return value as T;
+}
+
 interface OrganizationData {
   name: string | null;
   type?: string | null;
@@ -374,15 +386,34 @@ export default function JobDetailPageProduction({
                 Education Requirements
               </h2>
               <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                {post.educationRequirements.map((e, idx) => (
-                  <li key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
-                    <div className="font-semibold">{e.degree}</div>
-                    {e.subject && <div className="text-sm">Subject: {e.subject}</div>}
-                    {e.specialization && <div className="text-sm">Specialization: {e.specialization}</div>}
-                    {e.minimumPercentage && <div className="text-sm">Minimum: {e.minimumPercentage}%</div>}
-                    {e.confidenceScore && <div className="text-xs text-gray-500">Confidence: {e.confidenceScore}%</div>}
-                  </li>
-                ))}
+                {post.educationRequirements.map((e, idx) => {
+                  // Parse degree if it's a JSON string array
+                  const degreeOptions = safeJsonParse<string[]>(e.degree, [e.degree || ''].filter(Boolean));
+                  const isMultipleOptions = Array.isArray(degreeOptions) && degreeOptions.length > 1;
+
+                  return (
+                    <li key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      {isMultipleOptions ? (
+                        <div>
+                          <div className="font-semibold mb-2">Any of the following:</div>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            {degreeOptions.map((option, optIdx) => (
+                              <li key={optIdx} className="text-gray-700 dark:text-gray-300">
+                                {option}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="font-semibold">{degreeOptions[0] || e.degree}</div>
+                      )}
+                      {e.subject && <div className="text-sm mt-2">Subject: {e.subject}</div>}
+                      {e.specialization && <div className="text-sm">Specialization: {e.specialization}</div>}
+                      {e.minimumPercentage && <div className="text-sm">Minimum: {e.minimumPercentage}%</div>}
+                      {e.confidenceScore && <div className="text-xs text-gray-500 mt-2">Confidence: {e.confidenceScore}%</div>}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -427,8 +458,10 @@ export default function JobDetailPageProduction({
                   {post.experienceRequirements.map((exp, idx) => (
                     <li key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
                       <div className="font-semibold">{exp.type}</div>
-                      {exp.totalYears && <div className="text-sm">{exp.totalYears} years required</div>}
-                      {exp.confidenceScore && <div className="text-xs text-gray-500">Confidence: {exp.confidenceScore}%</div>}
+                      <div className="text-sm">
+                        {exp.minYears || exp.totalYears ? `${exp.minYears || exp.totalYears} years required` : 'Experience required'}
+                      </div>
+                      {exp.confidenceScore && <div className="text-xs text-gray-500 mt-2">Confidence: {exp.confidenceScore}%</div>}
                     </li>
                   ))}
                 </ul>
@@ -537,53 +570,60 @@ export default function JobDetailPageProduction({
           )}
 
           {/* Important Links */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
-              Important Links
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
-                  {post.officialLinks && post.officialLinks.length > 0 ? (
-                    // Display official links if available
-                    post.officialLinks.map((link, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">{link.title || link.type || 'Link'}</th>
-                        <td className="px-4 py-3">
-                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
-                            Open Link
-                          </a>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    // Fallback to original links if no official links data
-                    <>
-                      {post.applyUrl && (
-                        <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Apply Online</th>
+          {(post.officialLinks?.length || post.applyUrl || post.officialSourceUrl) && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Important Links
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
+                    {post.officialLinks && post.officialLinks.length > 0 ? (
+                      // Display official links if available
+                      post.officialLinks.map((link, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">
+                            {link.title || link.type?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Link'}
+                          </th>
                           <td className="px-4 py-3">
-                            <a href={post.applyUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
-                              Click here
-                            </a>
+                            {link.url ? (
+                              <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                {link.type === 'apply_online' ? 'Click here' : link.type === 'official_notification' ? 'Download PDF' : 'Open Link'}
+                              </a>
+                            ) : (
+                              <span className="text-gray-500">No link available</span>
+                            )}
                           </td>
                         </tr>
-                      )}
-                      {post.officialSourceUrl && (
-                        <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Official Notification</th>
-                          <td className="px-4 py-3">
-                            <a href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
-                              Download PDF
-                            </a>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      ))
+                    ) : (
+                      // Fallback to original links if no official links data
+                      <>
+                        {post.applyUrl && (
+                          <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Apply Online</th>
+                            <td className="px-4 py-3">
+                              <a href={post.applyUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                Click here
+                              </a>
+                            </td>
+                          </tr>
+                        )}
+                        {post.officialSourceUrl && (
+                          <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                            <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Official Notification</th>
+                            <td className="px-4 py-3">
+                              <a href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                Download PDF
+                              </a>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
           </section>
 
           {/* CTA Buttons */}
