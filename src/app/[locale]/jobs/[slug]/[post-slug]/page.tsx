@@ -126,19 +126,25 @@ export default async function LocaleJobPostingPage({ params }: Props) {
   console.log(`[LocaleJobPostingPage] Fetching recruitment data and related posts...`);
   let recruitmentData, relatedPosts;
   try {
-    [recruitmentData, relatedPosts] = await Promise.all([
-      getRecruitmentWithPosts(post.recruitmentSlug),
-      getRelatedPostsForLeafCached(
-        Number(post.id),
-        post.positionId ?? null,
-        post.organizationId ? Number(post.organizationId) : null,
-        post.locationState ?? null,
-        post.recruitmentId ? Number(post.recruitmentId) : null
-      ),
-    ]);
+    console.log(`[LocaleJobPostingPage] Calling getRecruitmentWithPosts(${post.recruitmentSlug})...`);
+    const recData = await getRecruitmentWithPosts(post.recruitmentSlug);
+    console.log(`[LocaleJobPostingPage] getRecruitmentWithPosts completed`);
+
+    console.log(`[LocaleJobPostingPage] Calling getRelatedPostsForLeafCached...`);
+    const relPosts = await getRelatedPostsForLeafCached(
+      Number(post.id),
+      post.positionId ?? null,
+      post.organizationId ? Number(post.organizationId) : null,
+      post.locationState ?? null,
+      post.recruitmentId ? Number(post.recruitmentId) : null
+    );
+    console.log(`[LocaleJobPostingPage] getRelatedPostsForLeafCached completed`);
+
+    recruitmentData = recData;
+    relatedPosts = relPosts;
     console.log(`[LocaleJobPostingPage] Recruitment data and related posts loaded successfully`);
   } catch (err) {
-    console.error(`[LocaleJobPostingPage] Error fetching recruitment data:`, err);
+    console.error(`[LocaleJobPostingPage] Error fetching recruitment data:`, err instanceof Error ? err.message : String(err));
     throw err;
   }
   const now = new Date();
