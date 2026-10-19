@@ -10,6 +10,7 @@
  * - FAQ toggle (minimal JS)
  * - Related jobs section
  * - Dark mode support via CSS variables
+ * - Phase 1 P0: Unified enrichment display (vacancies, education, experience, documents, dates, age rules, selection process)
  *
  * SEO/GEO Strategy:
  * - Semantic HTML (h1→h6 hierarchy)
@@ -59,6 +60,14 @@ interface JobDetailPageProps {
     };
     vacancies?: number | null;
     applicationDeadline?: Date | string | null;
+    // Phase 1 P0: Enrichment detail fields
+    vacanciesByCategory?: Array<{ category: string; total: number; location?: string }>;
+    educationRequirements?: Array<{ degree: string; subject?: string; specialization?: string; minimumPercentage?: number; minimumMarks?: number; confidenceScore?: number }>;
+    experienceRequirements?: Array<{ totalYears?: number; minYears?: number; type: string; confidenceScore?: number }>;
+    selectionProcessStages?: Array<{ order: number; name: string; scheduledDate?: string; durationMinutes?: number; totalMarks?: number; minimumMarks?: number }>;
+    requiredDocuments?: Array<{ name: string; category: string; isRequired: boolean }>;
+    importantDates?: Array<{ type: string; date: string }>;
+    ageRules?: Array<{ category: string; maxAge?: number; relaxationYears?: number; ruleType: string; note?: string }>;
     fjaExtract?: {
       qualificationRaw?: string | null;
       experienceRaw?: string | null;
@@ -135,7 +144,6 @@ export default function JobDetailPageProduction({
   const orgEmoji = getOrgEmojiByType(post.organizationType);
 
   // Breadcrumb data for GEO/navigation
-  // Extract locale from canonical URL (already locale-aware)
   const localeFromUrl = canonicalUrl.split('/')[1] || 'en';
   const baseJobsUrl = `/${localeFromUrl}/jobs`;
 
@@ -323,6 +331,27 @@ export default function JobDetailPageProduction({
             </div>
           </section>
 
+          {/* Vacancies by Category - Phase 1 P0 */}
+          {post.vacanciesByCategory && post.vacanciesByCategory.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Vacancy Breakdown
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
+                    {post.vacanciesByCategory.map((v, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 capitalize">{v.category}</th>
+                        <td className="px-4 py-3 text-gray-900 dark:text-white">{v.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           {/* Qualifications Section */}
           {qualificationText && (
             <section className="mb-8">
@@ -335,39 +364,139 @@ export default function JobDetailPageProduction({
             </section>
           )}
 
+          {/* Education Requirements - Phase 1 P0 */}
+          {post.educationRequirements && post.educationRequirements.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Education Requirements
+              </h2>
+              <ul className="space-y-3 text-gray-700 dark:text-gray-300">
+                {post.educationRequirements.map((e, idx) => (
+                  <li key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                    <div className="font-semibold">{e.degree}</div>
+                    {e.subject && <div className="text-sm">Subject: {e.subject}</div>}
+                    {e.specialization && <div className="text-sm">Specialization: {e.specialization}</div>}
+                    {e.minimumPercentage && <div className="text-sm">Minimum: {e.minimumPercentage}%</div>}
+                    {e.confidenceScore && <div className="text-xs text-gray-500">Confidence: {e.confidenceScore}%</div>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* Age Limit Section */}
-          {(post.ageLimit || post.fjaExtract?.ageRaw) && (
+          {(post.ageLimit || post.fjaExtract?.ageRaw || (post.ageRules && post.ageRules.length > 0)) && (
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
                 Age Limit
               </h2>
-              <p className="text-gray-700 dark:text-gray-300">
-                {post.ageLimit || post.fjaExtract?.ageRaw}
-              </p>
+              {post.ageLimit || post.fjaExtract?.ageRaw ? (
+                <p className="text-gray-700 dark:text-gray-300">
+                  {post.ageLimit || post.fjaExtract?.ageRaw}
+                </p>
+              ) : null}
+              {post.ageRules && post.ageRules.length > 0 && (
+                <ul className="space-y-2 mt-4 text-gray-700 dark:text-gray-300">
+                  {post.ageRules.map((rule, idx) => (
+                    <li key={idx} className="text-sm">
+                      <strong>{rule.category}:</strong> {rule.maxAge ? `Max ${rule.maxAge} years` : rule.ruleType === 'NO_UPPER_LIMIT' ? 'No upper age limit' : 'Check notification'}
+                      {rule.relaxationYears && ` (+ ${rule.relaxationYears} years relaxation)`}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           )}
 
           {/* Experience Section */}
-          {experienceText && (
+          {(experienceText || (post.experienceRequirements && post.experienceRequirements.length > 0)) && (
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
                 Experience Required
               </h2>
-              <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {experienceText}
-              </div>
+              {experienceText && (
+                <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed mb-4">
+                  {experienceText}
+                </div>
+              )}
+              {post.experienceRequirements && post.experienceRequirements.length > 0 && (
+                <ul className="space-y-3 text-gray-700 dark:text-gray-300">
+                  {post.experienceRequirements.map((exp, idx) => (
+                    <li key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      <div className="font-semibold">{exp.type}</div>
+                      {exp.totalYears && <div className="text-sm">{exp.totalYears} years required</div>}
+                      {exp.confidenceScore && <div className="text-xs text-gray-500">Confidence: {exp.confidenceScore}%</div>}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           )}
 
-          {/* Selection Process */}
-          {post.selectionProcess && (
+          {/* Selection Process - Phase 1 P0 */}
+          {(post.selectionProcess || (post.selectionProcessStages && post.selectionProcessStages.length > 0)) && (
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
                 Selection Process
               </h2>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                {post.selectionProcess}
-              </p>
+              {post.selectionProcess && (
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+                  {post.selectionProcess}
+                </p>
+              )}
+              {post.selectionProcessStages && post.selectionProcessStages.length > 0 && (
+                <ol className="space-y-3 text-gray-700 dark:text-gray-300 list-decimal list-inside">
+                  {post.selectionProcessStages.map((stage, idx) => (
+                    <li key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                      <div className="font-semibold">{stage.name}</div>
+                      {stage.totalMarks && <div className="text-sm">Total Marks: {stage.totalMarks}</div>}
+                      {stage.minimumMarks && <div className="text-sm">Passing: {stage.minimumMarks}</div>}
+                      {stage.durationMinutes && <div className="text-sm">Duration: {stage.durationMinutes} minutes</div>}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          )}
+
+          {/* Required Documents - Phase 1 P0 */}
+          {post.requiredDocuments && post.requiredDocuments.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Required Documents
+              </h2>
+              <div className="space-y-2">
+                {post.requiredDocuments.map((doc, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg flex items-start gap-3">
+                    <span className={`text-lg ${doc.isRequired ? '✓' : '○'}`}>{doc.isRequired ? '✓' : '○'}</span>
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{doc.name}</div>
+                      {doc.category && <div className="text-sm text-gray-600 dark:text-gray-400">{doc.category}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Important Dates - Phase 1 P0 */}
+          {post.importantDates && post.importantDates.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Important Dates
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
+                    {post.importantDates.map((date, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 capitalize">{date.type}</th>
+                        <td className="px-4 py-3 text-gray-900 dark:text-white">{formatDate(new Date(date.date))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           )}
 

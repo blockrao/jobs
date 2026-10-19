@@ -135,7 +135,7 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
         experienceText: post.fjaExtract?.experienceRaw,
         ageLimit: post.fjaExtract?.ageLimitRaw,
-        selectionProcess: post.recruitmentSelectionProcess || enrichment?.selectionProcess?.map(s => s.description).join("; "),
+        selectionProcess: post.recruitmentSelectionProcess || enrichment?.selectionProcess?.map((s: any) => s.description).join("; "),
         howToApply: post.applicationMethod,
         applicationFee: undefined,
         salary: {
@@ -151,6 +151,50 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           ageRaw: post.fjaExtract?.ageLimitRaw,
           salaryRaw: post.fjaExtract?.salaryRaw,
         },
+        // Phase 1 P0: Detail enrichment data
+        vacanciesByCategory: (enrichment?.vacancies || []).map((v: any) => ({
+          category: v.category,
+          total: v.total_vacancies,
+          location: v.location,
+        })),
+        educationRequirements: (enrichment?.education || []).map((e: any) => ({
+          degree: e.degree,
+          subject: e.subject,
+          specialization: e.specialization,
+          minimumPercentage: e.minimum_percentage,
+          minimumMarks: e.minimum_marks,
+          confidenceScore: e.confidence_score,
+        })),
+        experienceRequirements: (enrichment?.experience || []).map((e: any) => ({
+          totalYears: e.total_years,
+          minYears: e.min_years,
+          type: e.experience_type,
+          confidenceScore: e.confidence_score,
+        })),
+        selectionProcessStages: (enrichment?.selectionProcess || []).map((s: any) => ({
+          order: s.stage_order,
+          name: typeof s.stage_name === 'string' ? s.stage_name : JSON.stringify(s.stage_name),
+          scheduledDate: s.scheduled_date,
+          durationMinutes: s.duration_minutes,
+          totalMarks: s.total_marks,
+          minimumMarks: s.minimum_marks,
+        })),
+        requiredDocuments: (enrichment?.documents || []).map((d: any) => ({
+          name: d.document_name,
+          category: d.document_category,
+          isRequired: d.is_required,
+        })),
+        importantDates: (enrichment?.importantDates || []).map((d: any) => ({
+          type: d.date_type,
+          date: d.date_value,
+        })),
+        ageRules: (enrichment?.ageRules || []).map((a: any) => ({
+          category: a.category,
+          maxAge: a.max_age,
+          relaxationYears: a.relaxation_years,
+          ruleType: a.rule_type,
+          note: a.note,
+        })),
       }}
       locale={locale}
       canonicalUrl={canonicalUrl}

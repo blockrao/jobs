@@ -271,6 +271,89 @@ async function getPostEnrichmentData(postId: number | string): Promise<any> {
 }
 
 /**
+ * Fetch enrichment detail tables for a post (vacancies, education, experience, etc.)
+ * These are fetched in parallel with FJA data for Phase 1 P0 data unification
+ */
+async function getPostDetailEnrichment(postId: number | string): Promise<any> {
+  const db = getDb();
+
+  try {
+    const [vacancies, education, experience, selectionProcess, documents, importantDates, ageRules] = await Promise.all([
+      // Vacancies by category
+      db.execute<any>(sql`
+        SELECT id, total_vacancies, category, location, location_count, category_count, source
+        FROM posts_vacancies
+        WHERE post_id = ${postId}
+        ORDER BY category
+      `),
+      // Education requirements
+      db.execute<any>(sql`
+        SELECT id, degree, subject, specialization, minimum_percentage, minimum_marks, source, confidence_score
+        FROM posts_education
+        WHERE post_id = ${postId}
+        ORDER BY degree
+      `),
+      // Experience requirements
+      db.execute<any>(sql`
+        SELECT id, total_years, min_years, experience_type, source, confidence_score
+        FROM posts_experience
+        WHERE post_id = ${postId}
+        ORDER BY experience_type
+      `),
+      // Selection process stages
+      db.execute<any>(sql`
+        SELECT id, stage_order, stage_name, scheduled_date, duration_minutes, total_marks, minimum_marks, passing_marks, mode, is_qualifying
+        FROM posts_selection_process
+        WHERE post_id = ${postId}
+        ORDER BY stage_order
+      `),
+      // Required documents
+      db.execute<any>(sql`
+        SELECT id, document_name, document_category, is_required, required_for_categories
+        FROM posts_documents
+        WHERE post_id = ${postId}
+        ORDER BY document_category, document_name
+      `),
+      // Important dates
+      db.execute<any>(sql`
+        SELECT id, date_type, date_value
+        FROM posts_important_dates
+        WHERE post_id = ${postId}
+        ORDER BY date_type
+      `),
+      // Age rules and relaxations
+      db.execute<any>(sql`
+        SELECT id, category, max_age, relaxation_years, note, rule_type, condition_text
+        FROM post_age_rules
+        WHERE post_id = ${postId}
+        ORDER BY category
+      `),
+    ]);
+
+    return {
+      vacancies: vacancies || [],
+      education: education || [],
+      experience: experience || [],
+      selectionProcess: selectionProcess || [],
+      documents: documents || [],
+      importantDates: importantDates || [],
+      ageRules: ageRules || [],
+    };
+  } catch (err) {
+    console.warn("Error fetching detail enrichment for post", postId, ":", err);
+    return {
+      vacancies: [],
+      education: [],
+      experience: [],
+      selectionProcess: [],
+      documents: [],
+      importantDates: [],
+      ageRules: [],
+    };
+  }
+}
+
+/**
  * Fetch a single post by recruitment and post slugs with enrichment data
  * PERF-004: Optimized for ISR caching - core post query <500ms,
  * enrichment/FJA extracted lazily
@@ -294,10 +377,11 @@ export async function getPostBySlug(
 
     const postId = coreData.id;
 
-    // SECONDARY PATH: Fetch FJA and enrichment data in parallel
-    const [fjaData, enrichmentData] = await Promise.all([
+    // SECONDARY PATH: Fetch FJA, enrichment, and detail tables in parallel
+    const [fjaData, enrichmentData, detailEnrichment] = await Promise.all([
       getFjaExtractForPost(postId),
       getPostEnrichmentData(postId),
+      getPostDetailEnrichment(postId),
     ]);
 
     // Merge results
@@ -396,7 +480,25 @@ export async function getPostBySlug(
       // Do not gate the entire enrichment object on vacanciesTotal: other
       // valid enrichment fields (dates, fees, eligibility, salary) can exist
       // independently of a vacancy count.
-      enrichment: enrichmentData ?? undefined,
+      enrichment: enrichmentData ? {
+        ...enrichmentData,
+        // Include detail enrichment tables
+        vacancies: detailEnrichment.vacancies,
+        education: detailEnrichment.education,
+        experience: detailEnrichment.experience,
+        selectionProcess: detailEnrichment.selectionProcess,
+        documents: detailEnrichment.documents,
+        importantDates: detailEnrichment.importantDates,
+        ageRules: detailEnrichment.ageRules,
+      } : {
+        vacancies: detailEnrichment.vacancies,
+        education: detailEnrichment.education,
+        experience: detailEnrichment.experience,
+        selectionProcess: detailEnrichment.selectionProcess,
+        documents: detailEnrichment.documents,
+        importantDates: detailEnrichment.importantDates,
+        ageRules: detailEnrichment.ageRules,
+      },
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", {
