@@ -346,22 +346,51 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
 
     // CRITICAL FIX: db.execute() may return { rows: [...] } or an array directly
     // Extract rows safely to ensure Array.isArray() checks in component pass
-    const extractRows = (result: any): any[] => {
-      if (Array.isArray(result)) return result;
-      if (result && typeof result === 'object' && Array.isArray(result.rows)) return result.rows;
+    const extractRows = (result: any, label: string): any[] => {
+      if (Array.isArray(result)) {
+        console.log(`[getPostDetailEnrichment] ${label}: Array with ${result.length} items`);
+        return result;
+      }
+      if (result && typeof result === 'object' && Array.isArray(result.rows)) {
+        console.log(`[getPostDetailEnrichment] ${label}: Object.rows with ${result.rows.length} items`);
+        return result.rows;
+      }
+      console.log(`[getPostDetailEnrichment] ${label}: Neither array nor object.rows, returning empty`);
       return [];
     };
 
+    const vacanciesList = extractRows(vacancies, 'vacancies');
+    const educationList = extractRows(education, 'education');
+    const experienceList = extractRows(experience, 'experience');
+    const selectionProcessList = extractRows(selectionProcess, 'selectionProcess');
+    const documentsList = extractRows(documents, 'documents');
+    const importantDatesList = extractRows(importantDates, 'importantDates');
+    const ageRulesList = extractRows(ageRules, 'ageRules');
+    const applicationFeesList = extractRows(applicationFees, 'applicationFees');
+    const officialLinksList = extractRows(officialLinks, 'officialLinks');
+
+    console.log(`[getPostDetailEnrichment] Post ${postId} enrichment counts:`, {
+      vacancies: vacanciesList.length,
+      education: educationList.length,
+      experience: experienceList.length,
+      selectionProcess: selectionProcessList.length,
+      documents: documentsList.length,
+      importantDates: importantDatesList.length,
+      ageRules: ageRulesList.length,
+      applicationFees: applicationFeesList.length,
+      officialLinks: officialLinksList.length,
+    });
+
     return {
-      vacancies: extractRows(vacancies),
-      education: extractRows(education),
-      experience: extractRows(experience),
-      selectionProcess: extractRows(selectionProcess),
-      documents: extractRows(documents),
-      importantDates: extractRows(importantDates),
-      ageRules: extractRows(ageRules),
-      applicationFees: extractRows(applicationFees),
-      officialLinks: extractRows(officialLinks),
+      vacancies: vacanciesList,
+      education: educationList,
+      experience: experienceList,
+      selectionProcess: selectionProcessList,
+      documents: documentsList,
+      importantDates: importantDatesList,
+      ageRules: ageRulesList,
+      applicationFees: applicationFeesList,
+      officialLinks: officialLinksList,
     };
   } catch (err) {
     console.warn("Error fetching detail enrichment for post", postId, ":", err);
