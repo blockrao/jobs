@@ -278,63 +278,55 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
   const db = getDb();
 
   try {
-    const [vacancies, education, experience, selectionProcess, documents, importantDates, ageRules, applicationFees, officialLinks] = await Promise.all([
-      // Vacancies by category
+    // Use Promise.allSettled to prevent one failing query from blocking others
+    const results = await Promise.allSettled([
       db.execute<any>(sql`
         SELECT id, total_vacancies, category, location, location_count, category_count, source
         FROM posts_vacancies
         WHERE post_id = ${postId}
         ORDER BY category
       `),
-      // Education requirements
       db.execute<any>(sql`
         SELECT id, degree, subject, specialization, minimum_percentage AS "minimumPercentage", minimum_marks AS "minimumMarks", source, confidence_score AS "confidenceScore"
         FROM posts_education
         WHERE post_id = ${postId}
         ORDER BY degree
       `),
-      // Experience requirements
       db.execute<any>(sql`
         SELECT id, total_years AS "totalYears", min_years AS "minYears", experience_type AS "experienceType", source, confidence_score AS "confidenceScore"
         FROM posts_experience
         WHERE post_id = ${postId}
         ORDER BY experience_type
       `),
-      // Selection process stages
       db.execute<any>(sql`
         SELECT id, stage_order AS "step", stage_name AS "name", scheduled_date AS "scheduledDate", duration_minutes AS "durationMinutes", total_marks AS "totalMarks", minimum_marks AS "minimumMarks", passing_marks AS "passingMarks", mode, is_qualifying AS "isQualifying"
         FROM posts_selection_process
         WHERE post_id = ${postId}
         ORDER BY stage_order
       `),
-      // Required documents
       db.execute<any>(sql`
         SELECT id, document_name AS "name", document_category AS "category", is_required AS "required", required_for_categories AS "requiredForCategories"
         FROM posts_documents
         WHERE post_id = ${postId}
         ORDER BY document_category, document_name
       `),
-      // Important dates
       db.execute<any>(sql`
         SELECT id, date_type AS "label", date_value AS "date"
         FROM posts_important_dates
         WHERE post_id = ${postId}
         ORDER BY date_type
       `),
-      // Age rules and relaxations
       db.execute<any>(sql`
         SELECT id, category, max_age AS "max", relaxation_years AS "relaxationYears", note, rule_type AS "ruleType", condition_text AS "conditionText"
         FROM post_age_rules
         WHERE post_id = ${postId}
         ORDER BY category
       `),
-      // Application fees
       db.execute<any>(sql`
         SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods"
         FROM posts_application_fee
         WHERE post_id = ${postId}
       `),
-      // Official links (notification, apply, admit card, result, etc.)
       db.execute<any>(sql`
         SELECT id, link_type AS "type", link_url AS "url", link_title AS "title", source
         FROM posts_official_links
@@ -342,6 +334,27 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
         ORDER BY link_type
       `),
     ]);
+
+    // Extract results, handling rejections gracefully
+    const extractResult = (result: PromiseSettledResult<any>, label: string): any => {
+      if (result.status === 'rejected') {
+        console.error(`[getPostDetailEnrichment] ${label} query failed:`, result.reason instanceof Error ? result.reason.message : String(result.reason));
+        return null;
+      }
+      return result.value;
+    };
+
+    const [vacancies, education, experience, selectionProcess, documents, importantDates, ageRules, applicationFees, officialLinks] = [
+      extractResult(results[0], 'vacancies'),
+      extractResult(results[1], 'education'),
+      extractResult(results[2], 'experience'),
+      extractResult(results[3], 'selectionProcess'),
+      extractResult(results[4], 'documents'),
+      extractResult(results[5], 'importantDates'),
+      extractResult(results[6], 'ageRules'),
+      extractResult(results[7], 'applicationFees'),
+      extractResult(results[8], 'officialLinks'),
+    ];
 
     // CRITICAL FIX: db.execute() may return { rows: [...] } or an array directly
     // Extract rows safely to ensure Array.isArray() checks in component pass
