@@ -22,8 +22,6 @@
 import type React from 'react';
 import { formatDate, formatCurrency, formatDeadlineStatus } from '@/lib/formatting';
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
-import FAQSection from '@/components/job-posting/faq/faq-section';
-import { generateFAQs } from '@/components/job-posting/faq/faq-templates';
 
 // Helper: Parse JSON strings safely
 function safeJsonParse<T>(value: unknown, fallback: T): T {
@@ -661,30 +659,26 @@ export default function JobDetailPageProduction({
             )}
           </div>
 
-          {/* FAQs — Auto-generated from post metadata or provided via prop */}
-          {(() => {
-            // Use provided FAQs or generate from post metadata
-            const faqsToDisplay = faqs && faqs.length > 0 ? faqs : generateFAQs({
-              title: post.title,
-              organizationName: post.organizationName || undefined,
-              recruitmentName: post.recruitmentName || undefined,
-              qualificationText: qualificationText || undefined,
-              experienceText: experienceText || undefined,
-              locationCity: post.locationCity || undefined,
-              locationState: post.locationState || undefined,
-              salary: { min: salaryMin ?? undefined, max: salaryMax ?? undefined },
-              applicationDeadline: applicationDeadline || undefined,
-              examDate: post.importantDates?.find(d => d.type?.toLowerCase().includes('exam'))
-                ? new Date(post.importantDates.find(d => d.type?.toLowerCase().includes('exam'))?.date || '')
-                : undefined,
-              ageMin: post.ageRules?.[0]?.maxAge ? 18 : undefined,
-              ageMax: post.ageRules?.[0]?.maxAge,
-            });
-
-            return faqsToDisplay && faqsToDisplay.length > 0 ? (
-              <FAQSection faqs={faqsToDisplay} postId={post.id} postTitle={post.title} />
-            ) : null;
-          })()}
+          {/* FAQs */}
+          {faqs && faqs.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Frequently Asked Questions
+              </h2>
+              <div className="space-y-3">
+                {faqs.map((faq, idx) => (
+                  <details key={idx} className="border border-gray-200 dark:border-slate-800 rounded-lg">
+                    <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-slate-900">
+                      {faq.question}
+                    </summary>
+                    <div className="px-4 py-3 border-t border-gray-200 dark:border-slate-800 text-gray-700 dark:text-gray-300">
+                      {faq.answer}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Related Jobs */}
           {relatedJobs && relatedJobs.length > 0 && (
