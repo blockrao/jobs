@@ -1,11 +1,13 @@
 /**
- * /recruitments/[slug] — permanent redirect to the canonical /jobs/[slug] URL.
+ * /recruitments/[slug] — permanent redirect to the canonical recruitment hub
  *
- * P0-1 (canonical URL): /jobs/[slug] is the one public entity URL.
- * This route 301-redirects all traffic and crawlers to the canonical path.
+ * FIX-005: Redirect chain fixed for locale-aware routing
  *
- * Previously this file rendered a full hub page; that content now lives at
- * /jobs/[slug]/page.tsx and is not duplicated here.
+ * Old: /recruitments/[slug] → /jobs/[slug] (OLD URL - no locale prefix)
+ * New: /recruitments/[slug] → /en/jobs/[slug] (NEW URL - with locale)
+ *
+ * This is a permanent 301 redirect. Crawlers see the final canonical URL
+ * as /en/jobs/[slug], preserving SEO value from old /recruitments links.
  */
 
 import { permanentRedirect } from "next/navigation";
@@ -14,6 +16,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export default async function RecruitmentsRedirectPage({ params }: Props) {
   const { slug } = await params;
-  // DISC-001: redirect() is a 307 (temporary); crawlers need the permanent signal.
-  permanentRedirect(`/jobs/${slug}`);
+  // FIX-005: Redirect to new locale-based recruitment hub URL
+  // permanentRedirect produces HTTP 301, which preserves SEO value
+  permanentRedirect(`/en/jobs/${slug}`);
 }
