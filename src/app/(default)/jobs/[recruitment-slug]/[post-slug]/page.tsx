@@ -1,19 +1,16 @@
 /**
- * Dynamic Job Posting Page Route
- * Renders individual job posting with enriched data and recruitment context
- * Route: /jobs/[recruitment-slug]/[post-slug]
+ * Dynamic Job Posting Page Route — DEPRECATED
  *
- * Architecture (locked 2026-10-09):
- *   One authoritative source → canonical entity graph → independent projections.
- *   Hub and Leaf both consume the entity graph directly. Leaf does NOT inherit
- *   from the Hub. Entity ownership governs resolver choice:
- *   - Post-owned facts: resolvePostVacancy, resolveSalary, resolveDeadline, etc.
- *   - Recruitment-owned facts: resolveRecruitmentOfficialSource, resolveRecruitmentApplicationUrl,
- *     resolveRecruitmentEmployer, resolveRecruitmentSelectionProcess.
- *   - Do NOT put Recruitment total into Post totalJobOpenings.
+ * FIX-004: Redirects old route to new locale-based route
+ *
+ * Old route: /jobs/[recruitment-slug]/[post-slug]
+ * New route: /[locale]/jobs/[slug]/[post-slug]
+ *
+ * This file now redirects 301 (permanent) to preserve SEO value and prevent 404s.
+ * Old bookmarks, indexed URLs, and external links will automatically redirect to the new locale routes.
  */
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { cache } from "react";
 import { Metadata } from "next";
@@ -204,89 +201,13 @@ export async function generateMetadata({
   };
 }
 
+// FIX-004: Redirect old route to new locale-based route
 export default async function Page({ params }: JobPostingPageRouteProps) {
   const resolvedParams = await params;
   const recruitmentSlug = resolvedParams["recruitment-slug"];
   const postSlug = resolvedParams["post-slug"];
 
-  // Fetch post with enrichment data
-  const post = await getPostBySlugForRequest(recruitmentSlug, postSlug);
-
-  if (!post) {
-    notFound();
-  }
-
-  // All posts are exposed directly to schema and UI. The frontend shows
-  // "reported" labels for posts with unverified source inventory to signal
-  // data confidence; this is the consumer protection mechanism, not schema suppression.
-
-  // Fetch recruitment data with all posts for context
-  const recruitmentData = await getRecruitmentWithPosts(recruitmentSlug);
-
-  // ── Post-owned resolver facts ────────────────────────────────────────────
-  // Entity ownership: Post. These facts describe the specific Post.
-  const now = new Date();
-  const resolvedFacts = {
-    vacancyCount: resolvePostVacancy(post),
-    salary: resolveSalary(post),
-    deadline: resolveDeadline(post, now),
-  };
-
-  // ── Recruitment-owned resolver facts ─────────────────────────────────────
-  // Entity ownership: Recruitment. The Post Leaf shows these facts in context
-  // (e.g. "Apply Online" CTA, Official Notification link) but the canonical
-  // authority remains with the Recruitment entity, not the Post.
-  // Source: recruitmentData.recruitment from getRecruitmentWithPosts (independent
-  // query — Leaf does NOT inherit from Hub; both consume entity graph directly).
-  const recruitmentResolvedFacts = recruitmentData?.recruitment
-    ? {
-        officialSource: resolveRecruitmentOfficialSource(recruitmentData.recruitment),
-        applicationUrl: resolveRecruitmentApplicationUrl(recruitmentData.recruitment),
-        employer: resolveRecruitmentEmployer(recruitmentData.recruitment),
-        selectionProcess: resolveRecruitmentSelectionProcess(recruitmentData.recruitment),
-      }
-    : null;
-
-  return (
-    <>
-      <PostLeafStructuredData
-        post={{
-          id: post.id,
-          title: post.title,
-          slug: post.slug,
-          description: post.description ?? null,
-          organizationName: post.organizationName ?? null,
-          recruitmentSlug: post.recruitmentSlug,
-          recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
-          employmentType: post.employmentType ?? null,
-          locationCity: post.locationCity ?? null,
-          locationState: post.locationState ?? null,
-          notificationPublicationDate: post.notificationPublicationDate ?? null,
-          postedAt: post.postedAt ?? null,
-          updatedAt: post.updatedAt ?? null,
-          // Official advertisement number from source inventory — used as schema.org identifier
-          vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
-          officialSourceUrl: post.officialSourceUrl ?? null,
-          // Phase 1 eligibility text from source inventory — display-quality, not computed.
-          // fjaExtract.eligibilityRaw is the primary field; qualificationRaw is the fallback.
-          // Per ELIG-001: no computation, just pass what we have.
-          qualificationText:
-            post.fjaExtract?.eligibilityRaw ??
-            post.fjaExtract?.qualificationRaw ??
-            null,
-          experienceText: post.fjaExtract?.experienceRaw ?? null,
-        }}
-        resolvedVacancy={resolvedFacts.vacancyCount}
-        resolvedSalary={resolvedFacts.salary}
-        resolvedDeadline={resolvedFacts.deadline}
-      />
-      <JobPostingPage
-        post={post}
-        recruitment={recruitmentData}
-        isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
-        resolvedFacts={resolvedFacts}
-        recruitmentResolvedFacts={recruitmentResolvedFacts}
-      />
-    </>
-  );
+  // Redirect to new locale-based route with English as default
+  // This is a 301 permanent redirect, which preserves SEO value
+  redirect(`/en/jobs/${recruitmentSlug}/${postSlug}`);
 }

@@ -22,14 +22,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ORDER BY p.updated_at DESC
     `);
 
-    const postUrls = allPosts.map((post) => ({
-      url: `https://www.joboye.com/jobs/${post.recruitment_slug}/${post.post_slug}`,
+    // FIX-001: Generate URLs for live locale routes (/en/jobs/...)
+    // These match the actual routes in src/app/[locale]/jobs/[slug]/[post-slug]
+    const postUrlsEn = allPosts.map((post) => ({
+      url: `https://www.joboye.com/en/jobs/${post.recruitment_slug}/${post.post_slug}`,
       lastModified: post.updated_at instanceof Date ? post.updated_at : new Date(post.updated_at),
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }));
 
-    // Hub pages
+    // Also include Hindi locale (lower priority, but still indexable)
+    const postUrlsHi = allPosts.map((post) => ({
+      url: `https://www.joboye.com/hi/jobs/${post.recruitment_slug}/${post.post_slug}`,
+      lastModified: post.updated_at instanceof Date ? post.updated_at : new Date(post.updated_at),
+      changeFrequency: 'daily' as const,
+      priority: 0.7, // Slightly lower than EN
+    }));
+
+    // Hub pages (also with locale)
     const hubUrls: MetadataRoute.Sitemap = [
       {
         url: 'https://www.joboye.com',
@@ -38,14 +48,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1.0,
       },
       {
-        url: 'https://www.joboye.com/jobs',
+        url: 'https://www.joboye.com/en/jobs',
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 0.95,
       },
+      {
+        url: 'https://www.joboye.com/hi/jobs',
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.90,
+      },
     ];
 
-    return [...hubUrls, ...postUrls];
+    return [...hubUrls, ...postUrlsEn, ...postUrlsHi];
   } catch (error) {
     console.error('[sitemap] Error fetching posts:', error);
     // Fallback to at least hub pages
