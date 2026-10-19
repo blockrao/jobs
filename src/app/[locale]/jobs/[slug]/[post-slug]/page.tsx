@@ -120,16 +120,24 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
 
-  const [recruitmentData, relatedPosts] = await Promise.all([
-    getRecruitmentWithPosts(post.recruitmentSlug),
-    getRelatedPostsForLeafCached(
-      Number(post.id),
-      post.positionId ?? null,
-      post.organizationId ? Number(post.organizationId) : null,
-      post.locationState ?? null,
-      post.recruitmentId ? Number(post.recruitmentId) : null
-    ),
-  ]);
+  console.log(`[LocaleJobPostingPage] Fetching recruitment data and related posts...`);
+  let recruitmentData, relatedPosts;
+  try {
+    [recruitmentData, relatedPosts] = await Promise.all([
+      getRecruitmentWithPosts(post.recruitmentSlug),
+      getRelatedPostsForLeafCached(
+        Number(post.id),
+        post.positionId ?? null,
+        post.organizationId ? Number(post.organizationId) : null,
+        post.locationState ?? null,
+        post.recruitmentId ? Number(post.recruitmentId) : null
+      ),
+    ]);
+    console.log(`[LocaleJobPostingPage] Recruitment data and related posts loaded successfully`);
+  } catch (err) {
+    console.error(`[LocaleJobPostingPage] Error fetching recruitment data:`, err);
+    throw err;
+  }
   const now = new Date();
   const resolvedFacts = {
     vacancyCount: resolvePostVacancy(post),
