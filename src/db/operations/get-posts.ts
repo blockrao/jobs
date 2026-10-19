@@ -344,16 +344,24 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       `),
     ]);
 
+    // CRITICAL FIX: db.execute() may return { rows: [...] } or an array directly
+    // Extract rows safely to ensure Array.isArray() checks in component pass
+    const extractRows = (result: any): any[] => {
+      if (Array.isArray(result)) return result;
+      if (result && typeof result === 'object' && Array.isArray(result.rows)) return result.rows;
+      return [];
+    };
+
     return {
-      vacancies: vacancies || [],
-      education: education || [],
-      experience: experience || [],
-      selectionProcess: selectionProcess || [],
-      documents: documents || [],
-      importantDates: importantDates || [],
-      ageRules: ageRules || [],
-      applicationFees: applicationFees || [],
-      officialLinks: officialLinks || [],
+      vacancies: extractRows(vacancies),
+      education: extractRows(education),
+      experience: extractRows(experience),
+      selectionProcess: extractRows(selectionProcess),
+      documents: extractRows(documents),
+      importantDates: extractRows(importantDates),
+      ageRules: extractRows(ageRules),
+      applicationFees: extractRows(applicationFees),
+      officialLinks: extractRows(officialLinks),
     };
   } catch (err) {
     console.warn("Error fetching detail enrichment for post", postId, ":", err);
