@@ -92,76 +92,83 @@ async function getPostCoreData(
   recruitmentSlug: string,
   postSlug: string
 ): Promise<any> {
-  const db = getDb();
+  try {
+    console.log(`[getPostCoreData] Querying post: ${recruitmentSlug}/${postSlug}`);
+    const db = getDb();
 
-  // CRITICAL PATH: Fetch only core post + recruitment data (no enrichment, no FJA)
-  // This subset completes in <100ms and allows ISR caching to work
-  const result = await db.execute<any>(sql`
-    SELECT
-      p.id,
-      p.title,
-      p.slug,
-      p.position_id AS "positionId",
-      p."organizationId",
-      p."organizationName",
-      COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
-      p."recruitmentName",
-      r.slug AS "recruitmentSlug",
-      o.sector AS "organizationSector",
-      p."examType",
-      p."examTypeSlug",
-      p.description,
-      p.employment_type AS "employmentType",
-      p.location_city AS "locationCity",
-      p.location_state AS "locationState",
-      p.location_country AS "locationCountry",
-      p.experience_level AS "experienceLevel",
-      p.job_category_tags AS "jobCategoryTags",
-      p.posting_status AS "postingStatus",
-      p.source_post_code AS "sourcePostCode",
-      p.application_method AS "applicationMethod",
-      p.application_email AS "applicationEmail",
-      p.application_url AS "applicationUrl",
-      p.contact_department AS "contactDepartment",
-      p.contact_person AS "contactPerson",
-      p.vacancy_details AS "vacancyDetails",
-      p.pay_level AS "payLevel",
-      p.key_dates AS "keyDates",
-      p.required_skills AS "requiredSkills",
-      p.application_checklist AS "applicationChecklist",
-      p."isLive",
-      p."postedAt",
-      p."createdAt",
-      p."updatedAt",
-      p."officialSourceUrl",
-      p."applyPortalUrl",
-      p.vacancy_total AS "vacancyTotal",
-      p.salary_min AS "legacySalaryMin",
-      p.salary_max AS "legacySalaryMax",
-      r.total_vacancies AS "recruitmentVacancyTotal",
-      r.official_notification_url AS "recruitmentOfficialNotificationUrl",
-      r.official_application_url AS "recruitmentOfficialApplicationUrl",
-      r.application_end_date AS "recruitmentApplicationEndDate",
-      r.application_start_date AS "recruitmentApplicationStartDate",
-      r.notification_date AS "notificationPublicationDate",
-      r.selection_process AS "recruitmentSelectionProcess"
-    FROM posts p
-    LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
-    LEFT JOIN organizations o ON o.id = r.organization_id
-    WHERE p.slug = ${postSlug}
-      AND (
-        r.slug = ${recruitmentSlug}
-        OR r.id IN (
-          SELECT recruitment_id
-          FROM recruitment_slug_redirects
-          WHERE old_slug = ${recruitmentSlug}
+    // CRITICAL PATH: Fetch only core post + recruitment data (no enrichment, no FJA)
+    // This subset completes in <100ms and allows ISR caching to work
+    const result = await db.execute<any>(sql`
+      SELECT
+        p.id,
+        p.title,
+        p.slug,
+        p.position_id AS "positionId",
+        p."organizationId",
+        p."organizationName",
+        COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
+        p."recruitmentName",
+        r.slug AS "recruitmentSlug",
+        o.sector AS "organizationSector",
+        p."examType",
+        p."examTypeSlug",
+        p.description,
+        p.employment_type AS "employmentType",
+        p.location_city AS "locationCity",
+        p.location_state AS "locationState",
+        p.location_country AS "locationCountry",
+        p.experience_level AS "experienceLevel",
+        p.job_category_tags AS "jobCategoryTags",
+        p.posting_status AS "postingStatus",
+        p.source_post_code AS "sourcePostCode",
+        p.application_method AS "applicationMethod",
+        p.application_email AS "applicationEmail",
+        p.application_url AS "applicationUrl",
+        p.contact_department AS "contactDepartment",
+        p.contact_person AS "contactPerson",
+        p.vacancy_details AS "vacancyDetails",
+        p.pay_level AS "payLevel",
+        p.key_dates AS "keyDates",
+        p.required_skills AS "requiredSkills",
+        p.application_checklist AS "applicationChecklist",
+        p."isLive",
+        p."postedAt",
+        p."createdAt",
+        p."updatedAt",
+        p."officialSourceUrl",
+        p."applyPortalUrl",
+        p.vacancy_total AS "vacancyTotal",
+        p.salary_min AS "legacySalaryMin",
+        p.salary_max AS "legacySalaryMax",
+        r.total_vacancies AS "recruitmentVacancyTotal",
+        r.official_notification_url AS "recruitmentOfficialNotificationUrl",
+        r.official_application_url AS "recruitmentOfficialApplicationUrl",
+        r.application_end_date AS "recruitmentApplicationEndDate",
+        r.application_start_date AS "recruitmentApplicationStartDate",
+        r.notification_date AS "notificationPublicationDate",
+        r.selection_process AS "recruitmentSelectionProcess"
+      FROM posts p
+      LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      LEFT JOIN organizations o ON o.id = r.organization_id
+      WHERE p.slug = ${postSlug}
+        AND (
+          r.slug = ${recruitmentSlug}
+          OR r.id IN (
+            SELECT recruitment_id
+            FROM recruitment_slug_redirects
+            WHERE old_slug = ${recruitmentSlug}
+          )
         )
-      )
-      AND p."isLive" = true
-    LIMIT 1
-  `);
+        AND p."isLive" = true
+      LIMIT 1
+    `);
 
-  return result && result.length > 0 ? result[0] : null;
+    console.log(`[getPostCoreData] Query result: ${result?.length ? `Found row` : 'No rows'}`);
+    return result && result.length > 0 ? result[0] : null;
+  } catch (err) {
+    console.error(`[getPostCoreData] Error executing query:`, err instanceof Error ? err.message : String(err));
+    throw err;
+  }
 }
 
 /**
