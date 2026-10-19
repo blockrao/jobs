@@ -1,48 +1,21 @@
 /**
- * Locale-aware Post Leaf route with Enterprise SEO/GEO/AEO Schema
+ * Post Detail Page - Minimalist Architecture
  *
- * Renders 7 structured data schemas for maximum search engine visibility:
- * 1. Meta Tags (OG, Twitter, hreflang, geo)
- * 2. FAQ Page (AEO optimization)
- * 3. Organization (employer branding)
- * 4. Local Business (geo-targeting)
- * 5. Web Page (freshness signals)
- * 6. Event (application timeline)
- * 7. Aggregate Offer (salary indexing)
- *
- * English is indexable; Hindi remains an English-content fallback until
- * verified Post translations are part of the canonical Post read contract.
+ * Single query, simple rendering, strong SEO.
+ * - Metadata: OG tags, canonical, geo tags
+ * - Schema: JobPosting + BreadcrumbList only
+ * - Rendering: Post data + enrichment fields, no client components
+ * - ISR: 1 day (posts stable)
  */
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { checkSlugRedirect } from "@/lib/slug-redirects";
 
-export const revalidate = 300; // 5 min ISR - posts are stable after enrichment
+export const revalidate = 86400; // 1 day - posts are stable
+
 import { entitySeo } from "@/lib/seo";
-import { getPostBySlugCached, getRelatedPostsForLeafCached } from "@/db/operations/get-posts";
-import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
-import JobPostingPage from "@/components/job-posting/job-posting-page";
-import JobPostingPageClient from "@/components/job-posting/job-posting-page-client";
+import { getPostBySlugCached } from "@/db/operations/get-posts";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
-
-// ===== NEW: Enterprise schema components =====
-import { generateMetaTags } from "@/components/job-posting/structured-data/meta-tags-generator";
-import FAQPageSchema from "@/components/job-posting/structured-data/faq-page-schema";
-import OrganizationSchema from "@/components/job-posting/structured-data/organization-schema";
-import LocalBusinessSchema from "@/components/job-posting/structured-data/local-business-schema";
-import WebPageSchema from "@/components/job-posting/structured-data/web-page-schema";
-import EventSchema from "@/components/job-posting/structured-data/event-schema";
-import AggregateOfferSchema from "@/components/job-posting/structured-data/aggregate-offer-schema";
-
-import {
-  resolvePostVacancy,
-  resolveSalary,
-  resolveDeadline,
-  resolveRecruitmentOfficialSource,
-  resolveRecruitmentApplicationUrl,
-  resolveRecruitmentEmployer,
-  resolveRecruitmentSelectionProcess,
-} from "@/lib/resolvers/fact-resolvers";
 
 interface Props {
   params: Promise<{
@@ -55,15 +28,6 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
 
-  // Check for slug redirects and redirect if needed
-  const newRecruitmentSlug = await checkSlugRedirect(recruitmentSlug, "recruitment");
-  const newPostSlug = await checkSlugRedirect(postSlug, "post");
-
-  if (newRecruitmentSlug || newPostSlug) {
-    const redirectUrl = `/jobs/${newRecruitmentSlug || recruitmentSlug}/${newPostSlug || postSlug}`;
-    // Note: can't actually redirect in generateMetadata, but the page function will handle it
-  }
-
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) {
@@ -73,108 +37,56 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // ===== NEW: Use enterprise meta-tags-generator for full SEO/GEO/AEO compliance =====
-  const enterpriseMetadata = generateMetaTags({ post, locale });
-
-  // Merge with existing alternates from entitySeo (maintains backward compatibility)
-  const canonicalSlug = post.recruitmentSlug + "/" + post.slug;
-  const seo = entitySeo({
-    base: "/jobs",
-    slug: canonicalSlug,
-    locale,
-    hasHindi: false,
-  });
+  const title = `${post.title} - JobOye`;
+  const description = post.description || `Apply for ${post.title} at JobOye`;
+  const canonicalUrl = `/jobs/${post.recruitmentSlug}/${post.slug}`;
 
   return {
-    ...enterpriseMetadata,
-    // Merge alternates: use enterprise version but preserve seo.robots if different
-    alternates: {
-      ...enterpriseMetadata.alternates,
-      canonical: enterpriseMetadata.alternates?.canonical,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
     },
-    robots: seo.robots,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
   };
 }
 
 export default async function LocaleJobPostingPage({ params }: Props) {
   const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
 
-  // Check for slug redirects (malformed slugs that have been cleaned)
-  console.log(`[LocaleJobPostingPage] Checking slug redirects...`);
-  const newRecruitmentSlug = await checkSlugRedirect(recruitmentSlug, "recruitment");
-  const newPostSlug = await checkSlugRedirect(postSlug, "post");
-
-  if (newRecruitmentSlug || newPostSlug) {
-    const localePrefix = locale === "hi" ? "/hi" : "";
-    const redirectUrl = `${localePrefix}/jobs/${newRecruitmentSlug || recruitmentSlug}/${newPostSlug || postSlug}`;
-    console.log(`[LocaleJobPostingPage] Redirecting to ${redirectUrl}`);
-    redirect(redirectUrl);
-  }
-
-  console.log(`[LocaleJobPostingPage] Fetching post: ${recruitmentSlug}/${postSlug}`);
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
-  console.log(`[LocaleJobPostingPage] Post result:`, post ? `Found (id=${post.id})` : "NOT FOUND");
 
   if (!post) {
-    console.error(`[LocaleJobPostingPage] Post not found for ${recruitmentSlug}/${postSlug}`);
     notFound();
   }
 
-  // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
-  // ARCHITECTURAL FIX: Post already contains denormalized recruitment data - don't re-query.
-  // Related posts fetched async (non-blocking) to prevent one query failure from crashing page.
+  // Minimal HTML render - no client components, no complex logic
+  const enrichment = post.enrichment;
+  const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin;
+  const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax;
+  const applicationDeadline = enrichment?.applicationClosingDate;
+  const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
 
-  // Use post's existing denormalized fields instead of querying getRecruitmentWithPosts
-  const recruitmentData = post.recruitmentName ? {
-    recruitment: {
-      slug: post.recruitmentSlug,
-      name: post.recruitmentName,
-    },
-    isSingleJobRecruitment: false,
-  } : null;
-
-  // Fetch related posts async without blocking - page renders immediately with just post data
-  let relatedPosts = null;
-  try {
-    relatedPosts = await Promise.race([
-      getRelatedPostsForLeafCached(
-        Number(post.id),
-        post.positionId ?? null,
-        post.organizationId ? Number(post.organizationId) : null,
-        post.locationState ?? null,
-        post.recruitmentId ? Number(post.recruitmentId) : null
-      ),
-      new Promise(resolve => setTimeout(() => resolve(null), 2000)) // 2s timeout max
-    ]);
-  } catch (err) {
-    console.warn(`[LocaleJobPostingPage] Related posts fetch failed (non-blocking):`, err instanceof Error ? err.message : String(err));
-    // Don't throw - page still renders without related posts
-  }
-  const now = new Date();
-  const resolvedFacts = {
-    vacancyCount: resolvePostVacancy(post),
-    salary: resolveSalary(post),
-    deadline: resolveDeadline(post, now),
+  const deadline = applicationDeadline ? {
+    date: applicationDeadline,
+    state: new Date() > new Date(applicationDeadline) ? ("CLOSED" as const) : ("OPEN" as const),
+  } : {
+    date: null,
+    state: "UNKNOWN" as const,
   };
-  const recruitmentResolvedFacts = recruitmentData?.recruitment
-    ? {
-        officialSource: resolveRecruitmentOfficialSource(recruitmentData.recruitment),
-        applicationUrl: resolveRecruitmentApplicationUrl(recruitmentData.recruitment),
-        employer: resolveRecruitmentEmployer(recruitmentData.recruitment),
-        selectionProcess: resolveRecruitmentSelectionProcess(recruitmentData.recruitment),
-      }
-    : null;
 
   return (
-    <>
-      {/*
-        SEO-001: the untranslated Hindi route is noindex, so it must not emit JobPosting JSON-LD.
-        Inventory gate: when source verification is pending, suppress JobPosting schema — mirrors
-        the (default) route's suppressJobPostingSchema contract. BreadcrumbList is always emitted.
-
-        NEW: Enterprise schema components (FAQPage, Organization, LocalBusiness, WebPage, Event, AggregateOffer)
-        are emitted for all locales to maximize search engine visibility.
-      */}
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* JobPosting Schema */}
       {locale !== "hi" && (
         <PostLeafStructuredData
           post={{
@@ -184,58 +96,118 @@ export default async function LocaleJobPostingPage({ params }: Props) {
             description: post.description ?? null,
             organizationName: post.organizationName ?? null,
             recruitmentSlug: post.recruitmentSlug,
-            recruitmentName: post.recruitmentName ?? recruitmentData?.recruitment?.name ?? null,
+            recruitmentName: post.recruitmentName ?? null,
             employmentType: post.employmentType ?? null,
             locationCity: post.locationCity ?? null,
             locationState: post.locationState ?? null,
             notificationPublicationDate: post.notificationPublicationDate ?? null,
             postedAt: post.postedAt ?? null,
             updatedAt: post.updatedAt ?? null,
-            // Official advertisement number — used as schema.org identifier; mirrors (default) route.
             vacancyNumber: post.fjaExtract?.advertisementNumber ?? null,
             officialSourceUrl: post.officialSourceUrl ?? null,
-            // Phase 1 eligibility text from source inventory; mirrors (default) route.
             qualificationText:
               post.fjaExtract?.eligibilityRaw ??
               post.fjaExtract?.qualificationRaw ??
               null,
             experienceText: post.fjaExtract?.experienceRaw ?? null,
           }}
-          resolvedVacancy={resolvedFacts.vacancyCount}
-          resolvedSalary={resolvedFacts.salary}
-          resolvedDeadline={resolvedFacts.deadline}
+          resolvedVacancy={vacancies}
+          resolvedSalary={salaryMin ? { min: salaryMin, max: salaryMax ?? salaryMin, currency: "INR", period: "yearly" } : null}
+          resolvedDeadline={deadline}
         />
       )}
 
-      {/* TEMPORARILY DISABLED: Enterprise schema stack
-          These components may be throwing errors - disabled for Phase 1 P0 stability.
-          Only JobPosting schema (PostLeafStructuredData) is essential.
-      {locale !== "hi" && (
-        <>
-          <FAQPageSchema post={post} />
-          <OrganizationSchema post={post} />
-          <LocalBusinessSchema post={post} />
-          <WebPageSchema post={post} />
-          <EventSchema post={post} />
-          <AggregateOfferSchema post={post} />
-        </>
-      )}
-      */}
+      {/* Header */}
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold mb-2">{post.title}</h1>
+        <p className="text-gray-600">
+          {post.organizationName && `${post.organizationName} • `}
+          {post.locationState && `${post.locationState}`}
+        </p>
+      </header>
 
-      <JobPostingPageClient
-        applyUrl={recruitmentResolvedFacts?.applicationUrl}
-        postTitle={post.title}
-      >
-        <JobPostingPage
-          post={post}
-          recruitment={recruitmentData}
-          isSingleJobRecruitment={recruitmentData?.isSingleJobRecruitment}
-          locale={locale}
-          resolvedFacts={resolvedFacts}
-          recruitmentResolvedFacts={recruitmentResolvedFacts}
-          relatedPosts={relatedPosts}
-        />
-      </JobPostingPageClient>
-    </>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-3 gap-8">
+        {/* Left Column - Details */}
+        <div className="col-span-2 space-y-6">
+          {/* Description */}
+          {post.description && (
+            <section>
+              <h2 className="text-2xl font-bold mb-4">About This Position</h2>
+              <div className="prose prose-sm max-w-none">
+                {post.description}
+              </div>
+            </section>
+          )}
+
+          {/* Qualification */}
+          {post.fjaExtract?.qualificationRaw && (
+            <section>
+              <h2 className="text-2xl font-bold mb-4">Qualifications</h2>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {post.fjaExtract.qualificationRaw}
+              </p>
+            </section>
+          )}
+
+          {/* Experience */}
+          {post.fjaExtract?.experienceRaw && (
+            <section>
+              <h2 className="text-2xl font-bold mb-4">Experience Required</h2>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {post.fjaExtract.experienceRaw}
+              </p>
+            </section>
+          )}
+        </div>
+
+        {/* Right Column - Quick Facts */}
+        <aside className="bg-gray-50 p-6 rounded-lg h-fit">
+          <h3 className="text-lg font-bold mb-4">Quick Facts</h3>
+          <dl className="space-y-4 text-sm">
+            {vacancies > 0 && (
+              <div>
+                <dt className="font-semibold text-gray-700">Vacancies</dt>
+                <dd className="text-gray-900">{vacancies}</dd>
+              </div>
+            )}
+            {post.locationState && (
+              <div>
+                <dt className="font-semibold text-gray-700">Location</dt>
+                <dd className="text-gray-900">{post.locationState}</dd>
+              </div>
+            )}
+            {salaryMin && (
+              <div>
+                <dt className="font-semibold text-gray-700">Salary</dt>
+                <dd className="text-gray-900">
+                  ₹{salaryMin.toLocaleString()} - ₹{(salaryMax ?? salaryMin).toLocaleString()}
+                </dd>
+              </div>
+            )}
+            {applicationDeadline && (
+              <div>
+                <dt className="font-semibold text-gray-700">Apply By</dt>
+                <dd className="text-gray-900">
+                  {new Date(applicationDeadline).toLocaleDateString("en-IN")}
+                </dd>
+              </div>
+            )}
+            {post.officialSourceUrl && (
+              <div className="pt-4">
+                <a
+                  href={post.officialSourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700"
+                >
+                  Apply Now
+                </a>
+              </div>
+            )}
+          </dl>
+        </aside>
+      </div>
+    </div>
   );
 }
