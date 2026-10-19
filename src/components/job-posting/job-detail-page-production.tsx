@@ -135,10 +135,14 @@ export default function JobDetailPageProduction({
   const orgEmoji = getOrgEmojiByType(post.organizationType);
 
   // Breadcrumb data for GEO/navigation
+  // Extract locale from canonical URL (already locale-aware)
+  const localeFromUrl = canonicalUrl.split('/')[1] || 'en';
+  const baseJobsUrl = `/${localeFromUrl}/jobs`;
+
   const breadcrumbItems = [
     { name: 'Home', url: '/' },
-    { name: 'Jobs', url: '/jobs' },
-    ...(post.recruitmentName ? [{ name: post.recruitmentName, url: `/jobs/${post.recruitmentSlug}` }] : []),
+    { name: 'Jobs', url: baseJobsUrl },
+    ...(post.recruitmentName ? [{ name: post.recruitmentName, url: `${baseJobsUrl}/${post.recruitmentSlug}` }] : []),
     { name: post.title, url: canonicalUrl },
   ];
 

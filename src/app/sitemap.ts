@@ -64,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [...hubUrls, ...postUrlsEn, ...postUrlsHi];
   } catch (error) {
     console.error('[sitemap] Error fetching posts:', error);
-    // Fallback to at least hub pages
+    // Fallback to at least hub pages (must include both locales with explicit prefixes)
     return [
       {
         url: 'https://www.joboye.com',
@@ -73,10 +73,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1.0,
       },
       {
-        url: 'https://www.joboye.com/jobs',
+        url: 'https://www.joboye.com/en/jobs',
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 0.95,
+      },
+      {
+        url: 'https://www.joboye.com/hi/jobs',
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.90,
       },
     ];
   }
