@@ -109,8 +109,8 @@ export default async function LocaleJobDetailPage({ params }: Props) {
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
 
-  // Build canonical URL for schema
-  const canonicalUrl = `/jobs/${post.recruitmentSlug}/${post.slug}`;
+  // Build canonical URL for schema (must include locale prefix to match sitemap)
+  const canonicalUrl = `/${locale}/jobs/${post.recruitmentSlug}/${post.slug}`;
 
   return (
     <JobDetailPageProduction

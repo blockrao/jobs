@@ -97,17 +97,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ),
     );
     const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : null;
-    const seo = pageSeo(canonicalPath ?? `/jobs/${recruitment.slug}`, { index: true });
+    // FIX-008: Canonical URL must include locale prefix to match sitemap URLs
+    const jobsPath = `/${locale}/jobs/${recruitment.slug}`;
+    const baseUrl = "https://www.joboye.com";
+
     return {
       title: recruitment.name,
       description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-      ...seo,
-      ...(canonicalPath ? {} : { alternates: undefined }),
+      alternates: canonicalPath ? undefined : {
+        canonical: jobsPath,
+        languages: {
+          en: `${baseUrl}/en/jobs/${recruitment.slug}`,
+          hi: `${baseUrl}/hi/jobs/${recruitment.slug}`,
+          "x-default": `${baseUrl}/en/jobs/${recruitment.slug}`,
+        },
+      },
       openGraph: {
         title: recruitment.name,
         description: `${recruitment.name} recruitment on JobOye`,
         type: "website",
-        url: canonicalPath ? `https://www.joboye.com${canonicalPath}` : `https://www.joboye.com/jobs/${recruitment.slug}`,
+        url: canonicalPath ? `${baseUrl}${canonicalPath}` : `${baseUrl}${jobsPath}`,
       },
     };
   }
@@ -150,15 +159,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     eligible: posting.indexTier !== "C",
   });
 
+  // FIX-008: Canonical URL must include locale prefix to match sitemap URLs
+  // entitySeo generates /jobs/slug for English but sitemap has /en/jobs/slug
+  const baseUrl = "https://www.joboye.com";
+  const canonicalPath = isHi && hasHindi ? `/hi/jobs/${posting.slug}` : `/en/jobs/${posting.slug}`;
+  const enUrl = `${baseUrl}/en/jobs/${posting.slug}`;
+  const hiUrl = `${baseUrl}/hi/jobs/${posting.slug}`;
+
   return {
     title,
     description,
-    alternates: seo.alternates,
+    alternates: {
+      canonical: canonicalPath,
+      ...(hasHindi ? {
+        languages: {
+          en: enUrl,
+          hi: hiUrl,
+          "x-default": enUrl,
+        },
+      } : undefined),
+    },
     robots: seo.robots,
     openGraph: {
       title,
       description,
-      url: seo.url,
+      url: `${baseUrl}${canonicalPath}`,
       type: "article",
       images: ogImages,
     },

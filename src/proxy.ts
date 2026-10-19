@@ -19,7 +19,7 @@ const legacyExamSlugSet = new Set<string>(legacyExamSlugs);
 const intlMiddleware = createMiddleware({
   locales,
   defaultLocale: defaultLocale,
-  localePrefix: 'as-needed',
+  localePrefix: 'always',
   // SEO-001 (ledger A-052): hreflang is decided per page by src/lib/seo and
   // emitted in the page <head> and the sitemap only. The middleware's own
   // HTTP `Link` header would declare en/hi alternates on every URL,
@@ -111,16 +111,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // FIX-007: Both job hub pages and detail pages have [locale] routes.
-  // Route explicitly prefixed /en and /hi paths through next-intl BEFORE
-  // the generic locale-prefix fallback (lines 146-149) can strip them.
-  // Matches both:
-  // - /en/jobs/[slug] (hub page with 1 segment)
-  // - /en/jobs/[slug]/[post-slug] (detail page with 2 segments)
-  if (/^\/(en|hi)\/jobs\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname)) {
-    return intlMiddleware(request);
-  }
-
   // Only run next-intl's routing on paths that actually have a
   // `[locale]` page — everything else passes through untouched.
   if (isLocaleAwarePath(pathname)) {
@@ -135,19 +125,6 @@ export async function proxy(request: NextRequest) {
   // exam_slug="hi". Send it to the (non-localized) homepage instead.
   if (/^\/(en|hi)\/?$/.test(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // Any other /en/... or /hi/... path that isn't locale-aware (e.g.
-  // /en/news, /hi/categories/foo, /en/search) has no matching route at
-  // all — there's no [locale] segment for it and it's not the bare-root
-  // case above either, so Next would otherwise 404 it. These can reach a
-  // visitor via an old bookmark, a search engine that indexed a stray
-  // link, or simply typing a plausible-looking URL. Redirect to the
-  // equivalent canonical (non-prefixed) path rather than 404ing on a page
-  // that genuinely exists one segment away.
-  const localePrefixMatch = pathname.match(/^\/(en|hi)(\/.*)$/);
-  if (localePrefixMatch) {
-    return NextResponse.redirect(new URL(localePrefixMatch[2], request.url));
   }
 
   return NextResponse.next();
