@@ -14,6 +14,7 @@ import {
   boolean,
   bigint,
   numeric,
+  bigserial,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -1581,4 +1582,407 @@ export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
 export const vacanciesRelations = relations(vacancies, ({ one }) => ({
   post: one(posts, { fields: [vacancies.postId], references: [posts.id] }),
   location: one(locations, { fields: [vacancies.locationId], references: [locations.id] }),
+}));
+
+// =====================================================================
+// Enrichment Tables — Phase 1 Display Data (Added 2026-10-20)
+// =====================================================================
+
+/** Primary enrichment table linking all enrichment data to a post. */
+export const postEnrichments = pgTable(
+  "post_enrichments",
+  {
+    id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+    postId: text("post_id").notNull().unique(),
+    // Vacancy breakdown by category
+    vacanciesByCategory: jsonb("vacancies_by_category").$type<Record<string, number>>(),
+    vacanciesTotal: integer("vacancies_total"),
+    // Application fee
+    feesByCategory: jsonb("fees_by_category").$type<Record<string, string | number>>(),
+    feeNote: text("fee_note"),
+    // Age limits
+    ageRulesByCategory: jsonb("age_rules_by_category").$type<Record<string, { min?: number; max?: number }>>(),
+    ageNote: text("age_note"),
+    ageRelaxationRules: text("age_relaxation_rules"),
+    ageReferenceDate: timestamp("age_reference_date", { withTimezone: true }),
+    // Pay & salary
+    payScale: text("pay_scale"),
+    salaryMin: integer("salary_min"),
+    salaryMax: integer("salary_max"),
+    salaryNote: text("salary_note"),
+    payLevel: text("pay_level"),
+    // Selection process
+    selectionProcess: jsonb("selection_process").$type<Array<Record<string, unknown>>>(),
+    // Important dates
+    notificationDate: timestamp("notification_date", { withTimezone: true }),
+    applicationOpenDate: timestamp("application_open_date", { withTimezone: true }),
+    applicationClosingDate: timestamp("application_closing_date", { withTimezone: true }),
+    examDate: timestamp("exam_date", { withTimezone: true }),
+    admitCardDate: timestamp("admit_card_date", { withTimezone: true }),
+    resultDate: timestamp("result_date", { withTimezone: true }),
+    interviewScheduleDate: timestamp("interview_schedule_date", { withTimezone: true }),
+    appointmentDate: timestamp("appointment_date", { withTimezone: true }),
+    // Eligibility & education
+    eligibilityPathways: jsonb("eligibility_pathways").$type<Array<Record<string, unknown>>>(),
+    education: jsonb("education").$type<Record<string, unknown>>(),
+    experience: jsonb("experience").$type<Record<string, unknown>>(),
+    // Documents required
+    documentsRequired: jsonb("documents_required").$type<Record<string, unknown>>(),
+    // Other fields
+    duties: text("duties").array(),
+    responsibilities: text("responsibilities").array(),
+    benefits: text("benefits").array(),
+    // Verification
+    sourceVerificationStatus: varchar("source_verification_status", { length: 20 }).default("PENDING"),
+    sourceVerificationDate: timestamp("source_verification_date", { withTimezone: true }).notNull().defaultNow(),
+    extractionConfidence: integer("extraction_confidence").default(0),
+    dataGaps: text("data_gaps").array(),
+    // Timestamps
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_post_enrichments_post_id").on(table.postId),
+    index("idx_post_enrichments_verification_status").on(table.sourceVerificationStatus),
+    index("idx_post_enrichments_closing_date").on(table.applicationClosingDate),
+  ],
+).enableRLS();
+
+/** Education requirements for a post. */
+export const postsEducation = pgTable(
+  "posts_education",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    degree: varchar("degree", { length: 200 }),
+    subject: varchar("subject", { length: 200 }),
+    specialization: varchar("specialization", { length: 200 }),
+    minimumPercentage: numeric("minimum_percentage", { precision: 5, scale: 2 }),
+    minimumMarks: numeric("minimum_marks", { precision: 10, scale: 2 }),
+    source: varchar("source", { length: 100 }),
+    confidenceScore: smallint("confidence_score"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_education_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Vacancy breakdown by category and location. */
+export const postsVacancies = pgTable(
+  "posts_vacancies",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    totalVacancies: integer("total_vacancies"),
+    category: varchar("category", { length: 100 }),
+    location: varchar("location", { length: 200 }),
+    locationCount: integer("location_count"),
+    categoryCount: integer("category_count"),
+    source: varchar("source", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_vacancies_post_id").on(table.postId),
+    index("idx_posts_vacancies_category").on(table.category),
+  ],
+).enableRLS();
+
+/** Official links (notification, apply, admit card, etc.) */
+export const postsOfficialLinks = pgTable(
+  "posts_official_links",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    linkType: varchar("link_type", { length: 50 }).notNull(), // apply, notification, admit_card, result, etc.
+    label: varchar("label", { length: 200 }),
+    url: text("url").notNull(),
+    isOfficial: boolean("is_official").default(true),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_official_links_post_id").on(table.postId),
+    index("idx_posts_official_links_type").on(table.linkType),
+  ],
+).enableRLS();
+
+/** Application fee breakdown by category. */
+export const postsApplicationFee = pgTable(
+  "posts_application_fee",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 100 }),
+    amount: integer("amount"),
+    currencyCode: varchar("currency_code", { length: 3 }).default("INR"),
+    note: text("note"),
+    paymentMode: varchar("payment_mode", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_application_fee_post_id").on(table.postId),
+    index("idx_posts_application_fee_category").on(table.category),
+  ],
+).enableRLS();
+
+/** How to apply instructions. */
+export const postsHowToApply = pgTable(
+  "posts_how_to_apply",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    step: smallint("step").notNull(),
+    title: varchar("title", { length: 200 }),
+    description: text("description"),
+    url: text("url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_how_to_apply_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Documents required for application. */
+export const postsDocuments = pgTable(
+  "posts_documents",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    documentName: varchar("document_name", { length: 200 }),
+    documentCategory: varchar("document_category", { length: 100 }),
+    isRequired: boolean("is_required").default(true),
+    requiredForCategories: text("required_for_categories").array(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_documents_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Selection process stages. */
+export const postsSelectionProcess = pgTable(
+  "posts_selection_process",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    stageName: varchar("stage_name", { length: 200 }),
+    stageOrder: smallint("stage_order"),
+    description: text("description"),
+    marks: integer("marks"),
+    duration: varchar("duration", { length: 100 }),
+    minQualifyingMarks: jsonb("min_qualifying_marks").$type<Record<string, number>>(),
+    mode: varchar("mode", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_selection_process_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Important dates (notification, application, exam, result, etc.). */
+export const postsImportantDates = pgTable(
+  "posts_important_dates",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    dateType: varchar("date_type", { length: 100 }).notNull(), // notification, application_open, application_close, exam, etc.
+    dateValue: timestamp("date_value", { withTimezone: true }),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_important_dates_post_id").on(table.postId),
+    index("idx_posts_important_dates_type").on(table.dateType),
+  ],
+).enableRLS();
+
+/** Experience requirements for a post. */
+export const postsExperience = pgTable(
+  "posts_experience",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    totalYears: smallint("total_years"),
+    minYears: smallint("min_years"),
+    maxYears: smallint("max_years"),
+    experienceType: varchar("experience_type", { length: 200 }),
+    source: varchar("source", { length: 100 }),
+    confidenceScore: smallint("confidence_score"),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_experience_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Raw staging table for daily digest entries. */
+export const rawNotifications = pgTable(
+  "raw_notifications",
+  {
+    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    digestDate: date("digest_date").notNull(),
+    digestSource: varchar("digest_source", { length: 100 }).default("fja_daily_digest"),
+    orgShort: text("org_short"),
+    orgFull: text("org_full"),
+    postName: text("post_name"),
+    vacancies: integer("vacancies"),
+    vacanciesRaw: text("vacancies_raw"),
+    feeText: text("fee_text"),
+    salaryText: text("salary_text"),
+    lastDate: date("last_date"),
+    lastDateRaw: text("last_date_raw"),
+    officialPdfUrl: text("official_pdf_url"),
+    applyUrl: text("apply_url"),
+    sourceUrl: text("source_url"),
+    category: text("category"),
+    states: text("states").array(),
+    qualificationText: text("qualification_text"),
+    promoted: boolean("promoted").default(false),
+    promotedAt: timestamp("promoted_at", { withTimezone: true }),
+    promotedRecruitmentId: integer("promoted_recruitment_id").references(() => recruitments.id, { onDelete: "setNull" }),
+    promotedPostId: integer("promoted_post_id").references(() => posts.id, { onDelete: "setNull" }),
+    promotionNotes: text("promotion_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("raw_notifications_dedup_idx").on(table.digestDate, table.sourceUrl),
+    index("idx_raw_notifications_promoted").on(table.promoted, table.digestDate),
+    index("idx_raw_notifications_date").on(table.digestDate),
+    index("idx_raw_notifications_pdf_url").on(table.officialPdfUrl),
+  ],
+).enableRLS();
+
+/** Slug redirect mapping for old→new slugs. */
+export const slugRedirects = pgTable(
+  "slug_redirects",
+  {
+    id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+    oldSlug: text("old_slug").notNull(),
+    newSlug: text("new_slug").notNull(),
+    slugType: varchar("slug_type", { length: 20 }).notNull(), // recruitment, post
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("slug_redirects_unique_idx").on(table.oldSlug, table.slugType),
+    index("idx_slug_redirects_lookup").on(table.oldSlug, table.slugType),
+  ],
+).enableRLS();
+
+/** Organization mapping from official names to canonical org IDs. */
+export const organizationMapping = pgTable(
+  "organization_mapping",
+  {
+    id: serial("id").primaryKey(),
+    officialName: varchar("official_name", { length: 300 }).notNull().unique(),
+    canonicalOrgId: integer("canonical_org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    matchScore: numeric("match_score", { precision: 3, scale: 2 }),
+    matchMethod: varchar("match_method", { length: 50 }), // exact, fuzzy, manual, new_record
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_org_mapping_official_name").on(table.officialName),
+    index("idx_org_mapping_canonical_id").on(table.canonicalOrgId),
+  ],
+).enableRLS();
+
+/** Simplified jobs table for analytics and API. */
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+    recruitmentId: integer("recruitment_id").references(() => recruitments.id, { onDelete: "setNull" }),
+    postId: integer("post_id").references(() => posts.id, { onDelete: "setNull" }),
+    title: varchar("title", { length: 220 }).notNull(),
+    description: text("description"),
+    organizationId: integer("organization_id").references(() => organizations.id, { onDelete: "setNull" }),
+    organizationName: varchar("organization_name", { length: 200 }),
+    locationCity: varchar("location_city", { length: 120 }),
+    locationState: varchar("location_state", { length: 120 }),
+    locationCountry: varchar("location_country", { length: 120 }).default("India"),
+    salaryMin: integer("salary_min"),
+    salaryMax: integer("salary_max"),
+    salaryCurrency: varchar("salary_currency", { length: 8 }).default("INR"),
+    vacancyCount: integer("vacancy_count"),
+    applicationDeadline: timestamp("application_deadline", { withTimezone: true }),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+    officialSourceUrl: text("official_source_url"),
+    applyPortalUrl: text("apply_portal_url"),
+    enrichmentData: jsonb("enrichment_data").$type<Record<string, unknown>>(),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_jobs_recruitment_id").on(table.recruitmentId),
+    index("idx_jobs_post_id").on(table.postId),
+    index("idx_jobs_organization_id").on(table.organizationId),
+    index("idx_jobs_active").on(table.isActive),
+    index("idx_jobs_deadline").on(table.applicationDeadline),
+  ],
+).enableRLS();
+
+// ── Relations for enrichment tables ──────────────────────────────────
+
+export const postEnrichmentsRelations = relations(postEnrichments, ({ many }) => ({
+  education: many(postsEducation),
+  vacancies: many(postsVacancies),
+  officialLinks: many(postsOfficialLinks),
+  applicationFees: many(postsApplicationFee),
+  howToApply: many(postsHowToApply),
+  documents: many(postsDocuments),
+  selectionProcess: many(postsSelectionProcess),
+  importantDates: many(postsImportantDates),
+  experience: many(postsExperience),
+}));
+
+export const postsEducationRelations = relations(postsEducation, ({ one }) => ({
+  post: one(posts, { fields: [postsEducation.postId], references: [posts.id] }),
+}));
+
+export const postsVacanciesRelations = relations(postsVacancies, ({ one }) => ({
+  post: one(posts, { fields: [postsVacancies.postId], references: [posts.id] }),
+}));
+
+export const postsOfficialLinksRelations = relations(postsOfficialLinks, ({ one }) => ({
+  post: one(posts, { fields: [postsOfficialLinks.postId], references: [posts.id] }),
+}));
+
+export const postsApplicationFeeRelations = relations(postsApplicationFee, ({ one }) => ({
+  post: one(posts, { fields: [postsApplicationFee.postId], references: [posts.id] }),
+}));
+
+export const postsHowToApplyRelations = relations(postsHowToApply, ({ one }) => ({
+  post: one(posts, { fields: [postsHowToApply.postId], references: [posts.id] }),
+}));
+
+export const postsDocumentsRelations = relations(postsDocuments, ({ one }) => ({
+  post: one(posts, { fields: [postsDocuments.postId], references: [posts.id] }),
+}));
+
+export const postsSelectionProcessRelations = relations(postsSelectionProcess, ({ one }) => ({
+  post: one(posts, { fields: [postsSelectionProcess.postId], references: [posts.id] }),
+}));
+
+export const postsImportantDatesRelations = relations(postsImportantDates, ({ one }) => ({
+  post: one(posts, { fields: [postsImportantDates.postId], references: [posts.id] }),
+}));
+
+export const postsExperienceRelations = relations(postsExperience, ({ one }) => ({
+  post: one(posts, { fields: [postsExperience.postId], references: [posts.id] }),
+}));
+
+export const organizationMappingRelations = relations(organizationMapping, ({ one }) => ({
+  organization: one(organizations, { fields: [organizationMapping.canonicalOrgId], references: [organizations.id] }),
+}));
+
+export const jobsRelations = relations(jobs, ({ one }) => ({
+  recruitment: one(recruitments, { fields: [jobs.recruitmentId], references: [recruitments.id] }),
+  post: one(posts, { fields: [jobs.postId], references: [posts.id] }),
+  organization: one(organizations, { fields: [jobs.organizationId], references: [organizations.id] }),
 }));

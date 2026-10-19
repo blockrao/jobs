@@ -68,6 +68,9 @@ interface JobDetailPageProps {
     requiredDocuments?: Array<{ name: string; category: string; isRequired: boolean }>;
     importantDates?: Array<{ type: string; date: string }>;
     ageRules?: Array<{ category: string; maxAge?: number; relaxationYears?: number; ruleType: string; note?: string }>;
+    // Phase 1 P0: Application Fee and Official Links (new)
+    applicationFees?: Array<{ category: string; amount: number | null; note?: string }>;
+    officialLinks?: Array<{ label: string; url: string; linkType: string }>;
     fjaExtract?: {
       qualificationRaw?: string | null;
       experienceRaw?: string | null;
@@ -512,6 +515,34 @@ export default function JobDetailPageProduction({
             </section>
           )}
 
+          {/* Application Fee */}
+          {post.applicationFees && post.applicationFees.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Application Fee
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
+                    {post.applicationFees.map((fee, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 capitalize">{fee.category}</th>
+                        <td className="px-4 py-3 text-gray-900 dark:text-white font-semibold">
+                          {fee.amount !== null ? `₹${formatCurrency(fee.amount)}` : 'Exempted'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {post.applicationFees.some(f => f.note) && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                  {post.applicationFees.find(f => f.note)?.note}
+                </p>
+              )}
+            </section>
+          )}
+
           {/* Important Links */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
@@ -520,25 +551,42 @@ export default function JobDetailPageProduction({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
-                  {post.applyUrl && (
-                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Apply Online</th>
-                      <td className="px-4 py-3">
-                        <a href={post.applyUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
-                          Click here
-                        </a>
-                      </td>
-                    </tr>
-                  )}
-                  {post.officialSourceUrl && (
-                    <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                      <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Official Notification</th>
-                      <td className="px-4 py-3">
-                        <a href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
-                          Download PDF
-                        </a>
-                      </td>
-                    </tr>
+                  {post.officialLinks && post.officialLinks.length > 0 ? (
+                    // Display official links if available
+                    post.officialLinks.map((link, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">{link.label}</th>
+                        <td className="px-4 py-3">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                            Open Link
+                          </a>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    // Fallback to original links if no official links data
+                    <>
+                      {post.applyUrl && (
+                        <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Apply Online</th>
+                          <td className="px-4 py-3">
+                            <a href={post.applyUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                              Click here
+                            </a>
+                          </td>
+                        </tr>
+                      )}
+                      {post.officialSourceUrl && (
+                        <tr className="hover:bg-gray-50 dark:hover:bg-slate-900">
+                          <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Official Notification</th>
+                          <td className="px-4 py-3">
+                            <a href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                              Download PDF
+                            </a>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   )}
                 </tbody>
               </table>
