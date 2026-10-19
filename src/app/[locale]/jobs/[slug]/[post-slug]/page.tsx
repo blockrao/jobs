@@ -93,8 +93,8 @@ export default async function LocaleJobDetailPage({ params }: Props) {
 
   // Normalize salary data
   const enrichment = post.enrichment;
-  const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin;
-  const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax;
+  const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
+  const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
 
   // Build canonical URL for schema
