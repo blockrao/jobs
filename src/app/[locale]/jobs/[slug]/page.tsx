@@ -80,43 +80,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
 
   // Metadata must resolve the same canonical Recruitment the page renderer serves.
-  // Until genuine Hindi hub content exists, /hi is an English fallback: noindex and
-  // canonicalized to the unprefixed Recruitment URL.
+  // Hub pages ALWAYS have a canonical URL pointing to the hub itself (with locale prefix).
+  // This matches the sitemap URLs and follows CLAUDE.md localePrefix: 'always' rule.
   const recruitmentData = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
   if (recruitmentData) {
-    const { recruitment, totalPosts, posts } = recruitmentData;
-    // Recruitment Hubs are supporting navigation, not canonical search landings.
-    // Never index the hub. If all its Posts map to one role, consolidate signals
-    // to that role's canonical /posts page; for mixed-role hubs, no canonical is
-    // asserted because choosing one role would be misleading.
-    const roleSlugs = Array.from(
-      new Set(
-        posts
-          .map((post) => post.position?.slug)
-          .filter((roleSlug): roleSlug is string => Boolean(roleSlug)),
-      ),
-    );
-    const canonicalPath = roleSlugs.length === 1 ? `/posts/${roleSlugs[0]}` : null;
+    const { recruitment, totalPosts } = recruitmentData;
+    // Recruitment Hubs are navigation pages with explicit canonical hub URLs.
+    // Always include canonical + hreflang pointing to the hub itself (with locale prefix).
+    // The hub's ItemList structured data helps Google discover individual role pages.
     // FIX-008: Canonical URL must include locale prefix to match sitemap URLs
-    const jobsPath = `/${locale}/jobs/${recruitment.slug}`;
+
     const baseUrl = "https://www.joboye.com";
+    const enHubUrl = `${baseUrl}/en/jobs/${recruitment.slug}`;
+    const hiHubUrl = `${baseUrl}/hi/jobs/${recruitment.slug}`;
+    const canonicalUrl = locale === "hi" ? hiHubUrl : enHubUrl;
 
     return {
       title: recruitment.name,
       description: `${recruitment.name} recruitment with ${totalPosts} open position${totalPosts !== 1 ? "s" : ""}. View eligibility criteria and application details.`,
-      alternates: canonicalPath ? undefined : {
-        canonical: jobsPath,
+      alternates: {
+        canonical: canonicalUrl,
         languages: {
-          en: `${baseUrl}/en/jobs/${recruitment.slug}`,
-          hi: `${baseUrl}/hi/jobs/${recruitment.slug}`,
-          "x-default": `${baseUrl}/en/jobs/${recruitment.slug}`,
+          en: enHubUrl,
+          hi: hiHubUrl,
+          "x-default": enHubUrl,
         },
       },
       openGraph: {
         title: recruitment.name,
         description: `${recruitment.name} recruitment on JobOye`,
         type: "website",
-        url: canonicalPath ? `${baseUrl}${canonicalPath}` : `${baseUrl}${jobsPath}`,
+        url: canonicalUrl,
       },
     };
   }

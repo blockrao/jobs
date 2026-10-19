@@ -22,6 +22,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ORDER BY p.updated_at DESC
     `);
 
+    if (!allPosts || allPosts.length === 0) {
+      console.warn('[sitemap] No live posts found, returning hub pages only');
+      // Fallback: return hub pages when no posts are found
+      return [
+        {
+          url: 'https://www.joboye.com',
+          lastModified: new Date(),
+          changeFrequency: 'daily',
+          priority: 1.0,
+        },
+        {
+          url: 'https://www.joboye.com/en/jobs',
+          lastModified: new Date(),
+          changeFrequency: 'daily',
+          priority: 0.95,
+        },
+        {
+          url: 'https://www.joboye.com/hi/jobs',
+          lastModified: new Date(),
+          changeFrequency: 'daily',
+          priority: 0.90,
+        },
+      ];
+    }
+
     // FIX-001: Generate URLs for live locale routes (/en/jobs/...)
     // These match the actual routes in src/app/[locale]/jobs/[slug]/[post-slug]
     const postUrlsEn = allPosts.map((post) => ({
@@ -32,12 +57,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
     // Also include Hindi locale (lower priority, but still indexable)
+    // CRITICAL: Both locales MUST be present per localePrefix: 'always' rule
     const postUrlsHi = allPosts.map((post) => ({
       url: `https://www.joboye.com/hi/jobs/${post.recruitment_slug}/${post.post_slug}`,
       lastModified: post.updated_at instanceof Date ? post.updated_at : new Date(post.updated_at),
       changeFrequency: 'daily' as const,
       priority: 0.7, // Slightly lower than EN
     }));
+
+    // Sanity check: ensure both locales were generated
+    if (postUrlsEn.length !== postUrlsHi.length) {
+      console.error(`[sitemap] Locale mismatch! EN: ${postUrlsEn.length}, HI: ${postUrlsHi.length}`);
+    }
 
     // Hub pages (also with locale)
     const hubUrls: MetadataRoute.Sitemap = [
@@ -61,7 +92,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     ];
 
-    return [...hubUrls, ...postUrlsEn, ...postUrlsHi];
+    const result = [...hubUrls, ...postUrlsEn, ...postUrlsHi];
+    console.log(`[sitemap] Generated sitemap with ${postUrlsEn.length} EN posts and ${postUrlsHi.length} HI posts`);
+    return result;
   } catch (error) {
     console.error('[sitemap] Error fetching posts:', error);
     // Fallback to at least hub pages (must include both locales with explicit prefixes)
