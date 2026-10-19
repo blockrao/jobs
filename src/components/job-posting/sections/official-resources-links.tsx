@@ -7,6 +7,7 @@
 
 import { JobPostingData } from "@/types/job-posting";
 import { ResolvedRecruitmentFacts } from "../job-posting-page";
+import { publicLink } from "@/lib/aggregators";
 import styles from "./official-resources-links.module.css";
 
 interface OfficialResourcesLinksProps {
@@ -30,11 +31,12 @@ export default function OfficialResourcesLinks({
   try {
     const resources: ResourceLink[] = [];
 
-    // 1. Official Notification PDF
-    if (post?.officialSourceUrl) {
+    // 1. Official Notification — only govt/official URLs, never aggregators
+    const notificationUrl = publicLink(post?.officialSourceUrl);
+    if (notificationUrl) {
       resources.push({
         title: "Official Notification",
-        url: post.officialSourceUrl,
+        url: notificationUrl,
         description: "PDF of the official recruitment notification",
         icon: "📄",
       });
@@ -57,10 +59,12 @@ export default function OfficialResourcesLinks({
       const enrichment = post.enrichment as Record<string, any>;
       if (enrichment.officialLinks && Array.isArray(enrichment.officialLinks)) {
         enrichment.officialLinks.forEach((link: any) => {
-          if (link?.url) {
+          // Never render aggregator links from enrichment
+          const safeUrl = publicLink(link?.url);
+          if (safeUrl) {
             resources.push({
               title: link.title || "Official Link",
-              url: link.url,
+              url: safeUrl,
               description: link.description || "Related official resource",
               icon: "🔗",
             });
