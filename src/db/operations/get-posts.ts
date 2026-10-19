@@ -508,6 +508,8 @@ export async function getPostBySlug(
         documents: detailEnrichment.documents,
         importantDates: detailEnrichment.importantDates,
         ageRules: detailEnrichment.ageRules,
+        applicationFees: detailEnrichment.applicationFees,
+        officialLinks: detailEnrichment.officialLinks,
       } : {
         vacancies: detailEnrichment.vacancies,
         education: detailEnrichment.education,
@@ -516,6 +518,8 @@ export async function getPostBySlug(
         documents: detailEnrichment.documents,
         importantDates: detailEnrichment.importantDates,
         ageRules: detailEnrichment.ageRules,
+        applicationFees: detailEnrichment.applicationFees,
+        officialLinks: detailEnrichment.officialLinks,
       },
     };
   } catch (err) {
