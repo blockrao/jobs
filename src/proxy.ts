@@ -111,11 +111,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // The nested Post Leaf has a real [locale] route, but the general locale
-  // path classifier intentionally keeps unprefixed /jobs/:recruitment/:post
-  // on the default route. Route explicitly prefixed /hi and legacy /en leaves
-  // through next-intl before the generic locale-prefix fallback can strip them.
-  if (/^\/(en|hi)\/jobs\/[^/]+\/[^/]+\/?$/.test(pathname)) {
+  // FIX-007: Both job hub pages and detail pages have [locale] routes.
+  // Route explicitly prefixed /en and /hi paths through next-intl BEFORE
+  // the generic locale-prefix fallback (lines 146-149) can strip them.
+  // Matches both:
+  // - /en/jobs/[slug] (hub page with 1 segment)
+  // - /en/jobs/[slug]/[post-slug] (detail page with 2 segments)
+  if (/^\/(en|hi)\/jobs\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname)) {
     return intlMiddleware(request);
   }
 
