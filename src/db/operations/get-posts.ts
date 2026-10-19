@@ -273,6 +273,7 @@ export async function getPostBySlug(
   postSlug: string
 ): Promise<JobPostingData | null> {
   try {
+    console.log(`[getPostBySlug] Starting query for ${recruitmentSlug}/${postSlug}`);
     const db = getDb();
 
     // CRITICAL PATH: Get core post data (fast, cacheable)
@@ -282,6 +283,7 @@ export async function getPostBySlug(
       console.warn("No post found for:", { recruitmentSlug, postSlug });
       return null;
     }
+    console.log(`[getPostBySlug] Core data found: post id=${coreData.id}`);
 
     const postId = coreData.id;
 

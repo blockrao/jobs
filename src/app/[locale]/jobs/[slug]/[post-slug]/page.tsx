@@ -17,7 +17,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { checkSlugRedirect } from "@/lib/slug-redirects";
 
-export const revalidate = 300;
+export const revalidate = 60; // Aggressive cache clearance for post detail pages
 import { entitySeo } from "@/lib/seo";
 import { getPostBySlugCached, getRelatedPostsForLeafCached } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
@@ -109,9 +109,14 @@ export default async function LocaleJobPostingPage({ params }: Props) {
     redirect(redirectUrl);
   }
 
+  console.log(`[LocaleJobPostingPage] Fetching post: ${recruitmentSlug}/${postSlug}`);
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
+  console.log(`[LocaleJobPostingPage] Post result:`, post ? `Found (id=${post.id})` : "NOT FOUND");
 
-  if (!post) notFound();
+  if (!post) {
+    console.error(`[LocaleJobPostingPage] Post not found for ${recruitmentSlug}/${postSlug}`);
+    notFound();
+  }
 
   // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
 
