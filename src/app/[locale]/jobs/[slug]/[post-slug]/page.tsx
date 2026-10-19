@@ -42,18 +42,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // SEO-friendly title: Include organization + year for better ranking
-  const yearMatch = post.recruitmentName?.match(/\b(202[0-9]|20[0-9]{2})\b/);
-  const year = yearMatch ? yearMatch[0] : new Date().getFullYear().toString();
-  const seoTitle = post.organizationName
-    ? `${post.title} - ${post.organizationName} ${year} | Apply Online`
-    : `${post.title} Recruitment ${year} | JobOye`;
-
-  const title = seoTitle;
+  const title = `${post.title} - Apply Online at JobOye`;
   const description =
     post.description ||
-    `Apply for ${post.title} at ${post.organizationName || "JobOye"}. ` +
-    `Check eligibility, salary, age limit, deadline and official notification.`;
+    `Apply for ${post.title} at ${post.organizationName || "JobOye"}.
+     Check eligibility, salary, deadline and official notification.`;
 
   // FIX-003: Canonical URL must include locale prefix
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://joboye.com";
