@@ -97,29 +97,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function LocaleJobPostingPage({ params }: Props) {
-  try {
-    const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
+  const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
 
-    // Check for slug redirects (malformed slugs that have been cleaned)
-    console.log(`[LocaleJobPostingPage] Checking slug redirects...`);
-    const newRecruitmentSlug = await checkSlugRedirect(recruitmentSlug, "recruitment");
-    const newPostSlug = await checkSlugRedirect(postSlug, "post");
+  // Check for slug redirects (malformed slugs that have been cleaned)
+  console.log(`[LocaleJobPostingPage] Checking slug redirects...`);
+  const newRecruitmentSlug = await checkSlugRedirect(recruitmentSlug, "recruitment");
+  const newPostSlug = await checkSlugRedirect(postSlug, "post");
 
-    if (newRecruitmentSlug || newPostSlug) {
-      const localePrefix = locale === "hi" ? "/hi" : "";
-      const redirectUrl = `${localePrefix}/jobs/${newRecruitmentSlug || recruitmentSlug}/${newPostSlug || postSlug}`;
-      console.log(`[LocaleJobPostingPage] Redirecting to ${redirectUrl}`);
-      redirect(redirectUrl);
-    }
+  if (newRecruitmentSlug || newPostSlug) {
+    const localePrefix = locale === "hi" ? "/hi" : "";
+    const redirectUrl = `${localePrefix}/jobs/${newRecruitmentSlug || recruitmentSlug}/${newPostSlug || postSlug}`;
+    console.log(`[LocaleJobPostingPage] Redirecting to ${redirectUrl}`);
+    redirect(redirectUrl);
+  }
 
-    console.log(`[LocaleJobPostingPage] Fetching post: ${recruitmentSlug}/${postSlug}`);
-    const post = await getPostBySlugCached(recruitmentSlug, postSlug);
-    console.log(`[LocaleJobPostingPage] Post result:`, post ? `Found (id=${post.id})` : "NOT FOUND");
+  console.log(`[LocaleJobPostingPage] Fetching post: ${recruitmentSlug}/${postSlug}`);
+  const post = await getPostBySlugCached(recruitmentSlug, postSlug);
+  console.log(`[LocaleJobPostingPage] Post result:`, post ? `Found (id=${post.id})` : "NOT FOUND");
 
-    if (!post) {
-      console.error(`[LocaleJobPostingPage] Post not found for ${recruitmentSlug}/${postSlug}`);
-      notFound();
-    }
+  if (!post) {
+    console.error(`[LocaleJobPostingPage] Post not found for ${recruitmentSlug}/${postSlug}`);
+    notFound();
+  }
 
   // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
   // ARCHITECTURAL FIX: Post already contains denormalized recruitment data - don't re-query.
@@ -239,8 +238,4 @@ export default async function LocaleJobPostingPage({ params }: Props) {
       </JobPostingPageClient>
     </>
   );
-  } catch (err) {
-    console.error(`[LocaleJobPostingPage] Unhandled error:`, err);
-    throw err;
-  }
 }
