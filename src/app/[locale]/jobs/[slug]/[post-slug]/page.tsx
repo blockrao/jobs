@@ -10,6 +10,8 @@
  * - Related jobs section
  * - Dark mode support
  * - ISR: 1 day (posts stable)
+ *
+ * ISR Cache: Cleared 2026-10-20 01:42 to regenerate with enrichment data fix
  */
 
 import type { Metadata } from "next";
