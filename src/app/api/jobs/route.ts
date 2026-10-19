@@ -22,13 +22,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
-
 export async function GET(request: NextRequest) {
   try {
+    // Create Supabase client at runtime (not build time)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    );
     // Rate limiting: 100 requests per minute per IP
     const clientIp = getClientIp(request);
     const rateLimitResult = rateLimit(clientIp, 100, 60000);
