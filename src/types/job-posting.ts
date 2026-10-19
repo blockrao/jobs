@@ -106,6 +106,8 @@ export interface PostEnrichment {
   // Vacancies
   vacanciesByCategory: Record<string, number>;
   vacanciesTotal: number;
+  /** Array of vacancy objects for rendering */
+  vacancies?: Array<{ category: string; count: number }>;
 
   // Application Fee
   feesByCategory: Record<string, number | string>; // Can be "Exempted" etc.
@@ -116,6 +118,8 @@ export interface PostEnrichment {
   ageNote?: string;
   ageRelaxationRules?: string;
   ageReferenceDate?: Date;
+  /** Array of age rules for rendering */
+  ageRules?: Array<{ category: string; min: number; max: number; note?: string }>;
 
   // Pay & Salary
   payScale?: string;
@@ -133,6 +137,15 @@ export interface PostEnrichment {
     minQualifyingMarks?: Record<string, number>;
     description?: string;
   }>;
+  /** Alias for selectionProcess as array of stages */
+  selectionProcessStages?: Array<{
+    step: number;
+    name: string;
+    totalMarks?: number;
+    duration?: string;
+    minQualifyingMarks?: Record<string, number>;
+    description?: string;
+  }>;
 
   // Important Dates
   notificationDate?: Date;
@@ -143,6 +156,11 @@ export interface PostEnrichment {
   resultDate?: Date;
   interviewScheduleDate?: Date;
   appointmentDate?: Date;
+  /** Array of important dates for rendering */
+  importantDates?: Array<{ label: string; date?: Date; dateStr?: string }>;
+
+  /** Array of required documents */
+  requiredDocuments?: Array<{ name: string; category?: string; required?: boolean }>;
 
   // Eligibility Pathways
   eligibilityPathways?: Array<{
@@ -168,18 +186,27 @@ export interface PostEnrichment {
   extractionConfidence: number; // 0-100
   dataGaps: string[];
 
-  // Structured Data Fields
-  education?: {
+  // Structured Data Fields (always arrays for consistent .map() usage)
+  education?: Array<{
     degree: string;
+    subject?: string;
+    specialization?: string;
     university?: string;
     registration?: string;
-  };
+    minimumPercentage?: number;
+    minimumMarks?: number;
+    confidenceScore?: number;
+  }>;
 
-  experience?: {
+  experience?: Array<{
+    totalYears?: number;
     minYears: number;
+    maxYears?: number;
     domains: string[];
+    experienceType?: string;
     countedFrom?: string;
-  };
+    confidenceScore?: number;
+  }>;
 
   benefits?: string[];
 

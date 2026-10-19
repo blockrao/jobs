@@ -491,21 +491,21 @@ export default function JobPostingPage({
             </h2>
             <div style={{ marginBottom: "16px" }}>
               <p style={{ fontWeight: 600, marginBottom: "8px", color: "var(--text-primary)" }}>
-                Minimum: {post.enrichment.experience.minYears} year{post.enrichment.experience.minYears !== 1 ? 's' : ''}
+                Minimum: {(post.enrichment.experience as any)?.minYears} year{(post.enrichment.experience as any)?.minYears !== 1 ? 's' : ''}
               </p>
-              {post.enrichment.experience.countedFrom && (
+              {(post.enrichment.experience as any)?.countedFrom && (
                 <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "8px" }}>
-                  Counted from: {post.enrichment.experience.countedFrom}
+                  Counted from: {(post.enrichment.experience as any)?.countedFrom}
                 </p>
               )}
             </div>
-            {post.enrichment.experience.domains && post.enrichment.experience.domains.length > 0 && (
+            {(post.enrichment.experience as any)?.domains && (post.enrichment.experience as any)?.domains.length > 0 && (
               <div>
                 <p style={{ fontWeight: 600, marginBottom: "8px", color: "var(--text-primary)" }}>
                   Relevant domains:
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {post.enrichment.experience.domains.map((domain, idx) => (
+                  {(post.enrichment.experience as any)?.domains.map((domain: any, idx: any) => (
                     <span
                       key={idx}
                       style={{
@@ -535,16 +535,16 @@ export default function JobPostingPage({
             <div style={{ display: "grid", gap: "12px" }}>
               <div style={{ padding: "12px", background: "#ffffff", borderRadius: "6px" }}>
                 <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "var(--text-primary)" }}>
-                  {post.enrichment.education.degree}
+                  {(post.enrichment.education as any)?.degree}
                 </p>
-                {post.enrichment.education.university && (
+                {(post.enrichment.education as any)?.university && (
                   <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
-                    University: {post.enrichment.education.university}
+                    University: {(post.enrichment.education as any)?.university}
                   </p>
                 )}
-                {post.enrichment.education.registration && (
+                {(post.enrichment.education as any)?.registration && (
                   <p style={{ margin: "4px 0", fontSize: "14px", color: "var(--text-secondary)" }}>
-                    Registration: {post.enrichment.education.registration}
+                    Registration: {(post.enrichment.education as any)?.registration}
                   </p>
                 )}
               </div>
