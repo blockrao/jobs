@@ -402,8 +402,12 @@ export async function getPostBySlug(
   }
 }
 
-/** Request-scoped memoization so metadata and page rendering share one DB read. */
-export const getPostBySlugCached = cache(getPostBySlug);
+/** Request-scoped memoization so metadata and page rendering share one DB read.
+ * NOTE: Temporarily not using cache() due to 500 errors in production.
+ * This may need investigation into cache() behavior in Vercel serverless environment.
+ */
+// export const getPostBySlugCached = cache(getPostBySlug);
+export const getPostBySlugCached = getPostBySlug;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Related posts for post leaf page (internal linking / SEO)
