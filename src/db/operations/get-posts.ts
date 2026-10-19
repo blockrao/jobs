@@ -328,12 +328,11 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
         WHERE post_id = ${postId}
         ORDER BY category
       `),
-      // Application fees by category
+      // Application fees
       db.execute<any>(sql`
-        SELECT id, category, fee_amount AS "amount", fee_currency AS "currency", is_exempted AS "isExempted", exemption_category AS "exemptionCategory"
+        SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods"
         FROM posts_application_fee
         WHERE post_id = ${postId}
-        ORDER BY category
       `),
       // Official links (notification, apply, admit card, result, etc.)
       db.execute<any>(sql`

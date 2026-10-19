@@ -69,7 +69,7 @@ interface JobDetailPageProps {
     importantDates?: Array<{ type: string; date: string }>;
     ageRules?: Array<{ category: string; maxAge?: number; relaxationYears?: number; ruleType: string; note?: string }>;
     // Phase 1 P0: Application Fee and Official Links (new)
-    applicationFees?: Array<{ category?: string; amount?: number | null; currency?: string; isExempted?: boolean; exemptionCategory?: string; note?: string }>;
+    applicationFees?: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string }>;
     officialLinks?: Array<{ type?: string; url?: string; title?: string; source?: string }>;
     fjaExtract?: {
       qualificationRaw?: string | null;
@@ -521,25 +521,18 @@ export default function JobDetailPageProduction({
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
                 Application Fee
               </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
-                    {post.applicationFees.map((fee, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-900">
-                        <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 capitalize">{fee.category}</th>
-                        <td className="px-4 py-3 text-gray-900 dark:text-white font-semibold">
-                          {fee.amount !== null ? `₹${formatCurrency(fee.amount)}` : 'Exempted'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-2">
+                {post.applicationFees.map((fee, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      {fee.amount !== null && fee.amount !== undefined ? `₹${formatCurrency(fee.amount)}` : 'Fee Waived'}
+                    </div>
+                    {fee.currency && fee.currency !== 'INR' && <div className="text-sm text-gray-600 dark:text-gray-400">Currency: {fee.currency}</div>}
+                    {fee.waivedFor && <div className="text-sm text-gray-600 dark:text-gray-400">Waived for: {fee.waivedFor}</div>}
+                    {fee.paymentMethods && <div className="text-sm text-gray-600 dark:text-gray-400">Payment: {fee.paymentMethods}</div>}
+                  </div>
+                ))}
               </div>
-              {post.applicationFees.some(f => f.note) && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                  {post.applicationFees.find(f => f.note)?.note}
-                </p>
-              )}
             </section>
           )}
 

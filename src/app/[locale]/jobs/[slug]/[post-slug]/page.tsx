@@ -203,11 +203,10 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           note: a.note,
         })) : [],
         applicationFees: Array.isArray(enrichment?.applicationFees) ? enrichment.applicationFees.map((f: any) => ({
-          category: f.category,
-          amount: f.fee_amount || f.amount,
+          amount: f.fee_amount || f.amount || null,
           currency: f.fee_currency || f.currency || "INR",
-          isExempted: f.is_exempted || f.isExempted,
-          exemptionCategory: f.exemption_category || f.exemptionCategory,
+          waivedFor: f.fee_waived_for || f.waivedFor,
+          paymentMethods: f.payment_methods || f.paymentMethods,
         })) : [],
         officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
           type: l.link_type || l.type,
