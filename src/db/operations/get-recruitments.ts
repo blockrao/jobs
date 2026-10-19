@@ -122,10 +122,12 @@ export async function getRecruitmentVacancyCount(recruitmentId: number) {
  */
 export async function getRecruitmentWithPosts(slug: string) {
   try {
+    console.log(`[getRecruitmentWithPosts] Starting for slug: ${slug}`);
     const db = getDb();
 
     // Step 0: Try the requested slug first. Canonical URLs are the common path,
     // so avoid a redirect-table round trip unless the recruitment isn't found.
+    console.log(`[getRecruitmentWithPosts] Querying recruitments table...`);
     let recruitmentResult = await db
       .select({
         recruitment: recruitments,
@@ -137,6 +139,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
       .where(eq(recruitments.slug, slug))
       .limit(1);
+    console.log(`[getRecruitmentWithPosts] Query result:`, recruitmentResult?.length ? `Found ${recruitmentResult.length} record(s)` : "No records");
 
     // Legacy slugs still resolve through the redirect table as before.
     if (!recruitmentResult || recruitmentResult.length === 0) {
