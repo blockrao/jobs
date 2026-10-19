@@ -135,7 +135,7 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
         experienceText: post.fjaExtract?.experienceRaw,
         ageLimit: post.fjaExtract?.ageLimitRaw,
-        selectionProcess: post.recruitmentSelectionProcess || enrichment?.selectionProcess?.map((s: any) => s.description).join("; "),
+        selectionProcess: post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined),
         howToApply: post.applicationMethod,
         applicationFee: undefined,
         salary: {
