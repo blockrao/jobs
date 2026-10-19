@@ -21,8 +21,10 @@ import DutiesResponsibilities from "./sections/duties-responsibilities";
 import SalaryCompensation from "./sections/salary-compensation";
 import FAQSection from "./sections/faq-section";
 import OfficialResourcesLinks from "./sections/official-resources-links";
+import RelatedPostsLinks from "./sections/related-posts-links";
 import JobPostingTabs from "./job-posting-tabs";
 import styles from "./job-posting-page.module.css";
+import type { RelatedPostsForLeaf } from "@/db/operations/get-posts";
 
 interface RecruitmentData {
   recruitment: Record<string, unknown> & { name?: string | null };
@@ -51,6 +53,7 @@ interface JobPostingPageProps {
   locale?: string;
   resolvedFacts?: ResolvedLeafFacts;
   recruitmentResolvedFacts?: ResolvedRecruitmentFacts | null;
+  relatedPosts?: RelatedPostsForLeaf | null;
 }
 
 function fmtDate(d: Date | string | null | undefined): string | null {
@@ -70,6 +73,7 @@ export default function JobPostingPage({
   locale = "en",
   resolvedFacts,
   recruitmentResolvedFacts,
+  relatedPosts,
 }: JobPostingPageProps) {
   const localePrefix = locale === "hi" ? "/hi" : "";
   const siblingPosts = recruitment?.posts?.filter((p) => p.id !== post.id) || [];
@@ -786,6 +790,16 @@ export default function JobPostingPage({
 
         </JobPostingTabs>
       </article>
+
+      {/* ── Related posts: position hub, org jobs, state jobs ──────────── */}
+      {relatedPosts && (
+        <RelatedPostsLinks
+          related={relatedPosts}
+          localePrefix={localePrefix}
+          currentOrganizationName={post.organizationName ?? null}
+          currentLocationState={post.locationState ?? null}
+        />
+      )}
 
       {/* Footer note */}
       <div className={styles.footerNote}>

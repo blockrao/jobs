@@ -19,7 +19,7 @@ import { checkSlugRedirect } from "@/lib/slug-redirects";
 
 export const revalidate = 300;
 import { entitySeo } from "@/lib/seo";
-import { getPostBySlugCached } from "@/db/operations/get-posts";
+import { getPostBySlugCached, getRelatedPostsForLeafCached } from "@/db/operations/get-posts";
 import { getRecruitmentWithPosts } from "@/db/operations/get-recruitments";
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import JobPostingPageClient from "@/components/job-posting/job-posting-page-client";
@@ -115,7 +115,16 @@ export default async function LocaleJobPostingPage({ params }: Props) {
 
   // All posts are exposed. Frontend shows "reported" labels for data-confidence signaling.
 
-  const recruitmentData = await getRecruitmentWithPosts(post.recruitmentSlug);
+  const [recruitmentData, relatedPosts] = await Promise.all([
+    getRecruitmentWithPosts(post.recruitmentSlug),
+    getRelatedPostsForLeafCached(
+      Number(post.id),
+      post.positionId ?? null,
+      post.organizationId ? Number(post.organizationId) : null,
+      post.locationState ?? null,
+      post.recruitmentId ? Number(post.recruitmentId) : null
+    ),
+  ]);
   const now = new Date();
   const resolvedFacts = {
     vacancyCount: resolvePostVacancy(post),
@@ -207,6 +216,7 @@ export default async function LocaleJobPostingPage({ params }: Props) {
           locale={locale}
           resolvedFacts={resolvedFacts}
           recruitmentResolvedFacts={recruitmentResolvedFacts}
+          relatedPosts={relatedPosts}
         />
       </JobPostingPageClient>
     </>

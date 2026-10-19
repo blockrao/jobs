@@ -101,6 +101,7 @@ async function getPostCoreData(
       p.id,
       p.title,
       p.slug,
+      p.position_id AS "positionId",
       p."organizationId",
       p."organizationName",
       COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
@@ -301,6 +302,7 @@ export async function getPostBySlug(
       id: data.id,
       title: data.title,
       slug: data.slug,
+      positionId: (data as any).positionId ?? null,
       organizationId: data.organizationId,
       organizationName: data.organizationName,
       // org_sector; PRIVATE indicates unresolved organization (data quality signal).
@@ -400,6 +402,152 @@ export async function getPostBySlug(
 
 /** Request-scoped memoization so metadata and page rendering share one DB read. */
 export const getPostBySlugCached = cache(getPostBySlug);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Related posts for post leaf page (internal linking / SEO)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RelatedPost {
+  id: number;
+  title: string;
+  slug: string;
+  recruitmentSlug: string;
+  organizationName: string | null;
+  locationState: string | null;
+  postedAt: Date | null;
+}
+
+export interface RelatedPostsForLeaf {
+  /** Other live posts for the same position role (position hub). */
+  samePosition: RelatedPost[];
+  /** Other live posts in the same organization (excluding current post). */
+  sameOrg: RelatedPost[];
+  /** Other live posts in the same state (excluding same-org and same-position already shown). */
+  sameState: RelatedPost[];
+  /** Position info for the hub link. */
+  positionSlug: string | null;
+  positionName: string | null;
+}
+
+export async function getRelatedPostsForLeaf(
+  postId: number,
+  positionId: number | null,
+  organizationId: number | null,
+  locationState: string | null,
+  recruitmentId: number | null
+): Promise<RelatedPostsForLeaf> {
+  const db = getDb();
+  const empty: RelatedPostsForLeaf = {
+    samePosition: [],
+    sameOrg: [],
+    sameState: [],
+    positionSlug: null,
+    positionName: null,
+  };
+
+  if (!positionId && !organizationId && !locationState) return empty;
+
+  // Position info
+  let positionSlug: string | null = null;
+  let positionName: string | null = null;
+  if (positionId) {
+    const posResult = await db.execute<{ slug: string; name: string }>(sql`
+      SELECT slug, name FROM positions WHERE id = ${positionId} LIMIT 1
+    `);
+    if (posResult.length > 0) {
+      positionSlug = posResult[0].slug;
+      positionName = posResult[0].name;
+    }
+  }
+
+  // Same position posts (max 6, excluding current)
+  const samePosition: RelatedPost[] = [];
+  if (positionId) {
+    const rows = await db.execute<any>(sql`
+      SELECT p.id, p.title, p.slug, r.slug AS "recruitmentSlug",
+             p."organizationName", p.location_state AS "locationState", p."postedAt"
+      FROM posts p
+      JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      WHERE p.position_id = ${positionId}
+        AND p.id != ${postId}
+        AND p."isLive" = true
+      ORDER BY p."postedAt" DESC NULLS LAST
+      LIMIT 6
+    `);
+    for (const r of rows) {
+      samePosition.push({
+        id: r.id,
+        title: r.title,
+        slug: r.slug,
+        recruitmentSlug: r.recruitmentSlug,
+        organizationName: r.organizationName ?? null,
+        locationState: r.locationState ?? null,
+        postedAt: r.postedAt ? new Date(r.postedAt) : null,
+      });
+    }
+  }
+
+  // Same org posts (max 5, excluding current recruitment and those already in samePosition)
+  const sameOrg: RelatedPost[] = [];
+  if (organizationId) {
+    const excludeIds = [postId, ...samePosition.map((p) => p.id)];
+    const rows = await db.execute<any>(sql`
+      SELECT p.id, p.title, p.slug, r.slug AS "recruitmentSlug",
+             p."organizationName", p.location_state AS "locationState", p."postedAt"
+      FROM posts p
+      JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      WHERE p."organizationId" = ${organizationId}
+        AND p.id != ALL(${excludeIds})
+        AND p."isLive" = true
+      ORDER BY p."postedAt" DESC NULLS LAST
+      LIMIT 5
+    `);
+    for (const r of rows) {
+      sameOrg.push({
+        id: r.id,
+        title: r.title,
+        slug: r.slug,
+        recruitmentSlug: r.recruitmentSlug,
+        organizationName: r.organizationName ?? null,
+        locationState: r.locationState ?? null,
+        postedAt: r.postedAt ? new Date(r.postedAt) : null,
+      });
+    }
+  }
+
+  // Same state posts (max 4, excluding those already shown)
+  const sameState: RelatedPost[] = [];
+  if (locationState) {
+    const excludeIds = [postId, ...samePosition.map((p) => p.id), ...sameOrg.map((p) => p.id)];
+    const rows = await db.execute<any>(sql`
+      SELECT p.id, p.title, p.slug, r.slug AS "recruitmentSlug",
+             p."organizationName", p.location_state AS "locationState", p."postedAt"
+      FROM posts p
+      JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      WHERE p.location_state = ${locationState}
+        AND p.id != ALL(${excludeIds})
+        AND p."isLive" = true
+      ORDER BY p."postedAt" DESC NULLS LAST
+      LIMIT 4
+    `);
+    for (const r of rows) {
+      sameState.push({
+        id: r.id,
+        title: r.title,
+        slug: r.slug,
+        recruitmentSlug: r.recruitmentSlug,
+        organizationName: r.organizationName ?? null,
+        locationState: r.locationState ?? null,
+        postedAt: r.postedAt ? new Date(r.postedAt) : null,
+      });
+    }
+  }
+
+  return { samePosition, sameOrg, sameState, positionSlug, positionName };
+}
+
+/** Request-scoped cache for related posts */
+export const getRelatedPostsForLeafCached = cache(getRelatedPostsForLeaf);
 
 /**
  * Fetch multiple posts for a recruitment with pagination

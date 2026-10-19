@@ -10,6 +10,8 @@ export interface JobPostingData {
   id: string;
   title: string;
   slug: string;
+  /** DB position_id — used for position hub linking. */
+  positionId?: number | null;
   organizationId: string;
   organizationName: string;
   /** org_sector of the issuing body; PRIVATE = unresolved (data quality signal). */

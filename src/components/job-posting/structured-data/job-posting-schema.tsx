@@ -4,16 +4,22 @@
  *
  * Emits schema.org/JobPosting and BreadcrumbList as a single @graph JSON-LD block.
  *
- * Gate 4C/4D rules:
- *   - All facts sourced exclusively through the canonical resolver layer.
+ * Google for Jobs compliance rules (2025):
  *   - JobPosting suppressed entirely when neither resolveOfficialSource() nor
  *     resolveApplicationUrl() returns a value (no verifiable source).
- *   - validThrough emitted ONLY when resolveDeadline() state === 'OPEN'.
- *   - hiringOrganization emitted ONLY when resolveEmployer() returns non-null.
- *   - totalJobOpenings emitted ONLY when resolvePostVacancy() returns non-null.
- *   - baseSalary emitted ONLY when resolveSalary() returns non-null.
- *   - datePosted uses the official notification publication date, NOT posts.created_at.
- *   - employmentType emitted ONLY when the official source establishes it.
+ *   - `url` must be the canonical JobOye page URL (NOT officialSourceUrl — that's an
+ *     external government site, and Google requires the indexable page URL).
+ *   - `description` must be a real job description (≥80 chars), not a one-liner fallback.
+ *   - `directApply` must be true only when a direct application URL is available.
+ *   - `validThrough` emitted ONLY when resolveDeadline() state === 'OPEN'.
+ *   - `hiringOrganization` emitted ONLY when resolveEmployer() returns non-null.
+ *   - `totalJobOpenings` emitted ONLY when resolvePostVacancy() returns non-null.
+ *   - `baseSalary` emitted ONLY when resolveSalary() returns non-null and value is visible on page.
+ *   - `datePosted` uses the official notification publication date, NOT posts.created_at.
+ *   - `employmentType` emitted ONLY when the official source establishes it.
+ *   - `identifier` uses advertisement number when available, internal ID as fallback.
+ *   - Non-schema fields (vacanciesByCategory, examDate, applicationDeadline, applicationStartDate)
+ *     are NOT emitted — they are invalid and can cause Google validation errors.
  *   - BreadcrumbList always emitted regardless of JobPosting suppression.
  */
 
@@ -220,16 +226,48 @@ export default function JobPostingStructuredData({
       ? Array.isArray(enrichment.documentsRequired) ? enrichment.documentsRequired : [String(enrichment.documentsRequired)]
       : [];
 
+    // ── Build description ──────────────────────────────────────────────
+    // Google requires a substantive description. Build one from available
+    // facts when post.description is absent or too short (< 80 chars).
+    const MIN_DESC_LEN = 80;
+    let description = post.description && post.description.length >= MIN_DESC_LEN
+      ? post.description
+      : null;
+
+    if (!description) {
+      // Build from structured facts — official data only, no aggregator prose
+      const parts: string[] = [];
+      if (qualifications) parts.push(`Qualification: ${qualifications}`);
+      if (experienceRequirements) parts.push(`Experience: ${experienceRequirements}`);
+      if (vacancyCount != null) parts.push(`Vacancies: ${vacancyCount}`);
+      if (salary) parts.push(`Pay: ₹${salary.min.toLocaleString("en-IN")}–₹${salary.max.toLocaleString("en-IN")} per ${salary.period}`);
+      const builtDesc = parts.join(". ");
+      // Only use built description if it's substantive
+      if (builtDesc.length >= MIN_DESC_LEN) {
+        description = builtDesc;
+      } else {
+        // Minimal valid fallback — at least identifies the role and org
+        description = [
+          post.title,
+          post.organizationName ? `at ${post.organizationName}` : null,
+          post.locationState ? `in ${post.locationState}` : null,
+          "Government recruitment. See official notification for full details and eligibility requirements.",
+        ].filter(Boolean).join(" ");
+      }
+    }
+
+    // ── identifier: prefer advertisement number over internal ID ───────
+    const identifierValue = post.vacancyNumber ?? String(post.id);
+
     jobPosting = {
       "@type": "JobPosting",
       "@id": `${postUrl}#jobposting`,
-      url: officialSourceUrl ?? postUrl,
+      // Google requires the indexable detail page URL (not an external official source URL)
+      url: postUrl,
       title: post.title,
-      description:
-        post.description ||
-        `${post.title} vacancy. See official notification for full details.`,
+      description,
 
-      // ── Complete enrichment fields ──
+      // ── Enrichment fields (schema.org valid only) ──
       ...(qualifications ? { qualifications } : {}),
       ...(experienceRequirements ? {
         experienceRequirements: {
@@ -241,23 +279,17 @@ export default function JobPostingStructuredData({
       ...(jobBenefits.length > 0 ? { jobBenefits } : {}),
       ...(skills.length > 0 ? { skills } : {}),
 
-      // ── Dates ──
+      // ── Dates — only schema.org valid fields ──
       ...(datePosted ? { datePosted: datePosted.toISOString() } : {}),
       dateModified: post.updatedAt?.toISOString(),
+      // validThrough: only when application is currently open
       ...(deadline.state === "OPEN" && deadline.date
         ? { validThrough: deadline.date.toISOString() }
         : {}),
-      ...(enrichment?.applicationOpenDate ? {
-        applicationStartDate: new Date(enrichment.applicationOpenDate as string).toISOString()
-      } : {}),
-      ...(enrichment?.applicationClosingDate ? {
-        applicationDeadline: new Date(enrichment.applicationClosingDate as string).toISOString()
-      } : {}),
-      ...(enrichment?.examDate ? {
-        examDate: new Date(enrichment.examDate as string).toISOString()
-      } : {}),
+      // NOTE: applicationStartDate, applicationDeadline, examDate are NOT valid
+      // Google/schema.org fields — omitted to avoid validation errors.
 
-      // ── Standard fields ──
+      // ── Standard Google for Jobs fields ──
       ...(employmentType ? { employmentType } : {}),
       ...(hiringOrganization ? { hiringOrganization } : {}),
       ...(jobLocation ? { jobLocation } : {}),
@@ -265,20 +297,17 @@ export default function JobPostingStructuredData({
       ...(baseSalary ? { baseSalary } : {}),
       ...(applicationContact ? { applicationContact } : {}),
 
-      // ── Additional enrichment ──
-      ...(enrichment?.vacanciesByCategory ? {
-        vacanciesByCategory: enrichment.vacanciesByCategory
-      } : {}),
-      ...(documentsRequired.length > 0 ? {
-        applicantLocationRequirements: documentsRequired
-      } : {}),
+      // directApply: true only when a direct online application URL exists
+      directApply: applicationUrl != null,
 
       identifier: {
         "@type": "PropertyValue",
         name: "JobOye",
-        value: String(post.id),
+        value: identifierValue,
       },
-      directApply: false,
+
+      // sameAs: link to official source for richer entity disambiguation
+      ...(officialSourceUrl ? { sameAs: officialSourceUrl } : {}),
     };
   }
 
