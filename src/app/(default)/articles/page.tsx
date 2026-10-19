@@ -4,7 +4,7 @@ import Link from "next/link";
 import { listArticles } from "@/lib/queries";
 import { ARTICLE_TYPE_LABELS, formatDate } from "@/lib/labels";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 export const metadata: Metadata = {
   title: "Guides & Articles",

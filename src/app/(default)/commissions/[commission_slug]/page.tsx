@@ -3,7 +3,7 @@ import { getCommissionBySlug, getPostingsByCommission, listCommissionsWithExams 
 import { CommissionContent } from "@/components/commission-content";
 import { safeQuery } from "@/lib/safe-query";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = {
   params: Promise<{ commission_slug: string }>;

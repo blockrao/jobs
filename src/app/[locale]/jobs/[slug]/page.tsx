@@ -37,9 +37,8 @@ import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "@/components/ui/info-card";
 import { CanonicalPostCard, LegacyPostCard } from "@/components/ui/post-card";
 
-// Enable ISR with 60-second revalidation instead of force-dynamic
-// force-dynamic prevents static generation and forces every request to hit the database
-export const revalidate = 60;
+// Disable aggressive ISR: revalidate once daily to reduce resource usage
+export const revalidate = 86400;
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 

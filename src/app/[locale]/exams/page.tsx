@@ -5,7 +5,7 @@ import { listCommissionsWithExams, countCurrentPostingsByCommission } from "@/li
 import { ExamsHubContent } from "@/components/exams-hub-content";
 import { pageSeo } from "@/lib/seo";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = {
   params: Promise<{ locale: string }>;

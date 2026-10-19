@@ -12,7 +12,7 @@ import { ClosingSoonContent } from "@/components/closing-soon-content";
 // block (HOMEPAGE_DESIGN_STRATEGY_2026_10_14). Indexable: it is the page for
 // "sarkari naukri last date" intent, and it refreshes with the data.
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 const WINDOW_DAYS = 30;
 const PAGE_SIZE = 50;

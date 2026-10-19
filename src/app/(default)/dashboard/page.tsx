@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getDailyDigestStats, getDailyDigestJobs } from "@/lib/queries";
 import { DashboardContent } from "@/components/dashboard-content";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 export const metadata: Metadata = {
   title: { absolute: "Govt Jobs Dashboard — Today's Vacancies | JobOye" },

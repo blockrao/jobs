@@ -2,7 +2,7 @@ import { pageSeo } from "@/lib/seo";
 import { listCommissionsWithExams, countCurrentPostingsByCommission } from "@/lib/queries";
 import { ExamsHubContent } from "@/components/exams-hub-content";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 export const metadata = {
   title: "Browse by Exam",

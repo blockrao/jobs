@@ -16,7 +16,7 @@ import { InfoCard } from "@/components/ui/info-card";
 import { Badge } from "@/components/ui/badge";
 import { ROLE_REGISTRY, roleAliases } from "@/lib/roles";
 
-export const revalidate = 3600;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = { params: Promise<{ slug: string }> };
 

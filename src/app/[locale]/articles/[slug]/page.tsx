@@ -13,7 +13,7 @@ import {
 import { ARTICLE_TYPE_LABELS, formatDate } from "@/lib/labels";
 import { InfoCard } from "@/components/ui/info-card";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = { params: Promise<{ slug: string; locale: string }> };
 

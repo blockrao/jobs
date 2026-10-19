@@ -4,7 +4,7 @@ import { absoluteUrl } from "@/lib/site";
 import { getRankedOrganizations } from "@/db/operations/get-organizations";
 import { OrganizationsHubContent } from "@/components/organizations-hub-content";
 
-export const revalidate = 3600; // 1 hour
+export const revalidate = 86400; // Phase 1: daily revalidation // 1 hour
 
 export const metadata: Metadata = {
   title: "Government Recruitment Organizations - SSC, UPSC, Railways & More",

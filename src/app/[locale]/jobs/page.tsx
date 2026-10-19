@@ -16,7 +16,7 @@ import {
   formatDate,
 } from "@/lib/labels";
 
-export const revalidate = 120;
+export const revalidate = 86400; // 1 day - Phase 1 no-traffic endpoint
 
 type Props = {
   params: Promise<{ locale: string }>;

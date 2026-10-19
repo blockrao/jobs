@@ -77,7 +77,7 @@ function buildMetaDescription(params: {
 // Recruitment hub pages are moderately static (vacancy counts and deadlines change on hourly/daily basis)
 // ISR dramatically improves performance vs force-dynamic, which hits the database on every request
 // PERF-003: ISR replaces force-dynamic to leverage Next.js static generation cache
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 interface RecruitmentHubProps {
   params: Promise<{

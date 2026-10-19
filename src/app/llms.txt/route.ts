@@ -6,7 +6,7 @@ import { QUALIFICATIONS } from "@/lib/qualifications";
 // crawlers how this site is structured so they cite the correct canonical
 // URL and read facts from the right page. Kept in step with the frozen URL
 // architecture (ARC-001) and the homepage ranking rule (2026-10-14).
-export const revalidate = 3600;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 export async function GET() {
   const sectorLines = SECTORS.map((s) => `  - ${SITE_URL}/categories/${s.slug} — ${s.label}: ${s.description}`).join("\n");

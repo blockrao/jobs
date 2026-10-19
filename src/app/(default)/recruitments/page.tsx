@@ -6,7 +6,7 @@ import { recruitments, posts, vacancies } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { desc, eq, sql } from "drizzle-orm";
 
-export const revalidate = 3600; // 1 hour
+export const revalidate = 86400; // Phase 1: daily revalidation // 1 hour
 
 export const metadata: Metadata = {
   title: "Recruitment Campaigns - Government Jobs Timeline",

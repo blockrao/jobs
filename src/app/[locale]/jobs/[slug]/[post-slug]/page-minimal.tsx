@@ -12,7 +12,7 @@ interface Props {
   }>;
 }
 
-export const revalidate = 60;
+export const revalidate = 86400; // 1 day - Phase 1 no-traffic minimal endpoint
 
 export default async function TestPage({ params }: Props) {
   const { slug: recruitmentSlug, "post-slug": postSlug } = await params;

@@ -5,7 +5,7 @@ import { safeQuery } from "@/lib/safe-query";
 import { SECTORS } from "@/lib/sectors";
 import { CategoriesContent } from "@/components/categories-content";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 export const metadata: Metadata = {
   title: "Government Jobs by Category",

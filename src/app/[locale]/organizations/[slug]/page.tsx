@@ -9,7 +9,7 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { InfoCard } from "@/components/ui/info-card";
 import { Badge } from "@/components/ui/badge";
 
-export const revalidate = 3600;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = {
   params: Promise<{ slug: string; locale: string }>

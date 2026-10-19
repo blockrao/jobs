@@ -3,7 +3,7 @@ import Link from "next/link";
 import { listArticles } from "@/lib/queries";
 import { formatDate } from "@/lib/labels";
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 export const metadata = {
   title: "Latest Job News",

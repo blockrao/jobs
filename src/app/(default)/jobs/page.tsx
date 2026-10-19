@@ -24,7 +24,7 @@ import { ChevronRight } from "lucide-react";
 // ever changing this page's own canonical URL or forcing it into a
 // different render mode than before (it was already request-dynamic from
 // `searchParams`, so reading another cookie here has no new cost).
-export const revalidate = 120;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = {
   searchParams: Promise<{

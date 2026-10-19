@@ -6,7 +6,7 @@ import { positions } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { asc } from "drizzle-orm";
 
-export const revalidate = 3600; // 1 hour
+export const revalidate = 86400; // Phase 1: daily revalidation // 1 hour
 
 export const metadata: Metadata = {
   title: "Browse All Government Job Positions - Evergreen Roles",

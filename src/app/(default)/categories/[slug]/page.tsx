@@ -13,7 +13,7 @@ import { CategoryContent } from "@/components/category-content";
 // through organizations.sector. See the header comment in sectors.ts for why
 // the old DB-backed category pages were replaced.
 
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 export const dynamicParams = true;
 
 const PAGE_SIZE = 50;

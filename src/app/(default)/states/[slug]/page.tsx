@@ -8,7 +8,7 @@ import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
 
-export const revalidate = 600;
+export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = { params: Promise<{ slug: string }> };
 

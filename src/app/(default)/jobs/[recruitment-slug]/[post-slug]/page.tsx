@@ -20,7 +20,7 @@ import { Metadata } from "next";
 
 // Revalidate every 5 minutes so DB writes (decomposition, enrichment) appear
 // without requiring a full deployment.
-export const revalidate = 300;
+export const revalidate = 86400; // Phase 1: daily revalidation
 import JobPostingPage from "@/components/job-posting/job-posting-page";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
 import { getPostBySlug } from "@/db/operations/get-posts";
