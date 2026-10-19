@@ -208,28 +208,20 @@ export default async function LocaleJobPostingPage({ params }: Props) {
         />
       )}
 
-      {/* ===== NEW: Enterprise schema stack (7 components) ===== */}
+      {/* TEMPORARILY DISABLED: Enterprise schema stack
+          These components may be throwing errors - disabled for Phase 1 P0 stability.
+          Only JobPosting schema (PostLeafStructuredData) is essential.
       {locale !== "hi" && (
         <>
-          {/* 1. FAQ Page Schema (AEO - Answer Engine Optimization) */}
           <FAQPageSchema post={post} />
-
-          {/* 2. Organization Schema (Employer branding) */}
           <OrganizationSchema post={post} />
-
-          {/* 3. Local Business Schema (Geo-targeting) */}
           <LocalBusinessSchema post={post} />
-
-          {/* 4. Web Page Schema (Freshness signals) */}
           <WebPageSchema post={post} />
-
-          {/* 5. Event Schema (Application timeline) */}
           <EventSchema post={post} />
-
-          {/* 6. Aggregate Offer Schema (Salary indexing) */}
           <AggregateOfferSchema post={post} />
         </>
       )}
+      */}
 
       <JobPostingPageClient
         applyUrl={recruitmentResolvedFacts?.applicationUrl}
