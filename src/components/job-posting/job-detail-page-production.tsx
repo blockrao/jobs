@@ -24,6 +24,11 @@ import { formatDate, formatCurrency, formatDeadlineStatus } from '@/lib/formatti
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
 import FAQSection from '@/components/job-posting/faq/faq-section';
 import { generateFAQs } from '@/components/job-posting/faq/faq-templates';
+import ApplicationInstructionsSection from '@/components/job-posting/application-instructions/application-instructions-section';
+import {
+  generateApplicationInstructions,
+  generateRequiredDocuments,
+} from '@/components/job-posting/application-instructions/application-templates';
 
 // Helper: Parse JSON strings safely
 function safeJsonParse<T>(value: unknown, fallback: T): T {
@@ -683,6 +688,40 @@ export default function JobDetailPageProduction({
 
             return faqsToDisplay && faqsToDisplay.length > 0 ? (
               <FAQSection faqs={faqsToDisplay} postId={post.id} postTitle={post.title} />
+            ) : null;
+          })()}
+
+          {/* Application Instructions */}
+          {(() => {
+            const appInstructions = generateApplicationInstructions({
+              applyUrl: post.applyUrl,
+              officialSourceUrl: post.officialSourceUrl,
+              organizationName: post.organizationName,
+              locationCity: post.locationCity,
+              locationState: post.locationState,
+              employmentType: post.employmentType,
+              requiredDocuments: post.requiredDocuments,
+              applicationDeadline,
+            });
+
+            const requiredDocs = generateRequiredDocuments({
+              applyUrl: post.applyUrl,
+              officialSourceUrl: post.officialSourceUrl,
+              organizationName: post.organizationName,
+              locationCity: post.locationCity,
+              locationState: post.locationState,
+              employmentType: post.employmentType,
+              requiredDocuments: post.requiredDocuments,
+              applicationDeadline,
+            });
+
+            return appInstructions && appInstructions.length > 0 ? (
+              <ApplicationInstructionsSection
+                instructions={appInstructions}
+                requiredDocuments={requiredDocs}
+                applicationDeadline={applicationDeadline || undefined}
+                organizationName={post.organizationName || undefined}
+              />
             ) : null;
           })()}
 
