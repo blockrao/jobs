@@ -415,14 +415,22 @@ export default function JobDetailPageProduction({
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
             {post.applyUrl && (
-              <a
-                href={post.applyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-center transition-colors"
-              >
-                Apply Now
-              </a>
+              <>
+                {isApplicationClosed ? (
+                  <div className="flex-1 px-6 py-3 bg-gray-400 text-white font-semibold rounded-lg text-center cursor-not-allowed opacity-60">
+                    Applications Closed
+                  </div>
+                ) : (
+                  <a
+                    href={post.applyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-center transition-colors"
+                  >
+                    Apply Now
+                  </a>
+                )}
+              </>
             )}
             {post.officialSourceUrl && (
               <a
@@ -496,14 +504,20 @@ export default function JobDetailPageProduction({
       {/* ─ Mobile Sticky Apply Bar ─ */}
       {post.applyUrl && (
         <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 p-4 z-40">
-          <a
-            href={post.applyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-center transition-colors"
-          >
-            Apply Now
-          </a>
+          {isApplicationClosed ? (
+            <div className="w-full block px-6 py-3 bg-gray-400 text-white font-semibold rounded-lg text-center opacity-60">
+              Applications Closed
+            </div>
+          ) : (
+            <a
+              href={post.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-center transition-colors"
+            >
+              Apply Now
+            </a>
+          )}
         </div>
       )}
     </>
