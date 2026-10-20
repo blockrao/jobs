@@ -14,11 +14,10 @@
 // redirects).
 
 // Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4.
-// PHASE 2: /jobs routes NO LONGER have [locale] counterparts (removed in Phase 2)
+// PHASE 2: /jobs and /organizations routes NO LONGER have [locale] counterparts (removed in Phase 2)
 export const LOCALE_AWARE_PREFIXES = [
   '/articles/',
   '/exams/',
-  '/organizations/',
 ] as const;
 
 // Entity / listing prefixes: the path itself (with no further slug) is
