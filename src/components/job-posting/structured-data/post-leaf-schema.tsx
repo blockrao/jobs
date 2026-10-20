@@ -138,7 +138,7 @@ export default function PostLeafStructuredData({
     "@type": "ListItem",
     position: position,
     name: post.title,
-    item: leafUrl,
+    // No item URL on final breadcrumb node — h1 is source of truth
   });
 
   const breadcrumb = {

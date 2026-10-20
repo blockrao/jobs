@@ -17,8 +17,9 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
+import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
-import { formatDate } from "@/lib/formatting";
+import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
 
 export const revalidate = 86400; // 1 day ISR
@@ -42,11 +43,42 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const title = `${post.title} - Apply Online at JobOye`;
-  const description =
-    post.description ||
-    `Apply for ${post.title} at ${post.organizationName || "JobOye"}.
-     Check eligibility, salary, deadline and official notification.`;
+  // SEO-optimized title: include location and salary for SERP visibility
+  const location = post.locationState || post.locationCity || "India";
+  const salaryMin = post.enrichment?.salaryMin ?? post.legacySalaryMin;
+  const salaryMax = post.enrichment?.salaryMax ?? post.legacySalaryMax;
+  const salaryInfo = salaryMin
+    ? `: ₹${formatCurrency(salaryMin)}${salaryMax ? `–₹${formatCurrency(salaryMax)}` : ""}`
+    : "";
+  const title = `${post.title} (${location})${salaryInfo}`;
+
+  // SEO-optimized description: use vacancy, deadline, and salary when available
+  let description = post.description;
+  if (!description) {
+    const vacancies = post.enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
+    const vacancyText = vacancies > 0 ? `${vacancies} positions` : "multiple positions";
+
+    const applicationDeadline = post.recruitmentApplicationEndDate ?? post.enrichment?.applicationClosingDate;
+    let daysText = "apply now";
+    if (applicationDeadline) {
+      const daysLeft = Math.ceil(
+        (new Date(applicationDeadline).getTime() - new Date().getTime()) / 86_400_000
+      );
+      if (daysLeft > 0) {
+        daysText = `apply in ${daysLeft} days`;
+      } else if (daysLeft === 0) {
+        daysText = "apply today";
+      } else {
+        daysText = "applications closed";
+      }
+    }
+
+    const salaryText = salaryMin
+      ? `Salary ₹${formatCurrency(salaryMin)}${salaryMax ? `–₹${formatCurrency(salaryMax)}` : ""}`
+      : "Check salary details";
+
+    description = `${post.title}: ${vacancyText}, ${daysText}. ${salaryText}.`;
+  }
 
   // PHASE 2: Canonical URL without locale prefix
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://joboye.com";
@@ -113,6 +145,16 @@ export default async function JobDetailPage({ params }: Props) {
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
+
+  // Fetch related posts (semantically grouped)
+  const relatedPosts = await getRelatedPostsGrouped(
+    String(post.recruitmentId),
+    post.slug,
+    post.title,
+    post.organizationId ? String(post.organizationId) : undefined,
+    post.locationState ?? undefined,
+    3
+  );
 
   // Build canonical URL for schema
   const canonicalUrl = `/jobs/${post.recruitmentSlug}/${post.slug}`;
@@ -225,6 +267,21 @@ export default async function JobDetailPage({ params }: Props) {
           source: l.source,
         })) : [],
       }}
+      relatedByOrg={relatedPosts.byOrganization.map((p) => ({
+        title: p.title,
+        slug: p.slug,
+        recruitment_slug: p.recruitment_slug,
+      }))}
+      relatedByLocation={relatedPosts.byLocation.map((p) => ({
+        title: p.title,
+        slug: p.slug,
+        recruitment_slug: p.recruitment_slug,
+      }))}
+      relatedByRole={relatedPosts.byRole.map((p) => ({
+        title: p.title,
+        slug: p.slug,
+        recruitment_slug: p.recruitment_slug,
+      }))}
       canonicalUrl={canonicalUrl}
       lifecycle={lifecycle}
     />

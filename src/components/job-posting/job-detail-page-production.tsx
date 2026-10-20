@@ -22,6 +22,7 @@
 import type React from 'react';
 import { formatDate, formatCurrency, formatDeadlineStatus } from '@/lib/formatting';
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
+import PostFAQSchema from '@/components/job-posting/structured-data/post-faq-schema';
 import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
 import FAQSection from '@/components/job-posting/faq/faq-section';
 import { generateFAQs } from '@/components/job-posting/faq/faq-templates';
@@ -48,6 +49,12 @@ interface OrganizationData {
   type?: string | null;
   url?: string | null;
   logoUrl?: string | null;
+}
+
+interface RelatedPost {
+  title: string;
+  slug: string;
+  recruitment_slug: string;
 }
 
 interface JobDetailPageProps {
@@ -106,6 +113,9 @@ interface JobDetailPageProps {
     recruitmentSlug: string;
     applicationDeadline?: Date | string | null;
   }>;
+  relatedByOrg?: RelatedPost[];
+  relatedByLocation?: RelatedPost[];
+  relatedByRole?: RelatedPost[];
   faqs?: Array<{
     question: string;
     answer: string;
@@ -152,6 +162,9 @@ function getOrgEmojiByType(type: string | null | undefined): string {
 export default function JobDetailPageProduction({
   post,
   relatedJobs,
+  relatedByOrg,
+  relatedByLocation,
+  relatedByRole,
   faqs,
   locale = 'en',
   canonicalUrl,
@@ -179,6 +192,22 @@ export default function JobDetailPageProduction({
 
   // Organization branding
   const orgEmoji = getOrgEmojiByType(post.organizationType);
+
+  // Compute completeness score for SEO/UX signal
+  const completenessFields = {
+    qualifications: Boolean(qualificationText),
+    education: (post.educationRequirements?.length ?? 0) > 0,
+    experience: (post.experienceRequirements?.length ?? 0) > 0,
+    selection: Boolean(post.selectionProcess || (post.selectionProcessStages?.length ?? 0) > 0),
+    requirements: (post.requiredDocuments?.length ?? 0) > 0,
+    dates: (post.importantDates?.length ?? 0) > 0,
+    fees: (post.applicationFees?.length ?? 0) > 0,
+    salary: Boolean(post.salary?.min || post.fjaExtract?.salaryRaw),
+  };
+
+  const completenessCount = Object.values(completenessFields).filter(Boolean).length;
+  const completenessMax = Object.keys(completenessFields).length;
+  const isCompletePost = completenessCount >= 6;
 
   // Visible breadcrumb, built from the URL contract (/jobs → hub → leaf).
   // BreadcrumbList structured data is emitted once, by JobPostingSchema.
@@ -221,6 +250,7 @@ export default function JobDetailPageProduction({
     <>
       {/* ─ Schema.org Structured Data (AEO Optimization) ─ */}
       {locale !== 'hi' && emitJobPosting && <JobPostingSchema {...schemaData} />}
+      {locale !== 'hi' && <PostFAQSchema post={post} />}
 
       {/* ─ Page Structure (Mobile-First) ─ */}
       <main className="min-h-screen bg-white dark:bg-slate-950">
@@ -298,6 +328,13 @@ export default function JobDetailPageProduction({
             </div>
           )}
 
+          {/* Completeness Badge */}
+          {isCompletePost && (
+            <div className="mb-6 p-3 rounded-lg bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm font-semibold">
+              ✓ Complete post: {completenessCount}/{completenessMax} sections filled
+            </div>
+          )}
+
           {/* Introduction */}
           {post.description && (
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-8 leading-relaxed">
@@ -308,7 +345,7 @@ export default function JobDetailPageProduction({
           {/* Quick Facts Table (SEO + Mobile Sticky) */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
-              Quick Facts
+              Quick Facts for {post.title}
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -375,7 +412,7 @@ export default function JobDetailPageProduction({
           {qualificationText && (
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
-                Qualifications Required
+                Qualifications Required for {post.title}
               </h2>
               <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                 {qualificationText}
@@ -387,7 +424,7 @@ export default function JobDetailPageProduction({
           {post.educationRequirements && post.educationRequirements.length > 0 && (
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
-                Education Requirements
+                Education Requirements for {post.title}
               </h2>
               <ul className="space-y-3 text-gray-700 dark:text-gray-300">
                 {post.educationRequirements.map((e, idx) => {
@@ -722,29 +759,100 @@ export default function JobDetailPageProduction({
             ) : null;
           })()}
 
-          {/* Related Jobs */}
-          {relatedJobs && relatedJobs.length > 0 && (
+          {/* Related Opportunities — Semantically grouped */}
+          {(
+            (relatedByOrg && relatedByOrg.length > 0) ||
+            (relatedByLocation && relatedByLocation.length > 0) ||
+            (relatedByRole && relatedByRole.length > 0) ||
+            (relatedJobs && relatedJobs.length > 0)
+          ) && (
             <section className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
-                Related Job Opportunities
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 border-b-2 border-gray-200 dark:border-slate-800 pb-2">
+                Related Opportunities
               </h2>
-              <ul className="space-y-3 divide-y divide-gray-200 dark:divide-slate-800">
-                {relatedJobs.map(job => (
-                  <li key={job.id} className="py-3">
-                    <a
-                      href={`/jobs/${job.recruitmentSlug}/${job.slug}`}
-                      className="block text-blue-600 dark:text-blue-400 font-semibold hover:underline"
-                    >
-                      {job.title}
-                    </a>
-                    {job.applicationDeadline && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Apply by {formatDate(new Date(job.applicationDeadline))}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+
+              {relatedByOrg && relatedByOrg.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Other jobs at {post.organizationName}
+                  </h3>
+                  <ul className="space-y-2">
+                    {relatedByOrg.map(r => (
+                      <li key={r.slug}>
+                        <a
+                          href={`/jobs/${r.recruitment_slug}/${r.slug}`}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {r.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {relatedByLocation && relatedByLocation.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Other jobs in {post.locationState}
+                  </h3>
+                  <ul className="space-y-2">
+                    {relatedByLocation.map(r => (
+                      <li key={r.slug}>
+                        <a
+                          href={`/jobs/${r.recruitment_slug}/${r.slug}`}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {r.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {relatedByRole && relatedByRole.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Other similar positions
+                  </h3>
+                  <ul className="space-y-2">
+                    {relatedByRole.map(r => (
+                      <li key={r.slug}>
+                        <a
+                          href={`/jobs/${r.recruitment_slug}/${r.slug}`}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {r.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {relatedJobs && relatedJobs.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">More opportunities</h3>
+                  <ul className="space-y-3 divide-y divide-gray-200 dark:divide-slate-800">
+                    {relatedJobs.map(job => (
+                      <li key={job.id} className="py-3">
+                        <a
+                          href={`/jobs/${job.recruitmentSlug}/${job.slug}`}
+                          className="block text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+                        >
+                          {job.title}
+                        </a>
+                        {job.applicationDeadline && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Apply by {formatDate(new Date(job.applicationDeadline))}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
           )}
 
