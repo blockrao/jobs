@@ -3,40 +3,12 @@
 /**
  * Pillar Content Renderer
  *
- * Dynamically imports and renders markdown pillar content based on slug
- * Maps slug to markdown file and renders with prose styling
+ * Fetches and renders markdown pillar content from public folder
+ * Uses react-markdown for conversion to HTML
  */
 
 import React, { Suspense } from "react";
-
-// Pillar slug to markdown file mapping
-const pillarContentMap: Record<string, () => Promise<any>> = {
-  "iit-delhi": () => import("@/content/pillars/iit-delhi.md"),
-  "echs": () => import("@/content/pillars/echs.md"),
-  "appsc-group-1": () => import("@/content/pillars/appsc-group-1.md"),
-  "iit-indore": () => import("@/content/pillars/iit-indore.md"),
-  "iari-recruitment": () => import("@/content/pillars/iari-recruitment.md"),
-  "bpsc-recruitment": () => import("@/content/pillars/bpsc-recruitment.md"),
-  "iiit-kota": () => import("@/content/pillars/iiit-kota.md"),
-  "iit-kharagpur": () => import("@/content/pillars/iit-kharagpur.md"),
-  "angrau-recruitment": () => import("@/content/pillars/angrau-recruitment.md"),
-  "tiss-recruitment": () => import("@/content/pillars/tiss-recruitment.md"),
-  "rites-recruitment": () => import("@/content/pillars/rites-recruitment.md"),
-  "aiims-jodhpur": () => import("@/content/pillars/aiims-jodhpur.md"),
-  "manipal-university": () => import("@/content/pillars/manipal-university.md"),
-  "iit-roorkee": () => import("@/content/pillars/iit-roorkee.md"),
-  "esic-recruitment": () => import("@/content/pillars/esic-recruitment.md"),
-  "east-central-railway": () => import("@/content/pillars/east-central-railway.md"),
-  "jipmer-recruitment": () => import("@/content/pillars/jipmer-recruitment.md"),
-  "iit-ropar": () => import("@/content/pillars/iit-ropar.md"),
-  "gmc-chandigarh": () => import("@/content/pillars/gmc-chandigarh.md"),
-  "iiser-bhopal": () => import("@/content/pillars/iiser-bhopal.md"),
-  "district-health-society": () => import("@/content/pillars/district-health-society.md"),
-  "mumbai-port-authority": () => import("@/content/pillars/mumbai-port-authority.md"),
-  "delhi-electricity-commission": () => import("@/content/pillars/delhi-electricity-commission.md"),
-  "csjmu-teaching": () => import("@/content/pillars/csjmu-teaching.md"),
-  "iiit-delhi": () => import("@/content/pillars/iiit-delhi.md"),
-};
+import ReactMarkdown from "react-markdown";
 
 interface PillarContentRendererProps {
   slug: string;
@@ -44,30 +16,59 @@ interface PillarContentRendererProps {
 
 async function PillarContentRendererAsync({ slug }: PillarContentRendererProps) {
   try {
-    const loader = pillarContentMap[slug];
-    if (!loader) {
+    // Fetch markdown from public folder
+    const response = await fetch(`/content/pillars/${slug}.md`, {
+      cache: "force-cache",
+    });
+
+    if (!response.ok) {
       return <div className="text-gray-500">Content not found for this pillar.</div>;
     }
 
-    const module = await loader();
-    const Content = module.default;
+    const markdown = await response.text();
 
-    // If it's an MDX/markdown module with a default export component
-    if (typeof Content === "function") {
-      return <Content />;
-    }
-
-    // If it's raw markdown text
-    if (typeof Content === "string") {
-      return (
-        <div
-          dangerouslySetInnerHTML={{ __html: Content }}
-          className="prose prose-sm dark:prose-invert max-w-none"
-        />
-      );
-    }
-
-    return <div className="text-gray-500">Unable to render content.</div>;
+    return (
+      <ReactMarkdown
+        className="prose prose-sm dark:prose-invert max-w-none"
+        components={{
+          h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mt-6 mb-4" {...props} />,
+          h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mt-6 mb-3" {...props} />,
+          h3: ({ node, ...props }) => <h3 className="text-xl font-semibold mt-4 mb-2" {...props} />,
+          p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
+          ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-4 space-y-1" {...props} />,
+          ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-4 space-y-1" {...props} />,
+          li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+          strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+          em: ({ node, ...props }) => <em className="italic" {...props} />,
+          code: ({ node, ...props }) => (
+            <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono" {...props} />
+          ),
+          blockquote: ({ node, ...props }) => (
+            <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-4" {...props} />
+          ),
+          table: ({ node, ...props }) => (
+            <div className="overflow-x-auto my-4">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-600" {...props} />
+            </div>
+          ),
+          thead: ({ node, ...props }) => (
+            <thead className="bg-gray-100 dark:bg-gray-800" {...props} />
+          ),
+          th: ({ node, ...props }) => (
+            <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left font-bold" {...props} />
+          ),
+          td: ({ node, ...props }) => (
+            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2" {...props} />
+          ),
+          a: ({ node, href, ...props }) => (
+            <a href={href} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />
+          ),
+          hr: () => <hr className="my-6 border-t border-gray-300 dark:border-gray-600" />,
+        }}
+      >
+        {markdown}
+      </ReactMarkdown>
+    );
   } catch (error) {
     console.error(`Failed to load pillar content for slug: ${slug}`, error);
     return (
