@@ -13,9 +13,8 @@
 // matches them, and they're also not the bare-root case proxy.ts separately
 // redirects).
 
-// Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4. Both the
-// legacy one-segment route (/jobs/[slug]) and canonical Post Leaf route
-// (/jobs/[recruitment-slug]/[post-slug]) have [locale] counterparts.
+// Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4.
+// PHASE 2: /jobs routes NO LONGER have [locale] counterparts (removed in Phase 2)
 export const LOCALE_AWARE_PREFIXES = [
   '/articles/',
   '/exams/',
@@ -32,8 +31,8 @@ const LOCALE_AWARE_ENTITIES = [
 ] as const;
 
 // Bare listing pages that live at exactly this path (no slug required).
+// PHASE 2: /jobs removed from this list (no longer has [locale] variants)
 const LOCALE_AWARE_LISTINGS = [
-  '/jobs',
   '/exams',
 ] as const;
 
@@ -57,13 +56,11 @@ export function isLocaleAwarePath(pathname: string): boolean {
   // locale-aware job detail page, which cannot resolve the preview fixture.
   if (stripped === '/jobs/jkssb-advertisement-08-of-2026') return false;
 
-  // Both concrete job detail routes are locale-aware: /jobs/[slug] and
-  // /jobs/[recruitment-slug]/[post-slug]. Do not route deeper unknown paths
-  // through next-intl, and let /jobs/ fall through to the listing check below.
+  // PHASE 2: Job routes NO LONGER have locale variants. /jobs/[slug] and
+  // /jobs/[recruitment-slug]/[post-slug] are not locale-aware anymore.
+  // Do not route job paths through next-intl.
   if (stripped.startsWith('/jobs/')) {
-    const segments = stripped.slice('/jobs/'.length).split('/').filter(Boolean);
-    if (segments.length === 1 || segments.length === 2) return true;
-    if (segments.length > 2) return false;
+    return false;
   }
 
   // Entity prefixes: require a slug after the prefix (same rule as above).
