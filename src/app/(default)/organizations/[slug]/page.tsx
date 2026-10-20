@@ -5,6 +5,13 @@ import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
 import { getOrganizationBySlug } from "@/db/operations/get-organizations";
+import {
+  getOrganizationPostings,
+  getOrganizationSalaryStats,
+  getOrganizationGeographicDistribution,
+  getOrganizationVacancyStats,
+  getOrganizationRoles,
+} from "@/db/operations/get-organization-postings";
 import OrgPageFundamental from "@/components/organization/org-page-fundamental";
 
 // ISR: Revalidate every 2 hours (live data updates)
@@ -184,11 +191,31 @@ export default async function OrganizationPage({ params }: Props) {
     notFound();
   }
 
-  // Return fundamental redesigned component with org data
+  // Fetch live recruitment data for this organization
+  const [
+    postings,
+    salaryStats,
+    geographicDistribution,
+    vacancyStats,
+    roles,
+  ] = await Promise.all([
+    getOrganizationPostings(org.id),
+    getOrganizationSalaryStats(org.id),
+    getOrganizationGeographicDistribution(org.id),
+    getOrganizationVacancyStats(org.id),
+    getOrganizationRoles(org.id),
+  ]);
+
+  // Return fundamental redesigned component with org data + live data
   return (
     <OrgPageFundamental
       organization={org}
       canonicalUrl={absoluteUrl(`/organizations/${originalSlug}`)}
+      postings={postings}
+      salaryStats={salaryStats}
+      geographicDistribution={geographicDistribution}
+      vacancyStats={vacancyStats}
+      roles={roles}
     />
   );
 }

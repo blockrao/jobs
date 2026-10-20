@@ -2,12 +2,33 @@
 
 import React from 'react';
 import Script from 'next/script';
-import type { organizations } from '@/db/schema';
+import type { organizations, postings } from '@/db/schema';
 import '@/styles/organization-fundamental.css';
+
+type PostingRecord = typeof postings.$inferSelect;
 
 interface OrgPageFundamentalProps {
   organization: typeof organizations.$inferSelect;
   canonicalUrl: string;
+  postings: PostingRecord[];
+  salaryStats: {
+    minSalary: number | null;
+    maxSalary: number | null;
+    avgMinSalary: number | null;
+    avgMaxSalary: number | null;
+    count: number;
+  };
+  geographicDistribution: Array<{
+    state: string | null;
+    city: string | null;
+    count: number;
+  }>;
+  vacancyStats: {
+    totalVacancies: number;
+    postingCount: number;
+    avgVacanciesPerPosting: number | null;
+  };
+  roles: string[];
 }
 
 // ============================================================================
@@ -99,30 +120,52 @@ function generateBreadcrumbSchema(org: typeof organizations.$inferSelect) {
 // SECTION COMPONENTS (Pure HTML, no client-side logic)
 // ============================================================================
 
-function HeroSnapshot({ org }: { org: typeof organizations.$inferSelect }) {
+function HeroSnapshot({
+  org,
+  vacancyStats,
+  postings: postingsData,
+}: {
+  org: typeof organizations.$inferSelect;
+  vacancyStats: {
+    totalVacancies: number;
+    postingCount: number;
+    avgVacanciesPerPosting: number | null;
+  };
+  postings: PostingRecord[];
+}) {
+  const vacancyDisplay = vacancyStats.totalVacancies > 0
+    ? `${vacancyStats.totalVacancies}+`
+    : 'Positions';
+
+  const recentPosting = postingsData.length > 0
+    ? new Date(postingsData[0].datePosted!).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'Recently';
+
   return (
     <section id="hero-snapshot" className="card card-primary">
       <h2>At a Glance</h2>
       <div className="stat-grid">
         <div className="stat">
-          <span className="stat-value">120+</span>
-          <span className="stat-label">Positions Open</span>
+          <span className="stat-value">{vacancyDisplay}</span>
+          <span className="stat-label">Total Vacancies</span>
         </div>
         <div className="stat">
-          <span className="stat-value">8</span>
-          <span className="stat-label">Active Campaigns</span>
+          <span className="stat-value">{vacancyStats.postingCount}</span>
+          <span className="stat-label">Active Postings</span>
         </div>
         <div className="stat">
-          <span className="stat-value">4-6</span>
-          <span className="stat-label">Month Cycle</span>
+          <span className="stat-value">
+            {vacancyStats.postingCount > 0 ? (vacancyStats.avgVacanciesPerPosting || 0).toFixed(0) : '—'}
+          </span>
+          <span className="stat-label">Avg. per Posting</span>
         </div>
       </div>
       <p className="scope-indicator">
         <strong>Recruiting:</strong> <span className="scope-badge scope-national">Across India</span>
       </p>
       <p className="last-updated">
-        Last updated: <time dateTime={new Date().toISOString().split('T')[0]}>
-          {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        Last posting: <time dateTime={postings[0]?.datePosted ? new Date(postings[0].datePosted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}>
+          {recentPosting}
         </time>
       </p>
     </section>
@@ -298,37 +341,43 @@ function ApplicationTimeline() {
   );
 }
 
-function SalaryBenefits() {
+function SalaryBenefits({ salaryStats }: { salaryStats: { minSalary: number | null; maxSalary: number | null; avgMinSalary: number | null; avgMaxSalary: number | null; count: number } }) {
+  const formatSalary = (val: number | null) =>
+    val ? `₹${(val / 1000).toFixed(0)}k` : '—';
+
   return (
     <section id="salary-benefits" className="card">
       <h2>Salary & Benefits</h2>
       <article className="salary-subsection">
-        <h3>Typical Salary Structure</h3>
+        <h3>Current Salary Range</h3>
+        <p className="salary-info">
+          Based on <strong>{salaryStats.count} active positions</strong>:
+        </p>
         <table className="salary-table" role="grid">
           <thead>
             <tr>
-              <th scope="col">Position</th>
-              <th scope="col">Year 1</th>
-              <th scope="col">Year 5</th>
-              <th scope="col">Year 10+</th>
+              <th scope="col">Metric</th>
+              <th scope="col">Minimum</th>
+              <th scope="col">Average</th>
+              <th scope="col">Maximum</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td data-label="Position">
+              <td data-label="Metric">
                 <strong>Entry Level</strong>
               </td>
-              <td data-label="Year 1">₹35,000</td>
-              <td data-label="Year 5">₹50,000</td>
-              <td data-label="Year 10+">₹65,000</td>
+              <td data-label="Minimum">{formatSalary(salaryStats.minSalary)}</td>
+              <td data-label="Average">{formatSalary(salaryStats.avgMinSalary)}</td>
+              <td data-label="Maximum">—</td>
             </tr>
             <tr>
-              <td data-label="Position">
-                <strong>Mid-Career</strong>
+              <td data-label="Metric">
+                <strong>Mid/Senior Level</strong>
               </td>
-              <td data-label="Year 1">₹55,000</td>
-              <td data-label="Year 5">₹75,000</td>
-              <td data-label="Year 10+">₹95,000</td>
+              <td data-label="Minimum">—</td>
+              <td data-label="Average">{formatSalary(salaryStats.avgMaxSalary)}</td>
+              <td data-label="Maximum">{formatSalary(salaryStats.maxSalary)}</td>
             </tr>
           </tbody>
         </table>
@@ -359,16 +408,25 @@ function SalaryBenefits() {
   );
 }
 
-function GeographicDistribution() {
-  const states = [
-    { name: 'Delhi', count: 15, intensity: 'high' },
-    { name: 'Maharashtra', count: 8, intensity: 'medium' },
-    { name: 'Karnataka', count: 6, intensity: 'medium' },
-    { name: 'Tamil Nadu', count: 5, intensity: 'low' },
-    { name: 'Gujarat', count: 4, intensity: 'low' },
-    { name: 'West Bengal', count: 3, intensity: 'low' },
-    { name: 'Others', count: 10, intensity: 'very-low' },
-  ];
+function GeographicDistribution({ geographicDistribution }: { geographicDistribution: Array<{ state: string | null; city: string | null; count: number }> }) {
+  // Calculate intensity based on count
+  const getIntensity = (count: number, maxCount: number) => {
+    if (count >= maxCount * 0.6) return 'high';
+    if (count >= maxCount * 0.3) return 'medium';
+    if (count >= maxCount * 0.1) return 'low';
+    return 'very-low';
+  };
+
+  const maxCount = Math.max(...geographicDistribution.map(d => d.count), 1);
+  const states = geographicDistribution
+    .filter(d => d.state) // Only include entries with state
+    .slice(0, 10) // Top 10
+    .map(d => ({
+      name: d.state || 'Unknown',
+      city: d.city || '',
+      count: d.count,
+      intensity: getIntensity(d.count, maxCount),
+    }));
 
   return (
     <section id="geographic-distribution" className="card">
@@ -517,7 +575,15 @@ function ActivePositions() {
 // MAIN PAGE COMPONENT
 // ============================================================================
 
-export default function OrgPageFundamental({ organization, canonicalUrl }: OrgPageFundamentalProps) {
+export default function OrgPageFundamental({
+  organization,
+  canonicalUrl,
+  postings: postingsData,
+  salaryStats,
+  geographicDistribution,
+  vacancyStats,
+  roles,
+}: OrgPageFundamentalProps) {
   const orgSchema = generateOrganizationSchema(organization, canonicalUrl);
   const faqSchema = generateFAQSchema(organization);
   const breadcrumbSchema = generateBreadcrumbSchema(organization);
@@ -553,13 +619,13 @@ export default function OrgPageFundamental({ organization, canonicalUrl }: OrgPa
       </header>
 
       <main id="main-content" className="org-main">
-        <HeroSnapshot org={organization} />
+        <HeroSnapshot org={organization} vacancyStats={vacancyStats} postings={postingsData} />
         <AboutOrganization org={organization} />
         <EligibilitySummary />
         <QualificationsByRole />
         <ApplicationTimeline />
-        <SalaryBenefits />
-        <GeographicDistribution />
+        <SalaryBenefits salaryStats={salaryStats} />
+        <GeographicDistribution geographicDistribution={geographicDistribution} />
         <InterviewGuide />
         <FAQ />
         <ActivePositions />
