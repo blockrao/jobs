@@ -18,7 +18,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         p.updated_at
       FROM posts p
       INNER JOIN recruitments r ON p.recruitment_id = r.id
-      WHERE p."isLive" = true
       ORDER BY p.updated_at DESC
     `);
 

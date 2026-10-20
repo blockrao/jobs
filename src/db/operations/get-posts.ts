@@ -101,42 +101,43 @@ async function getPostCoreData(
     const result = await db.execute<any>(sql`
       SELECT
         p.id,
-        p.title,
+        p.name AS title,
         p.slug,
         p.position_id AS "positionId",
-        p."organizationId",
-        p."organizationName",
-        COALESCE(p."recruitmentId"::integer, p.recruitment_id) AS "recruitmentId",
-        p."recruitmentName",
+        r.organization_id AS "organizationId",
+        o.name AS "organizationName",
+        p.recruitment_id AS "recruitmentId",
+        r.name AS "recruitmentName",
         r.slug AS "recruitmentSlug",
         o.sector AS "organizationSector",
-        p."examType",
-        p."examTypeSlug",
+        r.exam_id AS "examId",
+        NULL AS "examType",
+        NULL AS "examTypeSlug",
         p.description,
-        p.employment_type AS "employmentType",
-        p.location_city AS "locationCity",
-        p.location_state AS "locationState",
-        p.location_country AS "locationCountry",
-        p.experience_level AS "experienceLevel",
-        p.job_category_tags AS "jobCategoryTags",
-        p.posting_status AS "postingStatus",
+        r.employment_type AS "employmentType",
+        NULL AS "locationCity",
+        r.location_state_code AS "locationState",
+        NULL AS "locationCountry",
+        NULL AS "experienceLevel",
+        NULL AS "jobCategoryTags",
+        r.status AS "postingStatus",
         p.source_post_code AS "sourcePostCode",
-        p.application_method AS "applicationMethod",
-        p.application_email AS "applicationEmail",
-        p.application_url AS "applicationUrl",
-        p.contact_department AS "contactDepartment",
-        p.contact_person AS "contactPerson",
+        NULL AS "applicationMethod",
+        NULL AS "applicationEmail",
+        NULL AS "applicationUrl",
+        NULL AS "contactDepartment",
+        NULL AS "contactPerson",
         p.vacancy_details AS "vacancyDetails",
         p.pay_level AS "payLevel",
-        p.key_dates AS "keyDates",
-        p.required_skills AS "requiredSkills",
-        p.application_checklist AS "applicationChecklist",
-        p."isLive",
-        p."postedAt",
-        p."createdAt",
-        p."updatedAt",
-        p."officialSourceUrl",
-        p."applyPortalUrl",
+        NULL AS "keyDates",
+        NULL AS "requiredSkills",
+        NULL AS "applicationChecklist",
+        TRUE AS "isLive",
+        p.created_at AS "postedAt",
+        p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
+        r.official_notification_url AS "officialSourceUrl",
+        r.official_application_url AS "applyPortalUrl",
         p.vacancy_total AS "vacancyTotal",
         p.salary_min AS "legacySalaryMin",
         p.salary_max AS "legacySalaryMax",
@@ -146,9 +147,9 @@ async function getPostCoreData(
         r.application_end_date AS "recruitmentApplicationEndDate",
         r.application_start_date AS "recruitmentApplicationStartDate",
         r.notification_date AS "notificationPublicationDate",
-        r.selection_process AS "recruitmentSelectionProcess"
+        NULL AS "recruitmentSelectionProcess"
       FROM posts p
-      LEFT JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
+      INNER JOIN recruitments r ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
       WHERE p.slug = ${postSlug}
         AND (
@@ -159,7 +160,6 @@ async function getPostCoreData(
             WHERE old_slug = ${recruitmentSlug}
           )
         )
-        AND p."isLive" = true
       LIMIT 1
     `);
 
