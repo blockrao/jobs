@@ -11,7 +11,7 @@
 // list to remain accurate.
 
 // Detail-page prefixes: NONE (all routes removed in Phase 2)
-export const LOCALE_AWARE_PREFIXES = [] as const;
+export const LOCALE_AWARE_PREFIXES = [] as const as readonly string[];
 
 // Entity / listing prefixes: the path itself (with no further slug) is
 // a valid locale-aware destination. e.g. /hi/jobs, /hi/exams,
@@ -24,7 +24,7 @@ const LOCALE_AWARE_ENTITIES = [
 
 // Bare listing pages that live at exactly this path (no slug required).
 // PHASE 2: ALL listing pages removed (no longer have [locale] variants)
-const LOCALE_AWARE_LISTINGS = [] as const;
+const LOCALE_AWARE_LISTINGS = [] as const as readonly string[];
 
 // Strips a leading /en or /hi segment before checking, so callers can pass
 // either an already-prefixed path (e.g. /hi/exams/foo) or a bare one.
