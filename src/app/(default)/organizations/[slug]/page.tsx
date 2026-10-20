@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
 import { getOrganizationBySlug } from "@/db/operations/get-organizations";
-import OrganizationPageProduction from "@/components/organization/org-page-production";
+import OrgPageFundamental from "@/components/organization/org-page-fundamental";
 
 // ISR: Revalidate every 2 hours (live data updates)
 // Pillar content changes rarely, but job counts + salary data changes frequently
@@ -184,11 +184,10 @@ export default async function OrganizationPage({ params }: Props) {
     notFound();
   }
 
-  // Return production component with both pillar content and org data
+  // Return fundamental redesigned component with org data
   return (
-    <OrganizationPageProduction
+    <OrgPageFundamental
       organization={org}
-      pillarContent={pillarContent}
       canonicalUrl={absoluteUrl(`/organizations/${originalSlug}`)}
     />
   );
