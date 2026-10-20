@@ -344,7 +344,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing ageRules query`);
         return await db.execute<any>(sql`
-          SELECT id, category, max_age AS "max", relaxation_years AS "relaxationYears", note, rule_type AS "ruleType", condition_text AS "conditionText"
+          SELECT id, category, max_age AS "max", relaxation_years AS "relaxationYears", rule_type AS "ruleType", condition_text AS "conditionText"
           FROM post_age_rules
           WHERE post_id = ${postId}
           ORDER BY category
@@ -353,7 +353,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing applicationFees query`);
         return await db.execute<any>(sql`
-          SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods", note, is_exempted AS "isExempted", exemption_category AS "exemptionCategory"
+          SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods"
           FROM posts_application_fee
           WHERE post_id = ${postId}
         `);
@@ -361,7 +361,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing officialLinks query`);
         return await db.execute<any>(sql`
-          SELECT id, link_type AS "type", link_url AS "url", link_title AS "title", source
+          SELECT id, link_type AS "type", link_url AS "url", source
           FROM posts_official_links
           WHERE post_id = ${postId}
           ORDER BY link_type
