@@ -55,34 +55,34 @@ async function resolveSlug(requestedSlug: string): Promise<string | null> {
 }
 
 async function readPillarContent(slug: string, originalSlug: string): Promise<string | null> {
-  // Try primary slug first
-  try {
-    const pillarPath = join(
-      process.cwd(),
-      "public",
-      "content",
-      "pillars",
-      `${slug}.md`
-    );
-    return await readFile(pillarPath, "utf-8");
-  } catch {
-    // Try original slug if different
-    if (originalSlug !== slug) {
-      try {
-        const pillarPath = join(
-          process.cwd(),
-          "public",
-          "content",
-          "pillars",
-          `${originalSlug}.md`
-        );
-        return await readFile(pillarPath, "utf-8");
-      } catch {
-        return null;
-      }
+  // Try multiple slug variants in order of preference
+  const slugsToTry = [slug, originalSlug];
+
+  // For compound slugs like "state-bank-of-india-sbi", also try shorter variants
+  if (slug.includes("-") && slug !== originalSlug) {
+    const parts = slug.split("-");
+    if (parts.length > 2) {
+      slugsToTry.push(parts[parts.length - 1]); // e.g., "sbi" from "state-bank-of-india-sbi"
     }
-    return null;
   }
+
+  for (const trySlug of slugsToTry) {
+    try {
+      const pillarPath = join(
+        process.cwd(),
+        "public",
+        "content",
+        "pillars",
+        `${trySlug}.md`
+      );
+      const content = await readFile(pillarPath, "utf-8");
+      return content;
+    } catch {
+      // Continue to next variant
+    }
+  }
+
+  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
