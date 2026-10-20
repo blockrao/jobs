@@ -62,9 +62,9 @@ export function buildOrganizationSchema(org: Organization, kind?: string | null)
   const type = kind === "GOVERNMENT" ? "GovernmentOrganization" : "Organization";
   return {
     "@type": type,
-    "@id": absoluteUrl(`/organizations/${org.slug}#org`),
+    "@id": absoluteUrl(`/exams/${org.slug}#org`),
     name: org.name,
-    url: org.websiteUrl ?? absoluteUrl(`/organizations/${org.slug}`),
+    url: org.websiteUrl ?? absoluteUrl(`/exams/${org.slug}`),
     logo: org.logoUrl ?? undefined,
     description: org.description ?? undefined,
     ...(org.websiteUrl && { sameAs: org.websiteUrl }),
@@ -74,6 +74,7 @@ export function buildOrganizationSchema(org: Organization, kind?: string | null)
 // Organization node for the organization's own page. Same @id as
 // buildOrganizationSchema (one node per entity, the same identifier in every
 // language), with the page-language name/description and the page URL.
+// Phase 2A: Canonical org pages are now /exams/[slug] (pillar pages).
 export function buildOrganizationPageSchema(
   org: {
     slug: string;
@@ -91,10 +92,10 @@ export function buildOrganizationPageSchema(
   const description = hi ? org.descriptionHi || org.description : org.description;
   return {
     "@type": "Organization",
-    "@id": absoluteUrl(`/organizations/${org.slug}#org`),
+    "@id": absoluteUrl(`/exams/${org.slug}#org`),
     name,
     description: description || `Government recruitment organization: ${name}`,
-    url: absoluteUrl(hi ? `/hi/organizations/${org.slug}` : `/organizations/${org.slug}`),
+    url: absoluteUrl(hi ? `/hi/exams/${org.slug}` : `/exams/${org.slug}`),
     ...(org.logoUrl && { logo: org.logoUrl }),
     ...(org.websiteUrl && { sameAs: org.websiteUrl }),
     inLanguage: hi ? "hi-IN" : "en-IN",

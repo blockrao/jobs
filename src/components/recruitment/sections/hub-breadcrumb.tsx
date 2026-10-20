@@ -23,7 +23,7 @@ export default function HubBreadcrumb({ data }: HubBreadcrumbProps) {
         {displayOrg && (
           <li>
             {orgSlug ? (
-              <Link href={`${localePrefix}/organizations/${orgSlug}`}>{displayOrg}</Link>
+              <Link href={`${localePrefix}/exams/${orgSlug}`}>{displayOrg}</Link>
             ) : (
               <span>{displayOrg}</span>
             )}

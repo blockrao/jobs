@@ -86,8 +86,8 @@ export function OrganizationsHubContent({
             // content, same discipline as home-content.tsx.
             const href =
               isHi && org.nameHi
-                ? `/hi/organizations/${org.slug}`
-                : `/organizations/${org.slug}`;
+                ? `/hi/exams/${org.slug}`
+                : `/exams/${org.slug}`;
             return (
               <Link key={org.id} href={href} className="block">
                 <div className="p-6 border border-gray-200 rounded-lg hover:shadow-lg transition-shadow h-full flex flex-col">

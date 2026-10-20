@@ -32,7 +32,7 @@ export async function GET() {
 - Position (role) hub — an evergreen role with its current recruitments:
   ${SITE_URL}/posts/{role-slug}
 - Organization — a recruiting body and its live notifications:
-  ${SITE_URL}/organizations/{slug}
+  ${SITE_URL}/exams/{slug}
 - Sector hubs — live posts by sector:
 ${sectorLines}
 - Qualification hubs — live posts by education level required:

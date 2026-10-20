@@ -89,7 +89,7 @@ export default function WebPageSchema({ post }: WebPageSchemaProps) {
           "@type": "ListItem",
           position: 3,
           name: post.organizationName,
-          item: `${SITE_URL}/organizations/${post.organizationSlug || post.organizationId}`,
+          item: `${SITE_URL}/exams/${post.organizationSlug || post.organizationId}`,
         },
         {
           "@type": "ListItem",

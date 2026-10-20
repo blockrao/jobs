@@ -116,7 +116,7 @@ export function CategoryContent({
                   {p.postName}
                 </Link>
                 <p className="mt-0.5 text-sm text-neutral-600">
-                  <Link href={`/organizations/${p.orgSlug}`} className="hover:underline">
+                  <Link href={`/exams/${p.orgSlug}`} className="hover:underline">
                     {orgName}
                   </Link>
                   {" · "}
