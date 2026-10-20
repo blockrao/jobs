@@ -4,6 +4,10 @@ import React from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import type { organizations } from "@/db/schema";
+import LiveJobsWidget from "@/components/organization/widgets/LiveJobsWidget";
+import EligibilityChecker from "@/components/organization/widgets/EligibilityChecker";
+import SalaryCalculator from "@/components/organization/widgets/SalaryCalculator";
+import RoleComparisonMatrix from "@/components/organization/widgets/RoleComparisonMatrix";
 
 interface OrganizationPageProductionProps {
   organization: typeof organizations.$inferSelect;
@@ -38,7 +42,7 @@ export default function OrganizationPageProduction({
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type":
-      organization.sector === "GOVERNMENT"
+      organization.sector?.includes("GOVERNMENT")
         ? "GovernmentOrganization"
         : "Organization",
     "@id": canonicalUrl + "#org",
@@ -119,6 +123,26 @@ export default function OrganizationPageProduction({
 
         {/* Content Container */}
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          {/* Phase 2C MVP Widgets - High Impact Interactive Features */}
+
+          {/* 1. Live Job Count Widget - Urgency & Social Proof */}
+          <LiveJobsWidget
+            organizationId={organization.id}
+            organizationSlug={organization.slug}
+          />
+
+          {/* 2. Quick Eligibility Checker - Conversion Filter */}
+          <EligibilityChecker organizationId={organization.id} />
+
+          {/* 3. Salary Calculator - Top Question Answered */}
+          <SalaryCalculator organizationId={organization.id} />
+
+          {/* 4. Role Comparison Matrix - Choice Architecture */}
+          <RoleComparisonMatrix organizationId={organization.id} />
+
+          {/* Separator */}
+          <hr className="my-12 border-gray-300 dark:border-gray-700" />
+
           {/* Pillar Markdown Content */}
           <article className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown
