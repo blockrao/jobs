@@ -59,9 +59,9 @@ async function validateOrganization(org: any): Promise<ValidationResult> {
     ]);
 
     data.postingCount = postings.length;
-    data.vacancies = vacStats.totalVacancies;
-    data.salaryMin = salaryStats.minSalary;
-    data.salaryMax = salaryStats.maxSalary;
+    data.vacancies = Number(vacStats.totalVacancies) || 0;
+    data.salaryMin = salaryStats.minSalary ? Number(salaryStats.minSalary) : null;
+    data.salaryMax = salaryStats.maxSalary ? Number(salaryStats.maxSalary) : null;
     data.stateCount = geoDist.length;
     data.rolesCount = roles.length;
 

@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Script from 'next/script';
-import type { organizations, postings } from '@/db/schema';
+import type { organizations } from '@/db/schema';
+import { postings } from '@/db/schema';
 import '@/styles/organization-fundamental.css';
 
 type PostingRecord = typeof postings.$inferSelect;
