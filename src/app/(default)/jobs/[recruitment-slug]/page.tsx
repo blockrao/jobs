@@ -116,6 +116,12 @@ export default async function RecruitmentHubPage({ params }: Props) {
               <span className="font-semibold">{recruitment.posts.length}</span>
             </div>
           )}
+          {recruitment.totalVacancies && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600">Total Vacancies:</span>
+              <span className="font-semibold">{recruitment.totalVacancies}</span>
+            </div>
+          )}
           {recruitment.status && (
             <Badge tone={recruitment.status === "ACTIVE" ? "success" : "neutral"}>
               {recruitment.status}
@@ -139,7 +145,7 @@ export default async function RecruitmentHubPage({ params }: Props) {
             <div className="flex justify-between items-start mb-3">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-                  {post.title || post.name}
+                  {post.name}
                 </h3>
                 {post.position && (
                   <p className="text-sm text-gray-600 mt-1">
@@ -164,12 +170,9 @@ export default async function RecruitmentHubPage({ params }: Props) {
             )}
 
             <div className="flex gap-4 text-sm text-gray-600">
-              {post.locationState && (
-                <div>{post.locationState}</div>
-              )}
-              {post.applicationClosingDate && (
+              {post.salaryMin && post.salaryMax && (
                 <div>
-                  Closes: {new Date(post.applicationClosingDate).toLocaleDateString()}
+                  Salary: ₹{(post.salaryMin / 100000).toFixed(1)}L - ₹{(post.salaryMax / 100000).toFixed(1)}L
                 </div>
               )}
             </div>
@@ -178,22 +181,10 @@ export default async function RecruitmentHubPage({ params }: Props) {
       </div>
 
       {/* Official Links */}
-      {recruitment.officialWebsite || recruitment.officialNotificationUrl ? (
+      {recruitment.officialNotificationUrl || recruitment.officialApplicationUrl ? (
         <div className="mt-12 pt-8 border-t">
           <h3 className="text-lg font-semibold mb-4">Official Resources</h3>
           <div className="space-y-2">
-            {recruitment.officialWebsite && (
-              <div>
-                <a
-                  href={recruitment.officialWebsite}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  Official Website →
-                </a>
-              </div>
-            )}
             {recruitment.officialNotificationUrl && (
               <div>
                 <a
@@ -203,6 +194,18 @@ export default async function RecruitmentHubPage({ params }: Props) {
                   className="text-blue-600 hover:underline"
                 >
                   Official Notification →
+                </a>
+              </div>
+            )}
+            {recruitment.officialApplicationUrl && (
+              <div>
+                <a
+                  href={recruitment.officialApplicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  Apply Online →
                 </a>
               </div>
             )}
