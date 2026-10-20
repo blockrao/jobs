@@ -58,6 +58,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
       vacanciesTotal: 0,
       feesByCategory: {},
       ageRulesByCategory: {},
+      ageRules: [],
       selectionProcess: [],
       sourceVerificationStatus: 'PENDING',
       extractionConfidence: 0,
@@ -102,24 +103,40 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
 
     // Age rules - transform to PostEnrichment format
     if (rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object') {
-      const ageRules: Record<string, { min: number; max: number }> = {};
+      const ageRulesObject: Record<string, { min: number; max: number }> = {};
+      const ageRulesArray: Array<{ category: string; min: number; max: number; maxAge?: number; relaxationYears?: number; ruleType?: string; note?: string }> = [];
 
       Object.entries(rawEnrichment.age_rules).forEach(([category, rule]: [string, any]) => {
         if (rule && typeof rule === 'object') {
-          ageRules[category] = {
+          const ruleObj = {
             min: rule.min || 0,
             max: rule.max || 65,
           };
+          ageRulesObject[category] = ruleObj;
+
+          // Also add to array format for page component
+          ageRulesArray.push({
+            category,
+            min: rule.min || 0,
+            max: rule.max || 65,
+            maxAge: rule.max || 65,
+            relaxationYears: rule.relaxation_years || rule.relaxationYears,
+            ruleType: rule.rule_type || rule.ruleType,
+            note: rule.note,
+          });
         }
       });
 
-      if (Object.keys(ageRules).length > 0) {
-        enrichment.ageRulesByCategory = ageRules;
+      if (Object.keys(ageRulesObject).length > 0) {
+        enrichment.ageRulesByCategory = ageRulesObject;
+        enrichment.ageRules = ageRulesArray; // Page component expects this
       } else {
         enrichment.ageRulesByCategory = {};
+        enrichment.ageRules = [];
       }
     } else {
       enrichment.ageRulesByCategory = {};
+      enrichment.ageRules = [];
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -337,6 +354,9 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
 
       // Optional fields
       ...enrichment,
+
+      // Ensure ageRules array is always present for page component
+      ageRules: enrichment.ageRules || [],
     } as PostEnrichment;
   } catch (error) {
     console.error('[enrichment-transformer] Error transforming enrichment:', error);
@@ -345,6 +365,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
       vacanciesTotal: 0,
       feesByCategory: {},
       ageRulesByCategory: {},
+      ageRules: [],
       selectionProcess: [],
       sourceVerificationStatus: 'PENDING',
       extractionConfidence: 0,
