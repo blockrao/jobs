@@ -159,6 +159,26 @@ export default async function JobDetailPage({ params }: Props) {
   // Build canonical URL for schema
   const canonicalUrl = `/jobs/${post.recruitmentSlug}/${post.slug}`;
 
+  // Fetch pillar slug for organization (Phase 2)
+  let pillarSlug: string | null = null;
+  if (post.organizationId) {
+    try {
+      const { getDb } = await import("@/db");
+      const { eq } = await import("drizzle-orm");
+      const { organizations } = await import("@/db/schema");
+      const db = getDb();
+      const org = await db
+        .select({ pillarSlug: organizations.pillarSlug })
+        .from(organizations)
+        .where(eq(organizations.id, post.organizationId as number))
+        .limit(1);
+      pillarSlug = org.length > 0 ? org[0].pillarSlug : null;
+    } catch (e) {
+      // Silently fail if pillar slug cannot be fetched
+      pillarSlug = null;
+    }
+  }
+
   return (
     <JobDetailPageProduction
       post={{
@@ -282,6 +302,7 @@ export default async function JobDetailPage({ params }: Props) {
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
       }))}
+      pillarSlug={pillarSlug}
       canonicalUrl={canonicalUrl}
       lifecycle={lifecycle}
     />

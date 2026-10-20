@@ -35,12 +35,13 @@ function rowsOf<T>(result: unknown): T[] {
 const STATIC: MetadataRoute.Sitemap = [
   { url: SITE_URL, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
   { url: `${SITE_URL}/jobs`, lastModified: new Date(), changeFrequency: "daily", priority: 0.95 },
+  { url: `${SITE_URL}/exams`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const db = getDb();
-    const [hubResult, leafResult] = await Promise.all([
+    const [hubResult, leafResult, pillarResult] = await Promise.all([
       db.execute(sql`
         SELECT r.slug, r.status::text AS status, r.application_end_date, r.updated_at
         FROM recruitments r
@@ -54,6 +55,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         INNER JOIN recruitments r ON r.id = p.recruitment_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
         ORDER BY p.updated_at DESC NULLS LAST, p.id DESC
+      `),
+      db.execute(sql`
+        SELECT pillar_slug, updated_at
+        FROM organizations
+        WHERE pillar_enabled = true AND pillar_slug IS NOT NULL
+        ORDER BY updated_at DESC NULLS LAST
       `),
     ]);
 
@@ -77,8 +84,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-    console.log(`[sitemap] ${hubs.length} recruitment hubs, ${leaves.length} post leaves`);
-    return [...STATIC, ...hubs, ...leaves];
+    // Pillar pages (Phase 2 Tier 1)
+    type PillarRow = { pillar_slug: string; updated_at: Date | string | null };
+    const pillars = rowsOf<PillarRow>(pillarResult).map((p) => ({
+      url: `${SITE_URL}/exams/${p.pillar_slug}`,
+      lastModified: toDate(p.updated_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
+    }));
+
+    console.log(`[sitemap] ${hubs.length} recruitment hubs, ${leaves.length} post leaves, ${pillars.length} pillar pages`);
+    return [...STATIC, ...pillars, ...hubs, ...leaves];
   } catch (error) {
     console.error("[sitemap] database error, emitting static entries only:", error);
     return STATIC;

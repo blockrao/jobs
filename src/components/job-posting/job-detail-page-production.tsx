@@ -129,6 +129,8 @@ interface JobDetailPageProps {
    * JobPosting at all once closed.
    */
   lifecycle?: { state: string; isOpen: boolean; isLive: boolean; deadline: Date | null };
+  // Phase 2: Pillar page link
+  pillarSlug?: string | null;
 }
 
 // ─ Schema.org Data Preparation ─
@@ -853,6 +855,24 @@ export default function JobDetailPageProduction({
                   </ul>
                 </div>
               )}
+            </section>
+          )}
+
+          {/* Pillar Context Link — Phase 2 Tier 1 */}
+          {pillarSlug && (
+            <section className="mb-8 p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                📚 Learn More About {post.organizationName} Recruitment
+              </h2>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
+                View the complete {post.organizationName} recruitment guide including salary structure, eligibility criteria, application process, and more.
+              </p>
+              <a
+                href={`/exams/${pillarSlug}/`}
+                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium"
+              >
+                View {post.organizationName} Guide →
+              </a>
             </section>
           )}
 

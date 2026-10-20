@@ -378,6 +378,9 @@ export const organizations = pgTable(
     nameHi: varchar("name_hi", { length: 200 }),
     descriptionHi: text("description_hi"),
     headquarters: varchar("headquarters", { length: 160 }),
+    // Tier 1 pillar page support (Phase 2)
+    pillarSlug: varchar("pillar_slug", { length: 160 }).unique(),
+    pillarEnabled: boolean("pillar_enabled").default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -385,7 +388,10 @@ export const organizations = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [uniqueIndex("organizations_slug_idx").on(table.slug)],
+  (table) => [
+    uniqueIndex("organizations_slug_idx").on(table.slug),
+    uniqueIndex("organizations_pillar_slug_idx").on(table.pillarSlug),
+  ],
 ).enableRLS();
 
 // ---------- Commissions (SSC, UPSC, Banking, Railways, etc.) ----------
