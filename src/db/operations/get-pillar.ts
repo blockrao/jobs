@@ -41,6 +41,15 @@ export interface PillarPostSample {
   };
 }
 
+export interface PillarFAQData {
+  minSalary?: number;
+  maxSalary?: number;
+  ageLimit?: string;
+  nextDeadline?: Date;
+  recruitmentCount: number;
+  postCount: number;
+}
+
 /**
  * Get pillar data by slug
  * Includes organization info + recruitment/post counts + salary stats
@@ -205,7 +214,7 @@ export async function getAllPillarSlugs(): Promise<string[]> {
  * Get pillar aggregated FAQ data (for schema generation)
  * Extracts common qualifications, age limits, salary ranges from posts
  */
-export async function getPillarFAQData(organizationId: number) {
+export async function getPillarFAQData(organizationId: number): Promise<PillarFAQData | null> {
   const db = getDb();
 
   try {
