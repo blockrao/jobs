@@ -299,7 +299,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing education query`);
         return await db.execute<any>(sql`
-          SELECT id, degree, subject, specialization, minimum_percentage AS "minimumPercentage", minimum_marks AS "minimumMarks", source, confidence_score AS "confidenceScore"
+          SELECT id, degree, subject, specialization, source
           FROM posts_education
           WHERE post_id = ${postId}
           ORDER BY degree
@@ -308,7 +308,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing experience query`);
         return await db.execute<any>(sql`
-          SELECT id, total_years AS "totalYears", min_years AS "minYears", experience_type AS "experienceType", source, confidence_score AS "confidenceScore"
+          SELECT id, experience_type AS "experienceType", source, description
           FROM posts_experience
           WHERE post_id = ${postId}
           ORDER BY experience_type
@@ -317,10 +317,10 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing selectionProcess query`);
         return await db.execute<any>(sql`
-          SELECT id, stage_order AS "step", stage_name AS "name", scheduled_date AS "scheduledDate", duration_minutes AS "durationMinutes", total_marks AS "totalMarks", minimum_marks AS "minimumMarks", passing_marks AS "passingMarks", mode, is_qualifying AS "isQualifying"
+          SELECT id, stage_name AS "name", description, marks, duration, mode
           FROM posts_selection_process
           WHERE post_id = ${postId}
-          ORDER BY stage_order
+          ORDER BY stage_name
         `);
       })(),
       (async () => {
@@ -335,7 +335,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing importantDates query`);
         return await db.execute<any>(sql`
-          SELECT id, date_type AS "label", date_value AS "date"
+          SELECT id, date_type AS "label", description
           FROM posts_important_dates
           WHERE post_id = ${postId}
           ORDER BY date_type
@@ -353,7 +353,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing applicationFees query`);
         return await db.execute<any>(sql`
-          SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods"
+          SELECT id, category, amount, currency_code AS "currencyCode", note, payment_mode AS "paymentMode"
           FROM posts_application_fee
           WHERE post_id = ${postId}
         `);
@@ -361,7 +361,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing officialLinks query`);
         return await db.execute<any>(sql`
-          SELECT id, link_type AS "type", link_url AS "url", source
+          SELECT id, link_type AS "type", label, url, is_official AS "isOfficial"
           FROM posts_official_links
           WHERE post_id = ${postId}
           ORDER BY link_type
