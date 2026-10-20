@@ -170,7 +170,7 @@ export default async function JobDetailPage({ params }: Props) {
       const org = await db
         .select({ pillarSlug: organizations.pillarSlug })
         .from(organizations)
-        .where(eq(organizations.id, post.organizationId as number))
+        .where(eq(organizations.id, Number(post.organizationId)))
         .limit(1);
       pillarSlug = org.length > 0 ? org[0].pillarSlug : null;
     } catch (e) {
