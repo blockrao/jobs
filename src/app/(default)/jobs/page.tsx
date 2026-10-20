@@ -343,10 +343,7 @@ export default async function JobsListPage({ searchParams }: Props) {
             // actually has Hindi content — otherwise send visitors to the
             // plain canonical page rather than a /hi URL that just shows
             // the same English text under a different path.
-            const detailHref =
-              isHi && titleHi
-                ? `/hi/jobs/${posting.slug}`
-                : `/jobs/${posting.slug}`;
+            const detailHref = `/jobs/${posting.slug}`;
 
             const examDate = postingWithMetadata.examDate;
             const lastVerifiedAt = postingWithMetadata.lastVerifiedAt;
