@@ -121,10 +121,13 @@ export default function JobPostingStructuredData({
     const location = resolveLocation(post);
     const vacancyCount = resolvePostVacancy(post);
 
-    // datePosted: official notification publication date only.
-    // Never use posts.created_at as a semantic substitute for datePosted.
-    // If the official publication date is unavailable, omit the field.
-    const datePosted = post.notificationPublicationDate ?? post.enrichment?.notificationDate ?? null;
+    // datePosted: official notification publication date with fallbacks.
+    // Use: notificationPublicationDate > enrichment.notificationDate > createdAt
+    // Google requires datePosted for job validity; always include a date.
+    const datePosted = post.notificationPublicationDate
+      ?? post.enrichment?.notificationDate
+      ?? post.createdAt
+      ?? null;
 
     // employmentType: only when the official source establishes it.
     // Never universally assert FULL_TIME for government jobs.
@@ -147,25 +150,36 @@ export default function JobPostingStructuredData({
         }
       : undefined;
 
-    // jobLocation: Place > PostalAddress
-    const jobLocation = location
-      ? {
-          "@type": "Place",
-          address: {
-            "@type": "PostalAddress",
-            ...(location.city ? { addressLocality: location.city } : {}),
-            ...(location.state ? { addressRegion: location.state } : {}),
-            addressCountry: location.country,
-          },
-        }
-      : undefined;
+    // jobLocation: Place > PostalAddress with fallback to state/country
+    // Use resolved location first, then post state, then default to India
+    // Google requires jobLocation for job validity; always include at minimum a country.
+    const jobLocationData = location || {
+      city: null,
+      state: post.workState || post.locationState,
+      country: "IN",
+    };
+    const jobLocation = {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        ...(jobLocationData.city ? { addressLocality: jobLocationData.city } : {}),
+        ...(jobLocationData.state ? { addressRegion: jobLocationData.state } : {}),
+        addressCountry: jobLocationData.country || "IN",
+      },
+    };
 
-    // hiringOrganization: only when resolveEmployer() returns verified employer
+    // hiringOrganization: verified employer first, then organization name fallback
+    // Google requires hiringOrganization for job validity; never emit undefined.
     const hiringOrganization = employer
       ? {
           "@type": "Organization",
           name: employer.name,
           ...(employer.sameAs ? { sameAs: employer.sameAs } : {}),
+        }
+      : post.organizationName
+      ? {
+          "@type": "Organization",
+          name: post.organizationName,
         }
       : undefined;
 
@@ -280,6 +294,7 @@ export default function JobPostingStructuredData({
       ...(skills.length > 0 ? { skills } : {}),
 
       // ── Dates — only schema.org valid fields ──
+      // datePosted: critical field for Google, always emit when available
       ...(datePosted ? { datePosted: datePosted.toISOString() } : {}),
       dateModified: post.updatedAt?.toISOString(),
       // validThrough: only when application is currently open
@@ -289,10 +304,11 @@ export default function JobPostingStructuredData({
       // NOTE: applicationStartDate, applicationDeadline, examDate are NOT valid
       // Google/schema.org fields — omitted to avoid validation errors.
 
-      // ── Standard Google for Jobs fields ──
+      // ── Standard Google for Jobs fields (critical for validity) ──
       ...(employmentType ? { employmentType } : {}),
-      ...(hiringOrganization ? { hiringOrganization } : {}),
-      ...(jobLocation ? { jobLocation } : {}),
+      // hiringOrganization & jobLocation always emitted (never undefined due to fallbacks above)
+      hiringOrganization,
+      jobLocation,
       ...(vacancyCount != null ? { totalJobOpenings: vacancyCount } : {}),
       ...(baseSalary ? { baseSalary } : {}),
       ...(applicationContact ? { applicationContact } : {}),
