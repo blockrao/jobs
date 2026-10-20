@@ -1,24 +1,17 @@
 // Single source of truth for "which routes actually have a `[locale]`
-// counterpart — src/app/[locale]/articles|exams|organizations/jobs/[slug]
-// and canonical Post Leaf jobs/[slug]/[post-slug] pages, plus the
-// src/app/[locale]/jobs, /exams, /commissions/[slug],
-// /recruitments/[slug], /positions/[slug] for listing and entity pages.
-// Every other route (/news, /categories, /search, the homepage, ...) only
-// exists at its plain, non-prefixed path. Both src/proxy.ts (server-side
-// routing) and language-switcher.tsx (client-side "which link should the
-// हिन्दी/EN button build") need this exact list; keeping it in one place
-// means they can't drift out of sync the way they did when the switcher
-// assumed any page could be locale-prefixed and built dead /en/news,
-// /en/categories, /en/search, ... links that 404 (no [locale] route
-// matches them, and they're also not the bare-root case proxy.ts separately
-// redirects).
+// counterpart. PHASE 2 (2026-10-19+): ALL locale-based routes have been removed.
+// The src/app/[locale] directory no longer exists. All routes are now canonical
+// unprefixed paths in src/app/(default).
+//
+// This list is kept empty to prevent next-intl middleware from trying to add
+// locale prefixes to URLs. With localePrefix: 'always', any path listed here
+// would be redirected to /en/... or /hi/..., which no longer exist.
+//
+// Both src/proxy.ts (server-side routing) and language-switcher.tsx need this
+// list to remain accurate.
 
-// Detail-page prefixes: a slug must follow, e.g. /jobs/bpsc-tre-4.
-// PHASE 2: /jobs and /organizations routes NO LONGER have [locale] counterparts (removed in Phase 2)
-export const LOCALE_AWARE_PREFIXES = [
-  '/articles/',
-  '/exams/',
-] as const;
+// Detail-page prefixes: NONE (all routes removed in Phase 2)
+export const LOCALE_AWARE_PREFIXES = [] as const;
 
 // Entity / listing prefixes: the path itself (with no further slug) is
 // a valid locale-aware destination. e.g. /hi/jobs, /hi/exams,
@@ -30,10 +23,8 @@ const LOCALE_AWARE_ENTITIES = [
 ] as const;
 
 // Bare listing pages that live at exactly this path (no slug required).
-// PHASE 2: /jobs removed from this list (no longer has [locale] variants)
-const LOCALE_AWARE_LISTINGS = [
-  '/exams',
-] as const;
+// PHASE 2: ALL listing pages removed (no longer have [locale] variants)
+const LOCALE_AWARE_LISTINGS = [] as const;
 
 // Strips a leading /en or /hi segment before checking, so callers can pass
 // either an already-prefixed path (e.g. /hi/exams/foo) or a bare one.
