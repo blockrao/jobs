@@ -6,6 +6,16 @@ const nextConfig: NextConfig = {
   experimental: {
     globalNotFound: true,
   },
+  redirects: async () => [
+    // PHASE 2: Redirect old /jobs/{recruitment-slug}-{id} pattern to recruitment hub
+    // Old URLs like /jobs/directorate-of-medical-health-and-family-welfare-services-government-of-rajasthan-2026-02812
+    // are now served at /jobs/{recruitment-slug}
+    {
+      source: "/jobs/:slug-:id(\\d+)",
+      destination: "/jobs/:slug",
+      permanent: true, // 301 redirect
+    },
+  ],
   headers: async () => [
     {
       // Prevent Vercel edge from caching post leaf pages — they are
