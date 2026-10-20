@@ -28,9 +28,9 @@ async function PillarContentRendererAsync({ slug }: PillarContentRendererProps) 
     const markdown = await response.text();
 
     return (
-      <ReactMarkdown
-        className="prose prose-sm dark:prose-invert max-w-none"
-        components={{
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown
+          components={{
           h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mt-6 mb-4" {...props} />,
           h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mt-6 mb-3" {...props} />,
           h3: ({ node, ...props }) => <h3 className="text-xl font-semibold mt-4 mb-2" {...props} />,
@@ -65,9 +65,10 @@ async function PillarContentRendererAsync({ slug }: PillarContentRendererProps) 
           ),
           hr: () => <hr className="my-6 border-t border-gray-300 dark:border-gray-600" />,
         }}
-      >
-        {markdown}
-      </ReactMarkdown>
+        >
+          {markdown}
+        </ReactMarkdown>
+      </div>
     );
   } catch (error) {
     console.error(`Failed to load pillar content for slug: ${slug}`, error);

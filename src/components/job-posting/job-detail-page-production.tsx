@@ -171,6 +171,7 @@ export default function JobDetailPageProduction({
   locale = 'en',
   canonicalUrl,
   lifecycle,
+  pillarSlug,
 }: JobDetailPageProps) {
   // Data normalization
   const vacancies = post.vacancies ?? 0;
