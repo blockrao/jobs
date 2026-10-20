@@ -14,11 +14,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Govt Jobs Control Center 2026 — All Active Recruitments & Vacancies",
     description:
-      "Live dashboard of all active government job postings in India. 65,000+ vacancies across 767 recruitments. Track deadlines, browse by organisation, and apply before they close.",
+      "Live dashboard of active government job recruitments in India. Track deadlines, browse by organisation, and apply before they close.",
     alternates: seo.alternates,
     openGraph: {
       title: "Govt Jobs Control Center 2026 — All Active Recruitments",
-      description: "Live dashboard: 65,000+ vacancies, 767 recruitments. Track deadlines and apply.",
+      description: "Live dashboard of active government recruitments. Track deadlines and apply.",
       url: "/posts",
       type: "website",
     },

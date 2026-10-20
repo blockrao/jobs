@@ -137,7 +137,8 @@ async function getPostCoreData(
         NULL AS "keyDates",
         NULL AS "requiredSkills",
         NULL AS "applicationChecklist",
-        TRUE AS "isLive",
+        (r.status IN ('UPCOMING','ACTIVE')
+          AND (r.application_end_date IS NULL OR r.application_end_date >= now())) AS "isLive",
         p.created_at AS "postedAt",
         p.created_at AS "createdAt",
         p.updated_at AS "updatedAt",
@@ -158,6 +159,7 @@ async function getPostCoreData(
       INNER JOIN recruitments r ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
       WHERE p.slug = ${postSlug}
+        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
           r.slug = ${recruitmentSlug}
           OR r.id IN (
@@ -688,7 +690,9 @@ export async function getRelatedPostsForLeaf(
       JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p.position_id = ${positionId}
         AND p.id != ${postId}
-        AND p."isLive" = true
+        AND r.status IN ('UPCOMING','ACTIVE')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 6
     `);
@@ -716,7 +720,9 @@ export async function getRelatedPostsForLeaf(
       JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p."organizationId" = ${organizationId}
         AND p.id != ALL(${excludeIds})
-        AND p."isLive" = true
+        AND r.status IN ('UPCOMING','ACTIVE')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 5
     `);
@@ -744,7 +750,9 @@ export async function getRelatedPostsForLeaf(
       JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p.location_state = ${locationState}
         AND p.id != ALL(${excludeIds})
-        AND p."isLive" = true
+        AND r.status IN ('UPCOMING','ACTIVE')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 4
     `);
@@ -872,7 +880,9 @@ export async function getPostsByRecruitment(
             WHERE old_slug = ${recruitmentSlug}
           )
         )
-        AND p."isLive" = true
+        AND r.status IN ('UPCOMING','ACTIVE')
+        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
       OFFSET ${offset}

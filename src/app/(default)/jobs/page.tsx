@@ -2,28 +2,19 @@ import { listingSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { listPostings } from "@/lib/queries";
+import { listRecruitments } from "@/db/operations/get-recruitments";
+import { deriveLifecycle, lifecycleLabel } from "@/lib/lifecycle";
 import { SeoFooterLinks } from "@/components/seo-footer-links";
 import { JOBS_PAGE_SIZE, pageHref, parsePage } from "@/lib/pagination";
-import {
-  STAGE_LABELS,
-  STAGE_LABELS_HI,
-  KIND_LABELS,
-  KIND_LABELS_HI,
-  formatDate,
-} from "@/lib/labels";
+import { KIND_LABELS, KIND_LABELS_HI, formatDate } from "@/lib/labels";
 import { ChevronRight } from "lucide-react";
 
-// This page deliberately stays at the plain /jobs URL rather than gaining a
-// /hi variant: it's an aggregator view, not unique content that should rank
-// separately in Hindi search (that's what /hi/jobs/[slug] is for — see
-// src/i18n/locale-aware-paths.ts). What it CAN do is honor a visitor's
-// saved language choice by reading the same NEXT_LOCALE cookie the language
-// switcher writes (src/components/language-switcher.tsx) and rendering
-// Hindi titles/labels + linking into the Hindi job detail pages, without
-// ever changing this page's own canonical URL or forcing it into a
-// different render mode than before (it was already request-dynamic from
-// `searchParams`, so reading another cookie here has no new cost).
+// /jobs is the discovery listing of the URL contract (2026-10-20):
+//   /jobs → /jobs/{recruitment-slug} → /jobs/{recruitment-slug}/{post-slug}
+// Every row is a canonical `recruitments` record linking to its hub. The
+// legacy `postings` table is never used here: its one-segment slugs did not
+// resolve to any route (audit P0 #2). Hindi UI labels follow the NEXT_LOCALE
+// cookie; the URL never changes by language.
 export const revalidate = 86400; // Phase 1: daily revalidation
 
 type Props = {
@@ -74,23 +65,12 @@ export async function generateMetadata({
   };
 }
 
-// Stage pill color mapping
-const STAGE_COLORS: Record<string, string> = {
-  APPLICATION_OPEN: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  NOTIFICATION_OUT: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  APPLICATION_CLOSED: "bg-neutral-100 text-neutral-600 ring-neutral-500/20",
-  ADMIT_CARD_RELEASED: "bg-violet-50 text-violet-700 ring-violet-600/20",
-  EXAM_SCHEDULED: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  EXAM_CONDUCTED: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  ANSWER_KEY_OUT: "bg-sky-50 text-sky-700 ring-sky-600/20",
-  OBJECTION_WINDOW: "bg-orange-50 text-orange-700 ring-orange-600/20",
-  RESULT_OUT: "bg-teal-50 text-teal-700 ring-teal-600/20",
-  MERIT_LIST_OUT: "bg-teal-50 text-teal-700 ring-teal-600/20",
-  INTERVIEW_SCHEDULED: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  FINAL_RESULT_OUT: "bg-teal-50 text-teal-700 ring-teal-600/20",
-  ACTIVE: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  FILLED: "bg-neutral-100 text-neutral-500 ring-neutral-400/20",
-  CLOSED: "bg-neutral-100 text-neutral-500 ring-neutral-400/20",
+const LIFECYCLE_COLORS: Record<string, string> = {
+  open: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  upcoming: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  closed: "bg-neutral-100 text-neutral-600 ring-neutral-500/20",
+  results: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  archived: "bg-neutral-100 text-neutral-500 ring-neutral-500/20",
 };
 
 export default async function JobsListPage({ searchParams }: Props) {
@@ -103,9 +83,9 @@ export default async function JobsListPage({ searchParams }: Props) {
       ? (filterParam as "newly-added" | "open")
       : undefined;
 
-  let results: Awaited<ReturnType<typeof listPostings>> = [];
+  let results: Awaited<ReturnType<typeof listRecruitments>> = [];
   try {
-    results = await listPostings({
+    results = await listRecruitments({
       kind: validKind,
       filter: validFilter,
       search: q,
@@ -123,7 +103,6 @@ export default async function JobsListPage({ searchParams }: Props) {
   const cookieStore = await cookies();
   const isHi = cookieStore.get("NEXT_LOCALE")?.value === "hi";
 
-  const stageLabels = isHi ? STAGE_LABELS_HI : STAGE_LABELS;
   const kindLabels = isHi ? KIND_LABELS_HI : KIND_LABELS;
   const dateLocale = isHi ? "hi-IN" : "en-IN";
 
@@ -315,135 +294,72 @@ export default async function JobsListPage({ searchParams }: Props) {
       {/* ── Job list ─────────────────────────────────────────────────────── */}
       <div className="mt-6">
         <ul className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
-          {results.map((posting) => {
-            // Query projections vary across the legacy and normalized listing
-            // paths. Narrow the optional display fields once instead of using
-            // unchecked `any` casts throughout the row renderer.
-            const postingWithMetadata = posting as typeof posting & {
-              titleHi?: string | null;
-              locationCityHi?: string | null;
-              examDate?: Date | null;
-              lastVerifiedAt?: Date | null;
-              totalVacancies?: number | null;
-              validThrough?: Date | null;
-              organization: typeof posting.organization & {
-                nameHi?: string | null;
-              };
-            };
-            const titleHi = postingWithMetadata.titleHi ?? null;
-            const locationCityHi = postingWithMetadata.locationCityHi ?? null;
-            const orgNameHi = postingWithMetadata.organization.nameHi ?? null;
-
-            const displayTitle = isHi && titleHi ? titleHi : posting.title;
-            const displayOrgName =
-              isHi && orgNameHi ? orgNameHi : posting.organization.name;
-            const displayCity =
-              isHi && locationCityHi ? locationCityHi : posting.locationCity;
-            // Only link into the Hindi detail page when this posting
-            // actually has Hindi content — otherwise send visitors to the
-            // plain canonical page rather than a /hi URL that just shows
-            // the same English text under a different path.
-            const detailHref = `/jobs/${posting.slug}`;
-
-            const examDate = postingWithMetadata.examDate;
-            const lastVerifiedAt = postingWithMetadata.lastVerifiedAt;
-            const totalVacancies = postingWithMetadata.totalVacancies;
-            const validThrough = postingWithMetadata.validThrough;
-
-            // "Closing soon" = last date within 7 days from now (and not already past)
-            const daysLeftNum = (() => {
-              if (!validThrough) return null;
-              const now = Date.now();
-              const end = new Date(validThrough).getTime();
-              const d = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-              return d >= 0 && d <= 7 ? d : null;
-            })();
-            const closingSoon = daysLeftNum !== null;
-
-            const stageColor =
-              STAGE_COLORS[posting.currentStage] ??
-              "bg-neutral-100 text-neutral-600 ring-neutral-500/20";
-            const stageLabel =
-              stageLabels[posting.currentStage] ?? posting.currentStage;
-
-            const locationLine = [
-              displayOrgName,
-              displayCity
-                ? posting.locationRegion
-                  ? `${displayCity}, ${posting.locationRegion}`
-                  : displayCity
-                : posting.locationRegion ?? null,
-            ]
-              .filter(Boolean)
-              .join(" · ");
+          {results.map((r) => {
+            const lifecycle = deriveLifecycle(r.status, r.applicationEndDate);
+            const displayOrgName = isHi && r.organizationNameHi ? r.organizationNameHi : r.organizationName;
+            const detailHref = `/jobs/${r.slug}`;
+            const closingSoon = lifecycle.isOpen && lifecycle.daysLeft !== null && lifecycle.daysLeft >= 0 && lifecycle.daysLeft <= 7;
+            const badgeColor = LIFECYCLE_COLORS[lifecycle.state] ?? LIFECYCLE_COLORS.closed;
+            const postedOn = r.notificationDate ?? r.createdAt;
 
             return (
-              <li key={posting.id} className="group relative">
+              <li key={r.id} className="group relative">
                 <Link
                   href={detailHref}
                   className="flex items-start gap-4 px-5 py-5 transition-colors hover:bg-indigo-50/40 sm:px-6"
                 >
-                  {/* Left: text content */}
                   <div className="min-w-0 flex-1">
-                    {/* Title + closing badge row */}
                     <div className="flex flex-wrap items-start gap-2">
                       <span className="text-base font-semibold text-neutral-900 group-hover:text-indigo-600 transition-colors leading-snug">
-                        {displayTitle}
+                        {r.name}
                       </span>
-                      {/* Closing soon badge */}
                       {closingSoon && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600 ring-1 ring-red-500/20">
                           <span className="relative flex h-1.5 w-1.5">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
                             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
                           </span>
-                          {daysLeftNum === 0
+                          {lifecycle.daysLeft === 0
                             ? (isHi ? "आज बंद" : "Closes today")
-                            : L.daysLeft(daysLeftNum!)}
-                        </span>
-                      )}
-                      {/* Pending review badge — shown for PENDING postings not yet approved */}
-                      {posting.reviewStatus === "PENDING" && (
-                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-500/30">
-                          Pending review
+                            : L.daysLeft(lifecycle.daysLeft!)}
                         </span>
                       )}
                     </div>
 
-                    {/* Org + location */}
-                    {locationLine && (
-                      <p className="mt-1 text-sm text-neutral-500 leading-snug">
-                        {locationLine}
-                      </p>
+                    {displayOrgName && (
+                      <p className="mt-1 text-sm text-neutral-500 leading-snug">{displayOrgName}</p>
                     )}
 
-                    {/* Badges row: stage + vacancies */}
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${stageColor}`}
-                      >
-                        {stageLabel}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${badgeColor}`}>
+                        {lifecycleLabel(lifecycle.state, isHi)}
                       </span>
-                      {totalVacancies != null && totalVacancies > 0 && (
+                      {r.totalVacancies != null && r.totalVacancies > 0 && (
                         <span className="inline-flex items-center rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
-                          {totalVacancies.toLocaleString("en-IN")} {L.vacancies}
+                          {r.totalVacancies.toLocaleString("en-IN")} {L.vacancies}
+                        </span>
+                      )}
+                      {r.postCount > 1 && (
+                        <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-neutral-600">
+                          {r.postCount} {isHi ? "पद प्रकार" : "post types"}
                         </span>
                       )}
                     </div>
 
-                    {/* Metadata row */}
                     <p className="mt-2 text-xs text-neutral-400 leading-relaxed">
-                      {L.posted} {formatDate(posting.datePosted, dateLocale)}
-                      {examDate && (
-                        <> · {L.examOn}: {formatDate(examDate, dateLocale)}</>
+                      {postedOn && <>{L.posted} {formatDate(postedOn, dateLocale)}</>}
+                      {lifecycle.deadline && (
+                        <> · {isHi ? "अंतिम तिथि" : "Last date"}: {formatDate(lifecycle.deadline, dateLocale)}</>
                       )}
-                      {lastVerifiedAt && posting.reviewStatus !== "PENDING" && (
-                        <> · {L.verified} {formatDate(lastVerifiedAt, dateLocale)}</>
+                      {r.examDate && (
+                        <> · {L.examOn}: {formatDate(r.examDate, dateLocale)}</>
+                      )}
+                      {r.lastVerifiedAt && (
+                        <> · {L.verified} {formatDate(r.lastVerifiedAt, dateLocale)}</>
                       )}
                     </p>
                   </div>
 
-                  {/* Right: chevron (visible on hover) */}
                   <div className="mt-1 shrink-0 text-neutral-300 transition-all group-hover:translate-x-0.5 group-hover:text-indigo-600">
                     <ChevronRight className="h-5 w-5" />
                   </div>

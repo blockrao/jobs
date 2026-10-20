@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getArticleBySlug } from "@/lib/queries";
 import { absoluteUrl } from "@/lib/site";
 import { safeQuery } from "@/lib/safe-query";
+import { legacyPostingHref } from "@/lib/recruitment-href";
 import {
   buildArticleSchema,
   buildBreadcrumbSchema,
@@ -54,7 +55,10 @@ export default async function ArticlePage({ params }: Props) {
   const relatedPostings = article.postingArticles
     .map((pa) => pa.posting)
     .filter((p) => p.reviewStatus === "APPROVED");
-  const aboutUrls = relatedPostings.map((p) => absoluteUrl(`/jobs/${p.slug}`));
+  const aboutUrls = relatedPostings
+    .map((p) => legacyPostingHref(p))
+    .filter((h): h is string => Boolean(h))
+    .map((h) => absoluteUrl(h));
 
   const breadcrumbItems = [
     { name: "Home", path: "/" },
@@ -111,7 +115,7 @@ export default async function ArticlePage({ params }: Props) {
               <InfoCard
                 key={posting.id}
                 tone="brand"
-                href={`/jobs/${posting.slug}`}
+                href={legacyPostingHref(posting) ?? "/jobs"}
                 title={posting.title}
                 subtitle={
                   posting.totalVacancies != null

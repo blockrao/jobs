@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { getCommissionBySlug, getPostingsByCommission } from "@/lib/queries";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
+import { legacyPostingHref } from "@/lib/recruitment-href";
 
 type Commission = NonNullable<Awaited<ReturnType<typeof getCommissionBySlug>>>;
 type Postings = Awaited<ReturnType<typeof getPostingsByCommission>>;
@@ -169,10 +170,7 @@ export function CommissionContent({
                 isHi && orgNameHi ? orgNameHi : posting.organization.name;
               const displayExamLabel =
                 isHi && examLabelHi ? examLabelHi : posting.exam?.label;
-              const detailHref =
-                isHi && titleHi
-                  ? `/hi/jobs/${posting.slug}`
-                  : `/jobs/${posting.slug}`;
+              const detailHref = legacyPostingHref(posting) ?? "/jobs";
               return (
                 <li key={posting.id} className="py-4">
                   <Link

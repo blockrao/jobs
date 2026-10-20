@@ -538,7 +538,7 @@ export async function getArticleBySlug(slug: string) {
   const article = await db.query.articles.findFirst({
     where: eq(articles.slug, slug),
     with: {
-      postingArticles: { with: { posting: true } },
+      postingArticles: { with: { posting: { with: { inferredRecruitment: { columns: { slug: true } } } } } },
       articleCategories: { with: { category: true } },
     },
   });
@@ -887,7 +887,11 @@ export async function getPostingsByCommission(commissionSlug: string) {
       eq(postings.reviewStatus, "APPROVED"),
       ...currentOnly,
     ),
-    with: { organization: true, exam: { with: { commission: true } } },
+    with: {
+      organization: true,
+      exam: { with: { commission: true } },
+      inferredRecruitment: { columns: { slug: true } },
+    },
     orderBy: [desc(postings.datePosted)],
     limit: 200,
   });

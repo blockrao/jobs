@@ -7,11 +7,13 @@ import type { QualificationPostRow } from "@/lib/queries";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 import { pageHref } from "@/lib/pagination";
-import { recruitmentHref } from "@/lib/recruitment-href";
+import { postHref, recruitmentHref } from "@/lib/recruitment-href";
 
 function PostRow({ row, isHi }: { row: QualificationPostRow; isHi: boolean }) {
   const href = row.recruitmentSlug
-    ? recruitmentHref({ slug: row.recruitmentSlug, singlePostSlug: row.postSlug ?? null })
+    ? row.postSlug
+      ? postHref({ recruitmentSlug: row.recruitmentSlug, slug: row.postSlug })
+      : recruitmentHref({ slug: row.recruitmentSlug })
     : "#";
 
   const endDate = row.applicationEndDate ? new Date(row.applicationEndDate) : null;

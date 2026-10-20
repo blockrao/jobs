@@ -17,10 +17,10 @@ export const LOCALE_AWARE_PREFIXES = [] as const as readonly string[];
 // a valid locale-aware destination. e.g. /hi/jobs, /hi/exams,
 // /hi/commissions/bpsc, /hi/recruitments/bpsc-tre-4.
 // NOTE: /positions was removed (no longer exist post-position-hub removal)
-const LOCALE_AWARE_ENTITIES = [
-  '/commissions/',
-  '/recruitments/',
-] as const;
+// Locale-prefixed routes were removed on 2026-10-20 (URL contract: one URL per
+// page, no /en or /hi prefix). Nothing is locale-aware any more; the lists are
+// kept empty so the language switcher keeps compiling and only sets the cookie.
+const LOCALE_AWARE_ENTITIES = [] as const as readonly string[];
 
 // Bare listing pages that live at exactly this path (no slug required).
 // PHASE 2: ALL listing pages removed (no longer have [locale] variants)
@@ -44,8 +44,6 @@ export function isLocaleAwarePath(pathname: string): boolean {
   // JKSSB's temporary preview hub has a dedicated static route in (default).
   // Keep this exact path out of next-intl so it isn't rewritten to the generic
   // locale-aware job detail page, which cannot resolve the preview fixture.
-  if (stripped === '/jobs/jkssb-advertisement-08-of-2026') return false;
-
   // PHASE 2: Job routes NO LONGER have locale variants. /jobs/[slug] and
   // /jobs/[recruitment-slug]/[post-slug] are not locale-aware anymore.
   // Do not route job paths through next-intl.

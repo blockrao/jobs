@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects } from "../schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
+
+// Recruitments quarantined by the data-integrity process are not public pages.
+// (verification_status is a live DB column not yet mirrored in the Drizzle schema.)
+const notQuarantined = sql`${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'`;
 
 /**
  * Get recruitment by slug
@@ -137,7 +141,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       })
       .from(recruitments)
       .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
-      .where(eq(recruitments.slug, slug))
+      .where(and(eq(recruitments.slug, slug), notQuarantined))
       .limit(1);
     console.log(`[getRecruitmentWithPosts] Query result:`, recruitmentResult?.length ? `Found ${recruitmentResult.length} record(s)` : "No records");
 
@@ -159,7 +163,7 @@ export async function getRecruitmentWithPosts(slug: string) {
           })
           .from(recruitments)
           .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
-          .where(eq(recruitments.slug, redirectRecord[0].new_slug))
+          .where(and(eq(recruitments.slug, redirectRecord[0].new_slug), notQuarantined))
           .limit(1);
       }
     }
@@ -430,3 +434,129 @@ export async function getRecruitmentWithPosts(slug: string) {
 
 /** Request-scoped memoization shared by generateMetadata and page rendering. */
 export const getRecruitmentWithPostsCached = cache(getRecruitmentWithPosts);
+
+// ---------------------------------------------------------------------------
+// Discovery listing (/jobs) — canonical recruitments only.
+// Replaces the legacy `postings`-table listing whose one-segment slugs did not
+// resolve to any route (audit 2026-10-20, P0 #2).
+// ---------------------------------------------------------------------------
+
+export interface ListRecruitmentsOptions {
+  /** GOVERNMENT = every sector except PRIVATE. */
+  kind?: "GOVERNMENT" | "PRIVATE";
+  /** `open` = applications open now; `newly-added` = notified in the last 30 days. */
+  filter?: "newly-added" | "open";
+  /** Free-text search on recruitment name and organisation name. */
+  search?: string;
+  limit: number;
+  offset: number;
+}
+
+export interface RecruitmentListRow {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  organizationName: string | null;
+  organizationNameHi: string | null;
+  organizationSlug: string | null;
+  organizationSector: string | null;
+  locationStateCode: string | null;
+  totalVacancies: number | null;
+  postCount: number;
+  notificationDate: Date | null;
+  applicationStartDate: Date | null;
+  applicationEndDate: Date | null;
+  examDate: Date | null;
+  lastVerifiedAt: Date | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
+/** Recruitments whose organisation/identity could not be established are hidden everywhere. */
+export const NOT_QUARANTINED_SQL = sql`r.verification_status IS DISTINCT FROM 'QUARANTINED'`;
+
+const LIVE_RECRUITMENT_SQL = sql`
+  r.status IN ('UPCOMING', 'ACTIVE')
+  AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+`;
+
+const OPEN_RECRUITMENT_SQL = sql`
+  r.status = 'ACTIVE'
+  AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+`;
+
+export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<RecruitmentListRow[]> {
+  const db = getDb();
+  // Quarantined recruitments (identity not established — see
+  // claude/DATA_QUARANTINE_2026_10_20.md) are never public.
+  const conditions = [NOT_QUARANTINED_SQL];
+
+  if (opts.kind === "PRIVATE") conditions.push(sql`o.sector = 'PRIVATE'`);
+  else if (opts.kind === "GOVERNMENT") conditions.push(sql`o.sector IS DISTINCT FROM 'PRIVATE'`);
+
+  const search = opts.search?.trim();
+  if (search) {
+    const pattern = `%${search.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+    conditions.push(sql`(r.name ILIKE ${pattern} OR o.name ILIKE ${pattern})`);
+  }
+
+  if (opts.filter === "open") {
+    conditions.push(OPEN_RECRUITMENT_SQL);
+  } else if (opts.filter === "newly-added") {
+    conditions.push(LIVE_RECRUITMENT_SQL);
+    conditions.push(sql`COALESCE(r.notification_date, r.created_at) >= now() - interval '30 days'`);
+  } else if (!search) {
+    // Browsing without a query shows current recruitments only. A text search
+    // also matches closed ones, ordered after the open ones and labelled Closed.
+    conditions.push(LIVE_RECRUITMENT_SQL);
+  }
+
+  const where = conditions.length
+    ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+    : sql``;
+
+  const orderBy = opts.filter === "newly-added"
+    ? sql`COALESCE(r.notification_date, r.created_at) DESC, r.id DESC`
+    : sql`
+        (CASE WHEN ${OPEN_RECRUITMENT_SQL} THEN 0
+              WHEN ${LIVE_RECRUITMENT_SQL} THEN 1
+              ELSE 2 END),
+        r.application_end_date ASC NULLS LAST,
+        COALESCE(r.notification_date, r.created_at) DESC,
+        r.id DESC`;
+
+  const rows = await db.execute<Record<string, unknown>>(sql`
+    SELECT
+      r.id,
+      r.name,
+      r.slug,
+      r.status::text AS status,
+      o.name AS "organizationName",
+      o.name_hi AS "organizationNameHi",
+      o.slug AS "organizationSlug",
+      o.sector::text AS "organizationSector",
+      r.location_state_code AS "locationStateCode",
+      COALESCE(r.total_vacancies, NULLIF(pc.vacancies, 0)) AS "totalVacancies",
+      COALESCE(pc.post_count, 0)::int AS "postCount",
+      r.notification_date AS "notificationDate",
+      r.application_start_date AS "applicationStartDate",
+      r.application_end_date AS "applicationEndDate",
+      r.exam_date AS "examDate",
+      r.last_verified_at AS "lastVerifiedAt",
+      r.created_at AS "createdAt",
+      r.updated_at AS "updatedAt"
+    FROM recruitments r
+    LEFT JOIN organizations o ON o.id = r.organization_id
+    LEFT JOIN LATERAL (
+      SELECT count(*)::int AS post_count, sum(p.vacancy_total)::int AS vacancies
+      FROM posts p WHERE p.recruitment_id = r.id
+    ) pc ON true
+    ${where}
+    ORDER BY ${orderBy}
+    LIMIT ${opts.limit} OFFSET ${opts.offset}
+  `);
+
+  const list = Array.isArray(rows) ? rows : ((rows as unknown as { rows?: unknown[] }).rows ?? []);
+  return list as unknown as RecruitmentListRow[];
+}

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getStateBySlug, STATES } from "@/lib/states/states";
 import { listStateJobs } from "@/lib/states/queries";
 import { safeQuery } from "@/lib/safe-query";
+import { legacyPostingHref } from "@/lib/recruitment-href";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 import { STAGE_LABELS, formatDate } from "@/lib/labels";
 
@@ -60,11 +61,17 @@ export default async function StatePage({ params }: Props) {
 
       {jobs.length > 0 && (
         <ul className="mt-6 divide-y divide-black/10">
-          {jobs.map((j) => (
+          {jobs.map((j) => {
+            const href = legacyPostingHref(j);
+            return (
             <li key={j.id} className="py-4">
-              <Link href={`/jobs/${j.slug}`} className="text-base font-semibold hover:underline">
-                {j.title}
-              </Link>
+              {href ? (
+                <Link href={href} className="text-base font-semibold hover:underline">
+                  {j.title}
+                </Link>
+              ) : (
+                <span className="text-base font-semibold">{j.title}</span>
+              )}
               <p className="text-sm text-neutral-600">
                 {j.organization.name}
                 {j.locationCity ? ` · ${j.locationCity}` : ""}
@@ -75,7 +82,8 @@ export default async function StatePage({ params }: Props) {
                 {j.validThrough ? `Last date ${formatDate(j.validThrough)}` : `Posted ${formatDate(j.datePosted)}`}
               </p>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

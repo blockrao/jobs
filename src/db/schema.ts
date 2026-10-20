@@ -848,6 +848,14 @@ export const postingsRelations = relations(postings, ({ one, many }) => ({
   updates: many(postingUpdates),
   postingCategories: many(postingCategories),
   postingArticles: many(postingArticles),
+  // Legacy posting rows link to the public site only through the canonical
+  // recruitment they were matched to (URL contract 2026-10-20). `postings.slug`
+  // is not a public URL.
+  inferredRecruitment: one(recruitments, {
+    fields: [postings.inferredRecruitmentId],
+    references: [recruitments.id],
+    relationName: "postingInferredRecruitment",
+  }),
 }));
 
 export const postingUpdatesRelations = relations(postingUpdates, ({ one }) => ({

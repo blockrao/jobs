@@ -3,7 +3,8 @@ import { isAggregatorUrl, mentionsAggregator } from "../lib/aggregators";
 
 export type CheckResult = { page: string; check: string; ok: boolean; detail: string };
 export type PageInput = { label: string; url: string; status: number; body: string };
-export type Expect = { enUrl: string; hiUrl: string };
+/** Expected canonical URL of the page under test (one URL per page, no locale variants). */
+export type Expect = { canonicalUrl: string };
 
 const norm = (u: string) => u.trim().replace(/\/$/, "");
 
@@ -38,18 +39,21 @@ export function checkCanonical(html: string, self: string): [boolean, string] {
   return [ok, ok ? c[0].href : `canonical ${c[0].href} != ${self}`];
 }
 
-export function checkHreflang(html: string, e: Expect): [boolean, string] {
+/**
+ * URL contract 2026-10-20: pages have exactly one URL and no language
+ * variants, so any hreflang alternate is a regression (it would advertise a
+ * /hi or /en URL that redirects or 404s).
+ */
+export function checkNoHreflang(html: string): [boolean, string] {
   const alts = tags(html, "link").filter((l) => /alternate/i.test(l.rel ?? "") && l.hreflang);
-  const map = new Map(alts.map((l) => [l.hreflang.toLowerCase(), norm(l.href ?? "")]));
-  const want: [string, string][] = [
-    ["en", norm(e.enUrl)],
-    ["hi", norm(e.hiUrl)],
-    ["x-default", norm(e.enUrl)],
-  ];
-  const miss = want
-    .filter(([k, v]) => map.get(k) !== v)
-    .map(([k, v]) => `${k} (expected ${v}, got ${map.get(k) ?? "none"})`);
-  return [miss.length === 0, miss.length ? `bad: ${miss.join("; ")}` : "en/hi/x-default ok"];
+  return [alts.length === 0, alts.length ? `unexpected hreflang: ${alts.map((l) => l.hreflang).join(", ")}` : "no hreflang"];
+}
+
+/** A legacy URL must 301 straight to the expected canonical URL (no chain, no 404). */
+export function checkRedirect(status: number, location: string | null, expected: string): [boolean, string] {
+  if (status !== 301 && status !== 308) return [false, `HTTP ${status} (expected 301)`];
+  const ok = Boolean(location) && norm(location!) === norm(expected);
+  return [ok, ok ? `301 → ${location}` : `301 → ${location ?? "(none)"} != ${expected}`];
 }
 
 export function extractJsonLd(html: string): { ok: boolean; types: string[]; errors: number } {
@@ -100,7 +104,7 @@ export function checkSitemap(status: number, xml: string, urls: string[]): Check
   if (status !== 200) return [{ page: "sitemap", check: "sitemap.xml", ok: false, detail: `HTTP ${status}` }];
   const locs = new Set([...xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)].map((m) => norm(m[1])));
   return urls.map((u) => ({
-    page: u.includes("/hi/") ? "hi" : "en",
+    page: u.split("/jobs/")[1] ?? u,
     check: "in sitemap",
     ok: locs.has(norm(u)),
     detail: locs.has(norm(u)) ? "present" : "absent from /sitemap.xml",
@@ -119,8 +123,8 @@ export function checkPage(p: PageInput, e: Expect): CheckResult[] {
   if (!st[0]) return out;
   out.push(
     r("indexable", checkIndexable(p.body)),
-    r("self-canonical", checkCanonical(p.body, p.url)),
-    r("hreflang", checkHreflang(p.body, e)),
+    r("self-canonical", checkCanonical(p.body, e.canonicalUrl)),
+    r("no hreflang", checkNoHreflang(p.body)),
     r("JSON-LD", checkJsonLd(p.body)),
     r("no aggregators", checkNoAggregators(p.body)),
   );

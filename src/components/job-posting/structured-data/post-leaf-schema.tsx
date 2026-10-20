@@ -295,9 +295,9 @@ export default function PostLeafStructuredData({
     };
   }
 
-  // jobLocationType — Indian government jobs are typically ON_SITE
-  // Not remote or hybrid; always on-site employment at the workplace
-  jobPosting["jobLocationType"] = "ON_SITE";
+  // jobLocationType is deliberately not emitted: schema.org defines it only for
+  // TELECOMMUTE, and asserting a work mode the notification does not state is a
+  // fabricated fact (standing rule: no defaulted facts on pages).
 
   const graph = {
     "@context": "https://schema.org",

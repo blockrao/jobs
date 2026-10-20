@@ -46,7 +46,9 @@ export default function RelatedPostsLinks({
 }: RelatedPostsLinksProps) {
   const { samePosition, sameOrg, sameState, positionSlug, positionName } = related;
 
-  const hasPosition = positionSlug && positionName && positionName !== "Other";
+  // Position/role hubs (/posts/{slug}) were removed on 2026-10-20 (URL contract:
+  // recruitment hubs and post leaves only), so the hub section never renders.
+  const hasPosition = false as boolean && positionSlug && positionName && positionName !== "Other";
   const hasSameOrg = sameOrg.length > 0;
   const hasSameState = sameState.length > 0;
   const hasSamePosition = samePosition.length > 0;

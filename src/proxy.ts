@@ -1,65 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import createMiddleware from 'next-intl/middleware';
 import { adminSessionToken } from "@/lib/admin-token";
-import { locales, defaultLocale } from "@/i18n/request";
 import legacyExamSlugs from "@/lib/legacy-exam-slugs.generated.json";
 import { getLegacyExamRedirect } from "@/lib/legacy-exam-routing";
-import { isLocaleAwarePath } from "@/i18n/locale-aware-paths";
 import { getSector, getSectorByAlias, sectorHref } from "@/lib/sectors";
-
-// Import Supabase client for redirect lookups
-import { getDb } from "@/db";
-import { recruitment_slug_redirects } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 const COOKIE_NAME = "admin_session";
 const legacyExamSlugSet = new Set<string>(legacyExamSlugs);
 
-// Create the next-intl middleware
-const intlMiddleware = createMiddleware({
-  locales,
-  defaultLocale: defaultLocale,
-  localePrefix: 'always',
-  // SEO-001 (ledger A-052): hreflang is decided per page by src/lib/seo and
-  // emitted in the page <head> and the sitemap only. The middleware's own
-  // HTTP `Link` header would declare en/hi alternates on every URL,
-  // including pages the policy says must carry none.
-  alternateLinks: false,
-  // Ledger A-053 (owner decision 2026-10-03): the language of a page is the
-  // language of its URL. A request is never redirected to another language
-  // because of the browser's Accept-Language header or a saved preference.
-  // Visitors change language with the language switcher.
-  localeDetection: false,
-});
+/**
+ * URL contract (locked 2026-10-20) — there is exactly one URL per page and
+ * no locale prefix. Every redirect below is a permanent 301 to a URL that is
+ * guaranteed to exist, so crawlers never land on a redirect that 404s.
+ *
+ *   /jobs                                → discovery listing
+ *   /jobs/{recruitment-slug}             → recruitment hub
+ *   /jobs/{recruitment-slug}/{post-slug} → post leaf
+ *
+ * Legacy patterns handled here:
+ *   /en/...  /hi/...       → same path without the prefix (locale routes removed 2026-10-20)
+ *   /{legacy-exam-slug}    → /exams/{slug} (build-time manifest, no DB)
+ *   /jobs?sector=x         → sector hub
+ *   /jobs/{old-recruitment-slug}[/{post}] → canonical URL, resolved in the page routes
+ *                            via recruitment_slug_redirects (never in the proxy).
+ */
 
-// isLocaleAwarePath (src/i18n/locale-aware-paths.ts) tells us which route
-// families actually have a `[locale]` segment
-// (src/app/[locale]/articles|exams|organizations|jobs/[slug]). Every other
-// route (`/news`, `/categories`, `/commissions/[slug]`, `/[exam_slug]`,
-// etc.) is the plain, non-locale canonical page tree. next-intl's
-// middleware previously ran on *every* path (matcher only excluded /api,
-// /_next and static assets) — for a path with no `[locale]` counterpart it
-// would still try to route it through the locale segment and land
-// nowhere, 404ing pages that built and existed fine. Scoping the matcher
-// to just the locale-aware prefixes fixes that without touching the rest
-// of the site.
+const LOCALE_PREFIX_RE = /^\/(en|hi)(?=\/|$)/;
 
 export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+  const { pathname, search } = request.nextUrl;
 
-  // Legacy /{examSlug} URLs are redirected only when the slug appears in the
-  // build-generated authoritative manifest. Unknown root paths do no database
-  // work and fall through to the app's real 404 handler.
+  // 1. Locale-prefixed URLs. The site indexed ~6,500 /en/jobs/... URLs before the
+  //    locale segment was removed; they must 301 to the unprefixed path, never 404.
+  if (LOCALE_PREFIX_RE.test(pathname)) {
+    const stripped = pathname.replace(LOCALE_PREFIX_RE, "") || "/";
+    return NextResponse.redirect(new URL(`${stripped}${search}`, request.url), { status: 301 });
+  }
+
+  // 2. Legacy /{examSlug} root URLs (build-generated allowlist; unknown roots fall
+  //    through to the real 404 handler without any database work).
   const legacyExamTarget = getLegacyExamRedirect(pathname, legacyExamSlugSet);
   if (legacyExamTarget) {
     return NextResponse.redirect(new URL(legacyExamTarget, request.url), { status: 301 });
   }
 
-  // Handle admin authentication (applies everywhere under /admin)
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+  // 3. Admin authentication (everything under /admin except the login page).
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
     const token = await adminSessionToken();
     const cookie = request.cookies.get(COOKIE_NAME)?.value;
-
     if (!token || cookie !== token) {
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("next", pathname);
@@ -67,75 +54,24 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Legacy footer links used `/jobs?sector=<x>`, a query parameter /jobs never
-  // read, so six URLs served the same unfiltered listing. 301 them to the
-  // sector hub (src/lib/sectors.ts); unknown values drop the parameter.
+  // 4. Legacy footer links used `/jobs?sector=<x>`; 301 them to the sector hub.
   if (pathname === "/jobs" && request.nextUrl.searchParams.has("sector")) {
     const sectorParam = request.nextUrl.searchParams.get("sector") ?? "";
     const target = getSector(sectorParam) ?? getSectorByAlias(sectorParam);
-    const url = new URL(target ? sectorHref(target) : "/jobs", request.url);
-    return NextResponse.redirect(url, { status: 301 });
+    return NextResponse.redirect(new URL(target ? sectorHref(target) : "/jobs", request.url), { status: 301 });
   }
 
-  // Handle URL slug redirects from old format to new semantic format
-  // This handles the migration from descriptive slugs (150+ chars) to semantic slugs (33-48 chars)
-  const jobsMatch = pathname.match(/^\/jobs\/([^\/]+)$/);
-  if (jobsMatch) {
-    const slug = jobsMatch[1];
-
-    // Canonical semantic slugs end in -YYYY-NN. They cannot be legacy slugs,
-    // so skip the redirect-table query on the common canonical navigation path.
-    // Old descriptive slugs still use the indexed lookup and preserve 301s.
-    if (!/-\d{4}-\d{2}$/.test(slug)) {
-      try {
-        const db = getDb();
-        const redirectRecord = await db
-          .select()
-          .from(recruitment_slug_redirects)
-          .where(eq(recruitment_slug_redirects.old_slug, slug))
-          .limit(1);
-
-        if (redirectRecord && redirectRecord.length > 0) {
-          const newSlug = redirectRecord[0].new_slug;
-          const url = new URL(`/jobs/${newSlug}`, request.url);
-
-          // Return 301 permanent redirect
-          return NextResponse.redirect(url, {
-            status: 301,
-          });
-        }
-      } catch (error) {
-        console.error("Redirect lookup error:", error);
-        // Continue on error — don't block page access
-      }
-    }
-  }
-
-  // Only run next-intl's routing on paths that actually have a
-  // `[locale]` page — everything else passes through untouched.
-  if (isLocaleAwarePath(pathname)) {
-    return intlMiddleware(request);
-  }
-
-  // There is no src/app/[locale]/page.tsx — only articles/exams/
-  // organizations/jobs detail routes are localized. A bare /en or /hi
-  // (e.g. from the language switcher on the homepage) isn't locale-aware
-  // by the check above, so it would otherwise fall through to the
-  // top-level `/[exam_slug]` catch-all and render "Exam not found" for
-  // exam_slug="hi". Send it to the (non-localized) homepage instead.
-  if (/^\/(en|hi)\/?$/.test(pathname)) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  // 5. Old recruitment slugs are resolved by the routes themselves
+  //    (src/db/operations/get-recruitments.ts and get-posts.ts consult
+  //    recruitment_slug_redirects and the pages issue a 301 to the canonical
+  //    URL). Keeping the database out of the proxy keeps every request cheap.
 
   return NextResponse.next();
 }
 
-// Apply proxy to all routes except:
-// - API routes (/api/*)
-// - Assets (_next, favicon, robots, sitemap, etc.)
-// - Public files
+// Apply to all routes except API routes, Next internals and static files.
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.well-known|og-default.png).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.well-known|og-default.png).*)",
   ],
 };

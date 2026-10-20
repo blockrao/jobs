@@ -90,7 +90,7 @@ export default function RecruitmentHubStructuredData({
   resolvedOfficialSource,
   resolvedTotalVacancies,
 }: RecruitmentHubSchemaProps) {
-  const hubUrl = `${SITE_URL}/en/jobs/${recruitment.slug}`;
+  const hubUrl = `${SITE_URL}/jobs/${recruitment.slug}`;
 
   // Use resolvedEmployer (canonical, verified) when available; fall back to
   // raw organizationName only as a last resort. Both may be null.
@@ -121,7 +121,7 @@ export default function RecruitmentHubStructuredData({
       "@type": "ListItem",
       position: 2,
       name: "Jobs",
-      item: `${SITE_URL}/en/jobs`,
+      item: `${SITE_URL}/jobs`,
     },
   ];
 
@@ -213,7 +213,7 @@ export default function RecruitmentHubStructuredData({
         };
         // Only add url when the post has a confirmed slug (leaf page exists)
         if (post.slug) {
-          item["url"] = `${SITE_URL}/en/jobs/${recruitment.slug}/${post.slug}`;
+          item["url"] = `${SITE_URL}/jobs/${recruitment.slug}/${post.slug}`;
         }
         return item;
       }),
@@ -229,7 +229,7 @@ export default function RecruitmentHubStructuredData({
         "@type": "ListItem",
         position: i + 1,
         name: post.name ?? post.slug,
-        url: `${SITE_URL}/en/jobs/${recruitment.slug}/${post.slug}`,
+        url: `${SITE_URL}/jobs/${recruitment.slug}/${post.slug}`,
       })),
     };
   }

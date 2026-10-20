@@ -221,14 +221,15 @@ export default async function OrganizationPage({ params }: Props) {
             Government posts filled by {org.name} across all recruitment campaigns
           </p>
           <div className="flex flex-wrap gap-2">
+            {/* Role/position hubs are deferred (Master Plan: only for posts with
+                independent search demand), so roles are listed as plain text. */}
             {canonicalRoles.slice(0, ROLES_DISPLAY_LIMIT).map((role) => (
-              <Link
+              <span
                 key={role.slug}
-                href={`/posts/${role.slug}`}
-                className="px-3 py-1.5 bg-neutral-100 hover:bg-blue-100 hover:text-blue-800 text-neutral-700 rounded-full text-sm font-medium transition-colors"
+                className="px-3 py-1.5 bg-neutral-100 text-neutral-700 rounded-full text-sm font-medium"
               >
                 {role.name}
-              </Link>
+              </span>
             ))}
             {canonicalRoles.length > ROLES_DISPLAY_LIMIT && (
               <span className="px-3 py-1.5 text-neutral-400 text-sm">

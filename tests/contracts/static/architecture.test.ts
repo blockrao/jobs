@@ -124,13 +124,24 @@ describe("language routing does not override the policy", () => {
   // hreflang comes from src/lib/seo only (page head and sitemap). The
   // routing middleware must not add its own alternates in HTTP headers.
   test("LOC-09 the routing middleware emits no hreflang Link header (A-052)", () => {
-    expect(proxy()).toMatch(/alternateLinks:\s*false/);
+    // 2026-10-20: locale routing was removed entirely, so the proxy no longer
+    // mounts next-intl middleware (which is what could emit a Link header).
+    const src = proxy();
+    expect(src).not.toMatch(/next-intl\/middleware/);
+    expect(src).not.toMatch(/alternateLinks/);
+    expect(src).not.toMatch(/headers\.set\(\s*["']Link["']/i);
   });
 
   // The language of a page is the language of its URL: no redirect by
   // Accept-Language or saved preference.
   test("LOC-10 the routing middleware never redirects by detected language (A-053)", () => {
-    expect(proxy()).toMatch(/localeDetection:\s*false/);
+    const src = proxy();
+    expect(src).not.toMatch(/accept-language/i);
+    expect(src).not.toMatch(/localeDetection:\s*true/);
+    // The only locale handling left is the permanent redirect that strips a
+    // legacy /en or /hi prefix — the same URL in both languages, never a
+    // language-based redirect.
+    expect(src).toMatch(/LOCALE_PREFIX_RE\.test\(pathname\)/);
   });
 });
 

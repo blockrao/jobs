@@ -22,6 +22,7 @@
 import type React from 'react';
 import { formatDate, formatCurrency, formatDeadlineStatus } from '@/lib/formatting';
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
+import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
 import FAQSection from '@/components/job-posting/faq/faq-section';
 import { generateFAQs } from '@/components/job-posting/faq/faq-templates';
 import ApplicationInstructionsSection from '@/components/job-posting/application-instructions/application-instructions-section';
@@ -111,6 +112,13 @@ interface JobDetailPageProps {
   }>;
   locale?: string;
   canonicalUrl: string;
+  /**
+   * Lifecycle derived from the canonical recruitment (src/lib/lifecycle.ts).
+   * Gates the JobPosting structured data: a closed recruitment is never
+   * represented as an open job, and one with no verifiable deadline emits no
+   * JobPosting at all once closed.
+   */
+  lifecycle?: { state: string; isOpen: boolean; isLive: boolean; deadline: Date | null };
 }
 
 // ─ Schema.org Data Preparation ─
@@ -147,13 +155,20 @@ export default function JobDetailPageProduction({
   faqs,
   locale = 'en',
   canonicalUrl,
+  lifecycle,
 }: JobDetailPageProps) {
   // Data normalization
   const vacancies = post.vacancies ?? 0;
   const salaryMin = post.salary?.min ?? null;
   const salaryMax = post.salary?.max ?? null;
-  const applicationDeadline = post.applicationDeadline ? new Date(post.applicationDeadline) : null;
-  const isApplicationClosed = applicationDeadline && new Date() > applicationDeadline;
+  const applicationDeadline = lifecycle?.deadline
+    ?? toPlausibleRecruitmentDate(post.applicationDeadline ?? null);
+  const recruitmentClosed = lifecycle ? !lifecycle.isLive : false;
+  const isApplicationClosed = recruitmentClosed || Boolean(applicationDeadline && new Date() > applicationDeadline);
+  // Google requires expired postings to carry a past validThrough or no
+  // JobPosting markup. Without a verifiable deadline, a closed recruitment
+  // gets no JobPosting.
+  const emitJobPosting = !(recruitmentClosed && !applicationDeadline);
   const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
@@ -165,14 +180,12 @@ export default function JobDetailPageProduction({
   // Organization branding
   const orgEmoji = getOrgEmojiByType(post.organizationType);
 
-  // Breadcrumb data for GEO/navigation
-  const localeFromUrl = canonicalUrl.split('/')[1] || 'en';
-  const baseJobsUrl = `/${localeFromUrl}/jobs`;
-
+  // Visible breadcrumb, built from the URL contract (/jobs → hub → leaf).
+  // BreadcrumbList structured data is emitted once, by JobPostingSchema.
   const breadcrumbItems = [
     { name: 'Home', url: '/' },
-    { name: 'Jobs', url: baseJobsUrl },
-    ...(post.recruitmentName ? [{ name: post.recruitmentName, url: `${baseJobsUrl}/${post.recruitmentSlug}` }] : []),
+    { name: 'Jobs', url: '/jobs' },
+    ...(post.recruitmentName ? [{ name: post.recruitmentName, url: `/jobs/${post.recruitmentSlug}` }] : []),
     { name: post.title, url: canonicalUrl },
   ];
 
@@ -207,25 +220,7 @@ export default function JobDetailPageProduction({
   return (
     <>
       {/* ─ Schema.org Structured Data (AEO Optimization) ─ */}
-      {locale !== 'hi' && (
-        <>
-          <JobPostingSchema {...schemaData} />
-
-          {/* BreadcrumbList for GEO + Navigation */}
-          <script type="application/ld+json">
-            {JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'BreadcrumbList',
-              'itemListElement': breadcrumbItems.map((item, idx) => ({
-                '@type': 'ListItem',
-                position: idx + 1,
-                name: item.name,
-                item: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://joboye.com'}${item.url}`,
-              })),
-            })}
-          </script>
-        </>
-      )}
+      {locale !== 'hi' && emitJobPosting && <JobPostingSchema {...schemaData} />}
 
       {/* ─ Page Structure (Mobile-First) ─ */}
       <main className="min-h-screen bg-white dark:bg-slate-950">
@@ -289,15 +284,17 @@ export default function JobDetailPageProduction({
           )}
 
           {/* Application Status */}
-          {applicationDeadline && (
+          {(applicationDeadline || recruitmentClosed) && (
             <div className={`mb-6 p-3 rounded-lg text-sm font-semibold ${
               isApplicationClosed
                 ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                 : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
             }`}>
               {isApplicationClosed
-                ? `Applications closed on ${formatDate(applicationDeadline)}`
-                : `Applications close on ${formatDate(applicationDeadline)}`}
+                ? applicationDeadline
+                  ? `Applications closed on ${formatDate(applicationDeadline)}`
+                  : 'This recruitment is closed'
+                : `Applications close on ${formatDate(applicationDeadline!)}`}
             </div>
           )}
 

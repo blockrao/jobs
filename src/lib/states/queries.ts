@@ -20,7 +20,7 @@ export async function listStateJobs(slug: string, limit = 100) {
   if (!db) return [];
   return db.query.postings.findMany({
     where: and(eq(postings.stateSlug, slug), ...current),
-    with: { organization: true },
+    with: { organization: true, inferredRecruitment: { columns: { slug: true } } },
     orderBy: [desc(postings.datePosted), desc(postings.id)],
     limit,
   });

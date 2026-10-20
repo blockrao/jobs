@@ -183,15 +183,13 @@ function parseMatchingPosts(value: unknown, recruitmentSlug: string): MatchingPo
 function mapRow(row: Row): SearchResult {
   const slug = String(row.slug);
   const postCount = toNumberOrNull(row.live_posts) ?? 0;
-  const onlyPostSlug = postCount === 1 && row.only_post_slug ? String(row.only_post_slug) : null;
   const matchingPosts = parseMatchingPosts(row.matching_posts, slug);
   return {
     id: Number(row.id),
     slug,
     recruitmentSlug: slug,
-    // The Post page is the job page. A recruitment with one post links to it;
-    // one with several (or none yet) links to the recruitment page.
-    href: onlyPostSlug ? `/jobs/${slug}/${onlyPostSlug}` : `/jobs/${slug}`,
+    // The recruitment hub is always the canonical landing page (URL contract 2026-10-20).
+    href: `/jobs/${slug}`,
     title: String(row.title ?? ""),
     organizationName: row.organization_name ? String(row.organization_name) : null,
     locationRegion: row.location_region ? String(row.location_region) : null,

@@ -15,10 +15,11 @@
  */
 
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
 import { formatDate } from "@/lib/formatting";
+import { deriveLifecycle } from "@/lib/lifecycle";
 
 export const revalidate = 86400; // 1 day ISR
 
@@ -95,6 +96,18 @@ export default async function JobDetailPage({ params }: Props) {
     notFound();
   }
 
+  // A legacy recruitment slug resolves (via recruitment_slug_redirects) but is
+  // not canonical: 301 to the canonical leaf instead of serving a duplicate.
+  if (post.recruitmentSlug && post.recruitmentSlug !== recruitmentSlug) {
+    permanentRedirect(`/jobs/${post.recruitmentSlug}/${post.slug}`);
+  }
+
+  // Lifecycle from the canonical recruitment: status + verified deadline.
+  const lifecycle = deriveLifecycle(
+    post.postingStatus,
+    post.recruitmentApplicationEndDate ?? post.enrichment?.applicationClosingDate ?? null,
+  );
+
   // Normalize salary data
   const enrichment = post.enrichment;
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
@@ -122,7 +135,7 @@ export default async function JobDetailPage({ params }: Props) {
         notificationPublicationDate: post.notificationPublicationDate,
         officialSourceUrl: post.officialSourceUrl,
         applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
-        employmentType: post.employmentType || "FULL_TIME",
+        employmentType: post.employmentType ?? null,
         qualificationText:
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
         experienceText: post.fjaExtract?.experienceRaw,
@@ -213,6 +226,7 @@ export default async function JobDetailPage({ params }: Props) {
         })) : [],
       }}
       canonicalUrl={canonicalUrl}
+      lifecycle={lifecycle}
     />
   );
 }
