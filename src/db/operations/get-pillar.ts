@@ -64,42 +64,43 @@ export async function getPillarBySlug(pillarSlug: string): Promise<PillarData | 
 
     // Count recruitments for this org
     const recruitmentCountResult = await db.execute(sql`
-      SELECT COUNT(DISTINCT id) as count
+      SELECT COUNT(DISTINCT id)::int as count
       FROM recruitments
-      WHERE organization_id = ${organization.id}
+      WHERE organization_id = ${organization.id as number}
         AND verification_status IS DISTINCT FROM 'QUARANTINED'
     `);
 
-    const recruitmentCount = (recruitmentCountResult as any[])[0]?.count || 0;
+    const recruitmentCount = Number((recruitmentCountResult as any[])[0]?.count) || 0;
 
     // Count posts for this org
     const postCountResult = await db.execute(sql`
-      SELECT COUNT(DISTINCT p.id) as count
+      SELECT COUNT(DISTINCT p.id)::int as count
       FROM posts p
       JOIN recruitments r ON r.id = p.recruitment_id
-      WHERE r.organization_id = ${organization.id}
+      WHERE r.organization_id = ${organization.id as number}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
     `);
 
-    const postCount = (postCountResult as any[])[0]?.count || 0;
+    const postCount = Number((postCountResult as any[])[0]?.count) || 0;
 
     // Get salary stats (avg min/max from enriched data)
     const salaryStatsResult = await db.execute(sql`
       SELECT
         AVG((p.enrichment->>'salaryMin')::numeric) as avg_salary_min,
         AVG((p.enrichment->>'salaryMax')::numeric) as avg_salary_max,
-        COUNT(DISTINCT CASE WHEN p.enrichment IS NOT NULL THEN p.id END) as enriched_count
+        COUNT(DISTINCT CASE WHEN p.enrichment IS NOT NULL THEN p.id END)::int as enriched_count
       FROM posts p
       JOIN recruitments r ON r.id = p.recruitment_id
-      WHERE r.organization_id = ${organization.id}
+      WHERE r.organization_id = ${organization.id as number}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (p.enrichment->>'salaryMin' IS NOT NULL OR p.enrichment->>'salaryMax' IS NOT NULL)
     `);
 
+    const salaryRow = (salaryStatsResult as any[])[0];
     const stats = {
-      avgSalaryMin: salaryStatsResult[0]?.avg_salary_min ? parseFloat(salaryStatsResult[0].avg_salary_min) : undefined,
-      avgSalaryMax: salaryStatsResult[0]?.avg_salary_max ? parseFloat(salaryStatsResult[0].avg_salary_max) : undefined,
-      hasEnrichedData: salaryStatsResult[0]?.enriched_count || 0,
+      avgSalaryMin: salaryRow?.avg_salary_min ? parseFloat(String(salaryRow.avg_salary_min)) : undefined,
+      avgSalaryMax: salaryRow?.avg_salary_max ? parseFloat(String(salaryRow.avg_salary_max)) : undefined,
+      hasEnrichedData: Number(salaryRow?.enriched_count) || 0,
     };
 
     return {
@@ -231,14 +232,14 @@ export async function getPillarFAQData(organizationId: number) {
       LIMIT 1
     `);
 
-    const data = results[0];
+    const data = (results as any[])[0];
     return {
-      minSalary: data?.salary_min_overall ? parseInt(data.salary_min_overall) : undefined,
-      maxSalary: data?.salary_max_overall ? parseInt(data.salary_max_overall) : undefined,
-      ageLimit: data?.age_limit || undefined,
+      minSalary: data?.salary_min_overall ? parseInt(String(data.salary_min_overall)) : undefined,
+      maxSalary: data?.salary_max_overall ? parseInt(String(data.salary_max_overall)) : undefined,
+      ageLimit: (data?.age_limit as string | undefined) || undefined,
       nextDeadline: data?.next_deadline ? new Date(data.next_deadline) : undefined,
-      recruitmentCount: data?.recruitment_count || 0,
-      postCount: data?.post_count || 0,
+      recruitmentCount: Number(data?.recruitment_count) || 0,
+      postCount: Number(data?.post_count) || 0,
     };
   } catch (e) {
     console.error(`Error fetching pillar FAQ data for org ${organizationId}:`, e);
