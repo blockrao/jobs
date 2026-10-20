@@ -47,7 +47,7 @@ export default function OrganizationPageProduction({
   const advancedSchema = generateCompleteOrganizationSchema({
     organizationName: organization.name,
     organizationUrl: canonicalUrl,
-    organizationLogo: organization.logoUrl,
+    organizationLogo: organization.logoUrl || undefined,
     description:
       organization.description ||
       `Government recruitment organization: ${organization.name}`,
