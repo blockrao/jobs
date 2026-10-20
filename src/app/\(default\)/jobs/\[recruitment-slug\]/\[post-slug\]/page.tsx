@@ -11,7 +11,7 @@
  * - Dark mode support
  * - ISR: 1 day (posts stable)
  *
- * ISR Cache: Cleared 2026-10-20 01:42 to regenerate with enrichment data fix
+ * PHASE 2: Removed locale prefix. Canonical URL structure: /jobs/{recruitment-slug}/{post-slug}
  */
 
 import type { Metadata } from "next";
@@ -24,14 +24,13 @@ export const revalidate = 86400; // 1 day ISR
 
 interface Props {
   params: Promise<{
-    locale: string;
-    slug: string;
+    "recruitment-slug": string;
     "post-slug": string;
   }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
+  const { "recruitment-slug": recruitmentSlug, "post-slug": postSlug } = await params;
 
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
@@ -48,13 +47,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     `Apply for ${post.title} at ${post.organizationName || "JobOye"}.
      Check eligibility, salary, deadline and official notification.`;
 
-  // FIX-003: Canonical URL must include locale prefix
+  // PHASE 2: Canonical URL without locale prefix
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://joboye.com";
-  const canonicalUrl = `${baseUrl}/${locale}/jobs/${post.recruitmentSlug}/${post.slug}`;
-
-  // FIX-002: hreflang alternates for bilingual site
-  const enUrl = `${baseUrl}/en/jobs/${post.recruitmentSlug}/${post.slug}`;
-  const hiUrl = `${baseUrl}/hi/jobs/${post.recruitmentSlug}/${post.slug}`;
+  const canonicalUrl = `${baseUrl}/jobs/${post.recruitmentSlug}/${post.slug}`;
 
   return {
     title,
@@ -76,11 +71,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        'en': enUrl,
-        'hi': hiUrl,
-        'x-default': enUrl, // Default to English for unlisted locales
-      },
     },
     robots: {
       index: true,
@@ -96,8 +86,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function LocaleJobDetailPage({ params }: Props) {
-  const { locale, slug: recruitmentSlug, "post-slug": postSlug } = await params;
+export default async function JobDetailPage({ params }: Props) {
+  const { "recruitment-slug": recruitmentSlug, "post-slug": postSlug } = await params;
 
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
@@ -111,8 +101,8 @@ export default async function LocaleJobDetailPage({ params }: Props) {
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
 
-  // Build canonical URL for schema (must include locale prefix to match sitemap)
-  const canonicalUrl = `/${locale}/jobs/${post.recruitmentSlug}/${post.slug}`;
+  // Build canonical URL for schema
+  const canonicalUrl = `/jobs/${post.recruitmentSlug}/${post.slug}`;
 
   return (
     <JobDetailPageProduction
@@ -216,13 +206,12 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           exemptionCategory: f.exemptionCategory,
         })) : [],
         officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
-          type: l.link_type || l.type,
-          url: l.link_url || l.url,
-          title: l.link_title || l.title,
+          type: l.type,
+          url: l.url,
+          title: l.title,
           source: l.source,
         })) : [],
       }}
-      locale={locale}
       canonicalUrl={canonicalUrl}
     />
   );

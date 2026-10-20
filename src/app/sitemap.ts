@@ -23,8 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     `);
 
     if (!allPosts || allPosts.length === 0) {
-      console.warn('[sitemap] No live posts found, returning hub pages only');
-      // Fallback: return hub pages when no posts are found
+      console.warn('[sitemap] No live posts found, returning hub page only');
+      // Fallback: return hub page when no posts are found
       return [
         {
           url: 'https://www.joboye.com',
@@ -33,44 +33,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           priority: 1.0,
         },
         {
-          url: 'https://www.joboye.com/en/jobs',
+          url: 'https://www.joboye.com/jobs',
           lastModified: new Date(),
           changeFrequency: 'daily',
           priority: 0.95,
         },
-        {
-          url: 'https://www.joboye.com/hi/jobs',
-          lastModified: new Date(),
-          changeFrequency: 'daily',
-          priority: 0.90,
-        },
       ];
     }
 
-    // FIX-001: Generate URLs for live locale routes (/en/jobs/...)
-    // These match the actual routes in src/app/[locale]/jobs/[slug]/[post-slug]
-    const postUrlsEn = allPosts.map((post) => ({
-      url: `https://www.joboye.com/en/jobs/${post.recruitment_slug}/${post.post_slug}`,
+    // PHASE 2: Generate clean URLs without locale prefix
+    // All posts use /jobs/{recruitment-slug}/{post-slug} structure
+    const postUrls = allPosts.map((post) => ({
+      url: `https://www.joboye.com/jobs/${post.recruitment_slug}/${post.post_slug}`,
       lastModified: post.updated_at instanceof Date ? post.updated_at : new Date(post.updated_at),
       changeFrequency: 'daily' as const,
       priority: 0.8,
     }));
 
-    // Also include Hindi locale (lower priority, but still indexable)
-    // CRITICAL: Both locales MUST be present per localePrefix: 'always' rule
-    const postUrlsHi = allPosts.map((post) => ({
-      url: `https://www.joboye.com/hi/jobs/${post.recruitment_slug}/${post.post_slug}`,
-      lastModified: post.updated_at instanceof Date ? post.updated_at : new Date(post.updated_at),
-      changeFrequency: 'daily' as const,
-      priority: 0.7, // Slightly lower than EN
-    }));
-
-    // Sanity check: ensure both locales were generated
-    if (postUrlsEn.length !== postUrlsHi.length) {
-      console.error(`[sitemap] Locale mismatch! EN: ${postUrlsEn.length}, HI: ${postUrlsHi.length}`);
-    }
-
-    // Hub pages (also with locale)
+    // Hub pages (single canonical /jobs page)
     const hubUrls: MetadataRoute.Sitemap = [
       {
         url: 'https://www.joboye.com',
@@ -79,25 +59,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1.0,
       },
       {
-        url: 'https://www.joboye.com/en/jobs',
+        url: 'https://www.joboye.com/jobs',
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 0.95,
       },
-      {
-        url: 'https://www.joboye.com/hi/jobs',
-        lastModified: new Date(),
-        changeFrequency: 'daily',
-        priority: 0.90,
-      },
     ];
 
-    const result = [...hubUrls, ...postUrlsEn, ...postUrlsHi];
-    console.log(`[sitemap] Generated sitemap with ${postUrlsEn.length} EN posts and ${postUrlsHi.length} HI posts`);
+    const result = [...hubUrls, ...postUrls];
+    console.log(`[sitemap] Generated sitemap with ${postUrls.length} posts`);
     return result;
   } catch (error) {
     console.error('[sitemap] Error fetching posts:', error);
-    // Fallback to at least hub pages (must include both locales with explicit prefixes)
+    // Fallback to hub pages only
     return [
       {
         url: 'https://www.joboye.com',
@@ -106,16 +80,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1.0,
       },
       {
-        url: 'https://www.joboye.com/en/jobs',
+        url: 'https://www.joboye.com/jobs',
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 0.95,
-      },
-      {
-        url: 'https://www.joboye.com/hi/jobs',
-        lastModified: new Date(),
-        changeFrequency: 'daily',
-        priority: 0.90,
       },
     ];
   }
