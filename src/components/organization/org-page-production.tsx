@@ -8,6 +8,10 @@ import LiveJobsWidget from "@/components/organization/widgets/LiveJobsWidget";
 import EligibilityChecker from "@/components/organization/widgets/EligibilityChecker";
 import SalaryCalculator from "@/components/organization/widgets/SalaryCalculator";
 import RoleComparisonMatrix from "@/components/organization/widgets/RoleComparisonMatrix";
+import SelectionTrends from "@/components/organization/widgets/SelectionTrends";
+import RecruitmentCalendar from "@/components/organization/widgets/RecruitmentCalendar";
+import CompetitivenessIndicator from "@/components/organization/widgets/CompetitivenessIndicator";
+import BookmarkNotifications from "@/components/organization/widgets/BookmarkNotifications";
 
 interface OrganizationPageProductionProps {
   organization: typeof organizations.$inferSelect;
@@ -139,6 +143,24 @@ export default function OrganizationPageProduction({
 
           {/* 4. Role Comparison Matrix - Choice Architecture */}
           <RoleComparisonMatrix organizationId={organization.id} />
+
+          {/* Phase 2C-B Week 2: Advanced Intelligence Widgets */}
+
+          {/* 5. Selection Trends + Social Proof - Credibility & Realism */}
+          <SelectionTrends organizationId={organization.id} />
+
+          {/* 6. Recruitment Calendar + Prediction - When to Expect Next */}
+          <RecruitmentCalendar organizationId={organization.id} />
+
+          {/* 7. Competitiveness Indicator - Realistic Expectations */}
+          <CompetitivenessIndicator organizationId={organization.id} />
+
+          {/* 8. Bookmark + Notifications - Retention & Repeat Traffic */}
+          <BookmarkNotifications
+            organizationId={organization.id}
+            organizationName={organization.name}
+            organizationSlug={organization.slug}
+          />
 
           {/* Separator */}
           <hr className="my-12 border-gray-300 dark:border-gray-700" />
