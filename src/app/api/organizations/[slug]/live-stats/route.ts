@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db as database } from "@/db";
+import { getDbV2 } from "@/db";
 import { organizations, recruitments, posts } from "@/db/schema";
 import { eq, and, inArray, count } from "drizzle-orm";
 
@@ -32,9 +32,10 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const db = getDbV2();
 
     // Get organization
-    const org = await database.query.organizations.findFirst({
+    const org = await db.query.organizations.findFirst({
       where: eq(organizations.slug, slug),
     });
 
@@ -43,7 +44,7 @@ export async function GET(
     }
 
     // Count all posts for this organization (across active recruitments)
-    const postsCount = await database
+    const postsCount = await db
       .select({ count: count() })
       .from(posts)
       .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
@@ -57,7 +58,7 @@ export async function GET(
     const openPositions = postsCount[0]?.count || 0;
 
     // Get active recruitments (UPCOMING or ACTIVE status)
-    const activeRecruitmentsData = await database
+    const activeRecruitmentsData = await db
       .select({
         id: recruitments.id,
         applicationEndDate: recruitments.applicationEndDate,
