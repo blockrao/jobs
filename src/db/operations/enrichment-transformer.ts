@@ -360,25 +360,26 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     }
 
     // Ensure all required PostEnrichment fields are present
-    return {
+    const result: PostEnrichment = {
       // Required fields (with defaults if not set)
       vacanciesByCategory: enrichment.vacanciesByCategory || {},
       vacanciesTotal: enrichment.vacanciesTotal || 0,
       feesByCategory: enrichment.feesByCategory || {},
-      applicationFees: enrichment.applicationFees || [],
       ageRulesByCategory: enrichment.ageRulesByCategory || {},
       selectionProcess: enrichment.selectionProcess || [],
       sourceVerificationStatus: enrichment.sourceVerificationStatus || 'PENDING',
       extractionConfidence: enrichment.extractionConfidence || 0,
       dataGaps: enrichment.dataGaps || [],
 
-      // Optional fields
+      // Optional fields from enrichment
       ...enrichment,
+    };
 
-      // Ensure array forms are always present for page component
-      ageRules: enrichment.ageRules || [],
-      applicationFees: enrichment.applicationFees || [],
-    } as PostEnrichment;
+    // Ensure array forms are always present for page component (not duplicated in spread)
+    if (!result.ageRules) result.ageRules = [];
+    if (!result.applicationFees) result.applicationFees = [];
+
+    return result;
   } catch (error) {
     console.error('[enrichment-transformer] Error transforming enrichment:', error);
     return {
