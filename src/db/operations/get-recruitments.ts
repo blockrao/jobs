@@ -168,6 +168,40 @@ export async function getRecruitmentWithPosts(slug: string) {
       }
     }
 
+    // Smart slug resolution: If the slug is not found, try to resolve it as a
+    // short organization-based slug (e.g., "bihar-public-service-commission")
+    // to the most recent recruitment for that organization.
+    // Example: /jobs/bihar-public-service-commission → most recent BPSC recruitment
+    if (!recruitmentResult || recruitmentResult.length === 0) {
+      console.log(`[getRecruitmentWithPosts] Trying smart slug resolution for: ${slug}`);
+      // Find recruitments where slug starts with the requested slug + dash
+      // Order by year DESC, then by ID DESC to get the most recent
+      recruitmentResult = await db
+        .select({
+          recruitment: recruitments,
+          organizationName: organizations.name,
+          organizationSlug: organizations.slug,
+          organizationSector: organizations.sector,
+        })
+        .from(recruitments)
+        .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
+        .where(
+          and(
+            sql`${recruitments.slug} LIKE ${slug + "-%"}`,
+            notQuarantined
+          )
+        )
+        .orderBy(
+          sql`${recruitments.year} DESC`,
+          sql`${recruitments.id} DESC`
+        )
+        .limit(1);
+
+      if (recruitmentResult && recruitmentResult.length > 0) {
+        console.log(`[getRecruitmentWithPosts] Smart resolution found: ${recruitmentResult[0].recruitment.slug}`);
+      }
+    }
+
     if (!recruitmentResult || recruitmentResult.length === 0) {
       console.warn("No recruitment found with slug:", slug);
       return null;
