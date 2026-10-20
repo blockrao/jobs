@@ -20,11 +20,11 @@ interface Props {
 const SLUG_ALIASES: Record<string, string> = {
   "union-public-service-commission": "upsc",
   "staff-selection-commission": "ssc",
-  "all-india-institute-of-medical-sciences": "aiims",
+  "railway-recruitment-board": "rrb",
   "state-bank-of-india": "sbi",
-  railway: "railway",
-  railways: "railway",
-  rrb: "railway",
+  railway: "rrb",
+  railways: "rrb",
+  "all-india-institute-of-medical-sciences": "aiims",
 };
 
 // Resolve slug to canonical form
@@ -131,8 +131,12 @@ export async function generateStaticParams() {
   const aliases = [
     { slug: "union-public-service-commission" },
     { slug: "staff-selection-commission" },
-    { slug: "all-india-institute-of-medical-sciences" },
+    { slug: "railway-recruitment-board" },
     { slug: "state-bank-of-india" },
+    { slug: "railway" },
+    { slug: "railways" },
+    { slug: "all-india-institute-of-medical-sciences" },
+    { slug: "aiims" },
   ];
 
   return [...params, ...aliases];
