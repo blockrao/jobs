@@ -974,3 +974,22 @@ export async function getPostsByRecruitment(
     return [];
   }
 }
+// Debug export to test slug lookups
+export async function debugPostLookup(recruitmentSlug: string, postSlug: string) {
+  console.log(`\n=== DEBUG: Post Lookup ===`);
+  console.log(`Recruitment Slug: "${recruitmentSlug}" (length: ${recruitmentSlug.length})`);
+  console.log(`Post Slug: "${postSlug}" (length: ${postSlug.length})`);
+  
+  try {
+    const result = await getPostCoreData(recruitmentSlug, postSlug);
+    if (result) {
+      console.log(`✓ FOUND: Post ID ${result.id}, Title: ${result.title}`);
+    } else {
+      console.log(`✗ NOT FOUND`);
+    }
+    return result;
+  } catch (err) {
+    console.error(`✗ ERROR:`, err instanceof Error ? err.message : String(err));
+    throw err;
+  }
+}
