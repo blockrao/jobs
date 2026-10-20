@@ -18,13 +18,24 @@ interface Props {
 
 // Map long/variant slugs to canonical database slugs
 const SLUG_ALIASES: Record<string, string> = {
-  "union-public-service-commission": "upsc",
+  // UPSC variants
+  upsc: "union-public-service-commission",
+  "union-public-service-commission-upsc": "union-public-service-commission",
+
+  // SSC variants
   "staff-selection-commission": "ssc",
-  "railway-recruitment-board": "rrb",
-  "state-bank-of-india": "sbi",
-  railway: "rrb",
-  railways: "rrb",
-  "all-india-institute-of-medical-sciences": "aiims",
+
+  // Railway variants
+  railway: "railway-recruitment-board",
+  railways: "railway-recruitment-board",
+  rrb: "railway-recruitment-board",
+  "railway-recruitment-boards": "railway-recruitment-board",
+  "railway-recruitment-boards-rrb": "railway-recruitment-board",
+  "railway-recruitment-boards-rrbs": "railway-recruitment-board",
+
+  // SBI variants
+  "state-bank-of-india": "state-bank-of-india-sbi",
+  sbi: "state-bank-of-india-sbi",
 };
 
 // Resolve slug to canonical form
@@ -127,16 +138,26 @@ export async function generateStaticParams() {
     slug: org.slug,
   }));
 
-  // Also add alias slugs to pre-render
+  // Also add common alias slugs to pre-render
   const aliases = [
-    { slug: "union-public-service-commission" },
+    // UPSC aliases
+    { slug: "upsc" },
+    { slug: "union-public-service-commission-upsc" },
+
+    // SSC aliases
     { slug: "staff-selection-commission" },
-    { slug: "railway-recruitment-board" },
-    { slug: "state-bank-of-india" },
+
+    // Railway aliases
     { slug: "railway" },
     { slug: "railways" },
-    { slug: "all-india-institute-of-medical-sciences" },
-    { slug: "aiims" },
+    { slug: "rrb" },
+    { slug: "railway-recruitment-boards" },
+    { slug: "railway-recruitment-boards-rrb" },
+    { slug: "railway-recruitment-boards-rrbs" },
+
+    // SBI aliases
+    { slug: "state-bank-of-india" },
+    { slug: "sbi" },
   ];
 
   return [...params, ...aliases];
