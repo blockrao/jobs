@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { getExamBySlug, getExamRelatedPositions, getExamRecruitmentDetails } from "@/db/operations/get-exams";
 import { buildBreadcrumbSchema, buildExamSchema, jsonLdGraph } from "@/lib/structured-data";
 import { safeQuery } from "@/lib/safe-query";
-import { InfoCard } from "@/components/ui/info-card";
 import { Badge } from "@/components/ui/badge";
 
 export const revalidate = 86400; // Phase 1: daily revalidation
@@ -109,17 +108,17 @@ export default async function ExamPage({ params }: Props) {
             <h2 className="text-2xl font-bold mb-4">Positions Recruited by This Exam</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {relatedPositions.map((position) => (
-                <InfoCard
+                <div
                   key={position.id}
-                  tone="brand"
-                  href={`/positions/${position.slug}`}
-                  title={position.name}
-                  subtitle={
-                    position.typicalSalaryMin && position.typicalSalaryMax
-                      ? `Salary: ₹${(position.typicalSalaryMin / 1000).toFixed(0)}K - ₹${(position.typicalSalaryMax / 1000).toFixed(0)}K`
-                      : "View details"
-                  }
-                />
+                  className="p-4 border border-gray-200 rounded-lg bg-white"
+                >
+                  <h3 className="font-semibold text-gray-900 mb-1">{position.name}</h3>
+                  {position.typicalSalaryMin && position.typicalSalaryMax && (
+                    <p className="text-sm text-gray-600">
+                      Salary: ₹{(position.typicalSalaryMin / 1000).toFixed(0)}K - ₹{(position.typicalSalaryMax / 1000).toFixed(0)}K
+                    </p>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -162,7 +161,7 @@ export default async function ExamPage({ params }: Props) {
                           {recruitment.posts.map((item) => (
                             <Link
                               key={item.post.id}
-                              href={`/positions/${item.position.slug}`}
+                              href={`/jobs/${recruitment.slug}`}
                               className="text-sm text-blue-600 hover:underline block"
                             >
                               • {item.post.name}

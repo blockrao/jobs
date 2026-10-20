@@ -15,11 +15,11 @@ export const LOCALE_AWARE_PREFIXES = [] as const as readonly string[];
 
 // Entity / listing prefixes: the path itself (with no further slug) is
 // a valid locale-aware destination. e.g. /hi/jobs, /hi/exams,
-// /hi/commissions/bpsc, /hi/recruitments/bpsc-tre-4, /hi/positions/teacher.
+// /hi/commissions/bpsc, /hi/recruitments/bpsc-tre-4.
+// NOTE: /positions was removed (no longer exist post-position-hub removal)
 const LOCALE_AWARE_ENTITIES = [
   '/commissions/',
   '/recruitments/',
-  '/positions/',
 ] as const;
 
 // Bare listing pages that live at exactly this path (no slug required).
