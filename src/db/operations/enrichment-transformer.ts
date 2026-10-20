@@ -57,6 +57,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
       vacanciesByCategory: {},
       vacanciesTotal: 0,
       feesByCategory: {},
+      applicationFees: [],
       ageRulesByCategory: {},
       ageRules: [],
       selectionProcess: [],
@@ -178,21 +179,39 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // ─────────────────────────────────────────────────────────────────
 
     if (rawEnrichment.application_fees && typeof rawEnrichment.application_fees === 'object') {
-      const fees: Record<string, number | string> = {};
+      const feesObject: Record<string, number | string> = {};
+      const feesArray: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string; isExempted?: boolean; exemptionCategory?: string }> = [];
 
       Object.entries(rawEnrichment.application_fees).forEach(([category, feeData]: [string, any]) => {
         if (feeData && typeof feeData === 'object') {
-          fees[category] = feeData.amount || feeData.currency_code === 'EXEMPT' ? 'Exempted' : 0;
+          const amount = feeData.amount || feeData.fee_amount;
+          const isExempt = feeData.currency_code === 'EXEMPT' || feeData.exemption_status === 'EXEMPT';
+
+          feesObject[category] = isExempt ? 'Exempted' : (amount || 0);
+
+          // Also add to array format for page component
+          feesArray.push({
+            amount: isExempt ? null : amount,
+            currency: feeData.currency_code || feeData.currency || 'INR',
+            waivedFor: feeData.waived_for || feeData.waivedFor,
+            paymentMethods: feeData.payment_methods || feeData.paymentMethods,
+            note: feeData.note,
+            isExempted: isExempt,
+            exemptionCategory: category,
+          });
         }
       });
 
-      if (Object.keys(fees).length > 0) {
-        enrichment.feesByCategory = fees;
+      if (Object.keys(feesObject).length > 0) {
+        enrichment.feesByCategory = feesObject;
+        enrichment.applicationFees = feesArray; // Page component expects this
       } else {
         enrichment.feesByCategory = {};
+        enrichment.applicationFees = [];
       }
     } else {
       enrichment.feesByCategory = {};
+      enrichment.applicationFees = [];
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -346,6 +365,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
       vacanciesByCategory: enrichment.vacanciesByCategory || {},
       vacanciesTotal: enrichment.vacanciesTotal || 0,
       feesByCategory: enrichment.feesByCategory || {},
+      applicationFees: enrichment.applicationFees || [],
       ageRulesByCategory: enrichment.ageRulesByCategory || {},
       selectionProcess: enrichment.selectionProcess || [],
       sourceVerificationStatus: enrichment.sourceVerificationStatus || 'PENDING',
@@ -355,8 +375,9 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
       // Optional fields
       ...enrichment,
 
-      // Ensure ageRules array is always present for page component
+      // Ensure array forms are always present for page component
       ageRules: enrichment.ageRules || [],
+      applicationFees: enrichment.applicationFees || [],
     } as PostEnrichment;
   } catch (error) {
     console.error('[enrichment-transformer] Error transforming enrichment:', error);
@@ -364,6 +385,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
       vacanciesByCategory: {},
       vacanciesTotal: 0,
       feesByCategory: {},
+      applicationFees: [],
       ageRulesByCategory: {},
       ageRules: [],
       selectionProcess: [],
