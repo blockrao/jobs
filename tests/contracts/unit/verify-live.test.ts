@@ -64,6 +64,8 @@ describe("verify-live pure checks", () => {
     expect(checkNoAggregators(head(HUB))[0]).toBe(true);
     expect(checkNoAggregators('<a href="https://www.freejobalert.com/x">s</a>')[0]).toBe(false);
     expect(checkNoAggregators('<a href="https://t.me/abc">s</a>')[0]).toBe(false);
+    expect(checkNoAggregators('<a href="https://wa.me/?text=share">Share</a>')[0]).toBe(true);
+    expect(checkNoAggregators('<a href="/jobs">rel</a>')[0]).toBe(true);
     expect(checkNoAggregators("<p>Source: SarkariResult</p>")[0]).toBe(false);
     expect(checkNoAggregators('<script>var a="freejobalert"</script><p>ok</p>')[0]).toBe(true);
   });

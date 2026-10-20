@@ -23,7 +23,7 @@ async function main() {
   const args = process.argv.slice(2);
   const bi = args.indexOf("--base");
   const base = (bi >= 0 ? args[bi + 1] : "https://www.joboye.com").replace(/\/$/, "");
-  const positional = args.filter((a, i) => !a.startsWith("--") && i !== bi + 1);
+  const positional = args.filter((a, i) => !a.startsWith("--") && (bi < 0 || i !== bi + 1));
   const [recruitmentSlug, postSlug] = positional;
   if (!recruitmentSlug) {
     console.error("usage: npm run verify:live -- <recruitment-slug> [<post-slug>] [--base <url>]");

@@ -52,7 +52,9 @@ export function checkNoHreflang(html: string): [boolean, string] {
 /** A legacy URL must 301 straight to the expected canonical URL (no chain, no 404). */
 export function checkRedirect(status: number, location: string | null, expected: string): [boolean, string] {
   if (status !== 301 && status !== 308) return [false, `HTTP ${status} (expected 301)`];
-  const ok = Boolean(location) && norm(location!) === norm(expected);
+  // A relative Location header is resolved against the expected URL's origin.
+  const resolved = location ? new URL(location, expected).toString() : null;
+  const ok = Boolean(resolved) && norm(resolved!) === norm(expected);
   return [ok, ok ? `301 → ${location}` : `301 → ${location ?? "(none)"} != ${expected}`];
 }
 
@@ -91,7 +93,12 @@ export function checkJsonLd(html: string, required = ["BreadcrumbList"]): [boole
 
 export function checkNoAggregators(html: string): [boolean, string] {
   const hits: string[] = [];
-  for (const a of tags(html, "a")) if (a.href && isAggregatorUrl(a.href)) hits.push(`link ${a.href}`);
+  // Share intents (WhatsApp/Telegram "share this page" buttons) are outbound
+  // from JobOye, not a source credit, so they are not aggregator links.
+  const isShareIntent = (href: string) => /^https?:\/\/(wa\.me\/|api\.whatsapp\.com\/send|t\.me\/share)/i.test(href);
+  for (const a of tags(html, "a")) {
+    if (a.href && /^https?:\/\//i.test(a.href) && !isShareIntent(a.href) && isAggregatorUrl(a.href)) hits.push(`link ${a.href}`);
+  }
   const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
