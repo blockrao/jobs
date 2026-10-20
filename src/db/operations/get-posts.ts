@@ -509,66 +509,43 @@ export async function getPostBySlug(
     } as PostRow;
 
     /**
-     * CRITICAL FIX: Normalize enrichment JSONB structure
-     * The JSONB aggregation creates `vacancies` as an object { total, categories, by_location, ... }
-     * but the page component expects it as either an object or to handle both gracefully.
-     * This transformation ensures structure compatibility.
+     * CRITICAL FIX: Normalize enrichment JSONB structure AND field names
+     * Issues:
+     * 1. Database uses snake_case (application_fees) but page expects camelCase (applicationFees)
+     * 2. Some fields come as arrays when they should be objects and vice versa
+     * 3. Ensures all field names are in format expected by page component
      */
     const normalizeEnrichment = (enrichment: any): any => {
       if (!enrichment || typeof enrichment !== 'object') return enrichment;
 
-      const normalized = { ...enrichment };
+      const normalized: any = {};
 
-      // Vacancies: Keep the object structure, it's used correctly in page as object
-      // The issue was Array.isArray check - vacancies IS an object, not array
-      // Page should check: enrichment?.vacancies?.total or handle as object
+      // Convert all fields from snake_case to camelCase and normalize types
+      for (const [key, value] of Object.entries(enrichment)) {
+        // Convert snake_case to camelCase
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
-      // Education: Ensure it's an array
-      if (normalized.education && !Array.isArray(normalized.education)) {
-        console.warn('[getPostBySlug] Education is not an array, converting');
-        normalized.education = [];
-      }
-
-      // Experience: Ensure it's an array
-      if (normalized.experience && !Array.isArray(normalized.experience)) {
-        console.warn('[getPostBySlug] Experience is not an array, converting');
-        normalized.experience = [];
-      }
-
-      // Selection Process: Ensure it's an array
-      if (normalized.selection_process && !Array.isArray(normalized.selection_process)) {
-        console.warn('[getPostBySlug] Selection process is not an array, converting');
-        normalized.selection_process = [];
-      }
-
-      // Documents: Ensure it's an array
-      if (normalized.documents && !Array.isArray(normalized.documents)) {
-        console.warn('[getPostBySlug] Documents is not an array, converting');
-        normalized.documents = [];
-      }
-
-      // Important dates: Ensure it's an array
-      if (normalized.important_dates && !Array.isArray(normalized.important_dates)) {
-        console.warn('[getPostBySlug] Important dates is not an array, converting');
-        normalized.important_dates = [];
-      }
-
-      // Official links: Ensure it's an array
-      if (normalized.official_links && !Array.isArray(normalized.official_links)) {
-        console.warn('[getPostBySlug] Official links is not an array, converting');
-        normalized.official_links = [];
-      }
-
-      // Age rules: Ensure it's an object (or convert if it's somehow an array)
-      if (normalized.age_rules && Array.isArray(normalized.age_rules)) {
-        console.warn('[getPostBySlug] Age rules is an array, should be object');
-        normalized.age_rules = {};
-      }
-
-      // Application fees: Ensure it's an object (or convert if it's somehow an array)
-      if (normalized.application_fees && Array.isArray(normalized.application_fees)) {
-        console.warn('[getPostBySlug] Application fees is an array, should be object');
-        normalized.application_fees = {};
+        // Type normalization
+        if (['education', 'experience', 'selectionProcess', 'documents', 'importantDates', 'officialLinks'].includes(camelKey)) {
+          // These should be arrays
+          if (Array.isArray(value)) {
+            normalized[camelKey] = value;
+          } else if (value) {
+            console.warn(`[getPostBySlug] ${camelKey} is not an array, converting`);
+            normalized[camelKey] = [];
+          }
+        } else if (['vacancies', 'ageRules', 'applicationFees'].includes(camelKey)) {
+          // These should be objects
+          if (value && !Array.isArray(value)) {
+            normalized[camelKey] = value;
+          } else if (Array.isArray(value)) {
+            console.warn(`[getPostBySlug] ${camelKey} is an array, should be object`);
+            normalized[camelKey] = {};
+          }
+        } else {
+          // Other fields pass through unchanged
+          normalized[camelKey] = value;
+        }
       }
 
       return normalized;
