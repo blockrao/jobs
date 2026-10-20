@@ -6,8 +6,8 @@
  */
 
 import { getDb } from "@/db";
-import { recruitments, posts, positions } from "@/db/schema";
-import { eq } from "drizzle-orm"; // positions is already imported here
+import { recruitments, posts } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Check if database is available.
@@ -18,32 +18,24 @@ function hasDb(): boolean {
 }
 
 /**
- * Resolve the role hub for a URL slug.
- *
- * This handles both:
- * 1. Recruitment slugs → resolve to primary role hub
- * 2. Position slugs → return directly (already a role hub)
+ * Resolve the role hub for a recruitment URL.
  *
  * Recruitment is a supporting, non-indexable aggregation layer (see ARCHITECTURE_LEDGER.md).
  * When a recruitment contains multiple posts, we consolidate its traffic to the relevant
  * role hub for SEO and user navigation (one canonical path per role).
  *
- * Strategy for recruitment:
+ * Strategy:
  *   1. Find recruitment by slug
  *   2. Get all posts in that recruitment
  *   3. Select the role with highest vacancy count (heuristic for most relevant role)
  *   4. Return the role's slug for /jobs/[role-slug] hub
- *
- * Strategy for position:
- *   1. Check if slug is a position slug
- *   2. If yes, return it directly (it's already a role hub)
  *
  * NOTE: Selecting by vacancy count is a routing heuristic only. It does NOT establish
  * an ontological relationship (e.g., "this position is primary to the recruitment").
  * It is purely a UX decision: if a recruitment has 50 Clerk vacancies and 1 Steno vacancy,
  * the user landing on the recruitment page likely wants the Clerk role hub.
  *
- * @returns role slug for the role hub, or null if neither recruitment nor position found
+ * @returns role slug for the role hub, or null if recruitment not found or has no posts
  */
 export async function getRoleHubForRecruitmentSlug(
   recruitmentSlug: string
@@ -55,19 +47,9 @@ export async function getRoleHubForRecruitmentSlug(
 
   try {
     const db = getDb();
-    console.log(`[redirects.getRoleHub.start] Resolving slug: "${recruitmentSlug}"`);
+    console.log(`[redirects.getRoleHub.start] Resolving recruitment: "${recruitmentSlug}"`);
 
-    // Step 1a: Check if this is a POSITION slug (these are role hubs directly)
-    const positionBySlug = await db.query.positions.findFirst({
-      where: eq(positions.slug, recruitmentSlug),
-    });
-
-    if (positionBySlug) {
-      console.log(`[redirects.getRoleHub.isPosition] Slug is a position: id=${positionBySlug.id}, slug="${positionBySlug.slug}"`);
-      return positionBySlug.slug;
-    }
-
-    // Step 1b: Find recruitment by slug
+    // Step 1: Find recruitment by slug
     const recruitment = await db.query.recruitments.findFirst({
       where: eq(recruitments.slug, recruitmentSlug),
       with: {
@@ -81,13 +63,13 @@ export async function getRoleHubForRecruitmentSlug(
     });
 
     if (!recruitment) {
-      console.warn(`[redirects.getRoleHub.fail] Neither recruitment nor position found: "${recruitmentSlug}"`);
+      console.warn(`[redirects.getRoleHub.fail] Recruitment not found: "${recruitmentSlug}"`);
       return null;
     }
 
     console.log(`[redirects.getRoleHub.found] Recruitment exists: id=${recruitment.id}, posts=${recruitment.posts?.length || 0}`);
 
-    // Step 2: Get posts for this recruitment
+    // Step 2: Get all posts in that recruitment
     const recruitmentPosts = recruitment.posts;
     if (!recruitmentPosts || recruitmentPosts.length === 0) {
       console.warn(`[redirects.getRoleHub.fail] No posts in recruitment: "${recruitmentSlug}"`);
