@@ -508,6 +508,74 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
+    /**
+     * CRITICAL FIX: Normalize enrichment JSONB structure
+     * The JSONB aggregation creates `vacancies` as an object { total, categories, by_location, ... }
+     * but the page component expects it as either an object or to handle both gracefully.
+     * This transformation ensures structure compatibility.
+     */
+    const normalizeEnrichment = (enrichment: any): any => {
+      if (!enrichment || typeof enrichment !== 'object') return enrichment;
+
+      const normalized = { ...enrichment };
+
+      // Vacancies: Keep the object structure, it's used correctly in page as object
+      // The issue was Array.isArray check - vacancies IS an object, not array
+      // Page should check: enrichment?.vacancies?.total or handle as object
+
+      // Education: Ensure it's an array
+      if (normalized.education && !Array.isArray(normalized.education)) {
+        console.warn('[getPostBySlug] Education is not an array, converting');
+        normalized.education = [];
+      }
+
+      // Experience: Ensure it's an array
+      if (normalized.experience && !Array.isArray(normalized.experience)) {
+        console.warn('[getPostBySlug] Experience is not an array, converting');
+        normalized.experience = [];
+      }
+
+      // Selection Process: Ensure it's an array
+      if (normalized.selection_process && !Array.isArray(normalized.selection_process)) {
+        console.warn('[getPostBySlug] Selection process is not an array, converting');
+        normalized.selection_process = [];
+      }
+
+      // Documents: Ensure it's an array
+      if (normalized.documents && !Array.isArray(normalized.documents)) {
+        console.warn('[getPostBySlug] Documents is not an array, converting');
+        normalized.documents = [];
+      }
+
+      // Important dates: Ensure it's an array
+      if (normalized.important_dates && !Array.isArray(normalized.important_dates)) {
+        console.warn('[getPostBySlug] Important dates is not an array, converting');
+        normalized.important_dates = [];
+      }
+
+      // Official links: Ensure it's an array
+      if (normalized.official_links && !Array.isArray(normalized.official_links)) {
+        console.warn('[getPostBySlug] Official links is not an array, converting');
+        normalized.official_links = [];
+      }
+
+      // Age rules: Ensure it's an object (or convert if it's somehow an array)
+      if (normalized.age_rules && Array.isArray(normalized.age_rules)) {
+        console.warn('[getPostBySlug] Age rules is an array, should be object');
+        normalized.age_rules = {};
+      }
+
+      // Application fees: Ensure it's an object (or convert if it's somehow an array)
+      if (normalized.application_fees && Array.isArray(normalized.application_fees)) {
+        console.warn('[getPostBySlug] Application fees is an array, should be object');
+        normalized.application_fees = {};
+      }
+
+      return normalized;
+    };
+
+    const normalizedEnrichmentJsonb = normalizeEnrichment(enrichmentJsonb);
+
     return {
       id: data.id,
       title: data.title,
@@ -600,9 +668,9 @@ export async function getPostBySlug(
       // ageRules, applicationFees, officialLinks
       enrichment: enrichmentData ? {
         ...enrichmentData,
-        // Spread enrichment JSONB data from posts table
-        ...enrichmentJsonb,
-      } : enrichmentJsonb,
+        // Spread enrichment JSONB data from posts table (normalized for compatibility)
+        ...normalizedEnrichmentJsonb,
+      } : normalizedEnrichmentJsonb,
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", {
