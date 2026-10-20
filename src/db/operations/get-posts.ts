@@ -508,35 +508,6 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    // CRITICAL: Sanitize enrichment JSONB for JSON serialization
-    // PostgreSQL JSONB can contain values that JS can't serialize
-    const sanitizeEnrichmentJsonb = (obj: any): any => {
-      if (!obj || typeof obj !== 'object') return obj;
-      if (obj instanceof Date) return obj.toISOString();
-      if (Array.isArray(obj)) return obj.map(sanitizeEnrichmentJsonb);
-
-      const sanitized: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        try {
-          if (value === null || value === undefined) {
-            sanitized[key] = null;
-          } else if (value instanceof Date) {
-            sanitized[key] = value.toISOString();
-          } else if (typeof value === 'object') {
-            sanitized[key] = sanitizeEnrichmentJsonb(value);
-          } else {
-            sanitized[key] = value;
-          }
-        } catch (e) {
-          console.warn(`[getPostBySlug] Failed to sanitize enrichment key ${key}:`, e);
-          sanitized[key] = null;
-        }
-      }
-      return sanitized;
-    };
-
-    const safeEnrichmentJsonb = sanitizeEnrichmentJsonb(enrichmentJsonb);
-
     return {
       id: data.id,
       title: data.title,
@@ -628,9 +599,10 @@ export async function getPostBySlug(
       // vacancies, education, experience, selectionProcess, documents, importantDates,
       // ageRules, applicationFees, officialLinks
       enrichment: enrichmentData ? {
-        ...sanitizeEnrichmentJsonb(enrichmentData),
-        ...safeEnrichmentJsonb,
-      } : safeEnrichmentJsonb,
+        ...enrichmentData,
+        // Spread enrichment JSONB data from posts table
+        ...enrichmentJsonb,
+      } : enrichmentJsonb,
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", {
