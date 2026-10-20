@@ -180,7 +180,7 @@ describe('Enrichment Structure Normalization', () => {
     expect(normalized.education.length).toBe(2);
     expect(normalized.selection_process.length).toBe(2);
     expect(normalized.vacancies.total).toBe(25);
-  };
+  });
 
   it('should handle missing optional fields gracefully', () => {
     const enrichment = {
