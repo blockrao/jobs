@@ -66,7 +66,7 @@ export function RecruitmentRow({
           {row.name}
         </Link>
         <p className="mt-0.5 text-sm text-neutral-600 truncate">
-          <Link href={`/exams/${row.orgSlug}`} className="hover:underline">{orgName}</Link>
+          <Link href={`/organizations/${row.orgSlug}`} className="hover:underline">{orgName}</Link>
           {row.postCount > 1 && <> · {row.postCount} {isHi ? "पद प्रकार" : "posts"}</>}
           {sectorLabel && sectorSlug && (
             <> · <Link href={`/categories/${sectorSlug}`} className="hover:underline">{isHi ? sectorLabel.hi : sectorLabel.en}</Link></>

@@ -279,7 +279,7 @@ export function HomeContent({
             </div>
             <div className="flex flex-wrap gap-2.5">
               {orgs.map((o) => (
-                <Link key={o.slug} href={`/exams/${o.slug}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-black/12 bg-white px-3.5 text-[15px] font-semibold hover:border-brand-600/50">
+                <Link key={o.slug} href={`/organizations/${o.slug}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-black/12 bg-white px-3.5 text-[15px] font-semibold hover:border-brand-600/50">
                   <span className="max-w-[260px] truncate">{isHi && o.nameHi ? o.nameHi : o.name}</span>
                   <span className="tabular-nums text-neutral-500">{nf(o.vacancies)}</span>
                 </Link>

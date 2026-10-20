@@ -157,7 +157,7 @@ export default function JobPostingPage({
     factRows.push({
       term: "Employer",
       detail: organizationSlug ? (
-        <Link href={`${localePrefix}/exams/${organizationSlug}`}>
+        <Link href={`${localePrefix}/organizations/${organizationSlug}`}>
           {post.organizationName}
         </Link>
       ) : (

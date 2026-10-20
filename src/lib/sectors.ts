@@ -157,10 +157,10 @@ export const FEATURED_SECTORS = SECTORS.filter((s) => s.featured);
  * These are the two bodies users search for by name; their pages already
  * exist and resolve. Kept here so the homepage grid has one source.
  *
- * Phase 2A: Pillar pages (/exams/[slug]) are now the canonical org hubs.
- * All /organizations/[slug] links redirect to /exams/[slug].
+ * Phase 2C: /organizations/[slug] are the canonical org hubs.
+ * Content combines pillar markdown + live database integration.
  */
 export const FEATURED_ORG_TILES = [
-  { label: "UPSC", labelHi: "UPSC", href: "/exams/union-public-service-commission", emoji: "🎓" },
-  { label: "SSC", labelHi: "SSC", href: "/exams/staff-selection-commission", emoji: "📋" },
+  { label: "UPSC", labelHi: "UPSC", href: "/organizations/union-public-service-commission", emoji: "🎓" },
+  { label: "SSC", labelHi: "SSC", href: "/organizations/staff-selection-commission", emoji: "📋" },
 ] as const;
