@@ -134,41 +134,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export async function generateStaticParams() {
-  // Get all organizations with pillar pages
-  const { getRankedOrganizations } = await import(
-    "@/db/operations/get-organizations"
-  );
-  const orgs = await getRankedOrganizations();
-
-  const params = orgs.map((org) => ({
-    slug: org.slug,
-  }));
-
-  // Also add common alias slugs to pre-render
-  const aliases = [
-    // UPSC aliases
-    { slug: "upsc" },
-    { slug: "union-public-service-commission-upsc" },
-
-    // SSC aliases
-    { slug: "staff-selection-commission" },
-
-    // Railway aliases
-    { slug: "railway" },
-    { slug: "railways" },
-    { slug: "rrb" },
-    { slug: "railway-recruitment-boards" },
-    { slug: "railway-recruitment-boards-rrb" },
-    { slug: "railway-recruitment-boards-rrbs" },
-
-    // SBI aliases
-    { slug: "state-bank-of-india" },
-    { slug: "sbi" },
-  ];
-
-  return [...params, ...aliases];
-}
+// Note: Using on-demand ISR instead of static pre-rendering to avoid build timeout
+// with 1442+ organization pages. Pages are generated on first access and cached for 2 hours.
+// This is faster for users (instant on subsequent requests) and doesn't timeout during build.
 
 export default async function OrganizationPage({ params }: Props) {
   const { slug: originalSlug } = await params;
