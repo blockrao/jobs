@@ -156,7 +156,7 @@ function HeroSnapshot({
         </div>
         <div className="stat">
           <span className="stat-value">
-            {vacancyStats.postingCount > 0 ? (vacancyStats.avgVacanciesPerPosting || 0).toFixed(0) : '—'}
+            {vacancyStats.postingCount > 0 ? (Number(vacancyStats.avgVacanciesPerPosting) || 0).toFixed(0) : '—'}
           </span>
           <span className="stat-label">Avg. per Posting</span>
         </div>
