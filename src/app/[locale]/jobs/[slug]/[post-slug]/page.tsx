@@ -156,8 +156,10 @@ export default async function LocaleJobDetailPage({ params }: Props) {
         // Phase 1 P0: Detail enrichment data
         vacanciesByCategory: Array.isArray(enrichment?.vacancies) ? enrichment.vacancies.map((v: any) => ({
           category: v.category,
-          total: v.count || v.total_vacancies,
+          total: v.count,
           location: v.location,
+          locationCount: v.locationCount,
+          categoryCount: v.categoryCount,
         })) : [],
         educationRequirements: Array.isArray(enrichment?.education) ? enrichment.education.map((e: any) => ({
           degree: e.degree,
@@ -205,10 +207,13 @@ export default async function LocaleJobDetailPage({ params }: Props) {
           note: a.note,
         })) : [],
         applicationFees: Array.isArray(enrichment?.applicationFees) ? enrichment.applicationFees.map((f: any) => ({
-          amount: f.fee_amount || f.amount || null,
-          currency: f.fee_currency || f.currency || "INR",
-          waivedFor: f.fee_waived_for || f.waivedFor,
-          paymentMethods: f.payment_methods || f.paymentMethods,
+          amount: f.amount || null,
+          currency: f.currency || "INR",
+          waivedFor: f.waivedFor,
+          paymentMethods: f.paymentMethods,
+          note: f.note,
+          isExempted: f.isExempted,
+          exemptionCategory: f.exemptionCategory,
         })) : [],
         officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
           type: l.link_type || l.type,

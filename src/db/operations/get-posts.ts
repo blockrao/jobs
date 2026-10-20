@@ -285,7 +285,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing vacancies query`);
         return await db.execute<any>(sql`
-          SELECT id, total_vacancies, category, location, location_count, category_count, source
+          SELECT id, total_vacancies AS "count", category, location, location_count AS "locationCount", category_count AS "categoryCount", source
           FROM posts_vacancies
           WHERE post_id = ${postId}
           ORDER BY category
@@ -348,7 +348,7 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
       (async () => {
         console.log(`[getPostDetailEnrichment] Executing applicationFees query`);
         return await db.execute<any>(sql`
-          SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods"
+          SELECT id, fee_amount AS "amount", fee_currency AS "currency", fee_waived_for AS "waivedFor", payment_methods AS "paymentMethods", note, is_exempted AS "isExempted", exemption_category AS "exemptionCategory"
           FROM posts_application_fee
           WHERE post_id = ${postId}
         `);
