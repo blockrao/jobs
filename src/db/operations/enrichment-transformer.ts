@@ -30,7 +30,7 @@
  * - ... and 20+ more fields
  */
 
-import { EnrichmentSchema } from '@/types/enrichment-schema';
+import { PostEnrichment } from '@/types/job-posting';
 
 interface RawEnrichment {
   education?: any;
@@ -50,54 +50,76 @@ interface RawEnrichment {
  * This is called ONCE per request in getPostBySlug() and ensures
  * all downstream code gets consistent, properly-structured data.
  */
-export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
+export function transformEnrichment(rawEnrichment: any): PostEnrichment {
   if (!rawEnrichment || typeof rawEnrichment !== 'object') {
-    return {};
+    // Return minimal valid PostEnrichment
+    return {
+      vacanciesByCategory: {},
+      vacanciesTotal: 0,
+      feesByCategory: {},
+      ageRulesByCategory: {},
+      selectionProcess: [],
+      sourceVerificationStatus: 'PENDING',
+      extractionConfidence: 0,
+      dataGaps: [],
+    };
   }
 
-  const enrichment: EnrichmentSchema = {};
+  const enrichment: Partial<PostEnrichment> = {};
 
   try {
     // ─────────────────────────────────────────────────────────────────
     // TAB 1: ELIGIBILITY CRITERIA
     // ─────────────────────────────────────────────────────────────────
 
-    // Transform education array to object structure
+    // Transform education to array structure (as PostEnrichment expects)
     if (Array.isArray(rawEnrichment.education) && rawEnrichment.education.length > 0) {
-      enrichment.education = {
-        mandatory: rawEnrichment.education
-          .map((e: any) => {
-            const parts = [];
-            if (e.degree) parts.push(e.degree);
-            if (e.subject) parts.push(e.subject);
-            if (e.specialization) parts.push(`(${e.specialization})`);
-            return parts.join(' ');
-          })
-          .filter(Boolean),
-        preferred: [],
-        note: undefined,
-      };
+      enrichment.education = rawEnrichment.education.map((e: any) => ({
+        degree: e.degree || '',
+        subject: e.subject,
+        specialization: e.specialization,
+        university: e.university,
+        registration: e.registration,
+        minimumPercentage: e.minimum_percentage || e.minimumPercentage,
+        minimumMarks: e.minimum_marks || e.minimumMarks,
+        confidenceScore: e.confidence_score || e.confidenceScore,
+      }));
+    } else {
+      enrichment.education = [];
     }
 
-    // Transform experience array to object structure
+    // Transform experience to array structure (as PostEnrichment expects)
     if (Array.isArray(rawEnrichment.experience) && rawEnrichment.experience.length > 0) {
-      const firstExp = rawEnrichment.experience[0];
-      enrichment.experience = {
-        years_required: parseFloat(firstExp.type) || undefined,
-        job_title: firstExp.description || undefined,
-        preferred_with: [],
-        note: undefined,
-      };
+      enrichment.experience = rawEnrichment.experience.map((exp: any) => ({
+        totalYears: exp.total_years || exp.totalYears,
+        minYears: exp.min_years || exp.minYears || 0,
+        maxYears: exp.max_years || exp.maxYears,
+        domains: Array.isArray(exp.domains) ? exp.domains : (exp.domain ? [exp.domain] : []),
+      }));
+    } else {
+      enrichment.experience = [];
     }
 
-    // Age limit and age note
+    // Age rules - transform to PostEnrichment format
     if (rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object') {
-      const categories = Object.values(rawEnrichment.age_rules as any);
-      if (categories.length > 0) {
-        const firstRule = categories[0] as any;
-        enrichment.age_limit = firstRule.max ? `${firstRule.max} years` : undefined;
-        enrichment.age_note = firstRule.condition || undefined;
+      const ageRules: Record<string, { min: number; max: number }> = {};
+
+      Object.entries(rawEnrichment.age_rules).forEach(([category, rule]: [string, any]) => {
+        if (rule && typeof rule === 'object') {
+          ageRules[category] = {
+            min: rule.min || 0,
+            max: rule.max || 65,
+          };
+        }
+      });
+
+      if (Object.keys(ageRules).length > 0) {
+        enrichment.ageRulesByCategory = ageRules;
+      } else {
+        enrichment.ageRulesByCategory = {};
       }
+    } else {
+      enrichment.ageRulesByCategory = {};
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -107,30 +129,53 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
     if (rawEnrichment.vacancies && typeof rawEnrichment.vacancies === 'object') {
       const vacanc = rawEnrichment.vacancies;
 
-      // Transform categories to standard naming (SC, ST, OBC, EWS, General)
+      // Transform categories to PostEnrichment format
       if (vacanc.categories && typeof vacanc.categories === 'object') {
         enrichment.vacanciesByCategory = {
-          general_unreserved: vacanc.categories.General,
-          sc: vacanc.categories.SC,
-          st: vacanc.categories.ST,
-          obc: vacanc.categories.OBC,
-          ews: vacanc.categories.EWS,
+          General: vacanc.categories.General || 0,
+          SC: vacanc.categories.SC || 0,
+          ST: vacanc.categories.ST || 0,
+          OBC: vacanc.categories.OBC || 0,
+          EWS: vacanc.categories.EWS || 0,
         };
+      } else {
+        enrichment.vacanciesByCategory = {};
       }
 
-      // Location-wise vacancies
-      if (vacanc.by_location && typeof vacanc.by_location === 'object') {
-        enrichment.vacanciesByLocation = vacanc.by_location;
-      }
-
-      // Summary details
+      // Total vacancies count
       if (vacanc.total) {
-        enrichment.vacancy_details = {
-          total: vacanc.total,
-          by_category: vacanc.categories,
-          note: undefined,
-        };
+        enrichment.vacanciesTotal = vacanc.total;
       }
+
+      // Vacancies array for rendering
+      if (vacanc.categories && typeof vacanc.categories === 'object') {
+        enrichment.vacancies = Object.entries(vacanc.categories).map(([category, count]) => ({
+          category,
+          count: Number(count) || 0,
+        }));
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // APPLICATION FEES
+    // ─────────────────────────────────────────────────────────────────
+
+    if (rawEnrichment.application_fees && typeof rawEnrichment.application_fees === 'object') {
+      const fees: Record<string, number | string> = {};
+
+      Object.entries(rawEnrichment.application_fees).forEach(([category, feeData]: [string, any]) => {
+        if (feeData && typeof feeData === 'object') {
+          fees[category] = feeData.amount || feeData.currency_code === 'EXEMPT' ? 'Exempted' : 0;
+        }
+      });
+
+      if (Object.keys(fees).length > 0) {
+        enrichment.feesByCategory = fees;
+      } else {
+        enrichment.feesByCategory = {};
+      }
+    } else {
+      enrichment.feesByCategory = {};
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -144,15 +189,13 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
     // ─────────────────────────────────────────────────────────────────
 
     if (Array.isArray(rawEnrichment.documents) && rawEnrichment.documents.length > 0) {
-      enrichment.documents = rawEnrichment.documents
-        .map((doc: any) => doc.name || doc.document_name)
-        .filter(Boolean);
-
-      enrichment.documentsDetailed = rawEnrichment.documents.map((doc: any) => ({
-        name: doc.name || doc.document_name,
-        format: doc.category || undefined,
-        note: doc.note || undefined,
+      enrichment.requiredDocuments = rawEnrichment.documents.map((doc: any) => ({
+        name: doc.name || doc.document_name || '',
+        category: doc.category,
+        required: doc.required !== false,
       }));
+    } else {
+      enrichment.requiredDocuments = [];
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -161,10 +204,19 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
 
     if (Array.isArray(rawEnrichment.selection_process) && rawEnrichment.selection_process.length > 0) {
       enrichment.selectionProcess = rawEnrichment.selection_process.map((stage: any) => ({
-        stage: stage.step,
-        name: stage.name || stage.stage_name,
+        step: stage.step || 0,
+        name: stage.name || stage.stage_name || '',
+        totalMarks: stage.total_marks || stage.totalMarks,
+        duration: stage.duration,
+        minQualifyingMarks: stage.min_qualifying_marks || stage.minQualifyingMarks,
         description: stage.description,
       }));
+
+      // Also provide alias for compatibility
+      enrichment.selectionProcessStages = enrichment.selectionProcess;
+    } else {
+      enrichment.selectionProcess = [];
+      enrichment.selectionProcessStages = [];
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -177,25 +229,38 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
     // ─────────────────────────────────────────────────────────────────
 
     if (Array.isArray(rawEnrichment.important_dates) && rawEnrichment.important_dates.length > 0) {
-      // Extract key dates from the array
-      const dates = rawEnrichment.important_dates;
-      const dateMap: Record<string, string> = {};
+      // Create importantDates array for PostEnrichment
+      enrichment.importantDates = rawEnrichment.important_dates.map((d: any) => ({
+        label: d.label || d.description || '',
+        date: d.date ? new Date(d.date) : undefined,
+        dateStr: d.date || d.dateStr,
+      }));
 
-      dates.forEach((d: any) => {
+      // Extract and map specific dates based on labels
+      rawEnrichment.important_dates.forEach((d: any) => {
         const label = d.label?.toLowerCase() || '';
-        if (label.includes('open') || label.includes('start')) {
-          dateMap.applicationOpenDate = d.description || d.date;
-        } else if (label.includes('close') || label.includes('end')) {
-          dateMap.applicationClosingDate = d.description || d.date;
+        const dateVal = d.date ? new Date(d.date) : undefined;
+
+        if (label.includes('notification')) {
+          enrichment.notificationDate = dateVal;
+        } else if ((label.includes('open') || label.includes('start')) && label.includes('application')) {
+          enrichment.applicationOpenDate = dateVal;
+        } else if ((label.includes('close') || label.includes('end')) && label.includes('application')) {
+          enrichment.applicationClosingDate = dateVal;
+        } else if (label.includes('exam')) {
+          enrichment.examDate = dateVal;
+        } else if (label.includes('admit')) {
+          enrichment.admitCardDate = dateVal;
+        } else if (label.includes('result')) {
+          enrichment.resultDate = dateVal;
+        } else if (label.includes('interview')) {
+          enrichment.interviewScheduleDate = dateVal;
+        } else if (label.includes('appointment')) {
+          enrichment.appointmentDate = dateVal;
         }
       });
-
-      if (dateMap.applicationOpenDate) {
-        enrichment.applicationOpenDate = dateMap.applicationOpenDate;
-      }
-      if (dateMap.applicationClosingDate) {
-        enrichment.applicationClosingDate = dateMap.applicationClosingDate;
-      }
+    } else {
+      enrichment.importantDates = [];
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -203,27 +268,30 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
     // ─────────────────────────────────────────────────────────────────
 
     if (Array.isArray(rawEnrichment.official_links) && rawEnrichment.official_links.length > 0) {
-      const linksObj: Record<string, string> = {};
-
-      rawEnrichment.official_links.forEach((link: any) => {
-        const type = link.type?.toLowerCase() || link.label?.toLowerCase() || '';
-        const url = link.url;
-
-        if (type.includes('notification')) {
-          linksObj.notification_pdf = url;
-        } else if (type.includes('application') || type.includes('form')) {
-          linksObj.application_form = url;
-        } else if (type.includes('website') || type.includes('official')) {
-          linksObj.official_website = url;
-        } else {
-          linksObj[type] = url;
-        }
-      });
-
-      if (Object.keys(linksObj).length > 0) {
-        enrichment.officialLinks = linksObj;
-      }
+      enrichment.officialLinks = rawEnrichment.official_links.map((link: any) => ({
+        type: link.type,
+        url: link.url,
+        title: link.label || link.title,
+        source: link.source,
+      }));
+    } else {
+      enrichment.officialLinks = [];
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // VERIFICATION & QUALITY METRICS
+    // ─────────────────────────────────────────────────────────────────
+
+    // Source verification status (required field)
+    enrichment.sourceVerificationStatus = rawEnrichment.sourceVerificationStatus || 'PENDING';
+
+    // Extraction confidence score (0-100)
+    enrichment.extractionConfidence = rawEnrichment.extractionConfidence || 75;
+
+    // Data gaps tracking (required field)
+    enrichment.dataGaps = Array.isArray(rawEnrichment.dataGaps)
+      ? rawEnrichment.dataGaps
+      : [];
 
     // ─────────────────────────────────────────────────────────────────
     // VALIDATION: Ensure all fields are the correct type
@@ -235,9 +303,14 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
       enrichment.vacanciesByCategory = {};
     }
 
-    if (enrichment.vacanciesByLocation && Array.isArray(enrichment.vacanciesByLocation)) {
-      console.warn('[enrichment-transformer] vacanciesByLocation was array, converted to empty object');
-      enrichment.vacanciesByLocation = {};
+    if (enrichment.feesByCategory && Array.isArray(enrichment.feesByCategory)) {
+      console.warn('[enrichment-transformer] feesByCategory was array, converted to empty object');
+      enrichment.feesByCategory = {};
+    }
+
+    if (enrichment.ageRulesByCategory && Array.isArray(enrichment.ageRulesByCategory)) {
+      console.warn('[enrichment-transformer] ageRulesByCategory was array, converted to empty object');
+      enrichment.ageRulesByCategory = {};
     }
 
     if (enrichment.documents && typeof enrichment.documents === 'object' && !Array.isArray(enrichment.documents)) {
@@ -250,9 +323,32 @@ export function transformEnrichment(rawEnrichment: any): EnrichmentSchema {
       enrichment.selectionProcess = [];
     }
 
-    return enrichment;
+    // Ensure all required PostEnrichment fields are present
+    return {
+      // Required fields (with defaults if not set)
+      vacanciesByCategory: enrichment.vacanciesByCategory || {},
+      vacanciesTotal: enrichment.vacanciesTotal || 0,
+      feesByCategory: enrichment.feesByCategory || {},
+      ageRulesByCategory: enrichment.ageRulesByCategory || {},
+      selectionProcess: enrichment.selectionProcess || [],
+      sourceVerificationStatus: enrichment.sourceVerificationStatus || 'PENDING',
+      extractionConfidence: enrichment.extractionConfidence || 0,
+      dataGaps: enrichment.dataGaps || [],
+
+      // Optional fields
+      ...enrichment,
+    } as PostEnrichment;
   } catch (error) {
     console.error('[enrichment-transformer] Error transforming enrichment:', error);
-    return {};
+    return {
+      vacanciesByCategory: {},
+      vacanciesTotal: 0,
+      feesByCategory: {},
+      ageRulesByCategory: {},
+      selectionProcess: [],
+      sourceVerificationStatus: 'PENDING',
+      extractionConfidence: 0,
+      dataGaps: [],
+    };
   }
 }
