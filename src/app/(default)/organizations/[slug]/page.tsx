@@ -16,7 +16,35 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-async function readPillarContent(slug: string): Promise<string | null> {
+// Map long/variant slugs to canonical database slugs
+const SLUG_ALIASES: Record<string, string> = {
+  "union-public-service-commission": "upsc",
+  "staff-selection-commission": "ssc",
+  "all-india-institute-of-medical-sciences": "aiims",
+  "state-bank-of-india": "sbi",
+  railway: "railway",
+  railways: "railway",
+  rrb: "railway",
+};
+
+// Resolve slug to canonical form
+async function resolveSlug(requestedSlug: string): Promise<string | null> {
+  // Try direct lookup first
+  const direct = await getOrganizationBySlug(requestedSlug);
+  if (direct) return requestedSlug;
+
+  // Try alias mapping
+  const canonical = SLUG_ALIASES[requestedSlug];
+  if (canonical) {
+    const found = await getOrganizationBySlug(canonical);
+    if (found) return canonical;
+  }
+
+  return null;
+}
+
+async function readPillarContent(slug: string, originalSlug: string): Promise<string | null> {
+  // Try primary slug first
   try {
     const pillarPath = join(
       process.cwd(),
@@ -27,14 +55,36 @@ async function readPillarContent(slug: string): Promise<string | null> {
     );
     return await readFile(pillarPath, "utf-8");
   } catch {
+    // Try original slug if different
+    if (originalSlug !== slug) {
+      try {
+        const pillarPath = join(
+          process.cwd(),
+          "public",
+          "content",
+          "pillars",
+          `${originalSlug}.md`
+        );
+        return await readFile(pillarPath, "utf-8");
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const org = await getOrganizationBySlug(slug);
+  const { slug: originalSlug } = await params;
+  const slug = await resolveSlug(originalSlug);
 
+  if (!slug) {
+    return {
+      title: "Organization Not Found",
+    };
+  }
+
+  const org = await getOrganizationBySlug(slug);
   if (!org) {
     return {
       title: "Organization Not Found",
@@ -46,11 +96,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${org.name} Recruitment Guide 2026 - JobOye`,
     description,
-    ...pageSeo(`/organizations/${slug}`),
+    ...pageSeo(`/organizations/${originalSlug}`),
     openGraph: {
       title: `${org.name} Recruitment Guide`,
       description,
-      url: absoluteUrl(`/organizations/${slug}`),
+      url: absoluteUrl(`/organizations/${originalSlug}`),
       type: "website",
       images: org.logoUrl
         ? [
@@ -73,22 +123,38 @@ export async function generateStaticParams() {
   );
   const orgs = await getRankedOrganizations();
 
-  return orgs.map((org) => ({
+  const params = orgs.map((org) => ({
     slug: org.slug,
   }));
+
+  // Also add alias slugs to pre-render
+  const aliases = [
+    { slug: "union-public-service-commission" },
+    { slug: "staff-selection-commission" },
+    { slug: "all-india-institute-of-medical-sciences" },
+    { slug: "state-bank-of-india" },
+  ];
+
+  return [...params, ...aliases];
 }
 
 export default async function OrganizationPage({ params }: Props) {
-  const { slug } = await params;
+  const { slug: originalSlug } = await params;
+
+  // Resolve slug to canonical database slug
+  const canonicalSlug = await resolveSlug(originalSlug);
+  if (!canonicalSlug) {
+    notFound();
+  }
 
   // Fetch organization data
-  const org = await getOrganizationBySlug(slug);
+  const org = await getOrganizationBySlug(canonicalSlug);
   if (!org) {
     notFound();
   }
 
-  // Read pillar markdown content
-  const pillarContent = await readPillarContent(slug);
+  // Read pillar markdown content (try both original and canonical)
+  const pillarContent = await readPillarContent(canonicalSlug, originalSlug);
   if (!pillarContent) {
     notFound();
   }
@@ -98,7 +164,7 @@ export default async function OrganizationPage({ params }: Props) {
     <OrganizationPageProduction
       organization={org}
       pillarContent={pillarContent}
-      canonicalUrl={absoluteUrl(`/organizations/${slug}`)}
+      canonicalUrl={absoluteUrl(`/organizations/${originalSlug}`)}
     />
   );
 }
