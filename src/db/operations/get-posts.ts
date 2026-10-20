@@ -8,6 +8,7 @@ import { cache } from "react";
 import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
 import { JobPostingData, PostEnrichment } from "@/types/job-posting";
+import { transformEnrichment } from "./enrichment-transformer";
 
 type RawDate = string | Date | null;
 type FjaExtract = NonNullable<JobPostingData["fjaExtract"]>;
@@ -508,50 +509,9 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    /**
-     * CRITICAL FIX: Normalize enrichment JSONB structure AND field names
-     * Issues:
-     * 1. Database uses snake_case (application_fees) but page expects camelCase (applicationFees)
-     * 2. Some fields come as arrays when they should be objects and vice versa
-     * 3. Ensures all field names are in format expected by page component
-     */
-    const normalizeEnrichment = (enrichment: any): any => {
-      if (!enrichment || typeof enrichment !== 'object') return enrichment;
-
-      const normalized: any = {};
-
-      // Convert all fields from snake_case to camelCase and normalize types
-      for (const [key, value] of Object.entries(enrichment)) {
-        // Convert snake_case to camelCase
-        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-
-        // Type normalization
-        if (['education', 'experience', 'selectionProcess', 'documents', 'importantDates', 'officialLinks'].includes(camelKey)) {
-          // These should be arrays
-          if (Array.isArray(value)) {
-            normalized[camelKey] = value;
-          } else if (value) {
-            console.warn(`[getPostBySlug] ${camelKey} is not an array, converting`);
-            normalized[camelKey] = [];
-          }
-        } else if (['vacancies', 'ageRules', 'applicationFees'].includes(camelKey)) {
-          // These should be objects
-          if (value && !Array.isArray(value)) {
-            normalized[camelKey] = value;
-          } else if (Array.isArray(value)) {
-            console.warn(`[getPostBySlug] ${camelKey} is an array, should be object`);
-            normalized[camelKey] = {};
-          }
-        } else {
-          // Other fields pass through unchanged
-          normalized[camelKey] = value;
-        }
-      }
-
-      return normalized;
-    };
-
-    const normalizedEnrichmentJsonb = normalizeEnrichment(enrichmentJsonb);
+    // Transform raw JSONB enrichment to canonical EnrichmentSchema
+    // This is the single source of truth for all enrichment transformations
+    const transformedEnrichment = transformEnrichment(enrichmentJsonb);
 
     return {
       id: data.id,
@@ -640,14 +600,8 @@ export async function getPostBySlug(
         ? new Date(data.notificationPublicationDate)
         : null,
       // PHASE 2: Enrichment is now consolidated in posts.enrichment JSONB column
-      // This includes all detail enrichment data that was previously in 9 separate tables:
-      // vacancies, education, experience, selectionProcess, documents, importantDates,
-      // ageRules, applicationFees, officialLinks
-      enrichment: enrichmentData ? {
-        ...enrichmentData,
-        // Spread enrichment JSONB data from posts table (normalized for compatibility)
-        ...normalizedEnrichmentJsonb,
-      } : normalizedEnrichmentJsonb,
+      // Raw JSONB is transformed to canonical EnrichmentSchema structure by enrichment-transformer
+      enrichment: transformedEnrichment,
     };
   } catch (err) {
     console.error("Exception in getPostBySlug:", {
