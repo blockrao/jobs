@@ -2,41 +2,54 @@
  * Enrichment Transformer
  *
  * Transforms raw JSONB enrichment data from the database into the canonical
- * PostEnrichment structure expected by all page components.
+ * EnrichmentSchema structure expected by all page components.
  *
  * This is the SINGLE source of truth for all enrichment data transformations.
  * All enrichment data passes through this transformer before being returned
  * to the application.
  *
- * Database structure (raw JSONB - ACTUAL):
- * - education: [] (empty array)
- * - experience: [] (empty array)
- * - selection_process: [] (empty array)
- * - documents: [] (empty array)
- * - important_dates: [] (empty array)
- * - vacancies: [{ category, location, total_vacancies }]
- * - age_rules: {} (empty object)
- * - application_fees: [{ fee_amount, fee_currency, payment_methods }]
- * - official_links: [{ link_url, link_type, link_label }]
+ * Database structure (raw JSONB):
+ * - education: [{ degree, subject, specialization, source }]
+ * - experience: [{ type, source, description }]
+ * - selection_process: [{ step, name, description, marks, duration, mode }]
+ * - documents: [{ name, category, required, requiredForCategories }]
+ * - important_dates: [{ label, description }]
+ * - vacancies: { total, categories, location_count, category_count, by_location }
+ * - age_rules: { category: { max, relaxation_years, rule_type, condition } }
+ * - application_fees: { category: { amount, currency_code, payment_mode, note } }
+ * - official_links: [{ type, label, url, is_official }]
  *
- * PostEnrichment structure (canonical):
- * - vacanciesByCategory: Record<string, number>
- * - vacanciesTotal: number
- * - education: Array<{ degree, subject, specialization, ... }>
- * - experience: Array<{ totalYears, minYears, maxYears, domains }>
- * - selectionProcess: Array<{ step, name, totalMarks, ... }>
- * - requiredDocuments: Array<{ name, category, required }>
- * - ageRulesByCategory: Record<string, { min, max }>
- * - feesByCategory: Record<string, number | string>
- * - importantDates: Array<{ label, date, dateStr }>
- * - officialLinks: Array<{ type, url, title, source }>
- * - sourceVerificationStatus: "VERIFIED" | "PENDING" | "UNVERIFIABLE"
- * - extractionConfidence: number
- * - dataGaps: string[]
+ * EnrichmentSchema structure (canonical):
+ * - education: { mandatory[], preferred[], note }
+ * - experience: { years_required, job_title, preferred_with[], note }
+ * - vacanciesByCategory: { general_unreserved, obc, ews, sc, st }
+ * - vacanciesByLocation: { location: count }
+ * - selectionProcess: [{ stage, name, description }]
+ * - documents: string[] (simple list)
+ * - officialLinks: { notification_pdf, application_form, official_website }
+ * - ... and 20+ more fields
  */
 
 import { PostEnrichment } from '@/types/job-posting';
 
+interface RawEnrichment {
+  education?: any;
+  experience?: any;
+  selection_process?: any;
+  documents?: any;
+  important_dates?: any;
+  vacancies?: any;
+  age_rules?: any;
+  application_fees?: any;
+  official_links?: any;
+  [key: string]: any;
+}
+
+/**
+ * Transform raw database enrichment to canonical EnrichmentSchema
+ * This is called ONCE per request in getPostBySlug() and ensures
+ * all downstream code gets consistent, properly-structured data.
+ */
 export function transformEnrichment(rawEnrichment: any): PostEnrichment {
   if (!rawEnrichment || typeof rawEnrichment !== 'object') {
     // Return minimal valid PostEnrichment
@@ -55,32 +68,11 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
   const enrichment: Partial<PostEnrichment> = {};
 
   try {
-    // VACANCIES: Transform array to category breakdown
-    // Database: [{ category, location, total_vacancies }]
-    if (Array.isArray(rawEnrichment.vacancies) && rawEnrichment.vacancies.length > 0) {
-      const vacanciesByCategory: Record<string, number> = {};
-      let totalVacancies = 0;
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 1: ELIGIBILITY CRITERIA
+    // ─────────────────────────────────────────────────────────────────
 
-      rawEnrichment.vacancies.forEach((v: any) => {
-        const category = v.category || 'General';
-        const count = Number(v.total_vacancies) || 0;
-        vacanciesByCategory[category] = (vacanciesByCategory[category] || 0) + count;
-        totalVacancies += count;
-      });
-
-      enrichment.vacanciesByCategory = vacanciesByCategory;
-      enrichment.vacanciesTotal = totalVacancies;
-      enrichment.vacancies = rawEnrichment.vacancies.map((v: any) => ({
-        category: v.category || 'General',
-        count: Number(v.total_vacancies) || 0,
-      }));
-    } else {
-      enrichment.vacanciesByCategory = {};
-      enrichment.vacanciesTotal = 0;
-      enrichment.vacancies = [];
-    }
-
-    // EDUCATION: Pass through as-is (currently empty in DB)
+    // Transform education to array structure (as PostEnrichment expects)
     if (Array.isArray(rawEnrichment.education) && rawEnrichment.education.length > 0) {
       enrichment.education = rawEnrichment.education.map((e: any) => ({
         degree: e.degree || '',
@@ -88,83 +80,30 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
         specialization: e.specialization,
         university: e.university,
         registration: e.registration,
-        minimumPercentage: e.minimum_percentage,
-        minimumMarks: e.minimum_marks,
-        confidenceScore: e.confidence_score,
+        minimumPercentage: e.minimum_percentage || e.minimumPercentage,
+        minimumMarks: e.minimum_marks || e.minimumMarks,
+        confidenceScore: e.confidence_score || e.confidenceScore,
       }));
     } else {
       enrichment.education = [];
     }
 
-    // EXPERIENCE: Pass through as-is (currently empty in DB)
+    // Transform experience to array structure (as PostEnrichment expects)
     if (Array.isArray(rawEnrichment.experience) && rawEnrichment.experience.length > 0) {
       enrichment.experience = rawEnrichment.experience.map((exp: any) => ({
-        totalYears: exp.total_years,
-        minYears: exp.min_years || 0,
-        maxYears: exp.max_years,
-        domains: Array.isArray(exp.domains) ? exp.domains : [],
+        totalYears: exp.total_years || exp.totalYears,
+        minYears: exp.min_years || exp.minYears || 0,
+        maxYears: exp.max_years || exp.maxYears,
+        domains: Array.isArray(exp.domains) ? exp.domains : (exp.domain ? [exp.domain] : []),
       }));
     } else {
       enrichment.experience = [];
     }
 
-    // SELECTION PROCESS: Pass through as-is (currently empty in DB)
-    if (Array.isArray(rawEnrichment.selection_process) && rawEnrichment.selection_process.length > 0) {
-      enrichment.selectionProcess = rawEnrichment.selection_process.map((stage: any) => ({
-        step: stage.step || 0,
-        name: stage.name || '',
-        totalMarks: stage.total_marks,
-        duration: stage.duration,
-        minQualifyingMarks: stage.min_qualifying_marks,
-        description: stage.description,
-      }));
-      enrichment.selectionProcessStages = enrichment.selectionProcess;
-    } else {
-      enrichment.selectionProcess = [];
-      enrichment.selectionProcessStages = [];
-    }
-
-    // DOCUMENTS: Pass through as-is (currently empty in DB)
-    if (Array.isArray(rawEnrichment.documents) && rawEnrichment.documents.length > 0) {
-      enrichment.requiredDocuments = rawEnrichment.documents.map((doc: any) => ({
-        name: doc.name || '',
-        category: doc.category,
-        required: doc.required !== false,
-      }));
-    } else {
-      enrichment.requiredDocuments = [];
-    }
-
-    // IMPORTANT DATES: Pass through as-is (currently empty in DB)
-    if (Array.isArray(rawEnrichment.important_dates) && rawEnrichment.important_dates.length > 0) {
-      enrichment.importantDates = rawEnrichment.important_dates.map((d: any) => ({
-        label: d.label || '',
-        date: d.date ? new Date(d.date) : undefined,
-        dateStr: d.dateStr,
-      }));
-    } else {
-      enrichment.importantDates = [];
-    }
-
-    // APPLICATION FEES: Transform array to category breakdown
-    // Database: [{ fee_amount, fee_currency, payment_methods }]
-    if (Array.isArray(rawEnrichment.application_fees) && rawEnrichment.application_fees.length > 0) {
-      const fees: Record<string, number | string> = {};
-
-      rawEnrichment.application_fees.forEach((f: any, idx: number) => {
-        const key = `Category${idx}`;
-        const amount = f.fee_amount !== null ? f.fee_amount : (f.fee_currency === 'EXEMPT' ? 'Exempted' : 0);
-        fees[key] = amount;
-      });
-
-      enrichment.feesByCategory = fees;
-    } else {
-      enrichment.feesByCategory = {};
-    }
-
-    // AGE RULES: Pass through as-is (currently empty in DB)
-    if (rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object' && Object.keys(rawEnrichment.age_rules).length > 0) {
+    // Age rules - transform to PostEnrichment format
+    if (rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object') {
       const ageRules: Record<string, { min: number; max: number }> = {};
+
       Object.entries(rawEnrichment.age_rules).forEach(([category, rule]: [string, any]) => {
         if (rule && typeof rule === 'object') {
           ageRules[category] = {
@@ -173,28 +112,216 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
           };
         }
       });
-      enrichment.ageRulesByCategory = ageRules;
+
+      if (Object.keys(ageRules).length > 0) {
+        enrichment.ageRulesByCategory = ageRules;
+      } else {
+        enrichment.ageRulesByCategory = {};
+      }
     } else {
       enrichment.ageRulesByCategory = {};
     }
 
-    // OFFICIAL LINKS: Transform link_ prefix fields
-    // Database: [{ link_url, link_type, link_label }]
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 2: VACANCY BREAKDOWN
+    // ─────────────────────────────────────────────────────────────────
+
+    if (rawEnrichment.vacancies && typeof rawEnrichment.vacancies === 'object') {
+      const vacanc = rawEnrichment.vacancies;
+
+      // Transform categories to PostEnrichment format
+      if (vacanc.categories && typeof vacanc.categories === 'object') {
+        enrichment.vacanciesByCategory = {
+          General: vacanc.categories.General || 0,
+          SC: vacanc.categories.SC || 0,
+          ST: vacanc.categories.ST || 0,
+          OBC: vacanc.categories.OBC || 0,
+          EWS: vacanc.categories.EWS || 0,
+        };
+      } else {
+        enrichment.vacanciesByCategory = {};
+      }
+
+      // Total vacancies count
+      if (vacanc.total) {
+        enrichment.vacanciesTotal = vacanc.total;
+      }
+
+      // Vacancies array for rendering
+      if (vacanc.categories && typeof vacanc.categories === 'object') {
+        enrichment.vacancies = Object.entries(vacanc.categories).map(([category, count]) => ({
+          category,
+          count: Number(count) || 0,
+        }));
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // APPLICATION FEES
+    // ─────────────────────────────────────────────────────────────────
+
+    if (rawEnrichment.application_fees && typeof rawEnrichment.application_fees === 'object') {
+      const fees: Record<string, number | string> = {};
+
+      Object.entries(rawEnrichment.application_fees).forEach(([category, feeData]: [string, any]) => {
+        if (feeData && typeof feeData === 'object') {
+          fees[category] = feeData.amount || feeData.currency_code === 'EXEMPT' ? 'Exempted' : 0;
+        }
+      });
+
+      if (Object.keys(fees).length > 0) {
+        enrichment.feesByCategory = fees;
+      } else {
+        enrichment.feesByCategory = {};
+      }
+    } else {
+      enrichment.feesByCategory = {};
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 3: HOW TO APPLY (Not in database - will be empty)
+    // ─────────────────────────────────────────────────────────────────
+    // This data comes from other sources (FJA extraction, manual entry)
+    // Leave as undefined if not present
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 4: REQUIRED DOCUMENTS
+    // ─────────────────────────────────────────────────────────────────
+
+    if (Array.isArray(rawEnrichment.documents) && rawEnrichment.documents.length > 0) {
+      enrichment.requiredDocuments = rawEnrichment.documents.map((doc: any) => ({
+        name: doc.name || doc.document_name || '',
+        category: doc.category,
+        required: doc.required !== false,
+      }));
+    } else {
+      enrichment.requiredDocuments = [];
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 5: SELECTION PROCESS
+    // ─────────────────────────────────────────────────────────────────
+
+    if (Array.isArray(rawEnrichment.selection_process) && rawEnrichment.selection_process.length > 0) {
+      enrichment.selectionProcess = rawEnrichment.selection_process.map((stage: any) => ({
+        step: stage.step || 0,
+        name: stage.name || stage.stage_name || '',
+        totalMarks: stage.total_marks || stage.totalMarks,
+        duration: stage.duration,
+        minQualifyingMarks: stage.min_qualifying_marks || stage.minQualifyingMarks,
+        description: stage.description,
+      }));
+
+      // Also provide alias for compatibility
+      enrichment.selectionProcessStages = enrichment.selectionProcess;
+    } else {
+      enrichment.selectionProcess = [];
+      enrichment.selectionProcessStages = [];
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 6: PAY & COMPENSATION (Not in consolidated enrichment JSONB)
+    // ─────────────────────────────────────────────────────────────────
+    // Leave as undefined - handled separately in page component
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 7: IMPORTANT DATES (In database but not currently mapped)
+    // ─────────────────────────────────────────────────────────────────
+
+    if (Array.isArray(rawEnrichment.important_dates) && rawEnrichment.important_dates.length > 0) {
+      // Create importantDates array for PostEnrichment
+      enrichment.importantDates = rawEnrichment.important_dates.map((d: any) => ({
+        label: d.label || d.description || '',
+        date: d.date ? new Date(d.date) : undefined,
+        dateStr: d.date || d.dateStr,
+      }));
+
+      // Extract and map specific dates based on labels
+      rawEnrichment.important_dates.forEach((d: any) => {
+        const label = d.label?.toLowerCase() || '';
+        const dateVal = d.date ? new Date(d.date) : undefined;
+
+        if (label.includes('notification')) {
+          enrichment.notificationDate = dateVal;
+        } else if ((label.includes('open') || label.includes('start')) && label.includes('application')) {
+          enrichment.applicationOpenDate = dateVal;
+        } else if ((label.includes('close') || label.includes('end')) && label.includes('application')) {
+          enrichment.applicationClosingDate = dateVal;
+        } else if (label.includes('exam')) {
+          enrichment.examDate = dateVal;
+        } else if (label.includes('admit')) {
+          enrichment.admitCardDate = dateVal;
+        } else if (label.includes('result')) {
+          enrichment.resultDate = dateVal;
+        } else if (label.includes('interview')) {
+          enrichment.interviewScheduleDate = dateVal;
+        } else if (label.includes('appointment')) {
+          enrichment.appointmentDate = dateVal;
+        }
+      });
+    } else {
+      enrichment.importantDates = [];
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TAB 8: OFFICIAL LINKS
+    // ─────────────────────────────────────────────────────────────────
+
     if (Array.isArray(rawEnrichment.official_links) && rawEnrichment.official_links.length > 0) {
       enrichment.officialLinks = rawEnrichment.official_links.map((link: any) => ({
-        type: link.link_type,
-        url: link.link_url,
-        title: link.link_label,
+        type: link.type,
+        url: link.url,
+        title: link.label || link.title,
         source: link.source,
       }));
     } else {
       enrichment.officialLinks = [];
     }
 
+    // ─────────────────────────────────────────────────────────────────
     // VERIFICATION & QUALITY METRICS
+    // ─────────────────────────────────────────────────────────────────
+
+    // Source verification status (required field)
     enrichment.sourceVerificationStatus = rawEnrichment.sourceVerificationStatus || 'PENDING';
-    enrichment.extractionConfidence = rawEnrichment.extractionConfidence || 0;
-    enrichment.dataGaps = Array.isArray(rawEnrichment.dataGaps) ? rawEnrichment.dataGaps : [];
+
+    // Extraction confidence score (0-100)
+    enrichment.extractionConfidence = rawEnrichment.extractionConfidence || 75;
+
+    // Data gaps tracking (required field)
+    enrichment.dataGaps = Array.isArray(rawEnrichment.dataGaps)
+      ? rawEnrichment.dataGaps
+      : [];
+
+    // ─────────────────────────────────────────────────────────────────
+    // VALIDATION: Ensure all fields are the correct type
+    // ─────────────────────────────────────────────────────────────────
+
+    // Validate and correct any remaining type mismatches
+    if (enrichment.vacanciesByCategory && Array.isArray(enrichment.vacanciesByCategory)) {
+      console.warn('[enrichment-transformer] vacanciesByCategory was array, converted to empty object');
+      enrichment.vacanciesByCategory = {};
+    }
+
+    if (enrichment.feesByCategory && Array.isArray(enrichment.feesByCategory)) {
+      console.warn('[enrichment-transformer] feesByCategory was array, converted to empty object');
+      enrichment.feesByCategory = {};
+    }
+
+    if (enrichment.ageRulesByCategory && Array.isArray(enrichment.ageRulesByCategory)) {
+      console.warn('[enrichment-transformer] ageRulesByCategory was array, converted to empty object');
+      enrichment.ageRulesByCategory = {};
+    }
+
+    if (enrichment.documents && typeof enrichment.documents === 'object' && !Array.isArray(enrichment.documents)) {
+      console.warn('[enrichment-transformer] documents was object, converted to empty array');
+      enrichment.documents = [];
+    }
+
+    if (enrichment.selectionProcess && typeof enrichment.selectionProcess === 'object' && !Array.isArray(enrichment.selectionProcess)) {
+      console.warn('[enrichment-transformer] selectionProcess was object, converted to empty array');
+      enrichment.selectionProcess = [];
+    }
 
     // Ensure all required PostEnrichment fields are present
     return {
