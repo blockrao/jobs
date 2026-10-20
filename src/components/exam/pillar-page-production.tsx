@@ -11,6 +11,7 @@
 
 import React from "react";
 import Link from "next/link";
+import PillarContentRenderer from "./pillar-content-renderer";
 
 interface PostSample {
   id: number | string;
@@ -154,13 +155,12 @@ export default function PillarPageProduction({
             )}
           </div>
 
-          {/* Pillar Content Placeholder */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 mb-12">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              <strong>Full pillar content:</strong> Eligibility, salary, application process, selection criteria, and FAQ coming soon.
-              For now, browse the recent openings below.
-            </p>
-          </div>
+          {/* Pillar Content */}
+          {pillar.slug && (
+            <article className="prose prose-sm dark:prose-invert max-w-none mb-12">
+              <PillarContentRenderer slug={pillar.slug} />
+            </article>
+          )}
 
           {/* Posts Section */}
           <section className="mb-16">
