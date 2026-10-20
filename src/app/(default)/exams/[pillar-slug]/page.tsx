@@ -13,6 +13,8 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { promises as fs } from "fs";
+import path from "path";
 import { getPillarBySlug, getPillarPostSamples, getPillarFAQData } from "@/db/operations/get-pillar";
 import PillarPageProduction from "@/components/exam/pillar-page-production";
 import PillarFAQSchema from "@/components/exam/structured-data/pillar-faq-schema";
@@ -98,6 +100,16 @@ export default async function PillarPage({ params }: Props) {
   // Fetch FAQ data for schema generation
   const faqData = await getPillarFAQData(pillar.organization.id);
 
+  // Load pillar markdown content
+  let pillarContent = "";
+  try {
+    const contentPath = path.join(process.cwd(), "public", "content", "pillars", `${pillarSlug}.md`);
+    pillarContent = await fs.readFile(contentPath, "utf-8");
+  } catch (error) {
+    console.warn(`Failed to load pillar content for slug: ${pillarSlug}:`, error);
+    // Continue without content if file not found
+  }
+
   // Build canonical URL for schema
   const canonicalUrl = `/exams/${pillarSlug}/`;
 
@@ -129,6 +141,7 @@ export default async function PillarPage({ params }: Props) {
         }}
         posts={posts}
         canonicalUrl={canonicalUrl}
+        content={pillarContent}
       />
     </>
   );
@@ -148,22 +161,22 @@ export async function generateStaticParams() {
     "iiit-kota",
     "iit-kharagpur",
     "angrau-recruitment",
-    "tiss-recruitment",
-    "rites-recruitment",
-    "aiims-jodhpur",
-    "manipal-university",
-    "iit-roorkee",
-    "esic-recruitment",
-    "east-central-railway",
-    "jipmer-recruitment",
-    "iit-ropar",
-    "gmc-chandigarh",
-    "iiser-bhopal",
-    "district-health-society",
-    "mumbai-port-authority",
-    "delhi-electricity-commission",
-    "csjmu-teaching",
+    "iit-guwahati",
+    "iit-bombay",
+    "jnu-recruitment",
+    "iit-madras",
+    "iit-kanpur",
+    "aiims-recruitment",
+    "iiit-hyderabad",
+    "iim-recruitment",
+    "drdo-recruitment",
     "iiit-delhi",
+    "central-university-recruitment",
+    "isro-recruitment",
+    "icmr-recruitment",
+    "epfo-recruitment",
+    "ssc-recruitment",
+    "railway-recruitment",
   ];
 
   return pillars.map((slug) => ({

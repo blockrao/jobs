@@ -49,12 +49,14 @@ interface PillarPageProductionProps {
   };
   posts: PostSample[];
   canonicalUrl: string;
+  content?: string;
 }
 
 export default function PillarPageProduction({
   pillar,
   posts,
   canonicalUrl,
+  content,
 }: PillarPageProductionProps) {
   // BreadcrumbList schema
   const breadcrumbSchema = {
@@ -156,9 +158,9 @@ export default function PillarPageProduction({
           </div>
 
           {/* Pillar Content */}
-          {pillar.slug && (
+          {content && (
             <article className="prose prose-sm dark:prose-invert max-w-none mb-12">
-              <PillarContentRenderer slug={pillar.slug} />
+              <PillarContentRenderer content={content} />
             </article>
           )}
 
