@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { Metadata } from "next";
+import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
 import { getOrganizationBySlug } from "@/db/operations/get-organizations";
 import OrganizationPageProduction from "@/components/organization/org-page-production";
