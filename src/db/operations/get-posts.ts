@@ -151,7 +151,8 @@ async function getPostCoreData(
         r.application_end_date AS "recruitmentApplicationEndDate",
         r.application_start_date AS "recruitmentApplicationStartDate",
         r.notification_date AS "notificationPublicationDate",
-        NULL AS "recruitmentSelectionProcess"
+        NULL AS "recruitmentSelectionProcess",
+        p.enrichment
       FROM posts p
       INNER JOIN recruitments r ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
