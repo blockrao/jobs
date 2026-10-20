@@ -1,49 +1,50 @@
 /**
  * Sitemap and robots.txt contracts, asserted against the real route
- * handlers with the data layer mocked.
+ * handlers with the database client mocked.
+ *
+ * src/app/sitemap.ts (2026-10-20) runs three raw SQL statements through
+ * getDb().execute(): recruitment hubs, post leaves and indexable
+ * organizations. The mock dispatches on the FROM clause of each statement.
  */
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SITE } from "../helpers/metadata";
 
 const rows = vi.hoisted(() => ({
-  postings: [] as unknown[],
-  articles: [] as unknown[],
-  categories: [] as unknown[],
-  organizations: [] as unknown[],
-  exams: [] as unknown[],
-  recruitments: [] as unknown[],
+  hubs: [] as unknown[],
+  leaves: [] as unknown[],
+  orgs: [] as unknown[],
+  fail: false,
 }));
 
-vi.mock("@/lib/queries", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  getPostingSlugsPageForSitemap: async () => rows.postings,
-  getAllArticleSlugsForSitemap: async () => rows.articles,
-  getAllCategorySlugsForSitemap: async () => rows.categories,
-  getAllOrganizationSlugsForSitemap: async () => rows.organizations,
-  getAllExamSlugsForSitemap: async () => rows.exams,
-  getRecruitmentSlugsForSitemap: async () => rows.recruitments,
+vi.mock("@/db", () => ({
+  getDb: () => ({
+    execute: async (query: unknown) => {
+      if (rows.fail) throw new Error("connection refused");
+      const text = JSON.stringify(query);
+      if (/FROM organizations o/.test(text)) return rows.orgs;
+      if (/FROM posts p/.test(text)) return rows.leaves;
+      if (/FROM recruitments r/.test(text)) return rows.hubs;
+      throw new Error("unexpected sitemap query: " + text.slice(0, 120));
+    },
+  }),
 }));
 
 const now = new Date("2026-10-01T00:00:00Z");
+const future = "2027-01-31";
+const past = "2025-01-31";
 
 beforeEach(() => {
-  rows.postings = [
-    { slug: "job-translated", updatedAt: now, titleHi: "हिंदी" },
-    { slug: "job-english-only", updatedAt: now, titleHi: null },
-    { slug: "recruitment-collision", updatedAt: now, titleHi: null },
+  rows.fail = false;
+  rows.hubs = [
+    { slug: "live-recruitment", status: "OPEN", application_end_date: future, updated_at: now },
+    { slug: "closed-recruitment", status: "CLOSED", application_end_date: past, updated_at: now },
   ];
-  rows.articles = [{ slug: "guide", updatedAt: now, titleHi: null }];
-  rows.categories = [{ slug: "banking" }];
-  rows.organizations = [
-    { slug: "org-translated", nameHi: "संगठन" },
-    { slug: "org-english-only", nameHi: null },
+  rows.leaves = [
+    { slug: "live-recruitment", status: "OPEN", application_end_date: future, updated_at: now, post_slug: "clerk", post_updated_at: now },
+    { slug: "live-recruitment", status: "OPEN", application_end_date: future, updated_at: now, post_slug: "officer", post_updated_at: null },
+    { slug: "closed-recruitment", status: "CLOSED", application_end_date: past, updated_at: now, post_slug: "driver", post_updated_at: now },
   ];
-  rows.exams = [
-    { slug: "exam-translated", labelHi: "परीक्षा" },
-    { slug: "exam-english-only", labelHi: null },
-  ];
-  rows.recruitments = [{ slug: "recruitment-collision", updatedAt: now, isLive: true }];
-  // The sitemap module captures query imports; reload it after resetting fixtures.
+  rows.orgs = [{ slug: "sample-org", updated_at: now, n: 5 }];
   vi.resetModules();
 });
 
@@ -52,21 +53,24 @@ async function entries() {
   return mod.default();
 }
 
-const hiAlternate = (e: { alternates?: { languages?: { hi?: string } } }) => e.alternates?.languages?.hi;
-
 describe("sitemap", () => {
   test("IDX-04a every URL is an absolute, unprefixed, query-free canonical URL on the site origin", async () => {
-    for (const e of await entries()) {
+    const all = await entries();
+    expect(all.length).toBeGreaterThan(0);
+    for (const e of all) {
       const url = new URL(e.url);
       expect(url.origin).toBe(SITE);
       expect(url.search, e.url).toBe("");
+      expect(url.hash, e.url).toBe("");
       expect(url.pathname, e.url).not.toMatch(/^\/(en|hi)(\/|$)/);
     }
   });
 
   test("IDX-04b utility and non-indexable routes are never listed", async () => {
     const paths = (await entries()).map((e) => new URL(e.url).pathname);
-    for (const p of paths) expect(p).not.toMatch(/^\/(search|admin|api)(\/|$)/);
+    for (const p of paths) {
+      expect(p).not.toMatch(/^\/(search|admin|api|recruitments|positions|posts|commissions|exams\/)(\/|$)/);
+    }
   });
 
   test("IDX-04c no URL is listed twice", async () => {
@@ -74,52 +78,63 @@ describe("sitemap", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
-  test("IDX-04d a legacy job slug that collides with a live Recruitment hub yields one hub entry, not a duplicate", async () => {
-    // Owner decision (Oct 2026): live Recruitment hubs are listed; the legacy posting
-    // row with the same slug is dropped so the URL appears exactly once.
+  test("IDX-04d the URL contract is covered: static pages, indexable organizations, recruitment hubs, post leaves", async () => {
     const paths = (await entries()).map((e) => new URL(e.url).pathname);
-    expect(paths.filter((p) => p === "/jobs/recruitment-collision")).toHaveLength(1);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "/",
+        "/jobs",
+        "/exams",
+        "/organizations",
+        "/organizations/sample-org",
+        "/jobs/live-recruitment",
+        "/jobs/closed-recruitment",
+        "/jobs/live-recruitment/clerk",
+        "/jobs/live-recruitment/officer",
+        "/jobs/closed-recruitment/driver",
+      ]),
+    );
+    expect(paths).toHaveLength(10);
   });
 
-  test("IDX-04e commission routes that render noindex are excluded from the sitemap", async () => {
-    const paths = (await entries()).map((e) => new URL(e.url).pathname);
-    expect(paths.some((path) => path.startsWith("/commissions/"))).toBe(false);
-  });
-
-  test("LOC-05 a Hindi alternate is listed only for rows with genuine Hindi content", async () => {
+  test("IDX-04f closed recruitments stay listed as history but rank below live ones", async () => {
     const byPath = new Map((await entries()).map((e) => [new URL(e.url).pathname, e]));
-    const expectations: [string, boolean][] = [
-      ["/jobs/job-translated", true],
-      ["/jobs/job-english-only", false],
-      ["/organizations/org-translated", true],
-      ["/organizations/org-english-only", false],
-      ["/exams/exam-translated", true],
-      ["/exams/exam-english-only", false],
-    ];
-    const actual = expectations.map(([p]) => {
-      const entry = byPath.get(p);
-      expect(entry, "missing sitemap entry " + p).toBeDefined();
-      return [p, Boolean(entry && hiAlternate(entry))];
-    });
-    expect(actual).toEqual(expectations);
+    const live = byPath.get("/jobs/live-recruitment")!;
+    const closed = byPath.get("/jobs/closed-recruitment")!;
+    expect(live.priority!).toBeGreaterThan(closed.priority!);
+    expect(live.changeFrequency).toBe("daily");
+    expect(closed.changeFrequency).toBe("monthly");
+    const liveLeaf = byPath.get("/jobs/live-recruitment/clerk")!;
+    const closedLeaf = byPath.get("/jobs/closed-recruitment/driver")!;
+    expect(liveLeaf.priority!).toBeGreaterThan(closedLeaf.priority!);
   });
 
-  test("LOC-05b listed hreflang alternates never use the redirecting /en/ prefix", async () => {
-    for (const e of await entries()) {
-      for (const target of Object.values(e.alternates?.languages ?? {})) {
-        expect(new URL(target as string).pathname).not.toMatch(/^\/en(\/|$)/);
-      }
+  test("IDX-04g the organization query applies the same exclusions as the entity page (merged, quarantined, threshold)", async () => {
+    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
+    expect(src).toMatch(/merged_into_id IS NULL/);
+    expect(src).toMatch(/verification_status IS DISTINCT FROM 'QUARANTINED'/);
+    expect(src).toMatch(/HAVING count\(\*\) >= \$\{ORG_INDEX_MIN_RECRUITMENTS\}/);
+    expect(src).not.toMatch(/\bpostings\b/);
+  });
+
+  test("LOC-05 no hreflang alternates are listed: there is one language per URL and no prefixed address", async () => {
+    for (const e of await entries()) expect(e.alternates).toBeUndefined();
+  });
+
+  test("IDX-06 every indexable entity type in the URL contract has a sitemap source, and nothing else does", async () => {
+    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
+    expect(src).toContain("/jobs/${h.slug}");
+    expect(src).toContain("/jobs/${l.slug}/${l.post_slug}");
+    expect(src).toContain("/organizations/${o.slug}");
+    for (const t of ["recruitments", "positions", "posts", "articles", "commissions", "categories"]) {
+      expect(src, t).not.toContain(`/${t}/\${`);
     }
   });
 
-  // Recruitment and Position are intentionally omitted: they are noindex until
-  // canonical public projections exist. Do not advertise them in the sitemap.
-  test("IDX-06 every indexable entity type in the indexability contract has a sitemap source", async () => {
-    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
-    const covered = ["jobs", "organizations", "exams", "articles", "recruitments", "positions"].filter((t) =>
-      src.includes(`/${t}/`),
-    );
-    expect(covered).toEqual(["jobs", "organizations", "exams", "articles"]);
+  test("IDX-09 a database error throws instead of emitting a partial sitemap", async () => {
+    rows.fail = true;
+    const mod = await import("@/app/sitemap");
+    await expect(mod.default()).rejects.toThrow();
   });
 });
 
@@ -130,7 +145,7 @@ describe("robots.txt", () => {
     const rule = Array.isArray(robots.rules) ? robots.rules[0] : robots.rules;
     const disallow = ([] as string[]).concat(rule.disallow ?? []);
     expect(disallow).toEqual(expect.arrayContaining(["/admin", "/api/"]));
-    for (const indexable of ["/jobs", "/organizations", "/exams", "/positions", "/recruitments", "/articles", "/hi"]) {
+    for (const indexable of ["/jobs", "/organizations", "/exams", "/articles"]) {
       expect(disallow.some((d) => indexable.startsWith(d.replace(/\/$/, "")))).toBe(false);
     }
     expect(robots.sitemap).toBe(`${SITE}/sitemap.xml`);

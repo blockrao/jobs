@@ -17,6 +17,7 @@
 
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+import { pageSeo } from "@/lib/seo";
 import RecruitmentHub from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
@@ -50,19 +51,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "recruitment-slug": slug } = await params;
   const data = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
   if (!data) {
-    return { title: "Recruitment not found", robots: { index: false, follow: true } };
+    return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
   }
   const { recruitment, posts, totalPosts } = data;
-  const canonicalUrl = `${SITE_URL}/jobs/${recruitment.slug}`;
   const description = hubDescription(recruitment.name, totalPosts, sumVacancies(posts));
   const title = `${recruitment.name} — Recruitment ${new Date(recruitment.notificationDate ?? recruitment.createdAt ?? Date.now()).getFullYear()}`;
 
   return {
     title,
     description,
-    alternates: { canonical: canonicalUrl },
-    robots: { index: true, follow: true },
-    openGraph: { title, description, type: "website", url: canonicalUrl, siteName: "JobOye" },
+    ...pageSeo(`/jobs/${recruitment.slug}`, { index: true }),
+    openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
   };
 }

@@ -289,6 +289,7 @@ const liveGovRecruitment = sql`
   r.status IN ('ACTIVE','UPCOMING')
   AND (r.application_end_date IS NULL OR r.application_end_date > NOW())
   AND r.slug IS NOT NULL
+  AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
 `;
 
 /**
@@ -402,7 +403,7 @@ export async function listTopHiringOrgs(limit = 12): Promise<HomeOrgRow[]> {
     SELECT o.name, o.name_hi, o.slug, COALESCE(SUM(r.total_vacancies), 0)::int AS vacancies
     FROM public.organizations o
     JOIN public.recruitments r ON r.organization_id = o.id
-    WHERE ${liveGovRecruitment}
+    WHERE ${liveGovRecruitment} AND o.merged_into_id IS NULL
     GROUP BY o.id
     HAVING COALESCE(SUM(r.total_vacancies), 0) > 0
     ORDER BY vacancies DESC, o.name

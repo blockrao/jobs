@@ -6,7 +6,10 @@ const source = () => stripComments(readSource("src/db/operations/get-posts.ts"))
 describe("canonical Post leaf lookup", () => {
   test("returns the Recruitment current slug, not a denormalized legacy slug", () => {
     const sql = source();
-    expect(sql.match(/r\.slug AS "recruitmentSlug"/g)).toHaveLength(2);
+    // Every projection of a post's recruitment slug reads the live
+    // recruitments row; the denormalized p."recruitmentSlug" is never selected.
+    expect(sql.match(/r\.slug AS "recruitmentSlug"/g)!.length).toBeGreaterThanOrEqual(2);
+    expect(sql).not.toMatch(/p\."recruitmentSlug"\s+AS/);
     expect(sql).not.toContain('COALESCE(p."recruitmentSlug", r.slug)');
   });
 

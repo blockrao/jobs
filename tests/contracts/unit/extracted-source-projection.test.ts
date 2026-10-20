@@ -83,7 +83,9 @@ describe("extracted source projection", () => {
     const source = stripComments(readSource(APPLY));
     expect(source).toContain("recruitmentResolvedFacts?.applicationUrl ?? null");
     expect(source).not.toMatch(/post\.applyPortalUrl/);
-    expect(source).toContain("Application method (reported)");
+    // Extracted (fjaExtract) application modes are never turned into an href.
+    expect(source).not.toMatch(/href=\{[^}]*extractedApplicationModes/);
+    expect(source).not.toMatch(/href=\{[^}]*fjaExtract/);
   });
 
   test("verification UI does not claim extraction confidence is official verification", () => {
@@ -109,61 +111,38 @@ describe("extracted source projection", () => {
   test("all Post Leaves emit JobPosting schema; frontend labels unverified facts as reported", () => {
     // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
     // Unverified posts are marked as "reported" on the UI for consumer transparency.
-    // Indexability is gated on canonical title + official source, independent of verification.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
-    // Indexability based on real facts (title + official source), not verification status
-    expect(route).toContain("index: isIndexable");
+    // No verification-based schema suppression anywhere on the leaf path.
     expect(route).not.toContain("suppressJobPostingSchema");
+    expect(route).not.toContain("sourceVerificationPending");
     // All posts emit JobPosting schema regardless of verification
     expect(schema).toContain('"@graph": [breadcrumb, jobPosting]');
     // Frontend shows "reported" labels for consumer protection (verification notice banners)
-    expect(stripComments(readSource("src/components/job-posting/job-posting-page.tsx"))).toContain("Vacancies (reported)");
+    const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
+    expect(page).toContain("Vacancies (reported)");
+    expect(page).toContain("verificationStatus");
   });
 
-  test("locale Post Leaf route emits schema for all posts; locale check gates breadcrumb rendering", () => {
-    // Architecture decision (2026-10-15): remove schema suppression gates.
-    // All posts emit full JobPosting schema regardless of verification status.
-    // The locale check (locale !== "hi") gates BreadcrumbList rendering, not schema suppression.
-    // This mirrors the (default) route behavior.
-    const localeRoute = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
-    // No sourceVerificationPending checks — schema suppression removed entirely
-    expect(localeRoute).not.toContain("suppressJobPostingSchema");
-    expect(localeRoute).not.toContain("sourceVerificationPending");
-    // BreadcrumbList rendering respects locale check for Hindi content handling
-    expect(localeRoute).toContain('locale !== "hi"');
-    // JobPostingPage component (child) displays verification status for consumer transparency
-    expect(stripComments(readSource("src/components/job-posting/job-posting-page.tsx"))).toContain("verificationStatus");
+  test("the leaf renderer gates JobPosting on lifecycle only, never on verification status", () => {
+    const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
+    expect(renderer).toMatch(/const emitJobPosting = !\(recruitmentClosed && !applicationDeadline\);/);
+    expect(renderer).not.toMatch(/emitJobPosting[^\n]*[vV]erif/);
   });
 
-  test("all posts emit JobPosting schema regardless of verification status; frontend shows data-confidence labels", () => {
-    // Architecture decision (2026-10-15): remove schema suppression gates. All posts emit full
-    // JobPosting schema. Frontend displays "reported" labels for data-confidence signaling
-    // via verification notice banners, not via schema suppression.
-    //
-    // This enables Phase 1 P0 Item #7 (JobPosting schema coverage). Phase 2 adds enriched
-    // fields (computed educationRequirements, experienceRequirements) which can be gated
-    // by verification if needed — but basic JobPosting facts are always exposed.
-    const defaultRoute = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
-    const localeRoute = stripComments(readSource("src/app/[locale]/jobs/[slug]/[post-slug]/page.tsx"));
-    // No sourceVerificationPending checks gating schema emission
-    expect(defaultRoute).not.toContain("suppressJobPostingSchema");
-    expect(localeRoute).not.toContain("suppressJobPostingSchema");
-    // Verification notice is still shown on the UI for consumer transparency
-    expect(stripComments(readSource("src/components/job-posting/job-posting-page.tsx"))).toContain("verificationStatus");
-  });
-
-  test("a recruitment hub canonicalises to its single indexable Post leaf and stays noindex; otherwise it is canonical and indexable", () => {
-    // Owner decision, Oct 2026 (implemented 2026-10-14): a single-Post recruitment
-    // canonicalises to its own Post page; multi-Post hubs are the canonical unit.
+  test("a recruitment hub is always canonical to itself and indexable (URL contract 2026-10-20)", () => {
+    // The single-post-leaf canonical exception (Oct 2026) was retired with the
+    // URL contract: /jobs/{recruitment-slug} is the canonical unit, always.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/recruitment/structured-data/recruitment-hub-schema.tsx"));
-    expect(route).toContain("const singleLeafSlug = await getSinglePostLeafSlug(recruitment.id);");
-    expect(route).toContain("const canonicalPath = singleLeafSlug ? `/jobs/${recruitment.slug}/${singleLeafSlug}` : `/jobs/${recruitment.slug}`;");
-    expect(route).toContain("const hubIndexable = !singleLeafSlug;");
-    expect(route).toContain("pageSeo(canonicalPath, hubIndexable ? undefined : { index: false })");
+    expect(route).not.toContain("getSinglePostLeafSlug");
+    expect(route).not.toContain("singleLeafSlug");
     expect(route).not.toContain("/posts/${roleSlugs[0]}");
-    expect(route).toContain("verificationStatus: recruitment.sourceVerificationStatus ?? null");
+    expect(route).toContain("const canonicalUrl = `${SITE_URL}/jobs/${recruitment.slug}`;");
+    expect(route).toContain("robots: { index: true, follow: true }");
+    // Only a legacy slug (recruitment_slug_redirects) redirects; smart resolution renders in place.
+    expect(route).toMatch(/if \(data\.resolutionMethod === "legacy-redirect"\) \{\s*permanentRedirect\(`\/jobs\/\$\{data\.recruitment\.slug\}`\);/);
+    // Hub structured data keys its dates on source verification, never fabricating them.
     expect(schema).toMatch(/const datePostedIso = factsVerified\s*\?\s*toIso\(recruitment\.notificationDate\)/);
     expect(schema).toContain("const expiresIso = factsVerified ? toIso(recruitment.applicationEndDate) : undefined;");
   });

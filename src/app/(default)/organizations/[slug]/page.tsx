@@ -1,203 +1,80 @@
-import { notFound } from "next/navigation";
-import { readFile } from "fs/promises";
-import { join } from "path";
+/**
+ * /organizations/{slug} — the organization's canonical entity page.
+ *
+ * URL contract: exactly one URL per organization. Alias and merged-duplicate
+ * slugs 301 to the canonical slug; nothing else renders here. Indexability is
+ * decided by data volume (ORG_INDEX_MIN_RECRUITMENTS), not by whether an
+ * editorial file exists.
+ */
 import type { Metadata } from "next";
-import { eq, sql } from "drizzle-orm";
-import { absoluteUrl } from "@/lib/site";
+import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
-import { getDb } from "@/db/index";
-import { organizations } from "@/db/schema";
-import { getOrganizationBySlug } from "@/db/operations/get-organizations";
-import {
-  getOrganizationPostings,
-  getOrganizationSalaryStats,
-  getOrganizationGeographicDistribution,
-  getOrganizationVacancyStats,
-  getOrganizationRoles,
-} from "@/db/operations/get-organization-postings";
-import OrgPageFundamental from "@/components/organization/org-page-fundamental";
+import { absoluteUrl } from "@/lib/site";
+import { resolveOrganization } from "@/lib/organizations/resolve";
+import { getOrganizationStats } from "@/lib/organizations/stats";
+import { buildBreadcrumbSchema, buildOrganizationSchema, jsonLdGraph } from "@/lib/structured-data";
+import { OrganizationPage } from "@/components/organization/organization-page";
 
-// ISR: Revalidate every 2 hours (live data updates)
-// Pillar content changes rarely, but job counts + salary data changes frequently
-export const revalidate = 7200; // 2 hours
+export const revalidate = 7200; // 2 hours: deadlines and new notifications move daily
 
-interface Props {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-// Smart slug resolution: Supports exact match + prefix match
-// Examples:
-//   /organizations/upsc → resolves to union-public-service-commission
-//   /organizations/sbi → resolves to state-bank-of-india-sbi
-//   /organizations/railway → resolves to railway-recruitment-board
-// This eliminates the need for hardcoded SLUG_ALIASES (which are unmaintainable)
-async function resolveSlug(requestedSlug: string): Promise<string | null> {
-  // Import at function call to keep it self-contained
-  const { smartResolveSlug } = await import("@/lib/slug-resolver");
-  const db = getDb();
-
-  // Define data access functions for smartResolveSlug
-  const findExact = async (slug: string) => {
-    const result = await db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.slug, slug))
-      .limit(1);
-    return result.length > 0 ? result[0].slug : null;
-  };
-
-  const findByPrefix = async (prefix: string) => {
-    const results = await db
-      .select()
-      .from(organizations)
-      .where(
-        sql`${organizations.slug} LIKE ${prefix + "%"} AND ${organizations.slug} != ${prefix}`
-      )
-      .orderBy(
-        sql`CASE WHEN ${organizations.slug} = ${prefix + "-sbi"} THEN 0 ELSE 1 END`, // Prefer -sbi suffix
-        sql`${organizations.id} DESC`
-      )
-      .limit(1);
-    return results.map((r) => r.slug);
-  };
-
-  // Use smartResolveSlug for consistent, multi-strategy resolution
-  const result = await smartResolveSlug(requestedSlug, {
-    findExact: async (s) => {
-      const org = await getOrganizationBySlug(s);
-      return org ? org.slug : null;
-    },
-    findByPrefix,
-    getId: (slug) => 0, // Organizations don't have year, use insertion order
-  });
-
-  return result;
-}
-
-async function readPillarContent(slug: string, originalSlug: string): Promise<string | null> {
-  // Try multiple slug variants in order of preference
-  const slugsToTry = [slug, originalSlug];
-
-  // For compound slugs like "state-bank-of-india-sbi", also try shorter variants
-  if (slug.includes("-") && slug !== originalSlug) {
-    const parts = slug.split("-");
-    if (parts.length > 2) {
-      slugsToTry.push(parts[parts.length - 1]); // e.g., "sbi" from "state-bank-of-india-sbi"
-    }
-  }
-
-  for (const trySlug of slugsToTry) {
-    try {
-      const pillarPath = join(
-        process.cwd(),
-        "public",
-        "content",
-        "pillars",
-        `${trySlug}.md`
-      );
-      const content = await readFile(pillarPath, "utf-8");
-      return content;
-    } catch {
-      // Continue to next variant
-    }
-  }
-
-  return null;
-}
+type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug: originalSlug } = await params;
-  const slug = await resolveSlug(originalSlug);
-
-  if (!slug) {
-    return {
-      title: "Organization Not Found",
-    };
+  const { slug } = await params;
+  const resolved = await resolveOrganization(slug);
+  if (resolved.kind !== "canonical") {
+    // Redirects and 404s are handled by the page; emit nothing indexable here.
+    return { robots: { index: false, follow: true } };
   }
+  const { org } = resolved;
+  const stats = await getOrganizationStats(org.id);
+  const year = new Date().getFullYear();
 
-  const org = await getOrganizationBySlug(slug);
-  if (!org) {
-    return {
-      title: "Organization Not Found",
-    };
-  }
-
-  const description = `${org.name} recruitment guide 2026. Explore eligibility, salary, positions, interview preparation, and recruitment timeline for ${org.name} jobs.`;
+  const title = stats.live.length > 0
+    ? `${org.name} Recruitment ${year}: ${stats.live.length} open notification${stats.live.length === 1 ? "" : "s"}`
+    : `${org.name} Recruitment ${year}: notifications, posts and vacancies`;
+  const description = stats.live.length > 0
+    ? `${stats.live.length} current ${org.name} recruitment${stats.live.length === 1 ? "" : "s"}` +
+      (stats.liveVacancies ? ` with ${stats.liveVacancies.toLocaleString("en-IN")} vacancies` : "") +
+      `, with last dates and official notifications. ${stats.recruitments.length} notifications on record.`
+    : `${org.name} job notifications on JobOye: ${stats.recruitments.length} recruitments on record with posts, vacancies and official notification links.`;
 
   return {
-    title: `${org.name} Recruitment Guide 2026 - JobOye`,
+    title,
     description,
-    ...pageSeo(`/organizations/${originalSlug}`),
+    ...pageSeo(`/organizations/${org.slug}`, { index: stats.indexable }),
     openGraph: {
-      title: `${org.name} Recruitment Guide`,
+      title,
       description,
-      url: absoluteUrl(`/organizations/${originalSlug}`),
+      url: absoluteUrl(`/organizations/${org.slug}`),
       type: "website",
-      images: org.logoUrl
-        ? [
-            {
-              url: org.logoUrl,
-              width: 200,
-              height: 200,
-              alt: org.name,
-            },
-          ]
-        : [],
+      ...(org.logoUrl ? { images: [{ url: org.logoUrl, alt: org.name }] } : {}),
     },
   };
 }
 
-// Note: Using on-demand ISR instead of static pre-rendering to avoid build timeout
-// with 1442+ organization pages. Pages are generated on first access and cached for 2 hours.
-// This is faster for users (instant on subsequent requests) and doesn't timeout during build.
+export default async function OrganizationRoute({ params }: Props) {
+  const { slug } = await params;
+  const resolved = await resolveOrganization(slug);
+  if (resolved.kind === "redirect") permanentRedirect(`/organizations/${resolved.slug}`);
+  if (resolved.kind === "missing") notFound();
 
-export default async function OrganizationPage({ params }: Props) {
-  const { slug: originalSlug } = await params;
+  const { org } = resolved;
+  const stats = await getOrganizationStats(org.id);
 
-  // Resolve slug to canonical database slug
-  const canonicalSlug = await resolveSlug(originalSlug);
-  if (!canonicalSlug) {
-    notFound();
-  }
+  const schema = jsonLdGraph(
+    buildOrganizationSchema(org, org.sector === "PRIVATE" ? null : "GOVERNMENT"),
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Organisations", path: "/organizations" },
+      { name: org.name, path: `/organizations/${org.slug}` },
+    ]),
+  );
 
-  // Fetch organization data
-  const org = await getOrganizationBySlug(canonicalSlug);
-  if (!org) {
-    notFound();
-  }
-
-  // Read pillar markdown content (try both original and canonical)
-  const pillarContent = await readPillarContent(canonicalSlug, originalSlug);
-  if (!pillarContent) {
-    notFound();
-  }
-
-  // Fetch live recruitment data for this organization
-  const [
-    postings,
-    salaryStats,
-    geographicDistribution,
-    vacancyStats,
-    roles,
-  ] = await Promise.all([
-    getOrganizationPostings(org.id),
-    getOrganizationSalaryStats(org.id),
-    getOrganizationGeographicDistribution(org.id),
-    getOrganizationVacancyStats(org.id),
-    getOrganizationRoles(org.id),
-  ]);
-
-  // Return fundamental redesigned component with org data + live data
   return (
-    <OrgPageFundamental
-      organization={org}
-      canonicalUrl={absoluteUrl(`/organizations/${originalSlug}`)}
-      postings={postings}
-      salaryStats={salaryStats}
-      geographicDistribution={geographicDistribution}
-      vacancyStats={vacancyStats}
-      roles={roles}
-    />
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <OrganizationPage org={org} stats={stats} />
+    </>
   );
 }

@@ -16,6 +16,7 @@
 
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+import { pageSeo } from "@/lib/seo";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) {
     return {
       title: "Job Posting Not Found",
-      robots: { index: false, follow: true },
+      ...pageSeo(`/jobs/${recruitmentSlug}/${postSlug}`, { index: false }),
     };
   }
 
@@ -80,10 +81,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description = `${post.title}: ${vacancyText}, ${daysText}. ${salaryText}.`;
   }
 
-  // PHASE 2: Canonical URL without locale prefix
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://joboye.com";
-  const canonicalUrl = `${baseUrl}/jobs/${post.recruitmentSlug}/${post.slug}`;
-
   return {
     title,
     description,
@@ -98,24 +95,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: canonicalUrl,
       type: "website",
-      siteName: "JobOye",
     },
-    alternates: {
-      canonical: canonicalUrl,
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-snippet": -1,
-        "max-image-preview": "large",
-        "max-video-preview": -1,
-      },
-    },
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: true }),
   };
 }
 

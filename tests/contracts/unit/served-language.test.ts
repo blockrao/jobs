@@ -1,7 +1,7 @@
 /**
  * Language of the server-rendered document (SEO-001 step 3).
  *
- * The two real root layouts are rendered to HTML with the page chrome
+ * The one root layout is rendered to HTML with the page chrome
  * (header, footer, analytics, navigation progress) replaced by stubs, so the
  * assertions are about the document the server sends: one <html>, its lang,
  * one shell.
@@ -19,11 +19,11 @@ vi.mock("@/components/analytics-tracker", () => ({ AnalyticsTracker: () => null 
 vi.mock("@/components/listing-language-assist", () => ({
   ListingLanguageAssist: () => createElement("i", { "data-listing-language-assist": "" }),
 }));
-vi.mock("@/components/navigation-progress", () => ({
-  NavigationProgressProvider: ({ children }: { children: ReactNode }) => children,
-}));
 vi.mock("@/components/intl-provider", () => ({
   IntlProvider: ({ children }: { children: ReactNode }) => children,
+}));
+vi.mock("@/components/navigation-progress", () => ({
+  NavigationProgressProvider: ({ children }: { children: ReactNode }) => children,
 }));
 
 // Server components are async functions: resolve them depth-first into plain
@@ -47,26 +47,8 @@ const count = (html: string, re: RegExp) => (html.match(re) ?? []).length;
 const page = createElement("main", null, "page");
 
 describe("served document language", () => {
-  test.each([
-    ["hi", "hi"],
-    ["en", "en"],
-    ["ssc-cgl", "en"],
-  ])("LOC-06 locale root layout for segment %s serves <html lang=%s>, one shell", async (segment, lang) => {
-    const mod = await import("@/app/[locale]/layout");
-    const html = await htmlOf(await mod.default({ children: page, params: Promise.resolve({ locale: segment }) }));
-    expect(html).toMatch(new RegExp(`^<html lang="${lang}"`));
-    expect(count(html, /<html/g)).toBe(1);
-    expect(count(html, /<body/g)).toBe(1);
-    expect(count(html, /<header/g)).toBe(1);
-    expect(count(html, /<footer/g)).toBe(1);
-  });
-
-  test("LOC-07 entity pages never load the listing accessibility assist", async () => {
-    const mod = await import("@/app/[locale]/layout");
-    const html = await htmlOf(await mod.default({ children: page, params: Promise.resolve({ locale: "hi" }) }));
-    expect(html).not.toContain("data-listing-language-assist");
-  });
-
+  // LOC-06/LOC-07 (locale root layout) were retired with the locale prefix
+  // (URL contract 2026-10-20): there is one root layout and it serves English.
   test("LOC-08 the unprefixed root layout serves <html lang=en>, one shell, with the listing assist", async () => {
     const mod = await import("@/app/(default)/layout");
     const html = await htmlOf(mod.default({ children: page }));

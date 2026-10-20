@@ -381,6 +381,10 @@ export const organizations = pgTable(
     // Tier 1 pillar page support (Phase 2)
     pillarSlug: varchar("pillar_slug", { length: 160 }).unique(),
     pillarEnabled: boolean("pillar_enabled").default(false),
+    // Entity merge (2026-10-20): a duplicate organization keeps its row and slug
+    // but points at the surviving canonical entity. Routes 301 to the survivor;
+    // public queries never read a merged row directly.
+    mergedIntoId: integer("merged_into_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

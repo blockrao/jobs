@@ -5,9 +5,10 @@ import { notFound } from "next/navigation";
 import { getStateBySlug, STATES } from "@/lib/states/states";
 import { listStateJobs } from "@/lib/states/queries";
 import { safeQuery } from "@/lib/safe-query";
-import { legacyPostingHref } from "@/lib/recruitment-href";
+import { recruitmentHref } from "@/lib/recruitment-href";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
-import { STAGE_LABELS, formatDate } from "@/lib/labels";
+import { formatDate } from "@/lib/labels";
+import { lifecycleLabel } from "@/lib/lifecycle";
 
 export const revalidate = 86400; // Phase 1: daily revalidation
 
@@ -61,29 +62,25 @@ export default async function StatePage({ params }: Props) {
 
       {jobs.length > 0 && (
         <ul className="mt-6 divide-y divide-black/10">
-          {jobs.map((j) => {
-            const href = legacyPostingHref(j);
-            return (
+          {jobs.map((j) => (
             <li key={j.id} className="py-4">
-              {href ? (
-                <Link href={href} className="text-base font-semibold hover:underline">
-                  {j.title}
-                </Link>
-              ) : (
-                <span className="text-base font-semibold">{j.title}</span>
-              )}
+              <Link href={recruitmentHref(j)} className="text-base font-semibold hover:underline">
+                {j.name}
+              </Link>
               <p className="text-sm text-neutral-600">
-                {j.organization.name}
-                {j.locationCity ? ` · ${j.locationCity}` : ""}
-                {j.totalVacancies ? ` · ${j.totalVacancies} ${j.totalVacancies === 1 ? "post" : "posts"}` : ""} ·{" "}
-                {STAGE_LABELS[j.currentStage] ?? j.currentStage}
+                <Link href={`/organizations/${j.orgSlug}`} className="hover:underline">{j.orgName}</Link>
+                {j.totalVacancies ? ` · ${j.totalVacancies} ${j.totalVacancies === 1 ? "vacancy" : "vacancies"}` : ""}
+                {j.postCount > 1 ? ` · ${j.postCount} posts` : ""} · {lifecycleLabel(j.lifecycle.state)}
               </p>
               <p className="text-xs text-neutral-400">
-                {j.validThrough ? `Last date ${formatDate(j.validThrough)}` : `Posted ${formatDate(j.datePosted)}`}
+                {j.applicationEndDate
+                  ? `Last date ${formatDate(j.applicationEndDate)}`
+                  : j.notificationDate
+                    ? `Notified ${formatDate(j.notificationDate)}`
+                    : "Last date not stated in the notification"}
               </p>
             </li>
-            );
-          })}
+          ))}
         </ul>
       )}
 

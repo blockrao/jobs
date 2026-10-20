@@ -8,7 +8,12 @@
 import { describe, expect, test } from "vitest";
 import { filesMatching, listFiles, readSource, stripComments } from "../helpers/source";
 
-const JOB_LEAF_PAGE = "src/app/[locale]/jobs/[slug]/page.tsx";
+// URL contract (2026-10-20): no locale prefix. The post leaf is the only page
+// that may carry JobPosting markup; it renders through one leaf renderer
+// which mounts one JobPosting schema component.
+const JOB_LEAF_PAGE = "src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx";
+const JOB_LEAF_RENDERER = "src/components/job-posting/job-detail-page-production.tsx";
+const JOB_POSTING_SCHEMA = "src/components/job-posting/structured-data/post-leaf-schema.tsx";
 const STRUCTURED_DATA_LIB = "src/lib/structured-data.ts";
 
 /** Body of a pgTable("<name>", { ... }) column block in src/db/schema.ts. */
@@ -32,7 +37,14 @@ const columnLine = (block: string, dbName: string) =>
 
 describe("structured data is built in exactly one place", () => {
   test("SD-01 JobPosting is built only by the individual job leaf page", () => {
-    expect(filesMatching("src/app", /buildJobPostingSchema\s*\(/)).toEqual([JOB_LEAF_PAGE]);
+    // The leaf renderer is mounted by the post-leaf route and nothing else.
+    expect(filesMatching("src/app", /job-detail-page-production/)).toEqual([JOB_LEAF_PAGE]);
+    // The JobPosting schema component is mounted by that renderer and nothing else.
+    expect(filesMatching("src", /<JobPostingSchema[\s/]/)).toEqual([JOB_LEAF_RENDERER]);
+    expect(filesMatching("src", /structured-data\/post-leaf-schema/)).toEqual([JOB_LEAF_RENDERER]);
+    expect(stripComments(readSource(JOB_POSTING_SCHEMA))).toMatch(/"@type":\s*"JobPosting"/);
+    // No route builds a JobPosting node from the shared library directly.
+    expect(filesMatching("src/app", /buildJobPostingSchema\s*\(/)).toEqual([]);
   });
 
   test("SD-06 no parent, listing or utility page references JobPosting markup", () => {
@@ -75,7 +87,6 @@ describe("SEO policy is centralized", () => {
   // preference at one English address, so a client-side accessibility
   // assist is allowed there and only there.
   const SHELL = "src/components/root-shell.tsx";
-  const LOCALE_ROOT = "src/app/[locale]/layout.tsx";
   const DEFAULT_ROOT = "src/app/(default)/layout.tsx";
   const ASSIST = "src/components/listing-language-assist.tsx";
   // The whole-document 404 for an address that matches no route. It has no
@@ -90,26 +101,20 @@ describe("SEO policy is centralized", () => {
     expect(stripComments(readSource(SHELL))).toMatch(/<html lang=\{lang\}/);
   });
 
-  test("LOC-01a one shell renders <html> for every page, and no layout sits above the two root layouts", () => {
+  test("LOC-01a one shell renders <html> for every page, and the unprefixed root layout is the only root", () => {
     expect(filesMatching("src", /<html[\s>]/).sort()).toEqual([GLOBAL_404, SHELL].sort());
     expect(listFiles("src/app").filter((f) => f === "src/app/layout.tsx")).toEqual([]);
+    // The locale tree (src/app/[locale]) was removed with the URL contract of 2026-10-20.
+    expect(listFiles("src/app").filter((f) => f.startsWith("src/app/[locale]/"))).toEqual([]);
     const shellUsers = filesMatching("src", /<RootShell[\s>]/).sort();
-    expect(shellUsers).toEqual([DEFAULT_ROOT, LOCALE_ROOT].sort());
-  });
-
-  test("LOC-01c entity pages under the locale segment get their language from the URL, on the server", async () => {
-    expect(stripComments(readSource(LOCALE_ROOT))).toMatch(/<RootShell lang=\{htmlLang\(locale\)\}>/);
-    const { htmlLang } = await import("@/lib/seo");
-    expect(htmlLang("hi")).toBe("hi");
-    expect(htmlLang("en")).toBe("en");
-    expect(htmlLang("ssc-cgl")).toBe("en");
+    expect(shellUsers).toEqual([DEFAULT_ROOT]);
+    expect(stripComments(readSource(DEFAULT_ROOT))).toMatch(/<RootShell lang="en"/);
   });
 
   test("LOC-01b the only client-side language write is the listing accessibility assist, and entity pages never load it", () => {
     expect(filesMatching("src", /document\.documentElement\.lang\s*=/)).toEqual([ASSIST]);
     // Mounted by the shell only when the unprefixed root layout asks for it.
     expect(filesMatching("src", /<ListingLanguageAssist[\s/]/)).toEqual([SHELL]);
-    expect(stripComments(readSource(LOCALE_ROOT))).not.toMatch(/listingLanguageAssist/);
     expect(stripComments(readSource(DEFAULT_ROOT))).toMatch(/listingLanguageAssist/);
     // It acts on the cookie-switched listings only and cannot touch SEO signals.
     const assist = stripComments(readSource(ASSIST));

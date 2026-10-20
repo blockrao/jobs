@@ -181,6 +181,8 @@ describe("entity page nodes (SEO-001 step 1)", () => {
     expect(hi["@id"]).toBe(buildOrganizationSchema(org as never)["@id"]);
   });
 
+  // /exams/{slug} is a redirect-only route to /organizations since 2026-10-20,
+  // so the exam node's own URL lives under /organizations.
   test("SD-10 exam page node keeps its pre-move fields", async () => {
     const { buildExamSchema } = await import("@/lib/structured-data");
     const node = buildExamSchema({ slug: "cgl", label: "SSC CGL", description: null }, { slug: "ssc", name: "SSC" }, "en");
@@ -188,7 +190,7 @@ describe("entity page nodes (SEO-001 step 1)", () => {
       "@type": "EducationalOccupationalCredential",
       name: "SSC CGL",
       description: "SSC CGL government exam",
-      url: expect.stringMatching(/\/exams\/cgl$/),
+      url: expect.stringMatching(/\/organizations\/cgl$/),
       provider: { "@type": "Organization", name: "SSC", url: expect.stringMatching(/\/commissions\/ssc$/) },
       inLanguage: "en-IN",
     });

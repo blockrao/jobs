@@ -1,185 +1,34 @@
 /**
- * Pillar Page (Phase 2 Tier 1)
+ * /exams/{pillar-slug} — retired organization "pillar" guides (Phase 2 Tier 1).
  *
- * Route: /exams/[pillar-slug]/
- * Purpose: Organization-level recruitment guide + linked posts
- *
- * Features:
- * - Dynamic metadata (title, description, canonical)
- * - FAQPage schema (org-level aggregation)
- * - Pillar posts grid (top 12 posts, sorted by deadline)
- * - ISR: 7 days (evergreen content, infrequent updates)
+ * Consolidated 2026-10-20: one canonical page per organization at
+ * /organizations/{slug}. A pillar slug that maps to an organization 301s
+ * there; anything else is a 404. Exam hubs proper (Master Plan §4) will own
+ * this route when they ship; until then no page renders here.
  */
+import { notFound, permanentRedirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { organizations } from "@/db/schema";
+import { resolveOrganization } from "@/lib/organizations/resolve";
 
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { promises as fs } from "fs";
-import path from "path";
-import { getPillarBySlug, getPillarPostSamples, getPillarFAQData } from "@/db/operations/get-pillar";
-import PillarPageProduction from "@/components/exam/pillar-page-production";
-import PillarFAQSchema from "@/components/exam/structured-data/pillar-faq-schema";
-import { formatCurrency } from "@/lib/formatting";
+export const dynamic = "force-dynamic";
 
-export const revalidate = 604800; // 7 days ISR
+type Props = { params: Promise<{ "pillar-slug": string }> };
 
-interface Props {
-  params: Promise<{
-    "pillar-slug": string;
-  }>;
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export default async function RetiredPillarRoute({ params }: Props) {
   const { "pillar-slug": pillarSlug } = await params;
+  const db = getDb();
 
-  const pillar = await getPillarBySlug(pillarSlug);
+  const byPillar = await db
+    .select({ slug: organizations.slug })
+    .from(organizations)
+    .where(eq(organizations.pillarSlug, pillarSlug))
+    .limit(1);
 
-  if (!pillar) {
-    return {
-      title: "Exam Guide Not Found",
-      robots: { index: false, follow: true },
-    };
-  }
+  const target = byPillar.length > 0 ? await resolveOrganization(byPillar[0].slug) : await resolveOrganization(pillarSlug);
 
-  // SEO-optimized title
-  const title = `${pillar.organization.name} Recruitment Guide 2026: Salary, Eligibility & Process`;
-
-  // SEO-optimized description
-  const description = `Complete guide to ${pillar.organization.name} jobs. ${pillar.postCount} positions available. Learn about salary, eligibility, application process, and selection criteria.`;
-
-  // Canonical URL
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://joboye.com";
-  const canonicalUrl = `${baseUrl}/exams/${pillarSlug}/`;
-
-  return {
-    title,
-    description,
-    keywords: [
-      `${pillar.organization.name} recruitment`,
-      `${pillar.organization.name} jobs`,
-      `${pillar.organization.name} salary`,
-      `${pillar.organization.name} eligibility`,
-      "government jobs",
-      "recruitment",
-    ].filter(Boolean),
-    openGraph: {
-      title,
-      description,
-      url: canonicalUrl,
-      type: "website",
-      siteName: "JobOye",
-    },
-    alternates: {
-      canonical: canonicalUrl,
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-snippet": -1,
-        "max-image-preview": "large",
-        "max-video-preview": -1,
-      },
-    },
-  };
-}
-
-export default async function PillarPage({ params }: Props) {
-  const { "pillar-slug": pillarSlug } = await params;
-
-  const pillar = await getPillarBySlug(pillarSlug);
-
-  if (!pillar) {
-    notFound();
-  }
-
-  // Fetch sample posts
-  const posts = await getPillarPostSamples(pillar.organization.id, 12);
-
-  // Fetch FAQ data for schema generation
-  const faqData = await getPillarFAQData(pillar.organization.id);
-
-  // Load pillar markdown content
-  let pillarContent = "";
-  try {
-    const contentPath = path.join(process.cwd(), "public", "content", "pillars", `${pillarSlug}.md`);
-    pillarContent = await fs.readFile(contentPath, "utf-8");
-  } catch (error) {
-    console.warn(`Failed to load pillar content for slug: ${pillarSlug}:`, error);
-    // Continue without content if file not found
-  }
-
-  // Build canonical URL for schema
-  const canonicalUrl = `/exams/${pillarSlug}/`;
-
-  return (
-    <>
-      {/* FAQ Schema */}
-      {faqData && <PillarFAQSchema organization={pillar.organization} faqData={faqData} />}
-
-      {/* Page Content */}
-      <PillarPageProduction
-        pillar={{
-          slug: pillarSlug,
-          organization: {
-            id: pillar.organization.id,
-            name: pillar.organization.name,
-            slug: pillar.organization.slug,
-            sector: pillar.organization.sector,
-            description: pillar.organization.description,
-            logoUrl: pillar.organization.logoUrl,
-            websiteUrl: pillar.organization.websiteUrl,
-          },
-          recruitmentCount: pillar.recruitmentCount,
-          postCount: pillar.postCount,
-          stats: {
-            avgSalaryMin: pillar.stats.avgSalaryMin,
-            avgSalaryMax: pillar.stats.avgSalaryMax,
-            hasEnrichedData: pillar.stats.hasEnrichedData,
-          },
-        }}
-        posts={posts}
-        canonicalUrl={canonicalUrl}
-        content={pillarContent}
-      />
-    </>
-  );
-}
-
-// Generate static paths for top 25 pillars
-export async function generateStaticParams() {
-  // Hardcode top 25 pillar slugs for now
-  // In production, fetch from database with getAllPillarSlugs()
-  const pillars = [
-    "iit-delhi",
-    "echs",
-    "appsc-group-1",
-    "iit-indore",
-    "iari-recruitment",
-    "bpsc-recruitment",
-    "iiit-kota",
-    "iit-kharagpur",
-    "angrau-recruitment",
-    "iit-guwahati",
-    "iit-bombay",
-    "jnu-recruitment",
-    "iit-madras",
-    "iit-kanpur",
-    "aiims-recruitment",
-    "iiit-hyderabad",
-    "iim-recruitment",
-    "drdo-recruitment",
-    "iiit-delhi",
-    "central-university-recruitment",
-    "isro-recruitment",
-    "icmr-recruitment",
-    "epfo-recruitment",
-    "ssc-recruitment",
-    "railway-recruitment",
-  ];
-
-  return pillars.map((slug) => ({
-    "pillar-slug": slug,
-  }));
+  if (target.kind === "canonical") permanentRedirect(`/organizations/${target.org.slug}`);
+  if (target.kind === "redirect") permanentRedirect(`/organizations/${target.slug}`);
+  notFound();
 }

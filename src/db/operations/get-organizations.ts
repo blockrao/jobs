@@ -1,6 +1,6 @@
 import { getDb } from "../index";
 import { organizations, recruitments, exams, posts, positions } from "../schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, isNull, sql } from "drizzle-orm";
 
 /**
  * Get organization by slug
@@ -110,7 +110,12 @@ export async function getRankedOrganizations() {
       recruitmentCount: sql<number>`COUNT(DISTINCT ${recruitments.id})::int`,
     })
     .from(organizations)
-    .leftJoin(recruitments, eq(recruitments.organizationId, organizations.id))
+    .leftJoin(
+      recruitments,
+      sql`${recruitments.organizationId} = ${organizations.id} AND ${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'`,
+    )
+    // Merged duplicates never list: their slug 301s to the survivor.
+    .where(isNull(organizations.mergedIntoId))
     .groupBy(organizations.id)
     .having(sql`COUNT(DISTINCT ${recruitments.id}) > 0`)
     .orderBy(desc(sql`COUNT(DISTINCT ${recruitments.id})`));

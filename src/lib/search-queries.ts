@@ -93,7 +93,8 @@ const JOBS_CTE = `
           FROM posts po
           WHERE po.recruitment_id = r.id AND po."isLive"
         ) lp ON TRUE
-        WHERE lp.live_posts > 0 OR p.id IS NOT NULL
+        WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND (lp.live_posts > 0 OR p.id IS NOT NULL)
       ) b
     )`;
 

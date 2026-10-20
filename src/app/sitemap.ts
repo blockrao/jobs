@@ -3,11 +3,15 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
+import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
 
 /**
  * Sitemap follows the URL contract (2026-10-20) exactly:
  *   /jobs, every recruitment hub /jobs/{recruitment-slug}, and every post leaf
  *   /jobs/{recruitment-slug}/{post-slug}. Nothing else is a canonical job URL.
+ *   Entity pages: /organizations/{slug} for canonical (non-merged) organizations
+ *   with at least ORG_INDEX_MIN_RECRUITMENTS recruitments on record — the same
+ *   rule that sets their robots meta, so sitemap and indexability never disagree.
  *
  * Closed recruitments stay in the sitemap as historical pages (they carry no
  * open JobPosting markup — see lifecycle gating in the leaf renderer) but at a
@@ -36,12 +40,13 @@ const STATIC: MetadataRoute.Sitemap = [
   { url: SITE_URL, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
   { url: `${SITE_URL}/jobs`, lastModified: new Date(), changeFrequency: "daily", priority: 0.95 },
   { url: `${SITE_URL}/exams`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+  { url: `${SITE_URL}/organizations`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const db = getDb();
-    const [hubResult, leafResult, pillarResult] = await Promise.all([
+    const [hubResult, leafResult, orgResult] = await Promise.all([
       db.execute(sql`
         SELECT r.slug, r.status::text AS status, r.application_end_date, r.updated_at
         FROM recruitments r
@@ -57,10 +62,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ORDER BY p.updated_at DESC NULLS LAST, p.id DESC
       `),
       db.execute(sql`
-        SELECT pillar_slug, updated_at
-        FROM organizations
-        WHERE pillar_enabled = true AND pillar_slug IS NOT NULL
-        ORDER BY updated_at DESC NULLS LAST
+        SELECT o.slug, max(r.updated_at) AS updated_at, count(*)::int AS n
+        FROM organizations o
+        JOIN recruitments r ON r.organization_id = o.id
+          AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        WHERE o.merged_into_id IS NULL
+        GROUP BY o.id, o.slug
+        HAVING count(*) >= ${ORG_INDEX_MIN_RECRUITMENTS}
+        ORDER BY count(*) DESC
       `),
     ]);
 
@@ -84,19 +93,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-    // Pillar pages (Phase 2 Tier 1)
-    type PillarRow = { pillar_slug: string; updated_at: Date | string | null };
-    const pillars = rowsOf<PillarRow>(pillarResult).map((p) => ({
-      url: `${SITE_URL}/exams/${p.pillar_slug}`,
-      lastModified: toDate(p.updated_at),
+    type OrgRow = { slug: string; updated_at: Date | string | null; n: number };
+    const orgs = rowsOf<OrgRow>(orgResult).map((o) => ({
+      url: `${SITE_URL}/organizations/${o.slug}`,
+      lastModified: toDate(o.updated_at),
       changeFrequency: "weekly" as const,
-      priority: 0.85,
+      priority: 0.7,
     }));
 
-    console.log(`[sitemap] ${hubs.length} recruitment hubs, ${leaves.length} post leaves, ${pillars.length} pillar pages`);
-    return [...STATIC, ...pillars, ...hubs, ...leaves];
+    console.log(`[sitemap] ${hubs.length} recruitment hubs, ${leaves.length} post leaves, ${orgs.length} organizations`);
+    return [...STATIC, ...orgs, ...hubs, ...leaves];
   } catch (error) {
-    console.error("[sitemap] database error, emitting static entries only:", error);
-    return STATIC;
+    // Never emit a near-empty sitemap: a 4-URL sitemap served with 200 tells
+    // search engines thousands of pages are gone. A 500 is retried and the
+    // last good sitemap stays in effect.
+    console.error("[sitemap] database error; refusing to emit a partial sitemap:", error);
+    throw error;
   }
 }
