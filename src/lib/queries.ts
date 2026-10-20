@@ -16,6 +16,7 @@ import {
 import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
 
+import { normalizeEducation, normalizeExperience, normalizeSelectionProcess, auditEnrichmentShape } from "@/lib/enrichment-normalization";
 // Before DATABASE_URL is configured, every query degrades to an empty
 // result instead of throwing. This lets the site build and deploy (with
 // empty states) and light up automatically once the DB is connected.
@@ -1494,6 +1495,24 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     OFFSET ${offset}
   `);
 
+  // Audit: log any non-string enrichment shapes for database profiling
+  const malformedRows: Array<{ postId: number; postSlug: string; shape: Record<string, string> }> = [];
+  for (const row of results || []) {
+    if (row.education && typeof row.education !== 'string') {
+      malformedRows.push({
+        postId: row.id,
+        postSlug: row.slug,
+        shape: auditEnrichmentShape({ education: row.education }),
+      });
+    }
+  }
+  if (malformedRows.length > 0) {
+    console.warn(
+      `[getAllPostsWithEnrichment] Malformed enrichment on ${malformedRows.length} rows:`,
+      malformedRows.slice(0, 3).map(r => `${r.postSlug} → education:${r.shape['education']}`)
+    );
+  }
+
   return (results || []).map((row) => ({
     id: row.id,
     title: row.title, // already COALESCE(title, name) from SQL
@@ -1517,9 +1536,9 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     payLevel: row.payLevel,
     ageNote: row.ageNote,
     ageRulesByCategory: row.ageRulesByCategory,
-    education: row.education,
-    experience: row.experience,
-    selectionProcess: row.selectionProcess,
+    education: normalizeEducation(row.education),
+    experience: normalizeExperience(row.experience),
+    selectionProcess: normalizeSelectionProcess(row.selectionProcess),
     vacanciesTotal: row.vacanciesTotal,
     vacanciesByCategory: row.vacanciesByCategory,
     feeNote: row.feeNote,
@@ -1736,9 +1755,9 @@ export async function listPostsEnhanced(opts?: {
       salaryMax: row.salaryMax ? Math.round(row.salaryMax / 100000) : null,
       salaryNote: row.salaryNote,
       ageNote: row.ageNote,
-      education: row.education,
-      experience: row.experience,
-      selectionProcess: row.selectionProcess,
+      education: normalizeEducation(row.education),
+      experience: normalizeExperience(row.experience),
+      selectionProcess: normalizeSelectionProcess(row.selectionProcess),
       vacanciesTotal: row.vacanciesTotal,
       feeNote: row.feeNote,
       applicationClosingDate: row.applicationClosingDate ? new Date(row.applicationClosingDate) : null,
