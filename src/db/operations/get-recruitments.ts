@@ -123,11 +123,16 @@ export async function getRecruitmentVacancyCount(recruitmentId: number) {
  * Used for job posting leaf pages to display recruitment context
  * Returns recruitment metadata + all posts for that recruitment
  * Handles both new semantic slugs and old descriptive slugs (via redirect table)
+ *
+ * FIX (2026-10-20): Track resolution method so page knows whether to redirect.
+ * - Exact match or smart slug resolution: render as-is (no redirect)
+ * - Legacy slug from recruitment_slug_redirects: should redirect to canonical
  */
 export async function getRecruitmentWithPosts(slug: string) {
   try {
     console.log(`[getRecruitmentWithPosts] Starting for slug: ${slug}`);
     const db = getDb();
+    let resolutionMethod: "exact" | "legacy-redirect" | "smart-resolution" = "exact";
 
     // Step 0: Try the requested slug first. Canonical URLs are the common path,
     // so avoid a redirect-table round trip unless the recruitment isn't found.
@@ -154,6 +159,8 @@ export async function getRecruitmentWithPosts(slug: string) {
         .limit(1);
 
       if (redirectRecord && redirectRecord.length > 0) {
+        resolutionMethod = "legacy-redirect";
+        console.log(`[getRecruitmentWithPosts] Found legacy slug redirect: ${slug} → ${redirectRecord[0].new_slug}`);
         recruitmentResult = await db
           .select({
             recruitment: recruitments,
@@ -173,6 +180,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     // to the most recent recruitment for that organization.
     // Example: /jobs/bihar-public-service-commission → most recent BPSC recruitment
     if (!recruitmentResult || recruitmentResult.length === 0) {
+      resolutionMethod = "smart-resolution";
       console.log(`[getRecruitmentWithPosts] Trying smart slug resolution for: ${slug}`);
       // Find recruitments where slug starts with the requested slug + dash
       // Order by year DESC, then by ID DESC to get the most recent
@@ -315,6 +323,7 @@ export async function getRecruitmentWithPosts(slug: string) {
         posts: [],
         totalPosts: 0,
         isSingleJobRecruitment: false,
+        resolutionMethod,
       };
     }
 
@@ -458,6 +467,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       posts: postsWithDetails,
       totalPosts: enrichedPosts.length,
       isSingleJobRecruitment: enrichedPosts.length === 1,
+      resolutionMethod,
     };
   } catch (err) {
     console.error("Error fetching recruitment with posts:", err);

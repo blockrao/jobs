@@ -72,10 +72,18 @@ export default async function RecruitmentHubPage({ params }: Props) {
   const data = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
   if (!data) notFound();
 
-  // The loader resolves legacy slugs via recruitment_slug_redirects. If the
-  // requested slug is not the canonical one, send the visitor (and crawlers)
-  // to the canonical URL rather than serving duplicate content.
-  if (data.recruitment.slug !== slug) {
+  // FIX (2026-10-20): Only redirect for legacy slugs, not smart slug resolution.
+  //
+  // The data loader tracks how it resolved the slug:
+  //   - "exact" → direct match, no redirect
+  //   - "legacy-redirect" → old slug found in recruitment_slug_redirects, should 301
+  //   - "smart-resolution" → short org slug resolved to most recent recruitment, no redirect
+  //
+  // Smart slug resolution is a feature where /jobs/bihar-public-service-commission
+  // automatically renders the most recent BPSC recruitment without a redirect.
+  // Users and crawlers benefit: short slugs work directly, and the metadata has
+  // alternates.canonical pointing to the full slug for SEO.
+  if (data.resolutionMethod === "legacy-redirect") {
     permanentRedirect(`/jobs/${data.recruitment.slug}`);
   }
 
