@@ -2,8 +2,11 @@ import { notFound } from "next/navigation";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { Metadata } from "next";
+import { eq, sql } from "drizzle-orm";
 import { absoluteUrl } from "@/lib/site";
 import { pageSeo } from "@/lib/seo";
+import { getDb } from "@/db/index";
+import { organizations } from "@/db/schema";
 import { getOrganizationBySlug } from "@/db/operations/get-organizations";
 import {
   getOrganizationPostings,
@@ -23,42 +26,53 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-// Map long/variant slugs to canonical database slugs
-const SLUG_ALIASES: Record<string, string> = {
-  // UPSC variants
-  upsc: "union-public-service-commission",
-  "union-public-service-commission-upsc": "union-public-service-commission",
-
-  // SSC variants
-  "staff-selection-commission": "ssc",
-
-  // Railway variants
-  railway: "railway-recruitment-board",
-  railways: "railway-recruitment-board",
-  rrb: "railway-recruitment-board",
-  "railway-recruitment-boards": "railway-recruitment-board",
-  "railway-recruitment-boards-rrb": "railway-recruitment-board",
-  "railway-recruitment-boards-rrbs": "railway-recruitment-board",
-
-  // SBI variants
-  "state-bank-of-india": "state-bank-of-india-sbi",
-  sbi: "state-bank-of-india-sbi",
-};
-
-// Resolve slug to canonical form
+// Smart slug resolution: Supports exact match + prefix match
+// Examples:
+//   /organizations/upsc → resolves to union-public-service-commission
+//   /organizations/sbi → resolves to state-bank-of-india-sbi
+//   /organizations/railway → resolves to railway-recruitment-board
+// This eliminates the need for hardcoded SLUG_ALIASES (which are unmaintainable)
 async function resolveSlug(requestedSlug: string): Promise<string | null> {
-  // Try direct lookup first
-  const direct = await getOrganizationBySlug(requestedSlug);
-  if (direct) return requestedSlug;
+  // Import at function call to keep it self-contained
+  const { smartResolveSlug } = await import("@/lib/slug-resolver");
+  const db = getDb();
 
-  // Try alias mapping
-  const canonical = SLUG_ALIASES[requestedSlug];
-  if (canonical) {
-    const found = await getOrganizationBySlug(canonical);
-    if (found) return canonical;
-  }
+  // Define data access functions for smartResolveSlug
+  const findExact = async (slug: string) => {
+    const result = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.slug, slug))
+      .limit(1);
+    return result.length > 0 ? result[0].slug : null;
+  };
 
-  return null;
+  const findByPrefix = async (prefix: string) => {
+    const results = await db
+      .select()
+      .from(organizations)
+      .where(
+        sql`${organizations.slug} LIKE ${prefix + "%"} AND ${organizations.slug} != ${prefix}`
+      )
+      .orderBy(
+        sql`CASE WHEN ${organizations.slug} = ${prefix + "-sbi"} THEN 0 ELSE 1 END`, // Prefer -sbi suffix
+        sql`${organizations.id} DESC`
+      )
+      .limit(1);
+    return results.map((r) => r.slug);
+  };
+
+  // Use smartResolveSlug for consistent, multi-strategy resolution
+  const result = await smartResolveSlug(requestedSlug, {
+    findExact: async (s) => {
+      const org = await getOrganizationBySlug(s);
+      return org ? org.slug : null;
+    },
+    findByPrefix,
+    getId: (slug) => 0, // Organizations don't have year, use insertion order
+  });
+
+  return result;
 }
 
 async function readPillarContent(slug: string, originalSlug: string): Promise<string | null> {
