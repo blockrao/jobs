@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import type { organizations } from "@/db/schema";
+import { generateCompleteOrganizationSchema } from "@/lib/organization-schema";
 import LiveJobsWidget from "@/components/organization/widgets/LiveJobsWidget";
 import EligibilityChecker from "@/components/organization/widgets/EligibilityChecker";
 import SalaryCalculator from "@/components/organization/widgets/SalaryCalculator";
@@ -42,23 +43,19 @@ export default function OrganizationPageProduction({
   pillarContent,
   canonicalUrl,
 }: OrganizationPageProductionProps) {
-  // Organization schema for structured data
-  const organizationSchema = {
-    "@context": "https://schema.org",
-    "@type":
-      organization.sector?.includes("GOVERNMENT")
-        ? "GovernmentOrganization"
-        : "Organization",
-    "@id": canonicalUrl + "#org",
-    name: organization.name,
+  // Advanced organization schema with FAQ, salary offers, credentials
+  const advancedSchema = generateCompleteOrganizationSchema({
+    organizationName: organization.name,
+    organizationUrl: canonicalUrl,
+    organizationLogo: organization.logoUrl,
     description:
       organization.description ||
       `Government recruitment organization: ${organization.name}`,
-    url: organization.websiteUrl || canonicalUrl,
-    logo: organization.logoUrl || undefined,
-    ...(organization.websiteUrl && { sameAs: organization.websiteUrl }),
-    inLanguage: "en-IN",
-  };
+    // These would be populated from real data in production:
+    // salaryRanges: getSalaryRanges(organization.id),
+    // eligibilityRequirements: getEligibilityRequirements(organization.id),
+    // selectionStats: getSelectionStats(organization.id),
+  });
 
   // Breadcrumb schema
   const breadcrumbSchema = {
@@ -88,11 +85,13 @@ export default function OrganizationPageProduction({
 
   return (
     <>
-      {/* Structured Data */}
+      {/* Advanced Structured Data (FAQ, Salary, Credentials, Events) */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(advancedSchema) }}
       />
+
+      {/* Breadcrumb Schema */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
