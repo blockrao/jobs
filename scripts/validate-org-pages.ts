@@ -39,7 +39,7 @@ interface ValidationResult {
 
 async function validateOrganization(org: any): Promise<ValidationResult> {
   const errors: string[] = [];
-  const data = {
+  const data: ValidationResult['data'] = {
     postingCount: 0,
     vacancies: 0,
     salaryMin: null,

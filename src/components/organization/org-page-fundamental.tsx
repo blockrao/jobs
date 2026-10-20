@@ -165,7 +165,7 @@ function HeroSnapshot({
         <strong>Recruiting:</strong> <span className="scope-badge scope-national">Across India</span>
       </p>
       <p className="last-updated">
-        Last posting: <time dateTime={postings[0]?.datePosted ? new Date(postings[0].datePosted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}>
+        Last posting: <time dateTime={postingsData[0]?.datePosted ? new Date(postingsData[0].datePosted).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}>
           {recentPosting}
         </time>
       </p>
