@@ -17,7 +17,126 @@ IIT Roorkee is renowned for excellence in civil, mechanical, electrical, chemica
 
 IIT Roorkee positions provide access to premier research facilities, a distinguished faculty community, and influence over engineering education quality.
 
+------
+
+## Organization Overview: Structure & Impact
+
+IIT Roorkee Recruitment Guide operates across multiple departments and research/functional areas. Understanding the organization helps you:
+- Identify which department aligns with your career goals
+- Network with the right teams during recruitment
+- Tailor your application to specific divisions
+
+**Organization Reach:**
+- Multiple national and regional centers
+- Pan-India operational presence
+- International collaborations in research/standards
+
+**What Drives Selection:**
+- Academic/professional merit
+- Alignment with organization's mission
+- Research/innovation potential for technical roles
+- Domain expertise and specialization
+
+**Career Growth:**
+- Structured hierarchy with clear progression
+- Research/publication support (where applicable)
+- Mentorship from senior professionals
+- Professional development opportunities
 ---
+
+## Roles Comparison: Salary, Requirements & Growth
+
+The table below shows the major roles available at IIT Roorkee Recruitment Guide. Match your qualifications to find your fit.
+
+| Role | Salary Range | Min. Qualification | Experience | Growth Path |
+|---|---|---|---|---|
+| Faculty/Professor | ₹70K–₹140K+ | PhD | 3+ years postdoc | Prof → Senior Prof |
+| Research Scientist | ₹50K–₹80K | PhD/M.Tech | 0-5 years | Scientist → Senior Scientist |
+| Technical/Admin Staff | ₹25K–₹55K | Bachelor/Diploma | 3+ years | Grade II → Grade I |
+| Postdoctoral Fellow | ₹45K–₹60K | PhD | 0-3 years | Fellow → Scientist |
+
+**Career Progression:** Most professionals advance 1 grade every 3-5 years with merit and experience.
+---
+
+## Location Breakdown: Where Are the Positions?
+
+IIT Roorkee Recruitment Guide recruits across multiple locations in India:
+
+- **Delhi/National Capital Region:** Primary hub (~30% of positions)
+- **Major Metro Cities:** Secondary centers (~25% of positions)
+- **Regional Centers:** Distributed across states (~30% of positions)
+- **Remote/Hybrid:** Increasingly available for technical roles (~15%)
+
+**Relocation Support:** Government relocation rules apply; limited HRA/accommodation support at some locations.
+**Key Hubs:** [Check official notification for current location preferences]
+---
+
+## Salary Trends & Pay Commission Updates
+
+**Pay Structure (Government):**
+- Based on 7th Pay Commission (or latest applicable)
+- Dearness Allowance (DA): Revised quarterly
+- HRA: Location-dependent (30-40% of basic)
+- Additional benefits: Medical, pension, leave encashment
+
+**Recent Changes:**
+- Pay Commission implementation: 2016
+- Last DA revision: [Check official government updates]
+- Next expected revision: [As per government schedule]
+
+**Comparison with Peers:**
+- Government positions offer stability and structured growth
+- Competitive with private sector for senior roles
+- Long-term value (pension, job security) exceeds initial salary
+---
+
+## Interview Success Tips for IIT Roorkee Recruitment Guide
+
+**What Interviewers Look For:**
+
+1. **Technical Competence** — Deep understanding of your field
+   - Be ready to discuss your thesis, projects, or technical achievements
+   - Understand current trends in your domain
+   - Prepare to solve case studies or discuss real problems
+
+2. **Research/Innovation Mindset** — Contribution to knowledge
+   - Publications, patents, or notable work
+   - Vision for future research/contributions
+   - How you'd add value to their organization
+
+3. **Communication & Collaboration** — Working in teams
+   - Ability to articulate ideas clearly
+   - Experience working across departments
+   - Leadership potential for senior roles
+
+4. **Alignment with Mission** — Fit with organization's goals
+   - Research organization's recent work
+   - Understand their strategic direction
+   - Show genuine interest in their problems
+
+**Interview Preparation Checklist:**
+- ✓ Review organization's website and recent publications
+- ✓ Prepare 3-4 compelling examples from your experience (STAR method)
+- ✓ Research the interviewing department/faculty
+- ✓ Understand the role responsibilities deeply
+- ✓ Prepare thoughtful questions about the position
+- ✓ Practice articulating your research/work in 2-3 minutes
+- ✓ Dress professionally (formal business attire recommended)
+- ✓ Arrive/log-in 15 minutes early
+
+**Questions You Might Get:**
+- "Why IIT Roorkee Recruitment Guide?" → Show you've researched them specifically
+- "What's your research/career vision?" → Align with their goals
+- "Describe your biggest achievement" → Use STAR method
+- "How would you handle [common challenge]?" → Be realistic and thoughtful
+
+**Common Mistakes to Avoid:**
+- Not knowing basic facts about IIT Roorkee Recruitment Guide
+- Being unclear about your motivation
+- Overselling or underselling your capabilities
+- Appearing inflexible or difficult to work with
+- Poor follow-up after interview (send thank you within 24 hours)
+
 
 ## Eligibility & Qualification Requirements
 
