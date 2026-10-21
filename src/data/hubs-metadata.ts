@@ -328,6 +328,90 @@ export const hubs: Record<string, Hub> = {
     "filters": { "womenQuota": true },
     "relatedHubs": ["police-constable-recruitment-2026", "education-comprehensive-guide", "banking-comprehensive-guide", "30-50k-comprehensive-guide"],
     "stats": { "totalJobs": 10000, "salaryRange": "Rs. 21,000–Rs. 50,000", "selectionRate": "2–4%" }
+  },
+  "how-to-prepare-for-ssc-exam-2026": {
+    "slug": "how-to-prepare-for-ssc-exam-2026",
+    "title": "How to Prepare for SSC Exam 2026 | 12-Month Plan | Best Books & Mock Tests",
+    "keyword": "how to prepare for SSC exam 2026",
+    "description": "Complete SSC exam preparation guide 2026. 12-month roadmap, best books, mock testing strategy, success tips. SSC CGL, CHSL, MTS. Entry Rs. 21,000–Rs. 44,000.",
+    "content": "",
+    "category": "exam",
+    "color": "#8B5CF6",
+    "filters": { "exam": "SSC" },
+    "relatedHubs": ["ssc-comprehensive-guide", "upsc-comprehensive-guide", "banking-comprehensive-guide", "12th-pass-comprehensive-guide", "50-100k-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
+  },
+  "upsc-ias-preparation-guide-2026": {
+    "slug": "upsc-ias-preparation-guide-2026",
+    "title": "UPSC IAS Preparation Guide 2026 | 24-Month Roadmap | Best Books & Strategy",
+    "keyword": "UPSC IAS preparation guide 2026",
+    "description": "UPSC IAS preparation guide 2026. Complete 24-month roadmap (Prelims, Mains, Interview). Best books by subject, coaching analysis, interview prep. Success rate 0.12%.",
+    "content": "",
+    "category": "exam",
+    "color": "#8B5CF6",
+    "filters": { "exam": "UPSC" },
+    "relatedHubs": ["upsc-comprehensive-guide", "ssc-comprehensive-guide", "highest-paying-government-jobs", "government-vs-private-sector-comparison"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
+  },
+  "banking-jobs-eligibility-criteria-2026": {
+    "slug": "banking-jobs-eligibility-criteria-2026",
+    "title": "Banking Jobs Eligibility Criteria 2026 | Bank PO, Clerk, Specialist | Age, Education, Experience",
+    "keyword": "banking jobs eligibility criteria",
+    "description": "Banking jobs eligibility 2026. Bank PO, Clerk, Specialist Officer requirements. Age, education, experience. Government vs private bank comparison. 50,000+ vacancies.",
+    "content": "",
+    "category": "department",
+    "color": "#3B82F6",
+    "filters": { "department": "Banking" },
+    "relatedHubs": ["banking-comprehensive-guide", "ssc-comprehensive-guide", "upsc-comprehensive-guide", "government-vs-private-sector-comparison", "30-50k-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
+  },
+  "best-government-jobs-by-salary-2026": {
+    "slug": "best-government-jobs-by-salary-2026",
+    "title": "Best Government Jobs by Salary 2026 | Top 20 Ranked | Rs. 50,000–Rs. 1 lac+ | Effort vs Reward",
+    "keyword": "best government jobs by salary 2026",
+    "description": "Best government jobs ranked by salary 2026. Top 20 jobs, salary tiers, hidden benefits (DA, HRA, pension). 20-year ROI analysis. Government vs private comparison.",
+    "content": "",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": { "salaryMin": 50000 },
+    "relatedHubs": ["highest-paying-government-jobs", "government-vs-private-sector-comparison", "ssc-comprehensive-guide", "upsc-comprehensive-guide", "defense-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
+  },
+  "government-job-salary-after-20-years-2026": {
+    "slug": "government-job-salary-after-20-years-2026",
+    "title": "Government Job Salary After 20 Years 2026 | Pension Value | Lifetime Earnings | Career Progression",
+    "keyword": "government job salary after 20 years",
+    "description": "Government job salary progression after 20 years. Pension calculation, lifetime earnings comparison. IAS, Police, Bank, Teacher examples. Government vs private sector lifetime value.",
+    "content": "",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": {},
+    "relatedHubs": ["government-vs-private-sector-comparison", "highest-paying-government-jobs", "50-100k-comprehensive-guide", "banking-comprehensive-guide", "upsc-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
+  },
+  "defense-jobs-for-graduates-2026": {
+    "slug": "defense-jobs-for-graduates-2026",
+    "title": "Defense Jobs for Graduates 2026 | Officer Positions | Army, Navy, Air Force | Salary Rs. 56,000+ | SSB Selection",
+    "keyword": "defense jobs for graduates 2026",
+    "description": "Defense jobs for graduates 2026. Commissioned officer positions (Army, Navy, Air Force, Coast Guard). Salary, selection process, physical requirements, training. Rs. 56,000–Rs. 1 lac+.",
+    "content": "",
+    "category": "department",
+    "color": "#3B82F6",
+    "filters": { "department": "Defense" },
+    "relatedHubs": ["defense-comprehensive-guide", "highest-paying-government-jobs", "government-vs-private-sector-comparison", "ssc-comprehensive-guide", "upsc-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
+  },
+  "government-jobs-eligibility-checker-2026": {
+    "slug": "government-jobs-eligibility-checker-2026",
+    "title": "Government Jobs Eligibility Checker 2026 | Check Your Eligibility | 30 Job Types | Age, Education, Experience",
+    "keyword": "government jobs eligibility checker",
+    "description": "Government jobs eligibility checker 2026. Interactive tool. Check eligibility for 30+ government jobs. Age, education, experience criteria. Disqualifications guide.",
+    "content": "",
+    "category": "qualification",
+    "color": "#10B981",
+    "filters": {},
+    "relatedHubs": ["12th-pass-comprehensive-guide", "diploma-comprehensive-guide", "ssc-comprehensive-guide", "upsc-comprehensive-guide", "banking-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "selectionRate": "1–3%" }
   }
 };
 
