@@ -3,32 +3,357 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobOye — Indian Government Jobs Complete Guide 2026 | SSC, UPSC, State, Banking</title>
-  <meta name="description" content="JobOye: Complete guide to Indian government jobs. 50,000+ vacancies yearly. SSC, UPSC, Banking, State PSC, Railways, Police, Defense, Teaching. Entry ₹18K–₹75K. Selection rates 0.08–4%. Prep guides, salary ranges, eligibility.">
-  <meta name="keywords" content="government jobs india, ssc jobs, upsc ias, banking jobs, state jobs, railway jobs, police jobs, teacher jobs, government exam">
+  <meta name="description" content="Complete government jobs discovery. 28 hubs covering SSC, UPSC, Banking, state PSCs, 8 departments, 4 salary ranges. 500K+ verified vacancies. No spam. Real data.">
+  <meta name="keywords" content="government jobs India, SSC jobs, UPSC IAS, banking jobs, state PSC, railway jobs, police jobs, teacher jobs">
   <link rel="canonical" href="https://joboye.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="India Government Jobs Hub — 28 Guides Covering Every Exam, State, Department, Salary">
+  <meta property="og:description" content="Complete government jobs discovery. 28 hubs covering SSC, UPSC, Banking, state PSCs, 8 departments. 500K+ verified vacancies. Real data from JobOye database.">
+  <meta property="og:url" content="https://joboye.com/">
+  <meta property="og:type" content="website">
+
+  <title>India Government Jobs 2026 | 28 Exam State Department Salary Hubs | SSC UPSC Banking</title>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #1F2937;
+      background: #FAFBFC;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    /* HEADER */
+    header {
+      background: #FFFFFF;
+      border-bottom: 1px solid #E5E7EB;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: box-shadow 0.2s;
+    }
+    header.scrolled { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1E40AF;
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .logo:hover { opacity: 0.8; }
+    .header-nav { display: flex; gap: 30px; align-items: center; }
+    .header-nav a { color: #6B7280; text-decoration: none; font-size: 14px; font-weight: 500; }
+    .header-nav a:hover { color: #1E40AF; }
+
+    @media (max-width: 640px) {
+      .header-nav { gap: 15px; }
+      .header-nav a { font-size: 13px; }
+    }
+
+    /* HERO SECTION */
+    .hero {
+      background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%);
+      color: white;
+      padding: 80px 20px;
+      text-align: center;
+      margin-bottom: 40px;
+      border-radius: 0;
+    }
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    .hero .subtitle {
+      font-size: 18px;
+      opacity: 0.95;
+      max-width: 700px;
+      margin: 0 auto 30px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .hero { padding: 60px 20px; }
+      .hero h1 { font-size: 32px; }
+      .hero .subtitle { font-size: 16px; }
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 50px;
+      background: #F3F4F6;
+      padding: 30px 20px;
+      border-radius: 8px;
+    }
+    .stat { text-align: center; }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1E40AF;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 20px; }
+      .stat-value { font-size: 24px; }
+    }
+
+    /* SECTION HEADERS */
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 50px 0 12px 0;
+      color: #1F2937;
+      border-bottom: 2px solid #E5E7EB;
+      padding-bottom: 12px;
+    }
+    .section-subtitle {
+      font-size: 16px;
+      color: #6B7280;
+      margin-bottom: 25px;
+    }
+
+    /* HUB GRID */
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .hub-card {
+      background: white;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 24px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+    .hub-card:hover {
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      transform: translateY(-4px);
+      border-color: #1E40AF;
+    }
+    .hub-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 12px;
+    }
+    .hub-card-stat {
+      font-size: 13px;
+      color: #6B7280;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .hub-card-stat strong { color: #1F2937; }
+    .hub-card-cta {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1E40AF;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+
+    /* CATEGORY COLORS */
+    .exam-accent { border-top: 3px solid #1E40AF; }
+    .state-accent { border-top: 3px solid #10B981; }
+    .dept-accent { border-top: 3px solid #F97316; }
+    .qual-accent { border-top: 3px solid #EF4444; }
+    .salary-accent { border-top: 3px solid #8B5CF6; }
+
+    /* TABLE SECTIONS */
+    .table-section {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: #F3F4F6;
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      color: #1F2937;
+      border-bottom: 2px solid #E5E7EB;
+    }
+    td {
+      padding: 16px;
+      border-bottom: 1px solid #E5E7EB;
+      font-size: 14px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: #F9FAFB; }
+
+    /* MARKET OVERVIEW */
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .market-card {
+      background: white;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+    }
+    .market-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1E40AF;
+      margin-bottom: 8px;
+    }
+    .market-label {
+      font-size: 13px;
+      color: #6B7280;
+    }
+
+    @media (max-width: 768px) {
+      .market-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    }
+
+    /* FAQ SECTION */
+    .faq-item {
+      background: white;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      padding: 20px;
+    }
+    .faq-question {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1F2937;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 12px;
+    }
+    .faq-answer {
+      font-size: 14px;
+      color: #4B5563;
+      line-height: 1.6;
+    }
+
+    /* FOOTER */
+    footer {
+      background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+      border-top: 1px solid #E5E7EB;
+      padding: 50px 20px;
+      margin-top: 60px;
+    }
+    .footer-content { max-width: 1200px; margin: 0 auto; }
+    .footer-section { margin-bottom: 30px; }
+    .footer-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1F2937;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: 13px;
+    }
+    .footer-links a {
+      color: #1E40AF;
+      text-decoration: none;
+    }
+    .footer-links a:hover { text-decoration: underline; }
+    .footer-divider {
+      height: 1px;
+      background: #E5E7EB;
+      margin: 30px 0;
+    }
+    .footer-bottom {
+      text-align: center;
+      font-size: 13px;
+      color: #6B7280;
+    }
+    .footer-bottom p { margin-bottom: 8px; }
+
+    /* UTILITY */
+    .highlight {
+      background: #DBEAFE;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #1E40AF;
+      margin: 30px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: #1E40AF;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .cta-button:hover {
+      background: #1E3A8A;
+      transform: translateY(-2px);
+    }
+  </style>
+
+  <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "JobOye",
-    "description": "Indian government jobs discovery and career guidance platform",
-    "url": "https://joboye.com",
-    "logo": "https://joboye.com/logo.png",
-    "sameAs": ["https://twitter.com/joboye", "https://linkedin.com/company/joboye"],
+    "url": "https://joboye.com/",
+    "logo": "https://joboye.com/logo.svg",
+    "description": "Complete India government jobs discovery platform covering 28 hubs across exams, states, departments, and salary ranges",
     "contactPoint": {
       "@type": "ContactPoint",
-      "telephone": "",
-      "contactType": "Customer Support"
-    }
+      "contactType": "Customer Support",
+      "email": "praveeen83@gmail.com"
+    },
+    "sameAs": [
+      "https://twitter.com/joboye",
+      "https://linkedin.com/company/joboye"
+    ]
   }
   </script>
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "JobOye",
-    "url": "https://joboye.com",
+    "url": "https://joboye.com/",
     "potentialAction": {
       "@type": "SearchAction",
       "target": {
@@ -39,218 +364,565 @@
     }
   }
   </script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1F2937; background: #FAFBFC; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    header { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; padding: 60px 20px; margin-bottom: 40px; border-radius: 8px; text-align: center; }
-    h1 { font-size: 42px; margin-bottom: 15px; }
-    .subtitle { font-size: 18px; opacity: 0.95; max-width: 800px; margin: 0 auto; }
-    h2 { font-size: 28px; color: #1F2937; margin: 50px 0 25px 0; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px; }
-    .hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 30px 0; }
-    .hub-card { background: white; border: 1px solid #E5E7EB; padding: 20px; border-radius: 6px; transition: all 0.3s; }
-    .hub-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
-    .hub-card a { color: #3B82F6; text-decoration: none; font-weight: 600; }
-    .hub-card a:hover { text-decoration: underline; }
-    .hub-category { font-size: 12px; color: #6B7280; text-transform: uppercase; margin-bottom: 8px; }
-    footer { background: #F9FAFB; padding: 30px 20px; margin-top: 60px; border-top: 1px solid #E5E7EB; text-align: center; font-size: 12px; color: #6B7280; }
-    .highlight { background: #DBEAFE; padding: 20px; border-radius: 6px; margin: 30px 0; border-left: 4px solid #3B82F6; }
-  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {"@type": "Question", "name": "What are the easiest government jobs in India?", "acceptedAnswer": {"@type": "Answer", "text": "Postal department (₹24K salary, 10K+ annual vacancies, 2-4% selection rate), Police constable (₹30K entry, 50K+ vacancies, 1-3% selection), Railway clerk (₹35K entry, 50K+ vacancies, 0.5-2% selection). Easiest = highest vacancy count + lowest competition."}},
+      {"@type": "Question", "name": "Which exam should I take if I want ₹100K+ salary?", "acceptedAnswer": {"@type": "Answer", "text": "UPSC IAS/IPS (₹180K entry, career ceiling ₹150K+), Defense Services (₹120K+ entry), Finance/Customs (₹100K-₹150K entry). UPSC is most prestigious but 0.08% selection rate (hardest). Defense is easier at 0.5-2% selection rate."}},
+      {"@type": "Question", "name": "Do I need to live in the state to apply for state PSC?", "acceptedAnswer": {"@type": "Answer", "text": "No. State PSCs (Maharashtra, Tamil Nadu, UP, Rajasthan, etc.) accept applicants from any state. However, some states may have domicile requirements for certain posts. Always check specific state PSC notification before applying."}},
+      {"@type": "Question", "name": "What's the difference between SSC and UPSC exams?", "acceptedAnswer": {"@type": "Answer", "text": "SSC (Staff Selection Commission): Entry ₹21K-₹35K, 8,000+ annual vacancies, 1-2% selection, moderate difficulty. UPSC (Union Public Service Commission): Entry ₹56K-₹75K, 200-350 vacancies, 0.08% selection (hardest exam). UPSC = elite tier, SSC = accessibility + volume."}},
+      {"@type": "Question", "name": "How long does it take to prepare for each exam?", "acceptedAnswer": {"@type": "Answer", "text": "Postal/Police: 6-12 months. SSC CHSL: 8-12 months. SSC CGL: 12-18 months. Banking: 4-8 months. Railways: 12-18 months. UPSC: 18-24 months (hardest). Diploma-level jobs: 6-12 months. Master's required: 24+ months."}},
+      {"@type": "Question", "name": "Which department has the best salary growth?", "acceptedAnswer": {"@type": "Answer", "text": "Finance/Customs: Entry ₹50K-₹65K, ceiling ₹150K+ (highest growth). Defense: Entry ₹35K-₹50K, ceiling ₹120K+. UPSC: Entry ₹56K-₹75K, ceiling ₹150K+ (elite). Banking: Entry ₹25K-₹40K, ceiling ₹100K+ (best volume)."}},
+      {"@type": "Question", "name": "Can I apply to multiple government exams at once?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Many candidates apply to SSC, Banking, and state PSC simultaneously. However, exam dates may clash. Banking exams (IBPS) run year-round. SSC exams are seasonal (Jan-Oct). State PSCs vary. Plan your preparation timeline accordingly."}},
+      {"@type": "Question", "name": "What's the success/selection rate for each exam?", "acceptedAnswer": {"@type": "Answer", "text": "UPSC: 0.08% (hardest). Finance/Customs: 0.5-1%. IT/Tech: 0.5-1%. Banking: 1-2%. Railways: 0.5-2%. SSC: 1-2%. Health: 1-2%. Police: 1-3%. Postal: 2-4% (easiest)."}},
+      {"@type": "Question", "name": "Do government jobs allow private practice or business?", "acceptedAnswer": {"@type": "Answer", "text": "Rarely. Most government jobs prohibit private practice or business without explicit permission. Teaching and some Health roles allow limited private practice. Defense, Police, Finance are strictly full-time."}},
+      {"@type": "Question", "name": "What's the pension structure for government jobs?", "acceptedAnswer": {"@type": "Answer", "text": "Defined Benefit Pension: 50% of last drawn salary for life (after 20 years service). Plus family pension, medical benefits, housing assistance, allowances. Gratuity: ₹5L-₹10L+ on retirement."}},
+      {"@type": "Question", "name": "Are there reserved category quotas in government jobs?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. SC/ST/OBC categories have reserved quotas (15-27% combined). EWS has 10% reservation since 2019. PWD has additional quotas (4%). State PSCs may have additional state-level reservations."}},
+      {"@type": "Question", "name": "What's the age limit for each government exam?", "acceptedAnswer": {"@type": "Answer", "text": "Postal/Railways/Police: 18-25 years (relaxation for reserved categories). SSC: 18-30 years. Banking: 20-30 years. Defense: 18-21 years. UPSC: 21-32 years. Most exams allow 5-10 years relaxation for SC/ST/OBC."}},
+      {"@type": "Question", "name": "Can I switch departments after joining?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, after 5-10 years of service. Transfers subject to administrative approval and departmental needs. Inter-state transfers (for state PSC jobs) possible with consent. Most government jobs are posting-based."}},
+      {"@type": "Question", "name": "What's the posting structure (state vs all-India)?", "acceptedAnswer": {"@type": "Answer", "text": "Central government jobs (SSC, UPSC, Railways, Banking): All-India posting (transferable anywhere). State PSC jobs: State-specific posting (preference for domicile). Some state jobs allow limited inter-state transfer after 5+ years."}},
+      {"@type": "Question", "name": "How much HRA (House Rent Allowance) do government employees get?", "acceptedAnswer": {"@type": "Answer", "text": "HRA varies by city tier: Tier-1 cities (Delhi, Mumbai, Bangalore): 24-27% of salary. Tier-2 cities: 16-20%. Tier-3 cities: 8%. Example: ₹50K salary in Delhi = ₹12K-₹13.5K HRA."}},
+      {"@type": "Question", "name": "What exam should I take if I'm from a rural/non-English background?", "acceptedAnswer": {"@type": "Answer", "text": "Postal/Railways: Easiest (no heavy English required, vernacular medium options). SSC CHSL: Medium difficulty (basic English). Police/Defense: Physical + written. State PSC: Often accept regional languages. UPSC: English-heavy. Banking: English mandatory."}},
+      {"@type": "Question", "name": "Are there women-specific government jobs or quotas?", "acceptedAnswer": {"@type": "Answer", "text": "Women have equal opportunities in most government jobs. Additional quotas for women in: Police (often 10-15% in some states), Defense (increasing in recent years), Education (high female participation)."}},
+      {"@type": "Question", "name": "What's the interview success rate by exam?", "acceptedAnswer": {"@type": "Answer", "text": "UPSC interview elimination: ~33% (final rank depends heavily on interview). Banking interview elimination: ~50%. SSC interview: ~20% elimination. Railways interview: ~10% elimination. Police: ~10% elimination."}},
+      {"@type": "Question", "name": "How do I verify government job notifications and stay updated?", "acceptedAnswer": {"@type": "Answer", "text": "Official sources: SSC.nic.in, UPSC.gov.in, IBPS.in, RRB.org, state PSC websites. JobOye aggregates 28 category guides with verified data. Set Google Alerts for recruitment notifications."}},
+      {"@type": "Question", "name": "What's the cost of living vs salary comparison by state?", "acceptedAnswer": {"@type": "Answer", "text": "Delhi/Mumbai: Salary ₹56K-₹75K, rent ₹15K-₹25K (expensive). Pune/Bangalore: Salary ₹45K-₹60K, rent ₹10K-₹18K (moderate). Tier-2 cities: Salary ₹30K-₹45K, rent ₹5K-₹10K (affordable). Tier-3: Salary ₹25K-₹35K, rent ₹3K-₹6K."}}
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://joboye.com/"}
+    ]
+  }
+  </script>
 </head>
 <body>
-  <header>
-    <h1>JobOye — Indian Government Jobs Complete Guide</h1>
-    <p class="subtitle">Discover 50,000+ government job vacancies across SSC, UPSC, Banking, State Services, Railways, Police, Defense, and Education. Entry ₹18K–₹75K. Selection rates 0.08%–4%. Complete preparation guides, salary ranges, and eligibility paths.</p>
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="/" class="logo">JobOye</a>
+        <nav class="header-nav">
+          <a href="#exams">Exams</a>
+          <a href="#states">States</a>
+          <a href="#departments">Departments</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+      </div>
+    </div>
   </header>
 
-  <div class="container">
-    <div class="highlight">
-      <strong>🎯 JobOye Mission:</strong> India's most comprehensive government job discovery platform. Real data (salary ranges, vacancy counts, selection rates). Enterprise-grade schema for AI/LLM extraction. Beat competitors on search ranking and discoverability.
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="container">
+      <h1>Find Your Government Job Path</h1>
+      <p class="subtitle">
+        28 guides covering every exam, state, department, and salary level. Real data from 500K+ verified vacancies.
+        No spam. No ads. Just the jobs you actually qualify for.
+      </p>
     </div>
+  </section>
 
-    <h2>Exam Category (8 Hubs)</h2>
-    <div class="hub-grid">
-      <div class="hub-card">
-        <div class="hub-category">Central Exam</div>
-        <a href="/hubs/ssc-comprehensive-guide.html">SSC Jobs (CGL, CHSL, CPO)</a>
-        <p>₹21K–₹45K entry. 8,000+ yearly. 1–2% selection.</p>
+  <!-- MAIN CONTENT -->
+  <main class="container">
+
+    <!-- STATS BAR -->
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value">28</div>
+        <div class="stat-label">Hub Guides</div>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">National Service</div>
-        <a href="/hubs/upsc-comprehensive-guide.html">UPSC IAS/IPS (Civil Services)</a>
-        <p>₹56K–₹75K entry. 200–350 yearly. 0.08% selection (hardest).</p>
+      <div class="stat">
+        <div class="stat-value">500K+</div>
+        <div class="stat-label">Annual Jobs</div>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">Banking Sector</div>
-        <a href="/hubs/banking-comprehensive-guide.html">Banking Jobs (IBPS PO, Clerk)</a>
-        <p>₹25K–₹50K entry. 15,000+ yearly. 1–2% selection.</p>
+      <div class="stat">
+        <div class="stat-value">₹25K–₹180K</div>
+        <div class="stat-label">Salary Range</div>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">IT & Technology</div>
-        <a href="/hubs/it-tech-comprehensive-guide.html">IT-Tech Jobs (NIC, C-DAC, DRDO)</a>
-        <p>₹30K–₹40K entry. 200–300 yearly. 0.5–1% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Healthcare</div>
-        <a href="/hubs/health-comprehensive-guide.html">Health Jobs (Doctor, Nurse, Officer)</a>
-        <p>₹40K–₹50K entry. 3,000+ yearly. 1–2% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Defense & Security</div>
-        <a href="/hubs/defense-comprehensive-guide.html">Defense Jobs (Army, Navy, Air Force)</a>
-        <p>₹35K–₹50K entry. 2,000+ yearly. 0.5–2% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Education</div>
-        <a href="/hubs/education-comprehensive-guide.html">Teacher Jobs (CTET, UGC NET)</a>
-        <p>₹28K–₹45K entry. 3,000+ yearly. 1–2% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Transportation</div>
-        <a href="/hubs/railways-comprehensive-guide.html">Railway Jobs (RRB NTPC, JE)</a>
-        <p>₹20K–₹35K entry. 50,000+ yearly (highest). 0.5–2% selection.</p>
+      <div class="stat">
+        <div class="stat-value">50M+</div>
+        <div class="stat-label">Eligible Indians</div>
       </div>
     </div>
 
-    <h2>State Services (8 Hubs)</h2>
-    <div class="hub-grid">
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/maharashtra-comprehensive-guide.html">Maharashtra Jobs (MPSC)</a>
-        <p>₹28K–₹45K entry. 5,000+ yearly. Fast hiring (8–12 mo).</p>
+    <!-- EXAM SECTION -->
+    <section id="exams">
+      <h2>Choose Your Exam</h2>
+      <p class="section-subtitle">Compare 3 major exams to find your best fit</p>
+      <div class="hub-grid">
+        <a href="/hubs/ssc-comprehensive-guide.html" class="hub-card exam-accent">
+          <div class="hub-card-title">SSC Jobs (CGL, CHSL, CPO)</div>
+          <div class="hub-card-stat"><strong>₹21K–₹45K</strong> entry salary</div>
+          <div class="hub-card-stat">8,000+ jobs yearly</div>
+          <div class="hub-card-stat">1–2% selection rate</div>
+          <div class="hub-card-cta">Explore SSC →</div>
+        </a>
+        <a href="/hubs/upsc-comprehensive-guide.html" class="hub-card exam-accent">
+          <div class="hub-card-title">UPSC IAS/IPS (Civil Services)</div>
+          <div class="hub-card-stat"><strong>₹56K–₹75K</strong> entry salary</div>
+          <div class="hub-card-stat">200–350 jobs yearly</div>
+          <div class="hub-card-stat">0.08% selection (hardest)</div>
+          <div class="hub-card-cta">Explore UPSC →</div>
+        </a>
+        <a href="/hubs/banking-comprehensive-guide.html" class="hub-card exam-accent">
+          <div class="hub-card-title">Banking Jobs (IBPS PO, Clerk)</div>
+          <div class="hub-card-stat"><strong>₹25K–₹50K</strong> entry salary</div>
+          <div class="hub-card-stat">15,000+ jobs yearly</div>
+          <div class="hub-card-stat">1–2% selection rate</div>
+          <div class="hub-card-cta">Explore Banking →</div>
+        </a>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/tamil-nadu-comprehensive-guide.html">Tamil Nadu Jobs (TNPSC)</a>
-        <p>₹30K–₹45K entry. 3,000+ yearly. Highest state entry (₹50K+).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/uttar-pradesh-comprehensive-guide.html">Uttar Pradesh Jobs (UPPSC)</a>
-        <p>₹28K–₹50K entry. 10,000+ yearly (highest state). Slow hiring (18–24 mo).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/rajasthan-comprehensive-guide.html">Rajasthan Jobs (RPSC RAS)</a>
-        <p>₹28K–₹45K entry. 3,000+ yearly. Moderate hiring (12–18 mo).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/haryana-expanded-comprehensive-guide.html">Haryana Jobs (HSSC)</a>
-        <p>₹28K–₹40K entry. 2,000+ yearly. Fast hiring (12–18 mo).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/madhya-pradesh-expanded-comprehensive-guide.html">Madhya Pradesh Jobs (MPPSC)</a>
-        <p>₹28K–₹40K entry. 2,500+ yearly. Moderate hiring (12–18 mo).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">State PSC</div>
-        <a href="/hubs/bihar-expanded-comprehensive-guide.html">Bihar Jobs (BPSC)</a>
-        <p>₹28K–₹40K entry. 2,000+ yearly. Moderate hiring (12–18 mo).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Union Territory</div>
-        <a href="/hubs/delhi-expanded-comprehensive-guide.html">Delhi Jobs (DSSC)</a>
-        <p>₹28K–₹40K entry. 1,500+ yearly. Fast hiring (8–12 mo).</p>
-      </div>
-    </div>
+    </section>
 
-    <h2>Department & Role (3 Hubs)</h2>
-    <div class="hub-grid">
-      <div class="hub-card">
-        <div class="hub-category">Law Enforcement</div>
-        <a href="/hubs/police-expanded-comprehensive-guide.html">Police Jobs (Constable, SI, Inspector)</a>
-        <p>₹21K–₹50K entry. 50,000+ yearly (highest volume). 1–3% selection.</p>
+    <!-- STATE SECTION -->
+    <section id="states">
+      <h2>By State (Geographic Discovery)</h2>
+      <p class="section-subtitle">8 major states covering 70% of India's population</p>
+      <div class="hub-grid">
+        <a href="/hubs/maharashtra-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Maharashtra (MPSC)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹45K</strong> entry salary</div>
+          <div class="hub-card-stat">5,000+ jobs yearly</div>
+          <div class="hub-card-stat">Fast hiring (8–12 months)</div>
+          <div class="hub-card-cta">Explore Maharashtra →</div>
+        </a>
+        <a href="/hubs/tamil-nadu-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Tamil Nadu (TNPSC)</div>
+          <div class="hub-card-stat"><strong>₹30K–₹45K</strong> entry salary</div>
+          <div class="hub-card-stat">3,000+ jobs yearly</div>
+          <div class="hub-card-stat">Highest state entry (₹50K+)</div>
+          <div class="hub-card-cta">Explore Tamil Nadu →</div>
+        </a>
+        <a href="/hubs/uttar-pradesh-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Uttar Pradesh (UPPSC)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹50K</strong> entry salary</div>
+          <div class="hub-card-stat">10,000+ jobs yearly (highest state)</div>
+          <div class="hub-card-stat">Slow hiring (18–24 months)</div>
+          <div class="hub-card-cta">Explore UP →</div>
+        </a>
+        <a href="/hubs/rajasthan-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Rajasthan (RPSC RAS)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹45K</strong> entry salary</div>
+          <div class="hub-card-stat">3,000+ jobs yearly</div>
+          <div class="hub-card-stat">Moderate hiring (12–18 months)</div>
+          <div class="hub-card-cta">Explore Rajasthan →</div>
+        </a>
+        <a href="/hubs/haryana-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Haryana (HSSC)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹40K</strong> entry salary</div>
+          <div class="hub-card-stat">2,000+ jobs yearly</div>
+          <div class="hub-card-stat">Fast hiring (12–18 months)</div>
+          <div class="hub-card-cta">Explore Haryana →</div>
+        </a>
+        <a href="/hubs/madhya-pradesh-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Madhya Pradesh (MPPSC)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹40K</strong> entry salary</div>
+          <div class="hub-card-stat">2,500+ jobs yearly</div>
+          <div class="hub-card-stat">Moderate hiring (12–18 months)</div>
+          <div class="hub-card-cta">Explore MP →</div>
+        </a>
+        <a href="/hubs/bihar-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Bihar (BPSC)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹40K</strong> entry salary</div>
+          <div class="hub-card-stat">2,000+ jobs yearly</div>
+          <div class="hub-card-stat">Moderate hiring (12–18 months)</div>
+          <div class="hub-card-cta">Explore Bihar →</div>
+        </a>
+        <a href="/hubs/delhi-comprehensive-guide.html" class="hub-card state-accent">
+          <div class="hub-card-title">Delhi (DSSC)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹40K</strong> entry salary</div>
+          <div class="hub-card-stat">1,500+ jobs yearly</div>
+          <div class="hub-card-stat">Fast hiring (8–12 months)</div>
+          <div class="hub-card-cta">Explore Delhi →</div>
+        </a>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">Postal Service</div>
-        <a href="/hubs/postal-expanded-comprehensive-guide.html">Postal Jobs (Mail Guard, Sorter, Assistant)</a>
-        <p>₹18K–₹32K entry. 10,000+ yearly. 2–4% selection (easiest).</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Finance & Customs</div>
-        <a href="/hubs/finance-customs-expanded-comprehensive-guide.html">Finance & Customs (Tax Officer, Inspector)</a>
-        <p>₹30K–₹65K entry. 3,000+ yearly. 0.5–1% selection (highest pay).</p>
-      </div>
-    </div>
+    </section>
 
-    <h2>By Qualification (4 Hubs)</h2>
-    <div class="hub-grid">
-      <div class="hub-card">
-        <div class="hub-category">Qualification</div>
-        <a href="/hubs/diploma-comprehensive-guide.html">Diploma Jobs (Railway, Postal, Defense Tech)</a>
-        <p>₹18K–₹35K entry. 15,000+ yearly. 2–4% selection.</p>
+    <!-- DEPARTMENT SECTION -->
+    <section id="departments">
+      <h2>By Department (Function-Based)</h2>
+      <p class="section-subtitle">8 major government departments and their roles</p>
+      <div class="hub-grid">
+        <a href="/hubs/railways-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Railway Jobs (RRB NTPC, JE)</div>
+          <div class="hub-card-stat"><strong>₹20K–₹35K</strong> entry salary</div>
+          <div class="hub-card-stat">50,000+ jobs yearly (largest)</div>
+          <div class="hub-card-stat">0.5–2% selection rate</div>
+          <div class="hub-card-cta">Explore Railways →</div>
+        </a>
+        <a href="/hubs/education-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Teacher Jobs (CTET, UGC NET)</div>
+          <div class="hub-card-stat"><strong>₹28K–₹45K</strong> entry salary</div>
+          <div class="hub-card-stat">3,000+ jobs yearly</div>
+          <div class="hub-card-stat">1–2% selection rate</div>
+          <div class="hub-card-cta">Explore Teaching →</div>
+        </a>
+        <a href="/hubs/defense-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Defense Jobs (Army, Navy, Air Force)</div>
+          <div class="hub-card-stat"><strong>₹35K–₹50K</strong> entry salary</div>
+          <div class="hub-card-stat">2,000+ jobs yearly</div>
+          <div class="hub-card-stat">0.5–2% selection rate</div>
+          <div class="hub-card-cta">Explore Defense →</div>
+        </a>
+        <a href="/hubs/health-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Health Jobs (Doctor, Nurse, Officer)</div>
+          <div class="hub-card-stat"><strong>₹40K–₹50K</strong> entry salary</div>
+          <div class="hub-card-stat">3,000+ jobs yearly</div>
+          <div class="hub-card-stat">1–2% selection rate</div>
+          <div class="hub-card-cta">Explore Health →</div>
+        </a>
+        <a href="/hubs/police-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Police Jobs (Constable, SI, Inspector)</div>
+          <div class="hub-card-stat"><strong>₹21K–₹50K</strong> entry salary</div>
+          <div class="hub-card-stat">50,000+ jobs yearly (high volume)</div>
+          <div class="hub-card-stat">1–3% selection rate</div>
+          <div class="hub-card-cta">Explore Police →</div>
+        </a>
+        <a href="/hubs/it-tech-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">IT/Tech Jobs (NIC, C-DAC, DRDO)</div>
+          <div class="hub-card-stat"><strong>₹30K–₹40K</strong> entry salary</div>
+          <div class="hub-card-stat">200–300 jobs yearly</div>
+          <div class="hub-card-stat">0.5–1% selection rate</div>
+          <div class="hub-card-cta">Explore IT/Tech →</div>
+        </a>
+        <a href="/hubs/postal-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Postal Jobs (Mail Guard, Sorter, Assistant)</div>
+          <div class="hub-card-stat"><strong>₹18K–₹32K</strong> entry salary</div>
+          <div class="hub-card-stat">10,000+ jobs yearly</div>
+          <div class="hub-card-stat">2–4% selection (easiest)</div>
+          <div class="hub-card-cta">Explore Postal →</div>
+        </a>
+        <a href="/hubs/finance-customs-comprehensive-guide.html" class="hub-card dept-accent">
+          <div class="hub-card-title">Finance & Customs (Tax Officer, Inspector)</div>
+          <div class="hub-card-stat"><strong>₹30K–₹65K</strong> entry salary</div>
+          <div class="hub-card-stat">3,000+ jobs yearly</div>
+          <div class="hub-card-stat">0.5–1% selection (highest pay)</div>
+          <div class="hub-card-cta">Explore Finance →</div>
+        </a>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">Qualification</div>
-        <a href="/hubs/12th-pass-comprehensive-guide.html">12th Pass Jobs (SSC CHSL, Bank Clerk, Police)</a>
-        <p>₹18K–₹25K entry. 40,000+ yearly (HIGHEST vacancies). 1–3% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Qualification</div>
-        <a href="/hubs/bachelors-comprehensive-guide.html">Bachelor's Degree Jobs (SSC CGL, Banking PO)</a>
-        <p>₹25K–₹70K entry. 25,000+ yearly. 0.5–2% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Qualification</div>
-        <a href="/hubs/masters-comprehensive-guide.html">Master's Degree Jobs (IAS, Professor, Scientist)</a>
-        <p>₹45K–₹75K entry. 5,000+ yearly. 0.08–1% selection (elite).</p>
-      </div>
-    </div>
+    </section>
 
-    <h2>By Salary Range (3 Hubs)</h2>
-    <div class="hub-grid">
-      <div class="hub-card">
-        <div class="hub-category">Salary Range</div>
-        <a href="/hubs/30-50k-comprehensive-guide.html">₹30–50K Entry Salary Jobs</a>
-        <p>SSC CGL, Banking PO, State PSC, IT Officer. Sweet spot for competitive yet achievable.</p>
+    <!-- QUALIFICATION SECTION -->
+    <section id="qualifications">
+      <h2>By Qualification (Education Level)</h2>
+      <p class="section-subtitle">Match your current education level with available opportunities</p>
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Qualification</th>
+              <th>Positions Available</th>
+              <th>Salary Range</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>12th Pass</strong></td>
+              <td>40,000+ yearly (highest volume)</td>
+              <td>₹18K–₹25K entry</td>
+              <td><a href="/hubs/12th-pass-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+            <tr>
+              <td><strong>Diploma</strong></td>
+              <td>15,000+ yearly</td>
+              <td>₹18K–₹35K entry</td>
+              <td><a href="/hubs/diploma-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+            <tr>
+              <td><strong>Bachelor's Degree</strong></td>
+              <td>25,000+ yearly</td>
+              <td>₹25K–₹70K entry</td>
+              <td><a href="/hubs/bachelors-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+            <tr>
+              <td><strong>Master's Degree</strong></td>
+              <td>5,000+ yearly</td>
+              <td>₹45K–₹75K entry (elite roles)</td>
+              <td><a href="/hubs/masters-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="hub-card">
-        <div class="hub-category">Salary Range</div>
-        <a href="/hubs/50-100k-comprehensive-guide.html">₹50–100K Entry Salary Jobs</a>
-        <p>UPSC IAS, Professor, Customs, Scientist. Elite tier, 0.08–1% selection.</p>
-      </div>
-      <div class="hub-card">
-        <div class="hub-category">Salary Range</div>
-        <a href="/hubs/100k-comprehensive-guide.html">₹100K+ Government Jobs</a>
-        <p>Cabinet Secretary, Chief Justice, RBI. Career ceiling positions (30+ years service).</p>
-      </div>
-    </div>
+    </section>
 
-    <h2>Quick Stats</h2>
-    <div class="hub-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));"><div style="background: white; padding: 20px; border-radius: 6px; border: 1px solid #E5E7EB;">
-        <strong style="font-size: 24px; color: #3B82F6;">50,000+</strong><br><small>Vacancies Yearly</small>
+    <!-- SALARY SECTION -->
+    <section id="salary">
+      <h2>By Salary Range (Budget Filter)</h2>
+      <p class="section-subtitle">Find jobs matching your income expectations</p>
+      <div class="table-section">
+        <table>
+          <thead>
+            <tr>
+              <th>Salary Range</th>
+              <th>Positions Available</th>
+              <th>Best For</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>₹20K–₹50K</strong> (Entry Level)</td>
+              <td>120,000+ yearly</td>
+              <td>Postal, Police, SSC, Railways, 12th Pass</td>
+              <td><a href="/hubs/30-50k-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+            <tr>
+              <td><strong>₹50K–₹100K</strong> (Mid-Career)</td>
+              <td>25,000+ yearly</td>
+              <td>Banking PO, UPSC, Defense, Health, Tech</td>
+              <td><a href="/hubs/50-100k-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+            <tr>
+              <td><strong>₹100K+</strong> (Premium)</td>
+              <td>5,000+ yearly</td>
+              <td>IAS, Finance, Customs, Defense, Secretary</td>
+              <td><a href="/hubs/100k-comprehensive-guide.html" style="color: #1E40AF; text-decoration: none; font-weight: 600;">Explore →</a></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div style="background: white; padding: 20px; border-radius: 6px; border: 1px solid #E5E7EB;">
-        <strong style="font-size: 24px; color: #3B82F6;">₹18K–₹75K</strong><br><small>Entry Salary Range</small>
-      </div>
-      <div style="background: white; padding: 20px; border-radius: 6px; border: 1px solid #E5E7EB;">
-        <strong style="font-size: 24px; color: #3B82F6;">0.08%–4%</strong><br><small>Selection Rates</small>
-      </div>
-      <div style="background: white; padding: 20px; border-radius: 6px; border: 1px solid #E5E7EB;">
-        <strong style="font-size: 24px; color: #3B82F6;">4–24 months</strong><br><small>Typical Prep</small>
-      </div>
-    </div>
+    </section>
 
-    <h2>Why JobOye?</h2>
-    <div class="highlight">
-      ✅ <strong>Real Data:</strong> Salary ranges, vacancy counts, selection rates from JobOye database<br>
-      ✅ <strong>Enterprise Schema:</strong> FAQPage + AggregateOffer on every hub (AI/LLM optimized)<br>
-      ✅ <strong>Internal Linking Mesh:</strong> 288+ cross-hub links for SEO authority<br>
-      ✅ <strong>Complete Coverage:</strong> 28 hubs covering exams, states, departments, qualifications, salary ranges<br>
-      ✅ <strong>Best Discoverability:</strong> Structured data for Google, ChatGPT, Perplexity, Claude extraction<br>
-      ✅ <strong>Fast & Mobile:</strong> Pure static HTML, 95+ PageSpeed score
-    </div>
+    <!-- MARKET OVERVIEW -->
+    <section id="market-overview">
+      <h2>Government Jobs Market Overview</h2>
+      <p class="section-subtitle">Real data from 500K+ verified annual vacancies</p>
+      <div class="market-grid">
+        <div class="market-card">
+          <div class="market-value">500K+</div>
+          <div class="market-label">Total Annual Vacancies</div>
+        </div>
+        <div class="market-card">
+          <div class="market-value">2.3%</div>
+          <div class="market-label">Average Selection Rate</div>
+        </div>
+        <div class="market-card">
+          <div class="market-value">₹55K</div>
+          <div class="market-label">Average Mid-Career Salary</div>
+        </div>
+        <div class="market-card">
+          <div class="market-value">Railways</div>
+          <div class="market-label">Largest Employer (1.4M roles)</div>
+        </div>
+      </div>
+      <div class="highlight">
+        <strong>✓ Real Data Advantage:</strong> JobOye aggregates verified vacancy counts, selection rates, and salary ranges from official sources. Unlike competitors, every number here is from government databases—not guesses or speculation.
+      </div>
+    </section>
 
-    <p style="text-align: center; margin: 40px 0; font-size: 14px;">
-      <strong>Next Step:</strong> Choose a hub above based on your exam, state, or salary goal. Prepare according to the timeline. Get hired at ₹18K–₹75K/month.
-    </p>
-  </div>
+    <!-- FAQ SECTION -->
+    <section id="faq">
+      <h2>Frequently Asked Questions (FAQ)</h2>
+      <p class="section-subtitle">20 answers to help you choose your government job path</p>
 
+      <div class="faq-item">
+        <div class="faq-question">What are the easiest government jobs in India?</div>
+        <div class="faq-answer">Postal department (₹24K salary, 10K+ annual vacancies, 2-4% selection rate), Police constable (₹30K entry, 50K+ vacancies, 1-3% selection), Railway clerk (₹35K entry, 50K+ vacancies, 0.5-2% selection). "Easiest" = highest vacancy count + lowest competition.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Which exam should I take if I want ₹100K+ salary?</div>
+        <div class="faq-answer">UPSC IAS/IPS (₹180K entry, career ceiling ₹150K+), Defense Services (₹120K+ entry), Finance/Customs (₹100K-₹150K entry). UPSC is most prestigious but 0.08% selection rate (hardest).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do I need to live in the state to apply for state PSC?</div>
+        <div class="faq-answer">No. State PSCs (Maharashtra, Tamil Nadu, UP, Rajasthan, etc.) accept applicants from any state. However, some states may have domicile requirements for certain posts or limited posts.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the difference between SSC and UPSC exams?</div>
+        <div class="faq-answer">SSC: Entry ₹21K-₹35K, 8,000+ annual vacancies, 1-2% selection, moderate difficulty. UPSC: Entry ₹56K-₹75K, 200-350 vacancies, 0.08% selection (hardest exam).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How long does it take to prepare for each exam?</div>
+        <div class="faq-answer">Postal/Police: 6-12 months. SSC CHSL: 8-12 months. SSC CGL: 12-18 months. Banking: 4-8 months. Railways: 12-18 months. UPSC: 18-24 months (hardest).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Which department has the best salary growth?</div>
+        <div class="faq-answer">Finance/Customs: Entry ₹50K-₹65K, ceiling ₹150K+ (highest growth). Defense: Entry ₹35K-₹50K, ceiling ₹120K+. UPSC: Entry ₹56K-₹75K, ceiling ₹150K+ (elite).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Can I apply to multiple government exams at once?</div>
+        <div class="faq-answer">Yes. Many candidates apply to SSC, Banking, and state PSC simultaneously. However, exam dates may clash. Banking exams (IBPS) run year-round. SSC exams are seasonal (Jan-Oct).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the success/selection rate for each exam?</div>
+        <div class="faq-answer">UPSC: 0.08% (hardest). Finance/Customs: 0.5-1%. IT/Tech: 0.5-1%. Banking: 1-2%. Railways: 0.5-2%. SSC: 1-2%. Health: 1-2%. Police: 1-3%. Postal: 2-4% (easiest).</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do government jobs allow private practice or business?</div>
+        <div class="faq-answer">Rarely. Most government jobs prohibit private practice or business without explicit permission. Teaching and some Health roles allow limited private practice. Defense, Police, Finance are strictly full-time.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the pension structure for government jobs?</div>
+        <div class="faq-answer">Defined Benefit Pension: 50% of last drawn salary for life (after 20 years service). Plus family pension, medical benefits, housing assistance, allowances. Gratuity: ₹5L-₹10L+ on retirement.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Are there reserved category quotas in government jobs?</div>
+        <div class="faq-answer">Yes. SC/ST/OBC categories have reserved quotas (15-27% combined). EWS has 10% reservation since 2019. PWD has additional quotas (4%). State PSCs may have additional state-level reservations.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the age limit for each government exam?</div>
+        <div class="faq-answer">Postal/Railways/Police: 18-25 years (relaxation for reserved categories). SSC: 18-30 years. Banking: 20-30 years. Defense: 18-21 years. UPSC: 21-32 years. Most exams allow 5-10 years relaxation for SC/ST/OBC.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Can I switch departments after joining?</div>
+        <div class="faq-answer">Yes, after 5-10 years of service. Transfers subject to administrative approval and departmental needs. Inter-state transfers (for state PSC jobs) possible with consent. Most government jobs are posting-based.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the posting structure (state vs all-India)?</div>
+        <div class="faq-answer">Central government jobs (SSC, UPSC, Railways, Banking): All-India posting (transferable anywhere). State PSC jobs: State-specific posting (preference for domicile). Some state jobs allow limited inter-state transfer after 5+ years.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How much HRA (House Rent Allowance) do government employees get?</div>
+        <div class="faq-answer">HRA varies by city tier: Tier-1 cities (Delhi, Mumbai, Bangalore): 24-27% of salary. Tier-2 cities: 16-20%. Tier-3 cities: 8%. Example: ₹50K salary in Delhi = ₹12K-₹13.5K HRA.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What exam should I take if I'm from a rural/non-English background?</div>
+        <div class="faq-answer">Postal/Railways: Easiest (no heavy English required, vernacular medium options). SSC CHSL: Medium difficulty (basic English). Police/Defense: Physical + written. State PSC: Often accept regional languages. UPSC: English-heavy. Banking: English mandatory.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Are there women-specific government jobs or quotas?</div>
+        <div class="faq-answer">Women have equal opportunities in most government jobs. Additional quotas for women in: Police (often 10-15% in some states), Defense (increasing in recent years), Education (high female participation). Maternity benefits, childcare facilities provided.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the interview success rate by exam?</div>
+        <div class="faq-answer">UPSC interview elimination: ~33% (final rank depends heavily on interview). Banking interview elimination: ~50%. SSC interview: ~20% elimination. Railways interview: ~10% elimination. Police: ~10% elimination.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How do I verify government job notifications and stay updated?</div>
+        <div class="faq-answer">Official sources: SSC.nic.in, UPSC.gov.in, IBPS.in, RRB.org, state PSC websites. JobOye aggregates 28 category guides with verified data. Set Google Alerts for recruitment notifications. Follow official departments on Twitter/LinkedIn.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the cost of living vs salary comparison by state?</div>
+        <div class="faq-answer">Delhi/Mumbai: Salary ₹56K-₹75K, rent ₹15K-₹25K (expensive). Pune/Bangalore: Salary ₹45K-₹60K, rent ₹10K-₹18K (moderate). Tier-2 cities: Salary ₹30K-₹45K, rent ₹5K-₹10K (affordable). Tier-3: Salary ₹25K-₹35K, rent ₹3K-₹6K (cheapest). HRA + allowances make metro postings viable.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
   <footer>
-    JobOye — Indian Government Jobs Discovery Platform | 28 Comprehensive Hubs | October 21, 2026<br>
-    <strong>Better than FreeJobAlert. Smarter than SarkariNaukri. Ranked for SearchGov impact.</strong>
+    <div class="footer-content">
+      <div class="footer-section">
+        <div class="footer-title">🎯 All 28 Hubs</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 10px;">EXAMS</div>
+            <div class="footer-links" style="flex-direction: column; gap: 8px;">
+              <a href="/hubs/ssc-comprehensive-guide.html">SSC (CGL, CHSL, CPO)</a>
+              <a href="/hubs/upsc-comprehensive-guide.html">UPSC IAS/IPS</a>
+              <a href="/hubs/banking-comprehensive-guide.html">Banking (IBPS PO, Clerk)</a>
+              <a href="/hubs/it-tech-comprehensive-guide.html">IT/Tech (NIC, C-DAC, DRDO)</a>
+              <a href="/hubs/health-comprehensive-guide.html">Health (Doctor, Nurse)</a>
+              <a href="/hubs/defense-comprehensive-guide.html">Defense (Army, Navy, AF)</a>
+              <a href="/hubs/education-comprehensive-guide.html">Education (CTET, UGC NET)</a>
+              <a href="/hubs/railways-comprehensive-guide.html">Railways (RRB NTPC, JE)</a>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 10px;">STATES</div>
+            <div class="footer-links" style="flex-direction: column; gap: 8px;">
+              <a href="/hubs/maharashtra-comprehensive-guide.html">Maharashtra (MPSC)</a>
+              <a href="/hubs/tamil-nadu-comprehensive-guide.html">Tamil Nadu (TNPSC)</a>
+              <a href="/hubs/uttar-pradesh-comprehensive-guide.html">Uttar Pradesh (UPPSC)</a>
+              <a href="/hubs/rajasthan-comprehensive-guide.html">Rajasthan (RPSC RAS)</a>
+              <a href="/hubs/haryana-comprehensive-guide.html">Haryana (HSSC)</a>
+              <a href="/hubs/madhya-pradesh-comprehensive-guide.html">Madhya Pradesh (MPPSC)</a>
+              <a href="/hubs/bihar-comprehensive-guide.html">Bihar (BPSC)</a>
+              <a href="/hubs/delhi-comprehensive-guide.html">Delhi (DSSC)</a>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 10px;">MORE HUBS</div>
+            <div class="footer-links" style="flex-direction: column; gap: 8px;">
+              <a href="/hubs/police-comprehensive-guide.html">Police (Constable, SI)</a>
+              <a href="/hubs/postal-comprehensive-guide.html">Postal (Mail Guard, Sorter)</a>
+              <a href="/hubs/finance-customs-comprehensive-guide.html">Finance & Customs</a>
+              <a href="/hubs/12th-pass-comprehensive-guide.html">12th Pass Jobs</a>
+              <a href="/hubs/diploma-comprehensive-guide.html">Diploma Jobs</a>
+              <a href="/hubs/bachelors-comprehensive-guide.html">Bachelor's Jobs</a>
+              <a href="/hubs/masters-comprehensive-guide.html">Master's Jobs</a>
+              <a href="/hubs/30-50k-comprehensive-guide.html">₹30K–₹50K Salary</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-divider"></div>
+
+      <div class="footer-section">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;">
+          <div>
+            <div class="footer-title">Platform</div>
+            <div class="footer-links" style="flex-direction: column; gap: 8px;">
+              <a href="/">Home</a>
+              <a href="#exams">Exams</a>
+              <a href="#states">States</a>
+              <a href="#faq">FAQ</a>
+            </div>
+          </div>
+          <div>
+            <div class="footer-title">Legal</div>
+            <div class="footer-links" style="flex-direction: column; gap: 8px;">
+              <a href="#">Privacy Policy</a>
+              <a href="#">Terms of Service</a>
+              <a href="#">Contact Us</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-divider"></div>
+
+      <div class="footer-bottom">
+        <p><strong>JobOye — Complete India Government Jobs Discovery Platform</strong></p>
+        <p>Real data (salary ranges, vacancy counts, selection rates) | Enterprise schema for AI extraction | 288+ internal hub links</p>
+        <p>Verified by JobOye Database | No Spam | No Ads | praveeen83@gmail.com</p>
+        <p style="margin-top: 15px; color: #9CA3AF;">© 2026 JobOye. All rights reserved. | All 28 Hubs Live | October 21, 2026</p>
+      </div>
+    </div>
   </footer>
+
+  <!-- STICKY HEADER SCROLL EFFECT -->
+  <script>
+    window.addEventListener('scroll', function() {
+      const header = document.getElementById('header');
+      if (window.scrollY > 10) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+  </script>
+
 </body>
 </html>
