@@ -177,6 +177,61 @@ export const hubs: Record<string, Hub> = {
       "successRate": "2–5%",
       "vacanciesPerYear": "15,000+"
     }
+  },
+  "government-vs-private-sector-comparison": {
+    "slug": "government-vs-private-sector-comparison",
+    "title": "Government Jobs vs Private Sector 2026: Salary, Security, Growth, Work-Life Balance",
+    "keyword": "government jobs vs private sector India",
+    "description": "Complete comparison: government vs private sector careers. Salary growth, job security, work-life balance, pension, benefits. Which is right for you? Real numbers, real trade-offs.",
+    "content": "Decision-stage content comparing government and private sector paths. Salary progression ₹30K to ₹150K+, security analysis, work-life balance, career ceilings, lifetime earnings. Covers all major trade-offs.",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": {
+      "compareJobs": ["government", "private"]
+    },
+    "relatedHubs": [
+      "ssc-comprehensive-guide",
+      "upsc-comprehensive-guide",
+      "50-100k-comprehensive-guide",
+      "100k-comprehensive-guide",
+      "it-tech-comprehensive-guide",
+      "banking-comprehensive-guide",
+      "railways-comprehensive-guide",
+      "defense-comprehensive-guide"
+    ],
+    "stats": {
+      "salaryRange": "Government: ₹30K–₹90K; Private: ₹30K–₹150K+",
+      "lifetimeValue": "Government: ₹4–5 crore; Private: ₹6–15 crore",
+      "jobSecurity": "Government: 100%; Private: 85–95%"
+    }
+  },
+  "highest-paying-government-jobs": {
+    "slug": "highest-paying-government-jobs",
+    "title": "Highest Paying Government Jobs in India 2026 | Rs. 1 Lac+ Salary, Career Ceiling, Path to Top Roles",
+    "keyword": "highest paying government jobs India 2026",
+    "description": "Highest-paying government jobs: Top 20 positions ranked by salary. Cabinet Secretary ₹1.5 lac, RBI Governor ₹2 lac+, Chief Justice ₹1.4 lac. Career paths, timelines, hidden salary boosters. Is ₹1 lac+ realistic for you?",
+    "content": "Salary-maximization guide. 20 highest-paying government jobs with entry salaries, career ceilings, timelines. IAS Cabinet Secretary path, Finance Secretary, Defense Chief. Includes DA, HRA, pension value. 25–30 year timelines.",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": {
+      "salaryMin": 100000
+    },
+    "relatedHubs": [
+      "upsc-comprehensive-guide",
+      "ssc-comprehensive-guide",
+      "finance-comprehensive-guide",
+      "defense-comprehensive-guide",
+      "50-100k-comprehensive-guide",
+      "100k-comprehensive-guide",
+      "it-tech-comprehensive-guide",
+      "banking-comprehensive-guide"
+    ],
+    "stats": {
+      "topSalary": "₹2 lac+ (RBI Governor)",
+      "salaryRange": "₹1 lac–₹2 lac+ monthly",
+      "timelineToCeiling": "20–30 years",
+      "successRate": "0.01–0.3% (elite positions)"
+    }
   }
 };
 
