@@ -184,7 +184,7 @@ export interface HubData {
   ageTexts: string[];
 
   // Pay & fee
-  payLines: { label: string | null; value: string }[];
+  payLines: { label: string | null; value: string; verified?: boolean }[];
   feeRows: FeeRow[];
   feeSummary: string | null;
   feeNote: string | null;
