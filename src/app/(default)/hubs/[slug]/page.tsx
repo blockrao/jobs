@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getHub, getAllHubs, getHubJobs } from "@/data/hubs";
+import { getHub, getAllHubs } from "@/data/hubs-metadata";
+import { getHubJobs } from "@/lib/hubs-server";
 import { pageSeo } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
 

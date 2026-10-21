@@ -10,7 +10,7 @@ import { FEATURED_QUALIFICATIONS, qualificationHref } from "@/lib/qualifications
 import { RecruitmentRow, RowListHeader } from "@/components/recruitment-row";
 import { recruitmentHref } from "@/lib/recruitment-href";
 import { SITE_URL } from "@/lib/site";
-import { getAllHubs } from "@/data/hubs";
+import { getAllHubs } from "@/data/hubs-metadata";
 
 // Homepage = the deadline desk (HOMEPAGE_DESIGN_STRATEGY_2026_10_14).
 // Every block ranks by vacancies × urgency; every row shows org · vacancies ·

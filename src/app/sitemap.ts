@@ -4,7 +4,7 @@ import { getDb } from "@/db";
 import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
-import { getAllHubs } from "@/data/hubs";
+import { getAllHubs } from "@/data/hubs-metadata";
 
 /**
  * Sitemap follows the URL contract (2026-10-20) exactly:
