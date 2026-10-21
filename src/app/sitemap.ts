@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
+import { getAllHubs } from "@/data/hubs";
 
 /**
  * Sitemap follows the URL contract (2026-10-20) exactly:
@@ -41,6 +42,13 @@ const STATIC: MetadataRoute.Sitemap = [
   { url: `${SITE_URL}/jobs`, lastModified: new Date(), changeFrequency: "daily", priority: 0.95 },
   { url: `${SITE_URL}/exams`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
   { url: `${SITE_URL}/organizations`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+  // Hub pages
+  ...getAllHubs().map((hub) => ({
+    url: `${SITE_URL}/hubs/${hub.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  })),
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
