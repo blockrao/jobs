@@ -10,13 +10,13 @@
 
   <!-- Exam Category Hubs (8) -->
   <url>
-    <loc>https://joboye.com/hubs/ssc-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <loc>https://joboye.com/hubs/upsc-comprehensive-guide.html</loc>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://joboye.com/hubs/upsc-comprehensive-guide.html</loc>
+    <loc>https://joboye.com/hubs/ssc-comprehensive-guide.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
@@ -29,33 +29,33 @@
   </url>
   <url>
     <loc>https://joboye.com/hubs/it-tech-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://joboye.com/hubs/health-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://joboye.com/hubs/defense-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://joboye.com/hubs/education-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://joboye.com/hubs/railways-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
   </url>
 
   <!-- State Category Hubs (8) -->
@@ -67,19 +67,19 @@
   </url>
   <url>
     <loc>https://joboye.com/hubs/tamil-nadu-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://joboye.com/hubs/uttar-pradesh-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://joboye.com/hubs/rajasthan-comprehensive-guide.html</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -102,7 +102,7 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://joboye.com/hubs/delhi-expanded-comprehensive-guide.html</loc>
+    <loc>https://joboye.com/hubs/delhi-comprehensive-guide.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -110,13 +110,13 @@
 
   <!-- Department Category Hubs (3) -->
   <url>
-    <loc>https://joboye.com/hubs/police-expanded-comprehensive-guide.html</loc>
+    <loc>https://joboye.com/hubs/police-comprehensive-guide.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://joboye.com/hubs/postal-expanded-comprehensive-guide.html</loc>
+    <loc>https://joboye.com/hubs/postal-comprehensive-guide.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
