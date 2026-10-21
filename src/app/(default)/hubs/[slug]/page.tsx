@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getHub, getAllHubs } from "@/data/hubs";
+import { getHub, getAllHubs, getHubJobs } from "@/data/hubs";
 import { pageSeo } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
 
@@ -50,6 +50,9 @@ export default async function HubPage({ params }: PageProps) {
   if (!hub) {
     notFound();
   }
+
+  // Fetch live jobs for this hub (cached with ISR)
+  const hubJobs = await getHubJobs(slug, 15);
 
   // Get related hubs with full data
   const relatedHubs = hub.relatedHubs
@@ -160,6 +163,65 @@ export default async function HubPage({ params }: PageProps) {
             dangerouslySetInnerHTML={{ __html: hub.content }}
             className="space-y-6"
           />
+        </section>
+
+        {/* Live Jobs Section */}
+        <section className="py-12 border-t border-black/8">
+          <h2 className="text-2xl font-bold tracking-tight text-neutral-900 mb-8">
+            Live Job Opportunities
+          </h2>
+          {hubJobs.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {hubJobs.map((job) => (
+                  <Link
+                    key={job.id}
+                    href={`/jobs/${job.recruitment_slug}/${job.post_slug}`}
+                    className="group p-6 rounded-lg border border-black/8 hover:border-brand-600/50 hover:bg-brand-50 transition-colors"
+                  >
+                    <h3 className="font-semibold text-base text-neutral-900 group-hover:text-brand-600 line-clamp-2 mb-2">
+                      {job.title}
+                    </h3>
+                    <p className="text-sm text-neutral-600 mb-3">{job.organization}</p>
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      {job.vacancies && (
+                        <div className="text-xs font-semibold text-neutral-700 bg-neutral-100 px-2 py-1 rounded">
+                          {job.vacancies} {job.vacancies === 1 ? "vacancy" : "vacancies"}
+                        </div>
+                      )}
+                      {job.salary_min && job.salary_max && (
+                        <div className="text-xs font-semibold text-neutral-700 bg-neutral-100 px-2 py-1 rounded">
+                          ₹{(job.salary_min / 1000).toFixed(0)}K–₹{(job.salary_max / 1000).toFixed(0)}K
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-neutral-500 mb-4">{job.location}</p>
+                    {job.last_date && (
+                      <p className="text-xs font-semibold text-red-600">
+                        Apply by {job.last_date instanceof Date ? job.last_date.toLocaleDateString("en-IN") : new Date(job.last_date).toLocaleDateString("en-IN")}
+                      </p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+              <Link
+                href={`/jobs?${new URLSearchParams({
+                  [hub.category === "exam" ? "exam" : hub.category === "state" ? "location" : hub.category === "qualification" ? "qualification" : "salary"]:
+                  hub.filters.exam || hub.filters.state || hub.filters.qualification || hub.filters.salaryMin?.toString() || "",
+                }).toString()}`}
+                className="inline-block px-6 py-3 rounded-lg font-semibold border-2 text-neutral-900"
+                style={{ borderColor: hub.color }}
+              >
+                Browse All {hub.title.split(" ")[0]} Jobs
+              </Link>
+            </>
+          ) : (
+            <div className="p-8 rounded-lg bg-neutral-50 border border-black/8 text-center">
+              <p className="text-neutral-600">
+                No live jobs available at the moment. Check back soon or set up a job alert to get notified when new positions are posted.
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Related Hubs */}

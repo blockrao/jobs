@@ -4,6 +4,11 @@
  * Run: npm run generate:hubs-data
  */
 
+import { cache } from "react";
+import { getDb } from "@/db";
+import { and, or, gte, lte, ilike, eq, desc } from "drizzle-orm";
+import { postings, organizations, exams } from "@/db/schema";
+
 export type HubCategory = 'qualification' | 'exam' | 'state' | 'department' | 'salary';
 
 export interface Hub {
@@ -14,9 +19,22 @@ export interface Hub {
   content: string; // HTML content body
   category: HubCategory;
   color: string; // Tailwind color or hex
-  filters: Record<string, any>; // Supabase query filters
+  filters: Record<string, any>; // Database query filters
   relatedHubs: string[]; // Slugs of related hubs
   stats: Record<string, string | number>; // Display stats (total jobs, salary range, etc.)
+}
+
+export interface HubJob {
+  id: number;
+  title: string;
+  organization: string;
+  vacancies: number | null;
+  location: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  last_date: Date | null;
+  recruitment_slug: string;
+  post_slug: string;
 }
 
 export const hubs: Record<string, Hub> = {
@@ -736,3 +754,74 @@ export function getHubsByCategory(category: HubCategory): Hub[] {
 export function getAllHubs(): Hub[] {
   return Object.values(hubs);
 }
+
+/**
+ * Fetch live jobs for a hub from the database
+ * Cached with ISR (6 hours revalidation)
+ */
+export const getHubJobs = cache(async (slug: string, limit: number = 15): Promise<HubJob[]> => {
+  const hub = getHub(slug);
+  if (!hub) return [];
+
+  try {
+    const db = getDb();
+    if (!db) return [];
+
+    const conditions: any[] = [];
+
+    // Build query based on hub category and filters
+    if (hub.category === "exam" && hub.filters.exam) {
+      // Match exam by name
+      const examName = hub.filters.exam;
+      conditions.push(ilike(postings.title, `%${examName}%`));
+    } else if (hub.category === "state" && hub.filters.state) {
+      // Match by state/location
+      conditions.push(ilike(postings.locationRegion, `%${hub.filters.state}%`));
+    } else if (hub.category === "department" && hub.filters.department) {
+      // Match by title containing department name
+      conditions.push(ilike(postings.title, `%${hub.filters.department}%`));
+    } else if (hub.category === "qualification" && hub.filters.qualification) {
+      // Match by eligibility field
+      conditions.push(ilike(postings.eligibility, `%${hub.filters.qualification}%`));
+    } else if (hub.category === "salary") {
+      // Match salary range
+      if (hub.filters.salaryMin) {
+        conditions.push(gte(postings.salaryMax, hub.filters.salaryMin));
+      }
+      if (hub.filters.salaryMax) {
+        conditions.push(lte(postings.salaryMin, hub.filters.salaryMax));
+      }
+    }
+
+    // Always filter for published/approved postings
+    conditions.push(eq(postings.reviewStatus, "APPROVED"));
+
+    // Execute query
+    const jobs = await db
+      .select({
+        id: postings.id,
+        title: postings.title,
+        organization: organizations.name,
+        vacancies: postings.totalVacancies,
+        location: postings.locationRegion,
+        salary_min: postings.salaryMin,
+        salary_max: postings.salaryMax,
+        last_date: postings.validThrough,
+        recruitment_slug: postings.slug,
+        post_slug: postings.slug,
+      })
+      .from(postings)
+      .leftJoin(organizations, eq(postings.organizationId, organizations.id))
+      .where(and(...conditions))
+      .orderBy(desc(postings.datePosted))
+      .limit(limit);
+
+    return jobs.map(job => ({
+      ...job,
+      organization: job.organization || "Government of India",
+    })) as HubJob[];
+  } catch (error) {
+    console.warn(`Failed to fetch jobs for hub ${slug}:`, error);
+    return [];
+  }
+});

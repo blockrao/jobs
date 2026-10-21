@@ -10,6 +10,7 @@ import { FEATURED_QUALIFICATIONS, qualificationHref } from "@/lib/qualifications
 import { RecruitmentRow, RowListHeader } from "@/components/recruitment-row";
 import { recruitmentHref } from "@/lib/recruitment-href";
 import { SITE_URL } from "@/lib/site";
+import { getAllHubs } from "@/data/hubs";
 
 // Homepage = the deadline desk (HOMEPAGE_DESIGN_STRATEGY_2026_10_14).
 // Every block ranks by vacancies × urgency; every row shows org · vacancies ·
@@ -267,6 +268,38 @@ export function HomeContent({
                 {q.shortLabel}
               </Link>
             ))}
+          </div>
+        </section>
+
+        {/* ── Explore Hubs ──────────────────────────────────────── */}
+        <section className="pt-2 pb-10">
+          <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
+            <h2 className={sectionTitle}>{isHi ? "लोकप्रिय गाइड और संसाधन" : "Popular guides & resources"}</h2>
+            <Link href="/hubs" className={viewAll}>{isHi ? "सभी गाइड देखें →" : "All hubs →"}</Link>
+          </div>
+          <p className="text-sm text-neutral-500 max-w-xl mb-6">
+            {isHi
+              ? "परीक्षा, वेतन, राज्य, विभाग और योग्यता द्वारा सरकारी नौकरियों के बारे में विस्तृत गाइड।"
+              : "In-depth guides on government jobs by exam, salary, state, department, and qualification."}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {getAllHubs()
+              .slice(0, 12)
+              .map((hub) => (
+                <Link
+                  key={hub.slug}
+                  href={`/hubs/${hub.slug}`}
+                  className="group p-4 rounded-lg border border-black/8 hover:border-black/20 transition-colors"
+                >
+                  <div
+                    className="w-2 h-2 rounded-full mb-3"
+                    style={{ backgroundColor: hub.color }}
+                  />
+                  <h3 className="font-semibold text-sm text-neutral-900 group-hover:underline line-clamp-2">
+                    {hub.title}
+                  </h3>
+                </Link>
+              ))}
           </div>
         </section>
 
