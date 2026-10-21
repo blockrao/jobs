@@ -1,0 +1,119 @@
+{
+  "startedAt": "2026-10-06T08:59:15.831Z",
+  "windowDays": 10,
+  "fetches": [
+    {
+      "url": "https://www.freejobalert.com/sitemap.xml",
+      "ok": true,
+      "bytes": 3472
+    },
+    {
+      "url": "https://www.freejobalert.com/posts-12.xml",
+      "ok": true,
+      "bytes": 1767637
+    }
+  ],
+  "sitemapFiles": [
+    "https://www.freejobalert.com/posts-12.xml"
+  ],
+  "entriesInWindow": 980,
+  "byKind": {
+    "recruitment": 642,
+    "lifecycle": 278,
+    "other": 60
+  },
+  "detailTargets": 400,
+  "detailFailures": 0,
+  "sample": [
+    {
+      "externalId": "3071182",
+      "slug": "dm-ho-jayashankar-bhupalpally-recruitment-2026-apply-offline-for-33-staff-nurse-lab-technician-and-more-posts-3071182",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:26:37.000Z"
+    },
+    {
+      "externalId": "3071180",
+      "slug": "kv-meg-centre-bengaluru-recruitment-2026-walkin-for-pgt-tgt-and-more-posts-3071180",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:26:25.000Z"
+    },
+    {
+      "externalId": "3071174",
+      "slug": "negd-recruitment-2026-apply-online-for-ai-engineer-senior-data-scientist-posts-3071174",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:22:42.000Z"
+    },
+    {
+      "externalId": "3071178",
+      "slug": "sainik-school-chhingchhip-recruitment-2026-apply-offline-for-ward-boys-and-ge-posts-3071178",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:21:30.000Z"
+    },
+    {
+      "externalId": "3071176",
+      "slug": "iiest-shibpur-librarian-recruitment-2026-3071176",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:17:43.000Z"
+    },
+    {
+      "externalId": "3071173",
+      "slug": "vksu-ug-spot-admission-2026-30-3071173",
+      "kind": "lifecycle",
+      "lastmod": "2026-10-06T08:16:08.000Z"
+    },
+    {
+      "externalId": "3071171",
+      "slug": "icmr-nirwoh-project-technical-support-ii-recruitment-2026-apply-online-3071171",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:13:45.000Z"
+    },
+    {
+      "externalId": "3071169",
+      "slug": "civil-surgeon-office-ramgarh-recruitment-2026-walkin-for-doctor-counsellor-posts-3071169",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:11:34.000Z"
+    },
+    {
+      "externalId": "3071167",
+      "slug": "dr-ysrhu-recruitment-2026-walkin-for-record-assistant-electrician-messenger-and-more-posts-3071167",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:08:38.000Z"
+    },
+    {
+      "externalId": "3071165",
+      "slug": "samagra-shiksha-nuapada-part-time-teacher-recruitment-2026-apply-offline-3071165",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:06:06.000Z"
+    },
+    {
+      "externalId": "3071163",
+      "slug": "patliputra-university-ppu-spot-admission-2026-30-3071163",
+      "kind": "lifecycle",
+      "lastmod": "2026-10-06T08:05:11.000Z"
+    },
+    {
+      "externalId": "3071162",
+      "slug": "iit-hyderabad-research-associate-recruitment-2026-apply-online-3071162",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:03:36.000Z"
+    },
+    {
+      "externalId": "3071160",
+      "slug": "ksebl-general-manager-recruitment-2026-apply-offline-3071160",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T08:03:16.000Z"
+    },
+    {
+      "externalId": "3071158",
+      "slug": "district-commissioner-goalpara-district-administrative-head-assistant-recruitment-2026-apply-offline-3071158",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T07:59:42.000Z"
+    },
+    {
+      "externalId": "3071156",
+      "slug": "davangere-university-recruitment-2026-apply-offline-for-guest-faculty-teaching-assistants-posts-3071156",
+      "kind": "recruitment",
+      "lastmod": "2026-10-06T07:58:06.000Z"
+    }
+  ]
+}

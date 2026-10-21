@@ -1,0 +1,89 @@
+
+
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head id="Head1"><title>
+	File Preview
+</title>
+    <style>
+        html, body, form {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #fileViewer {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .full-container-pdf {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .full-container-img {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <form method="post" action="./MO_13-10-2026_Advt-Cont-Accountant-Oct26_admin.pdf?file=MO_13-10-2026_Advt-Cont-Accountant-Oct26_admin.pdf" id="form1">
+<div class="aspNetHidden">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="LbFF6pTCde4Egk5M0ZELRwzDuqWvjgBkkHPqLCNDatEwWSuJzFdtIyB/42g4TamBrHWxwq9UVr6Mg+BJG0VpDPiveOhpQeaFt/RshFOV4YjuRaSbmHrBWZQNlAmFotqkXzyBvs3pNIhUzMR+ZbF6Ms8/pe2fFT8PJAuVK8YwFWKppq4xKuzBJkpj8qIslyqGPF/rc1rBXGwgLqfGmGOGngElW00g925yz0bKEo09DMT3M8qX2LDr8aCEFx5s0pOOa1qmc1P/BIagzgeOwHxzSKmJrtiy4Ds+sUpvdCIkZ/q8laVSTZdwDeNdhNuYnr4pR0bS4MToFmyCGcSlp1CzxY4y38gzz4A95Jcm+GaVAv1CjrhvivddAVVbHo/X4nlDfKtXKEpCZ8diSN+52hlHMc6/MHHfNXBwdaNPh8ptFbsZUcQsxkWef4NmFtBCmj/R" />
+</div>
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="CB574050" />
+</div>
+        <div id="pdfContanier" class="full-container-pdf">
+            <embed src="https://nitaappstorage.blob.core.windows.net/nitagartalawebdocuments/MO_13-10-2026_Advt-Cont-Accountant-Oct26_admin.pdf?sv=2018-03-28&sr=b&sig=%2FbGNwvDrb0aKBzUHulkRYY1QQL%2FwZbmzUV%2BpExmqo3Q%3D&se=2026-10-15T17%3A51%3A36Z&sp=r" id="fileViewer" type="application/pdf"></embed>
+        </div>
+        
+    </form>
+</body>
+</html>
+
+                <script type='text/javascript'>
+                    // Function to remove the Google Vignette hash
+                    function removeGoogleVignetteHash() {
+                        if (window.location.hash === '#google_vignette') {
+                            history.replaceState(null, null, window.location.pathname + window.location.search);
+                        }
+                    }
+
+                    // Remove Google Vignette hash if present
+                    removeGoogleVignetteHash();
+
+                    // Create a MutationObserver to watch for ads and prevent the hash from being added
+                    const observer = new MutationObserver((mutationsList, observer) => {
+                        mutationsList.forEach(mutation => {
+                            mutation.addedNodes.forEach(node => {
+
+                                if (node.nodeType === Node.ELEMENT_NODE && node.matches('ins.adsbygoogle, ins.adsbygoogle.adsbygoogle-noablate, .adsbygoogle, ins')) {
+                                    node.remove(); // or node.style.setProperty('display', 'none', 'important');
+                                }
+                            });
+                        });
+                    });
+
+                    // Observe the body element for changes in the DOM
+                    observer.observe(document.body, { childList: true, subtree: true });
+
+                    // Optional: If ads are injected after some time, you can check for new ads periodically
+                    const interval = setInterval(() => {
+                        const adElement = document.querySelector('ins.adsbygoogle, ins.adsbygoogle.adsbygoogle-noablate, .adsbygoogle, ins');
+                        if (adElement) {
+                            adElement.remove(); // or adElement.style.display = 'none';
+                        }
+
+                        // Also check to remove the hash if it's added again
+                        removeGoogleVignetteHash();
+                    }, 1000); // Check every 1 second
+                </script>

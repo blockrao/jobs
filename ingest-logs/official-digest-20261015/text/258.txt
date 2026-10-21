@@ -1,0 +1,94 @@
+Applications are invited for the position of Research Associate-I for the following time-bound
+sponsored project as per the details given below:
+
+ S.    Name of the project & Duration of       Post details & No. of       Name of the Project
+ No               the Project                          Posts                Investigator and
+                                                                               Email ID
+ 1.    “Understanding the molecular and         Research Associate-I      Dr. Aneeshkumar A. G.
+       immunological      correlates   of                                 Staff Scientist-V
+       tuberculosis-induced     cachexia”       (One position only)       aneesh@nii.ac.in
+       funded by BIRAC
+                                                                          Dr. Veena S. Patil
+                                                                          Staff Scientist-V
+       Tenable-12.09.2027
+                                                                          veena@nii.ac.in
+
+Educational Qualifications: PhD/MD/MS/MDS or equivalent degree or having 3 years of
+research, teaching and design and development experience after MVSc/M.Pharm/ME/M.Tech
+with at least one research paper in a Science Citation Indexed (SCI) journal. Expertise in
+handling human samples/cohorts, human Immunology, multi-colour high parameter
+flowcytometry analysis and genomics is necessary. Experience with analysis of antigen-specific T
+cells, single-cell multiomics experiments, and omics data analysis and immune cell culture will be
+given preference. The candidate should be able to perform both wet lab experiments and
+bioinformatic analysis. Candidates who have completed their viva-voce examination may apply.
+
+Job description: Candidate will have to perform multi-colour high parameter flowcytometry
+analysis of immune cells, single-cell RNAseq experiments and omics data analysis of PBMCs
+analysis of antigen specific T cell experiments. The candidate should be able to write custom
+codes for the analysis in R.
+
+Emoluments: The selected candidates will draw consolidated emoluments as per Institute Rules,
+depending upon qualifications & experience
+
+Rs. 58,000/- per month plus 27% HRA (As per DST OM dated 26.06.2023)
+
+General Terms & Conditions:
+
+        1. The candidates selected for the above posts will be on contract for one year or duration
+           of the project whichever is shorter, at a time.
+        2. No hostel/ housing facility will be provided.
+        3. Applicants may clearly mention the category they belong to i.e. SC/ST/OBC/PH and
+           attach documentary proof of the same.
+        4. No TA/DA will be paid for attending the interview, if called for.
+        5. Apart from sending application in the prescribed format given below, candidates should
+           send complete Curriculum Vitae along with the names of three referees. Curriculum Vitae
+           should contain details of the experimental expertise and list of publications.
+        6. Canvassing in any form will be a disqualification.
+        7. The Interviews will be held in offline/online mode.
+  HOW TO APPLY: Interested candidates may apply directly, STRICTLY IN THE PRESCRIBED
+  FORMAT GIVEN BELOW, through E-mail, to the Investigator of the project, clearly indicating the
+  name of the project along with their complete CV, E-mail-ID, fax numbers, telephone numbers. Only
+  Short-listed candidates will be called for interview, and they required to submit attested copies of all
+  their certificates. A demand Draft of Rs 100/- drawn on Canara Bank or Indian Bank payable at
+  Delhi/New Delhi in favour of the Director, NII or can make the payment through UPI/Paytm/Phone
+  Pe etc. in the Bank A/c Beneficiary Name: Director, NII/Account No. 1484101001636/IFSC:
+  CNRB0001484/) and Women & SC/ST/PH Candidates are exempted from payment of fees, (subject to
+  submission of documentary proof), at the time of interview.
+
+
+            LAST DATE OF RECEIPT OF APPLICATIONS: 28th October, 2026
+
+
+                                       PRESCRIBED FORMAT
+
+
+ 1.        Full Name
+  2.       Father’s Name
+  3.       Mother’s Name
+  4.       Date of Birth & Age
+  5.       Gender
+  6.       Category (UR/SC/ST/OBC/PH)
+ 7 (a)     Full Current Correspondence Address
+   (b)     Permanent Address
+           Email Id
+  8.
+           Mobile No.
+  9.       Details of Past Experience & Present Employment , If any
+
+ 10.       Whether qualified any ‘National Level Examination’ (Please State)
+
+ 11.       Please State, whether holding Overseas Citizenship Card of India, (Yes/No)
+           Details of the Academic/Professional Qualifications:
+ 12.
+         Name of         Year of     Board/Institution/University        Percentage        Remarks
+       examination       passing                                        and division
+          passed
+
+
+
+
+Please Note:
+
+             1. Applications containing incomplete information shall not be entertained.
+             2. Date of passing the examinations must be indicated clearly.
+
