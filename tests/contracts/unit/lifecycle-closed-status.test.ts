@@ -27,7 +27,11 @@ describe("LIFE-002 recruitment lifecycle CLOSED state", () => {
   });
 
   test("the hub treats a CLOSED status as closed", () => {
+    // The hub derives open/closed from the shared lifecycle rule (which maps a
+    // CLOSED status, or a passed deadline, to "closed") and nothing else.
     const hub = stripComments(readSource("src/components/recruitment/recruitment-hub.tsx"));
-    expect(hub).toContain("return s === 'closed' || s === 'expired' || s === 'completed';");
+    expect(hub).toContain("deriveLifecycle(recruitment.status, recruitment.applicationEndDate, now)");
+    expect(hub).toContain("lifecycle.state === 'closed'");
+    expect(hub).not.toMatch(/isRecruitmentClosed|status\.toLowerCase\(\) === 'closed'/);
   });
 });

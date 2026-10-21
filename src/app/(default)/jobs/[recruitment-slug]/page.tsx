@@ -13,39 +13,23 @@
  * canonicalises a single-post recruitment to its leaf. Legacy slugs that map to a
  * current recruitment via recruitment_slug_redirects are 301'd in src/proxy.ts;
  * the data loader also resolves them so a stale link still renders the right hub.
+ *
+ * Metadata (v2, 2026-10-21): title and description are composed from stored
+ * facts by src/lib/seo/recruitment-title.ts through the same buildHubData the
+ * page renders from, so <title>, H1, description and JSON-LD never disagree.
  */
 
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
-import RecruitmentHub from "@/components/recruitment/recruitment-hub";
+import RecruitmentHub, { buildHubData } from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
-import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 86400; // 1 day ISR; revalidated on publish via /api/revalidate
 
 type Props = { params: Promise<{ "recruitment-slug": string }> };
-
-function hubDescription(name: string, totalPosts: number, totalVacancies: number | null): string {
-  const parts = [`${name} recruitment`];
-  if (totalVacancies && totalVacancies > 0) parts.push(`${totalVacancies.toLocaleString("en-IN")} vacancies`);
-  parts.push(`${totalPosts} post${totalPosts === 1 ? "" : "s"}`);
-  return `${parts.join(" · ")}. Eligibility, important dates, application fee, selection process and the official notification link.`;
-}
-
-function sumVacancies(posts: Array<{ vacancyTotal?: number | null }>): number | null {
-  let total = 0;
-  let any = false;
-  for (const p of posts) {
-    if (typeof p.vacancyTotal === "number" && p.vacancyTotal > 0) {
-      total += p.vacancyTotal;
-      any = true;
-    }
-  }
-  return any ? total : null;
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "recruitment-slug": slug } = await params;
@@ -53,9 +37,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) {
     return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
   }
-  const { recruitment, posts, totalPosts } = data;
-  const description = hubDescription(recruitment.name, totalPosts, sumVacancies(posts));
-  const title = `${recruitment.name} — Recruitment ${new Date(recruitment.notificationDate ?? recruitment.createdAt ?? Date.now()).getFullYear()}`;
+  const { recruitment, posts } = data;
+  const hub = buildHubData(recruitment, posts);
+  const { title, description } = hub;
 
   return {
     title,
@@ -86,26 +70,13 @@ export default async function RecruitmentHubPage({ params }: Props) {
     permanentRedirect(`/jobs/${data.recruitment.slug}`);
   }
 
-  const { recruitment, posts, totalPosts } = data;
+  const { recruitment, posts } = data;
+  const hub = buildHubData(recruitment, posts);
 
   return (
     <>
-      <RecruitmentHubStructuredData
-        recruitment={recruitment}
-        posts={posts}
-        totalPosts={totalPosts}
-        resolvedEmployer={recruitment.organizationName ?? null}
-        resolvedOfficialSource={recruitment.officialNotificationUrl ?? recruitment.notificationUrl ?? null}
-        resolvedTotalVacancies={sumVacancies(posts)}
-      />
-      <RecruitmentHub
-        recruitment={recruitment}
-        posts={posts}
-        orgSlug={recruitment.organizationSlug ?? null}
-        resolvedEmployer={recruitment.organizationName ?? null}
-        resolvedOfficialSource={recruitment.officialNotificationUrl ?? recruitment.notificationUrl ?? null}
-        resolvedTotalVacancies={sumVacancies(posts)}
-      />
+      <RecruitmentHubStructuredData data={hub} />
+      <RecruitmentHub data={hub} />
     </>
   );
 }

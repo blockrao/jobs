@@ -38,11 +38,12 @@ describe("extracted source projection", () => {
     expect(hub).toContain("parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)");
     expect(hub).toContain("sourceDetails?.interview_date_tentative");
     // The hub only surfaces the interview date when source facts are unverified, and
-    // the renderer labels it tentative rather than as an official schedule.
+    // the timeline labels it tentative rather than as an official schedule.
     expect(hub).toMatch(/tentativeInterviewDate = sourceFactsUnverified &&/);
+    expect(hub).toContain("label: 'Tentative interview date'");
+    expect(hub).toContain("note: 'tentative'");
     const hubDates = stripComments(readSource(HUB_DATES));
-    expect(hubDates).toContain("label: 'Tentative interview date'");
-    expect(hubDates).toContain("note: 'tentative'");
+    expect(hubDates).toMatch(/step\.note && <span[^>]*> \(\{step\.note\}\)<\/span>/);
   });
 
   test("types source-extracted fields independently from canonical facts", () => {
@@ -104,9 +105,12 @@ describe("extracted source projection", () => {
     expect(source).toContain("? 'Source listing published' : 'Notification published'");
     expect(source).toContain("sourceFactsUnverified ? 'Application deadline (reported)' : 'Application closes'");
     expect(source).toContain("The source listing reports");
-    // Lifecycle-derived claims (closed state, countdown) are suppressed while unverified.
-    expect(source).toContain("sourceFactsUnverified ? false : isRecruitmentClosed(recruitment.status)");
-    expect(source).toContain("sourceFactsUnverified ? null : daysUntil(appEndRaw)");
+    // Lifecycle-derived claims (closed state, countdown) come from the shared
+    // lifecycle rule and are suppressed while unverified.
+    expect(source).toContain("deriveLifecycle(recruitment.status, recruitment.applicationEndDate, now)");
+    expect(source).toContain("sourceFactsUnverified ? null : lifecycle.state");
+    expect(source).toContain("sourceFactsUnverified ? false : lifecycle.state === 'closed'");
+    expect(source).toContain("sourceFactsUnverified ? null : lifecycle.daysLeft");
   });
   test("all Post Leaves emit JobPosting schema; frontend labels unverified facts as reported", () => {
     // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
@@ -138,8 +142,8 @@ describe("extracted source projection", () => {
     expect(route).not.toContain("getSinglePostLeafSlug");
     expect(route).not.toContain("singleLeafSlug");
     expect(route).not.toContain("/posts/${roleSlugs[0]}");
-    expect(route).toContain("const canonicalUrl = `${SITE_URL}/jobs/${recruitment.slug}`;");
-    expect(route).toContain("robots: { index: true, follow: true }");
+    // Canonical and robots go through src/lib/seo (CAN-05): self-canonical, indexable.
+    expect(route).toContain("pageSeo(`/jobs/${recruitment.slug}`, { index: true })");
     // Only a legacy slug (recruitment_slug_redirects) redirects; smart resolution renders in place.
     expect(route).toMatch(/if \(data\.resolutionMethod === "legacy-redirect"\) \{\s*permanentRedirect\(`\/jobs\/\$\{data\.recruitment\.slug\}`\);/);
     // Hub structured data keys its dates on source verification, never fabricating them.
