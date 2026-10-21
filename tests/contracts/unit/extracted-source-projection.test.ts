@@ -120,8 +120,10 @@ describe("extracted source projection", () => {
     // No verification-based schema suppression anywhere on the leaf path.
     expect(route).not.toContain("suppressJobPostingSchema");
     expect(route).not.toContain("sourceVerificationPending");
-    // All posts emit JobPosting schema regardless of verification
-    expect(schema).toContain('"@graph": [breadcrumb, jobPosting]');
+    // All posts emit JobPosting schema regardless of verification, in the one
+    // shared @graph (site org, breadcrumb, web page, JobPosting, visible FAQ).
+    expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, jobPosting, faqPage)");
+    expect(schema).not.toMatch(/[vV]erif/);
     // Frontend shows "reported" labels for consumer protection (verification notice banners)
     const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
     expect(page).toContain("Vacancies (reported)");

@@ -1,10 +1,12 @@
 /**
  * Hub Posts — posts & vacancies table, one row per post.
- * Post names are plain text (no leaf links: no Hub → Leaf inheritance).
+ * Each post name links to its leaf page; the hub is the one page that links
+ * every leaf, so this table is the leaves' primary internal-link source.
  * Vacancy counts that are not verified against the official notice carry an
  * asterisk and the footnote explains it.
  */
 
+import Link from 'next/link';
 import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
 
@@ -33,7 +35,7 @@ export default function HubPosts({ data }: { data: HubData }) {
           <tbody>
             {postRows.map((row) => (
               <tr key={row.id}>
-                <th scope="row">{row.name}</th>
+                <th scope="row">{row.href ? <Link href={row.href}>{row.name}</Link> : row.name}</th>
                 <td>{row.vacanciesLabel ?? '—'}</td>
                 <td>{row.qualification ?? '—'}</td>
                 {showExperience && <td>{row.experience ?? '—'}</td>}

@@ -32,6 +32,40 @@ interface Props {
   }>;
 }
 
+/**
+ * <title> and meta description composed from stored facts only, in the form
+ * the audience searches: "{Post} – {Org} {Recruitment} ({N} Posts) – Apply by {date}".
+ * The same strings are passed to the renderer so H1, <head> and JSON-LD agree.
+ */
+function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
+  const enrichment = post.enrichment;
+  const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
+  const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
+  const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
+  const deadlineRaw = post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null;
+  const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+  const closed = deadline ? Date.now() > deadline.getTime() : false;
+  const qualification = post.fjaExtract?.qualificationRaw ?? null;
+
+  const titleParts = [post.title];
+  if (post.organizationName) titleParts.push(`– ${post.organizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
+  else if (post.recruitmentName) titleParts.push(`– ${post.recruitmentName}`);
+  if (vacancies > 0) titleParts.push(`(${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "Post" : "Posts"})`);
+  if (deadline && !closed) titleParts.push(`– Apply by ${formatDate(deadline)}`);
+  const title = titleParts.join(" ");
+
+  const bits: string[] = [];
+  if (post.organizationName) bits.push(`${post.organizationName} recruitment for ${post.title}`);
+  else bits.push(`${post.title} recruitment`);
+  if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
+  if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
+  if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
+  if (deadline) bits.push(closed ? `applications closed on ${formatDate(deadline)}` : `last date ${formatDate(deadline)}`);
+  const description = post.description ?? `${bits.join(", ")}. Eligibility, age limit, fee, selection process and official apply link.`;
+
+  return { title, description };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "recruitment-slug": recruitmentSlug, "post-slug": postSlug } = await params;
 
@@ -44,59 +78,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // SEO-optimized title: include location and salary for SERP visibility
-  const location = post.locationState || post.locationCity || "India";
-  const salaryMin = post.enrichment?.salaryMin ?? post.legacySalaryMin;
-  const salaryMax = post.enrichment?.salaryMax ?? post.legacySalaryMax;
-  const salaryInfo = salaryMin
-    ? `: ₹${formatCurrency(salaryMin)}${salaryMax ? `–₹${formatCurrency(salaryMax)}` : ""}`
-    : "";
-  const title = `${post.title} (${location})${salaryInfo}`;
-
-  // SEO-optimized description: use vacancy, deadline, and salary when available
-  let description = post.description;
-  if (!description) {
-    const vacancies = post.enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
-    const vacancyText = vacancies > 0 ? `${vacancies} positions` : "multiple positions";
-
-    const applicationDeadline = post.recruitmentApplicationEndDate ?? post.enrichment?.applicationClosingDate;
-    let daysText = "apply now";
-    if (applicationDeadline) {
-      const daysLeft = Math.ceil(
-        (new Date(applicationDeadline).getTime() - new Date().getTime()) / 86_400_000
-      );
-      if (daysLeft > 0) {
-        daysText = `apply in ${daysLeft} days`;
-      } else if (daysLeft === 0) {
-        daysText = "apply today";
-      } else {
-        daysText = "applications closed";
-      }
-    }
-
-    const salaryText = salaryMin
-      ? `Salary ₹${formatCurrency(salaryMin)}${salaryMax ? `–₹${formatCurrency(salaryMax)}` : ""}`
-      : "Check salary details";
-
-    description = `${post.title}: ${vacancyText}, ${daysText}. ${salaryText}.`;
-  }
+  const { title, description } = composeLeafSeo(post);
 
   return {
     title,
     description,
-    keywords: [
-      post.title,
-      post.organizationName,
-      post.locationState || "India",
-      "government jobs",
-      "recruitment",
-      "apply online",
-    ].filter(Boolean),
-    openGraph: {
-      title,
-      description,
-      type: "website",
-    },
+    openGraph: { title, description, type: "article" },
+    twitter: { card: "summary", title, description },
     ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: true }),
   };
 }
@@ -140,9 +128,11 @@ export default async function JobDetailPage({ params }: Props) {
 
   // Build canonical URL for schema
   const canonicalUrl = `/jobs/${post.recruitmentSlug}/${post.slug}`;
+  const seo = composeLeafSeo(post);
 
   // Fetch pillar slug for organization (Phase 2)
   let pillarSlug: string | null = null;
+  let organizationWebsite: string | null = null;
   if (post.organizationId) {
     try {
       const { getDb } = await import("@/db");
@@ -150,13 +140,14 @@ export default async function JobDetailPage({ params }: Props) {
       const { organizations } = await import("@/db/schema");
       const db = getDb();
       const org = await db
-        .select({ pillarSlug: organizations.pillarSlug })
+        .select({ pillarSlug: organizations.pillarSlug, websiteUrl: organizations.websiteUrl })
         .from(organizations)
         .where(eq(organizations.id, Number(post.organizationId)))
         .limit(1);
       pillarSlug = org.length > 0 ? org[0].pillarSlug : null;
+      organizationWebsite = org.length > 0 ? org[0].websiteUrl ?? null : null;
     } catch (e) {
-      // Silently fail if pillar slug cannot be fetched
+      // Silently fail if organisation details cannot be fetched
       pillarSlug = null;
     }
   }
@@ -169,6 +160,7 @@ export default async function JobDetailPage({ params }: Props) {
         description: post.description,
         organizationName: post.organizationName,
         organizationType: post.organizationSector,
+        organizationWebsite,
         locationCity: post.locationCity,
         locationState: post.locationState,
         recruitmentSlug: post.recruitmentSlug,
@@ -286,6 +278,8 @@ export default async function JobDetailPage({ params }: Props) {
       }))}
       pillarSlug={pillarSlug}
       canonicalUrl={canonicalUrl}
+      pageTitle={seo.title}
+      pageDescription={seo.description}
       lifecycle={lifecycle}
     />
   );

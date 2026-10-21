@@ -69,6 +69,8 @@ export type RecruitmentHubPost = typeof posts.$inferSelect & {
 export interface PostTableRow {
   id: number | string;
   name: string;
+  /** Leaf page path (/jobs/{recruitment}/{post}); null when the post has no slug. */
+  href: string | null;
   vacanciesLabel: string | null;
   vacanciesUnverified: boolean;
   qualification: string | null;

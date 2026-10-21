@@ -17,7 +17,10 @@
  *     own source-verification status is not VERIFIED and an extracted source
  *     record exists, extracted facts are labelled "reported" and lifecycle
  *     claims (closed state, countdown) are suppressed.
- *   - No Hub -> Leaf data inheritance; post rows are plain text, never links.
+ *   - No Hub -> Leaf data inheritance: the hub never reads facts from a leaf.
+ *     Post rows DO link to their leaf page (/jobs/{slug}/{post-slug}) — the
+ *     hub is the only page that links every leaf, and that internal link is
+ *     what gets the leaves crawled and ranked (2026-10-21).
  *   - ELIG-001 Phase 1: display stored eligibility text only.
  */
 
@@ -356,9 +359,11 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     const vacanciesVerified = post.vacancyTotal != null
       || (post.resolvedVacancyCount != null && post.fjaExtract?.verificationStatus === 'VERIFIED');
     const vacanciesUnverified = vacancies != null && !vacanciesVerified;
+    const postSlug = str(post.slug);
     return [{
       id: post.id,
       name,
+      href: postSlug ? `/jobs/${slug}/${postSlug}` : null,
       vacanciesLabel: vacancies != null ? `${vacancies.toLocaleString('en-IN')}${vacanciesUnverified ? '*' : ''}` : null,
       vacanciesUnverified,
       qualification: postQualification(post),
@@ -653,11 +658,11 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
 
   // ── Section list ─────────────────────────────────────────────────────────
   const sections: HubSectionId[] = ['overview'];
+  if (hasTimeline) sections.push('dates');
   if (postRows.length > 0) sections.push('posts');
   if (educationTexts.length > 0 || physicalTexts.length > 0 || ageTexts.length > 0) sections.push('eligibility');
   if (payLines.length > 0) sections.push('pay');
   if (hasFee) sections.push('fee');
-  if (hasTimeline) sections.push('dates');
   if (selectionText || selectionRows.length > 0) sections.push('selection');
   if (howToApply.length > 0) sections.push('apply');
   if (links.length > 0) sections.push('links');
@@ -758,10 +763,10 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           <HubToc data={data} />
 
           <HubDetails data={data} />
+          {has('dates') && <HubDates data={data} />}
           {has('posts') && <HubPosts data={data} />}
           {has('eligibility') && <HubEligibility data={data} />}
           {(has('pay') || has('fee')) && <HubPayFee data={data} />}
-          {has('dates') && <HubDates data={data} />}
           {has('selection') && <HubSelection data={data} />}
           {has('apply') && <HubApply data={data} />}
           {data.sourceDocuments.length > 0 && (

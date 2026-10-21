@@ -1,30 +1,27 @@
-// @ts-nocheck
 /**
  * Post Leaf Structured Data
  *
- * Emits schema.org/JobPosting + BreadcrumbList for an individual Post Leaf page.
- * All data from the database is exposed directly to Google and users.
+ * One schema.org @graph for /jobs/{recruitment-slug}/{post-slug}:
+ *   - Organization   — site identity (JobOye), referenced as publisher
+ *   - BreadcrumbList — Home › Jobs › Recruitment hub › Post title
+ *   - WebPage        — the leaf itself; datePublished/dateModified; mainEntity → JobPosting
+ *   - JobPosting     — the ONLY place on the site that emits JobPosting
+ *   - FAQPage        — exactly the FAQ items rendered on the page (passed in)
  *
- * Design principles:
- *   - JobPosting belongs ONLY on Leaf pages (/jobs/{recruitment-slug}/{post-slug}).
- *     Never emit JobPosting on Hub pages — Google's guidelines forbid it on
- *     listing/aggregation pages.
- *   - All monetary and vacancy facts are resolver-gated: only values that passed
- *     the Gate 4C/4D resolver pipeline (resolvedSalary, resolvedVacancy) are
- *     emitted. Raw DB columns are never accessed directly here.
- *   - Eligibility facts (qualification, experience) are Phase 2 territory and
- *     intentionally omitted from JSON-LD per ELIG-001 deferral.
- *   - hiringOrganization: uses post.organizationName (display-quality). We emit
- *     as-is rather than omit entirely.
- *   - directApply: always false — JobOye links to official portals and never
- *     processes applications on-site.
- *   - All posts emit schema regardless of source verification status. Frontend
- *     shows "reported" labels for data-confidence signaling; this is the consumer
- *     protection mechanism.
- *   - No fabricated/inferred facts. Null = omit, never substitute.
+ * Rules (unchanged from the original builder):
+ *   - JobPosting belongs ONLY on leaf pages. Never on hubs or listings.
+ *   - Monetary and vacancy facts are resolver-gated (resolvedSalary / resolvedVacancy).
+ *   - No fabricated facts: null = omit. educationRequirements is not emitted
+ *     because credentialCategory cannot be derived safely yet (ELIG-001).
+ *   - directApply is always false: JobOye links to official portals only.
+ *   - `description` is HTML (<p>, <ul>/<li>) composed from stored facts, as
+ *     Google requires; it mirrors the visible sections of the page.
+ *   - baseSalary.unitText comes from the resolver's period and is always one
+ *     of Google's case-sensitive values (HOUR/DAY/WEEK/MONTH/YEAR).
  */
 
 import { SITE_URL } from "@/lib/site";
+import { jsonLdGraph } from "@/lib/structured-data";
 import type { ResolvedDeadline, ResolvedSalary } from "@/lib/resolvers/fact-resolvers";
 
 const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
@@ -43,13 +40,31 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   PERMANENT: "FULL_TIME",
 };
 
-interface PostLeafSchemaProps {
+const SALARY_UNITS: Record<string, string> = {
+  MONTH: "MONTH", MONTHLY: "MONTH", "PER MONTH": "MONTH",
+  YEAR: "YEAR", YEARLY: "YEAR", ANNUAL: "YEAR", "PER ANNUM": "YEAR",
+  DAY: "DAY", DAILY: "DAY", HOUR: "HOUR", HOURLY: "HOUR", WEEK: "WEEK", WEEKLY: "WEEK",
+};
+
+export interface LeafFaq {
+  q: string;
+  a: string;
+}
+
+/** A visible fact line that also goes into the JobPosting description. */
+export interface LeafFact {
+  label: string;
+  text: string;
+}
+
+export interface PostLeafSchemaProps {
   post: {
     id: number | string;
     title: string;
     slug: string;
     description?: string | null;
     organizationName?: string | null;
+    organizationWebsite?: string | null;
     recruitmentSlug: string;
     recruitmentName?: string | null;
     employmentType?: string | null;
@@ -58,20 +73,22 @@ interface PostLeafSchemaProps {
     notificationPublicationDate?: Date | null;
     postedAt?: Date | null;
     updatedAt?: Date | null;
-    /** Phase 1: stored qualification text from official source */
     qualificationText?: string | null;
-    /** Phase 1: stored experience text from official source */
     experienceText?: string | null;
-    /** Vacancy/notice number from the official advertisement */
     vacancyNumber?: string | null;
-    /** URL to the official source for this post */
     officialSourceUrl?: string | null;
   };
-  /** Vacancy count from resolvePostVacancy — null means omit. */
+  /** Page <title> / meta description, so WebPage never disagrees with <head>. */
+  pageTitle?: string;
+  pageDescription?: string;
+  /** One-paragraph intro rendered under the H1. */
+  intro?: string | null;
+  /** Fact lines rendered on the page; become the JobPosting description. */
+  facts?: LeafFact[];
+  /** Visible FAQ items; mirrored 1:1 into FAQPage. */
+  faqs?: LeafFaq[];
   resolvedVacancy: number | null;
-  /** Salary from resolveSalary — null means omit. */
   resolvedSalary: ResolvedSalary | null;
-  /** Deadline from resolveDeadline — state UNKNOWN means no validThrough. */
   resolvedDeadline: ResolvedDeadline;
 }
 
@@ -79,148 +96,144 @@ function toIso(d: Date | null | undefined): string | undefined {
   if (!d) return undefined;
   try {
     const ts = new Date(d);
-    if (isNaN(ts.getTime())) return undefined;
-    // Some legacy rows carry the Unix epoch as a missing-date sentinel.
-    // Do not publish 1970 as a real job notification date.
-    if (ts.getTime() <= 0) return undefined;
+    if (isNaN(ts.getTime()) || ts.getTime() <= 0) return undefined;
+    const y = ts.getUTCFullYear();
+    if (y < 1900 || y >= 2090) return undefined;
     return ts.toISOString();
   } catch {
     return undefined;
   }
 }
 
+function isAuthoritativeDomain(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host.endsWith(".gov.in") || host.endsWith(".nic.in");
+  } catch {
+    return false;
+  }
+}
+
+const escapeHtml = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 export default function PostLeafStructuredData({
   post,
+  pageTitle = post.title,
+  pageDescription = post.description ?? post.title,
+  intro = post.description ?? null,
+  facts = [],
+  faqs = [],
   resolvedVacancy,
   resolvedSalary,
   resolvedDeadline,
 }: PostLeafSchemaProps) {
   const leafUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.slug}`;
   const hubUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
+  const officialSite = post.organizationWebsite ?? post.officialSourceUrl ?? null;
 
-  // ── BreadcrumbList ─────────────────────────────────────────────────────────
-  // Home → Jobs → Recruitment (hub, linked) → Post title (leaf)
-  // Home is always position 1 per reference spec requirement.
-  // Org node intentionally omitted: Google requires `item` URL on every non-terminal
-  // node and we have no verified org page URL yet.
-  const breadcrumbItems: object[] = [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: "Home",
-      item: SITE_URL,
-    },
-    {
-      "@type": "ListItem",
-      position: 2,
-      name: "Jobs",
-      item: `${SITE_URL}/jobs`,
-    },
+  // ── Organization (site identity) ─────────────────────────────────────────
+  const siteOrg = {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#org`,
+    name: "JobOye",
+    url: SITE_URL,
+  };
+
+  // ── BreadcrumbList ───────────────────────────────────────────────────────
+  // Every non-terminal node carries an item URL (Google validation rule).
+  const crumbs: Array<Record<string, unknown>> = [
+    { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+    { "@type": "ListItem", position: 2, name: "Jobs", item: `${SITE_URL}/jobs` },
   ];
-
-  let position = 3;
-
-  // Note: org node omitted — no verified org URL to use as `item`.
-  // Google requires every non-terminal breadcrumb node to carry an `item` URL;
-  // emitting a name-only node triggers a validation error. Hub link carries the
-  // recruitment name instead, which is always linked.
-
   if (post.recruitmentName) {
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      position: position++,
-      name: post.recruitmentName,
-      item: hubUrl,
-    });
+    crumbs.push({ "@type": "ListItem", position: 3, name: post.recruitmentName, item: hubUrl });
   }
-
-  breadcrumbItems.push({
-    "@type": "ListItem",
-    position: position,
-    name: post.title,
-    // No item URL on final breadcrumb node — h1 is source of truth
-  });
-
+  crumbs.push({ "@type": "ListItem", position: crumbs.length + 1, name: post.title });
   const breadcrumb = {
     "@type": "BreadcrumbList",
     "@id": `${leafUrl}#breadcrumb`,
-    itemListElement: breadcrumbItems,
+    itemListElement: crumbs,
   };
 
-  // ── JobPosting ─────────────────────────────────────────────────────────────
-  // identifier: use vacancyNumber (official advertisement number) when available;
-  // fall back to internal post id as a stable synthetic identifier.
+  // ── Dates ────────────────────────────────────────────────────────────────
+  const datePostedIso = toIso(post.notificationPublicationDate) ?? toIso(post.postedAt);
+  const dateModifiedIso = toIso(post.updatedAt);
+
+  // ── WebPage ──────────────────────────────────────────────────────────────
+  const webPage: Record<string, unknown> = {
+    "@type": "WebPage",
+    "@id": `${leafUrl}#webpage`,
+    url: leafUrl,
+    name: pageTitle,
+    description: pageDescription,
+    inLanguage: "en-IN",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}#website`,
+      url: SITE_URL,
+      name: "JobOye",
+      publisher: { "@id": `${SITE_URL}/#org` },
+    },
+    breadcrumb: { "@id": `${leafUrl}#breadcrumb` },
+    mainEntity: { "@id": `${leafUrl}#jobposting` },
+  };
+  if (datePostedIso) webPage.datePublished = datePostedIso;
+  if (dateModifiedIso) webPage.dateModified = dateModifiedIso;
+  if (post.officialSourceUrl) {
+    webPage.citation = { "@type": "CreativeWork", url: post.officialSourceUrl };
+  }
+
+  // ── JobPosting ───────────────────────────────────────────────────────────
+  // description: HTML paragraphs from the same facts the page renders.
+  const descriptionParts: string[] = [];
+  if (intro) descriptionParts.push(`<p>${escapeHtml(intro)}</p>`);
+  if (facts.length > 0) {
+    descriptionParts.push(
+      `<ul>${facts.map((f) => `<li>${escapeHtml(f.label)}: ${escapeHtml(f.text)}</li>`).join("")}</ul>`,
+    );
+  }
+  if (descriptionParts.length === 0) {
+    descriptionParts.push(
+      `<p>${escapeHtml(post.title)} at ${escapeHtml(post.organizationName ?? "a government organisation")}. See the official notification for eligibility, pay and how to apply.</p>`,
+    );
+  }
+
   const identifierValue = post.vacancyNumber ?? String(post.id);
-  const identifierName = post.vacancyNumber
-    ? "vacancy number"
-    : (post.organizationName ?? "JobOye");
+  const identifierName = post.vacancyNumber ? "Advertisement number" : (post.organizationName ?? "JobOye");
 
   const jobPosting: Record<string, unknown> = {
     "@type": "JobPosting",
     "@id": `${leafUrl}#jobposting`,
+    mainEntityOfPage: { "@id": `${leafUrl}#webpage` },
     url: leafUrl,
     title: post.title,
+    description: descriptionParts.join(""),
     directApply: false,
-    identifier: {
-      "@type": "PropertyValue",
-      name: identifierName,
-      value: identifierValue,
-    },
+    identifier: { "@type": "PropertyValue", name: identifierName, value: identifierValue },
   };
 
-  // description — REQUIRED by Google for rich results; generate fallback if absent
-  const description = post.description ||
-    `${post.title} position at ${post.organizationName || 'a government organization'} in ${post.locationCity || post.locationState || 'India'}. ` +
-    `This is a ${post.employmentType?.toLowerCase() || 'full-time'} role. ` +
-    `For complete details including qualifications, experience requirements, salary, and how to apply, ` +
-    `please visit the official job posting.`;
+  if (datePostedIso) jobPosting.datePosted = datePostedIso;
 
-  jobPosting["description"] = description;
-
-  // datePosted — prefer notificationPublicationDate (when this role was announced),
-  // fall back to postedAt (when we first listed it on JobOye)
-  const datePostedIso =
-    toIso(post.notificationPublicationDate) ?? toIso(post.postedAt);
-  if (datePostedIso) {
-    jobPosting["datePosted"] = datePostedIso;
-  }
-
-  // dateModified — last update we know about
-  const dateModifiedIso = toIso(post.updatedAt);
-  if (dateModifiedIso) {
-    jobPosting["dateModified"] = dateModifiedIso;
-  }
-
-  // validThrough — only when a verified deadline exists (OPEN or CLOSED states
-  // both have a real date; UNKNOWN has none and must not be emitted as anything)
+  // validThrough only when a verified deadline exists (OPEN or CLOSED); never for UNKNOWN.
   if (resolvedDeadline.state !== "UNKNOWN" && resolvedDeadline.date) {
     const vtIso = toIso(resolvedDeadline.date);
-    if (vtIso) jobPosting["validThrough"] = vtIso;
+    if (vtIso) jobPosting.validThrough = vtIso;
   }
 
-  // employmentType — emit only recognized, explicitly mapped values.
-  // Never guess FULL_TIME for an unknown or missing value.
-  const employmentType =
-    EMPLOYMENT_TYPE_MAP[post.employmentType?.trim().toUpperCase() ?? ""];
-  if (employmentType) {
-    jobPosting["employmentType"] = employmentType;
-  }
+  const employmentType = EMPLOYMENT_TYPE_MAP[post.employmentType?.trim().toUpperCase() ?? ""];
+  if (employmentType) jobPosting.employmentType = employmentType;
 
-  // hiringOrganization — emit when name is present; omit sameAs (no verified URL yet).
-  // Use "Organization" not "GovernmentOrganization": Google's Jobs validator rejects
-  // GovernmentOrganization as an invalid object type for this field.
   if (post.organizationName) {
-    jobPosting["hiringOrganization"] = {
+    jobPosting.hiringOrganization = {
       "@type": "Organization",
       name: post.organizationName,
+      ...(isAuthoritativeDomain(officialSite) ? { sameAs: officialSite } : {}),
     };
   }
 
-  // jobLocation — all posts are Indian government jobs; addressCountry "IN" is
-  // always a real fact. Emit city/state when present; always emit country.
-  // postalCode and streetAddress are intentionally omitted: no verified data
-  // exists in the schema — emitting invented values would be a fabricated fact.
-  jobPosting["jobLocation"] = {
+  jobPosting.jobLocation = {
     "@type": "Place",
     address: {
       "@type": "PostalAddress",
@@ -229,80 +242,49 @@ export default function PostLeafStructuredData({
       addressCountry: "IN",
     },
   };
+  jobPosting.applicantLocationRequirements = { "@type": "Country", name: "India" };
 
-  // baseSalary — resolver-gated: only when resolveSalary returned a value
   if (resolvedSalary) {
-    jobPosting["baseSalary"] = {
-      "@type": "MonetaryAmount",
-      currency: resolvedSalary.currency,
-      value: {
-        "@type": "QuantitativeValue",
-        minValue: resolvedSalary.min,
-        maxValue: resolvedSalary.max,
-        unitText: resolvedSalary.period,
-      },
-    };
+    const unit = SALARY_UNITS[String(resolvedSalary.period ?? "").trim().toUpperCase()];
+    if (unit) {
+      jobPosting.baseSalary = {
+        "@type": "MonetaryAmount",
+        currency: resolvedSalary.currency,
+        value: {
+          "@type": "QuantitativeValue",
+          minValue: resolvedSalary.min,
+          maxValue: resolvedSalary.max,
+          unitText: unit,
+        },
+      };
+    }
   }
 
-  // totalJobOpenings — resolver-gated: only when resolvePostVacancy returned a value
-  if (resolvedVacancy != null) {
-    jobPosting["totalJobOpenings"] = resolvedVacancy;
-  }
-
-  // qualifications — Phase 1: stored qualification text from official source.
-  // Per ELIG-001 freeze, we only display stored text; no eligibility computation.
-  if (post.qualificationText) {
-    jobPosting["qualifications"] = post.qualificationText;
-  }
-
-  // Extract skills from qualifications text for better discoverability
-  // This helps AI search engines understand required competencies
-  const skillKeywords = [
-    "English", "Hindi", "Data", "IT", "Programming", "Java", "Python", "SQL",
-    "Communication", "Analysis", "Management", "Planning", "Coordination",
-    "Report writing", "Office", "Excel", "Word", "Administrative",
-    "Clerical", "Legal", "Medical", "Engineering", "Statistics",
-    "Accounting", "Finance", "HR", "Logistics", "Transportation"
-  ];
-
-  const extractedSkills: Set<string> = new Set();
-  if (post.qualificationText) {
-    skillKeywords.forEach(skill => {
-      // Case-insensitive word boundary matching
-      const regex = new RegExp(`\\b${skill}\\b`, 'i');
-      if (regex.test(post.qualificationText!)) {
-        extractedSkills.add(skill);
-      }
-    });
-  }
-
-  // Emit skills array if any were found (AEO optimization for AI search)
-  if (extractedSkills.size > 0) {
-    jobPosting["skills"] = Array.from(extractedSkills);
-  }
-
-  // educationRequirements — intentionally omitted in Phase 1.
-  // Phase 2 will derive the credentialCategory from qualificationExpr.
-  // A hardcoded "bachelor degree" would be a fabricated fact for posts that
-  // require a different level (10th, 12th, diploma, postgraduate, etc.).
-
-  // experienceRequirements — Phase 1: stored experience text as plain description.
-  // Per ELIG-001 freeze, months cannot be computed; we emit the text form only.
+  if (resolvedVacancy != null) jobPosting.totalJobOpenings = resolvedVacancy;
+  if (post.qualificationText) jobPosting.qualifications = post.qualificationText;
   if (post.experienceText) {
-    jobPosting["experienceRequirements"] = {
+    jobPosting.experienceRequirements = {
       "@type": "OccupationalExperienceRequirements",
       description: post.experienceText,
     };
   }
+  if (post.officialSourceUrl) jobPosting.sameAs = post.officialSourceUrl;
 
-  // jobLocationType is deliberately not emitted: schema.org defines it only for
-  // TELECOMMUTE, and asserting a work mode the notification does not state is a
-  // fabricated fact (standing rule: no defaulted facts on pages).
+  // ── FAQPage (exactly the visible FAQ) ────────────────────────────────────
+  const faqPage = faqs.length > 0
+    ? {
+        "@type": "FAQPage",
+        "@id": `${leafUrl}#faq`,
+        mainEntity: faqs.map(({ q, a }) => ({
+          "@type": "Question",
+          name: q,
+          acceptedAnswer: { "@type": "Answer", text: a },
+        })),
+      }
+    : null;
 
-  const graph = {
-    "@context": "https://schema.org",
-    "@graph": [breadcrumb, jobPosting],
-  };
+  // One @graph: site org, breadcrumb, web page, the JobPosting, visible FAQ.
+  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, jobPosting, faqPage);
 
   return (
     <script
