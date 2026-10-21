@@ -323,13 +323,26 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
   const hasFee = feeRows.length > 0 || Boolean(feeNote);
 
   // ── Pay ──────────────────────────────────────────────────────────────────
-  const payLines: { label: string | null; value: string }[] = [];
+  const payLines: { label: string | null; value: string; verified?: boolean }[] = [];
   for (const post of posts) {
     const pay = postPay(post);
-    if (pay) payLines.push({ label: posts.length > 1 ? postDisplayName(post) : null, value: pay });
+    if (pay) {
+      // Salary is verified if the post has a resolvedVacancyCount (from verified source)
+      // or if recruitment.sourceVerificationStatus is VERIFIED
+      const isSalaryVerified = verified || post.resolvedVacancyCount != null;
+      payLines.push({
+        label: posts.length > 1 ? postDisplayName(post) : null,
+        value: pay,
+        verified: isSalaryVerified,
+      });
+    }
   }
   if (payLines.length === 0 && sourcePayRange) {
-    payLines.push({ label: null, value: sourceFactsUnverified ? `${sourcePayRange} (reported)` : sourcePayRange });
+    payLines.push({
+      label: null,
+      value: sourceFactsUnverified ? `${sourcePayRange} (reported)` : sourcePayRange,
+      verified: verified,
+    });
   }
 
   // ── Posts table ──────────────────────────────────────────────────────────
@@ -451,7 +464,7 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
   const locationText = state ? null : str(sourceLocation);
 
   // ── At a glance ──────────────────────────────────────────────────────────
-  const glance: GlanceRow[] = [];
+  const glance: (GlanceRow & { verificationNote?: string })[] = [];
   if (orgName) glance.push({ label: 'Organisation', value: orgName, href: orgHref });
   if (notificationNumber) glance.push({ label: 'Advertisement no.', value: notificationNumber });
   if (postNames.length > 0) glance.push({ label: 'Posts', value: postNames.join(', ') });
@@ -459,16 +472,29 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     glance.push({
       label: 'Total vacancies',
       value: `${totalVacancies.toLocaleString('en-IN')}${sourceFactsUnverified ? ' (reported)' : ''}`,
+      verificationNote: sourceFactsUnverified ? 'not yet verified' : undefined,
     });
   }
   glance.push({ label: 'Apply from', value: appStart });
-  if (appEnd) glance.push({ label: 'Last date', value: `${appEnd}${sourceFactsUnverified ? ' (reported)' : ''}` });
-  glance.push({ label: 'Application fee', value: feeSummary ?? feeNote });
+  if (appEnd) glance.push({
+    label: 'Last date',
+    value: `${appEnd}${sourceFactsUnverified ? ' (reported)' : ''}`,
+    verificationNote: sourceFactsUnverified ? 'not yet verified' : undefined,
+  });
+  glance.push({
+    label: 'Application fee',
+    value: feeSummary ?? feeNote,
+    verificationNote: feeSummary && !verified ? 'from notification' : undefined,
+  });
   if (applicationMode) glance.push({ label: 'Mode', value: applicationMode });
   if (jobType) glance.push({ label: 'Job type', value: jobType });
   if (state) glance.push({ label: 'Location', value: state.name, href: state.href });
   else if (locationText) glance.push({ label: 'Location', value: locationText });
-  glance.push({ label: 'Age limit', value: ageNote });
+  glance.push({
+    label: 'Age limit',
+    value: ageNote,
+    verificationNote: ageNote && !verified ? 'from notification' : undefined,
+  });
 
   // ── Timeline ─────────────────────────────────────────────────────────────
   const stepDefs: Array<{ id: TimelineStep['id']; label: string; raw: Date | string | null | undefined; note?: string }> = [
@@ -502,9 +528,15 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     : 'Official notification link not on record for this recruitment.';
   const discoverySourceUrl = publicLink(recruitment.sourceExtract?.sourceUrl ?? null);
 
-  // ── FAQ (only known facts) ───────────────────────────────────────────────
+  // ── FAQ (comprehensive SEO/AEO coverage) ────────────────────────────────────
+  // Covers: deadlines, vacancies, fee, salary, eligibility, age, selection,
+  // how-to-apply, job type, location, posts (for long-tail discovery).
   const faqItems: FaqItem[] = [];
   const subject = composed.heading;
+  const orgAndJob = orgName ? `${orgName} ${postNames.length === 1 ? postNames[0] : 'job'}` : subject;
+  const postList = postNames.length > 0 ? postNames.join(', ') : null;
+
+  // Q1: Application deadline (critical long-tail query)
   if (appEnd) {
     faqItems.push({
       q: `What is the last date to apply for ${subject}?`,
@@ -513,28 +545,52 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
         : `The last date to apply is ${appEnd}.`,
     });
   }
+
+  // Q2: Total vacancies (critical discovery query)
   if (totalVacancies != null) {
     faqItems.push({
-      q: `How many vacancies are there in ${subject}?`,
+      q: `How many ${postList ? postList : 'jobs'} are there in ${subject}?`,
       a: sourceFactsUnverified
-        ? `The source listing reports ${totalVacancies.toLocaleString('en-IN')} vacancies${postNames.length > 0 ? ` for ${postNames.join(', ')}` : ''}. Confirm the count in the official notice.`
-        : `There are ${totalVacancies.toLocaleString('en-IN')} vacancies${postNames.length > 0 ? ` for ${postNames.join(', ')}` : ''}.`,
+        ? `The source listing reports ${totalVacancies.toLocaleString('en-IN')} vacancies. Confirm the count in the official notice.`
+        : `There are ${totalVacancies.toLocaleString('en-IN')} vacancies${postList ? ` for ${postList}` : ''}.`,
     });
   }
+
+  // Q3: Salary (high-value long-tail: "{org} {post} salary")
+  if (payLines.length > 0) {
+    faqItems.push({
+      q: `What is the ${orgName ? `${orgName} ` : ''}salary for ${postList && postList.length < 50 ? `${postList}` : 'this job'}?`,
+      a: payLines.map((l) => (l.label ? `${l.label}: ${l.value}` : l.value)).join('; ') + '.',
+    });
+  }
+
+  // Q4: Application fee
   if (feeSummary || feeNote) {
     faqItems.push({
       q: `What is the application fee for ${subject}?`,
       a: feeRows.length > 1
-        ? feeRows.map((r) => `${r.category}: ${r.amount}`).join('; ') + '.'
+        ? `Application fee: ${feeRows.map((r) => `${r.category}: ${r.amount}`).join('; ')}.`
         : `${feeSummary ?? feeNote}.`,
     });
   }
-  if (payLines.length > 0) {
+
+  // Q5: Eligibility / Qualification (long-tail: "{org} {post} eligibility")
+  if (educationTexts.length > 0) {
     faqItems.push({
-      q: `What is the salary for ${subject}?`,
-      a: payLines.map((l) => (l.label ? `${l.label}: ${l.value}` : l.value)).join('; ') + '.',
+      q: `What is the eligibility/qualification for ${postList && postList.length < 60 ? `${orgName ? `${orgName} ` : ''}${postList}` : subject}?`,
+      a: educationTexts.join(' '),
     });
   }
+
+  // Q6: Age limit (long-tail: "{org} {post} age limit")
+  if (ageTexts.length > 0) {
+    faqItems.push({
+      q: `What is the age limit for ${postList && postList.length < 60 ? `${orgName ? `${orgName} ` : ''}${postList}` : subject}?`,
+      a: ageTexts.join(' '),
+    });
+  }
+
+  // Q7: Selection process (long-tail: "{org} {post} selection process")
   if (selectionText || selectionRows.length > 0) {
     faqItems.push({
       q: `What is the selection process for ${subject}?`,
@@ -542,10 +598,44 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
         ?? selectionRows.map((r) => [r.title, r.detail].filter(Boolean).join(': ')).join('; ') + '.',
     });
   }
-  if (educationTexts.length > 0) {
+
+  // Q8: How to apply (procedural long-tail)
+  if (howToApply.length > 0) {
     faqItems.push({
-      q: `What is the eligibility for ${subject}?`,
-      a: educationTexts.join(' '),
+      q: `How do I apply for ${subject}?`,
+      a: `Steps to apply: ${howToApply.join(' → ')}.`,
+    });
+  }
+
+  // Q9: Job type / nature of appointment
+  if (jobType) {
+    faqItems.push({
+      q: `What is the job type for ${subject}?`,
+      a: `This is a ${jobType.toLowerCase()} position.`,
+    });
+  }
+
+  // Q10: Location / posting state (geo-discovery long-tail)
+  if (state) {
+    faqItems.push({
+      q: `Where is ${subject} posted? Which state?`,
+      a: `The recruitment is posted for ${state.name}.`,
+    });
+  }
+
+  // Q11: Posts / positions available (when multiple)
+  if (postRows.length > 1) {
+    faqItems.push({
+      q: `What are the available posts in ${subject}?`,
+      a: `Available posts: ${postRows.map((r) => r.name).join(', ')}.`,
+    });
+  }
+
+  // Q12: Application mode (online/offline)
+  if (applicationMode) {
+    faqItems.push({
+      q: `What is the application mode for ${subject}?`,
+      a: `Application mode: ${applicationMode}.`,
     });
   }
 

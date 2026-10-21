@@ -430,6 +430,18 @@
 }
 .pill:hover { border-color: var(--hub-blue); color: var(--hub-blue); text-decoration: none; }
 
+/* ── Verification badges ── */
+.verificationNote {
+  color: var(--hub-ink3);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.unknown {
+  color: var(--hub-ink3);
+  font-style: italic;
+}
+
 /* ── Mobile ── */
 @media (max-width: 720px) {
   .glance,

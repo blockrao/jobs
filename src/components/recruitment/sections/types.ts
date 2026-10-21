@@ -91,6 +91,8 @@ export interface GlanceRow {
   /** Display text; null means "Not stated in this notification". */
   value: string | null;
   href?: string | null;
+  /** Optional verification note: "from notification", "not yet verified", "verified", etc. */
+  verificationNote?: string | null;
 }
 
 export interface TimelineStep {

@@ -17,15 +17,25 @@ export default function HubDetails({ data }: { data: HubData }) {
     <section id="overview" aria-labelledby="overview-heading" className={styles.card}>
       <h2 id="overview-heading" className={styles.sectionTitle}>At a glance</h2>
       <dl className={styles.glance}>
-        {glance.map(({ label, value, href }) => (
+        {glance.map(({ label, value, href, verificationNote }) => (
           <div key={label} className={styles.glanceRow}>
             <dt>{label}</dt>
             <dd>
               {value === null
                 ? <span className={styles.unknown}>Not stated in this notification</span>
-                : href
-                ? <Link href={href}>{value}</Link>
-                : value}
+                : (
+                  <>
+                    {href
+                      ? <Link href={href}>{value}</Link>
+                      : value}
+                    {verificationNote && (
+                      <span className={styles.verificationNote} title={verificationNote}>
+                        {' '}
+                        <small>({verificationNote})</small>
+                      </span>
+                    )}
+                  </>
+                )}
             </dd>
           </div>
         ))}
