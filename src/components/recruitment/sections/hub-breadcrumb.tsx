@@ -1,37 +1,27 @@
 /**
- * Hub Breadcrumb — Sticky top breadcrumb bar
- * Jobs > Organisation > Recruitment name
+ * Hub Breadcrumb — Jobs › State › Organisation › Recruitment
+ * State and organisation appear only when known; the state is always a name,
+ * never an ISO code.
  */
 
 import Link from 'next/link';
 import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
 
-interface HubBreadcrumbProps {
-  data: HubData;
-}
-
-export default function HubBreadcrumb({ data }: HubBreadcrumbProps) {
-  const { recruitment, displayOrg, orgSlug, localePrefix } = data;
+export default function HubBreadcrumb({ data }: { data: HubData }) {
+  const { recruitment, orgName, orgHref, state } = data;
 
   return (
     <nav aria-label="Breadcrumb" className={styles.crumbs}>
       <ol className={styles.crumbsList}>
-        <li>
-          <Link href={`${localePrefix}/jobs`}>Jobs</Link>
-        </li>
-        {displayOrg && (
-          <li>
-            {orgSlug ? (
-              <Link href={`${localePrefix}/organizations/${orgSlug}`}>{displayOrg}</Link>
-            ) : (
-              <span>{displayOrg}</span>
-            )}
-          </li>
+        <li><Link href="/jobs">Jobs</Link></li>
+        {state && (
+          <li><Link href={state.href}>{state.name}</Link></li>
         )}
-        <li>
-          <span aria-current="page">{recruitment.name}</span>
-        </li>
+        {orgName && (
+          <li>{orgHref ? <Link href={orgHref}>{orgName}</Link> : <span>{orgName}</span>}</li>
+        )}
+        <li><span aria-current="page">{recruitment.name}</span></li>
       </ol>
     </nav>
   );

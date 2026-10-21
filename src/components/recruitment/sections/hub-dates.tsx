@@ -1,69 +1,46 @@
 /**
- * Hub Dates — Important dates table / timeline
- * Notification date, application open/close, tentative interview date.
+ * Hub Dates — vertical timeline.
+ * Known steps show their date; unknown future steps are greyed "Not announced
+ * yet"; the current/next step is highlighted. The tentative interview date is
+ * surfaced only while source facts are unverified and is labelled tentative.
+ * No "Alert me" button: there is no /alerts route to link to.
  */
 
 import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
 
-interface HubDatesProps {
-  data: HubData;
-}
-
-export default function HubDates({ data }: HubDatesProps) {
-  const {
-    notificationDate, notificationDateLabel, appStart, appEnd, appEndLabel,
-    tentativeInterviewDate, sourceFactsUnverified, hasTimeline,
-  } = data;
-
-  if (!hasTimeline) return null;
-
-  type DateRow = { label: string; value: string; note?: string };
-  const rows: DateRow[] = [];
-
-  if (notificationDate) {
-    rows.push({ label: notificationDateLabel, value: notificationDate });
-  }
-  if (appStart) {
-    rows.push({ label: 'Application opens', value: appStart });
-  }
-  if (appEnd) {
-    rows.push({
-      label: appEndLabel,
-      value: appEnd,
-      note: sourceFactsUnverified ? 'reported' : undefined,
-    });
-  }
-  if (tentativeInterviewDate) {
-    rows.push({ label: 'Tentative interview date', value: tentativeInterviewDate, note: 'tentative' });
-  }
-
-  if (rows.length === 0) return null;
+export default function HubDates({ data }: { data: HubData }) {
+  const { timeline } = data;
+  if (!timeline.some((t) => t.date)) return null;
 
   return (
-    <section id="dates" aria-labelledby="dates-heading" className={`${styles.card} ${styles.tintMint}`}>
-      <h2 id="dates-heading" className={styles.sectionTitle}>Important Dates</h2>
-      <div className={styles.scroll}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">Event</th>
-              <th scope="col">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ label, value, note }) => (
-              <tr key={label}>
-                <td>{label}</td>
-                <td>
-                  <strong>{value}</strong>
-                  {note && <span style={{ fontWeight: 400, fontSize: '0.85em', opacity: 0.7, marginLeft: '0.4em' }}>({note})</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <section id="dates" aria-labelledby="dates-heading" className={styles.card}>
+      <h2 id="dates-heading" className={styles.sectionTitle}>Dates &amp; updates</h2>
+      <ol className={styles.timeline}>
+        {timeline.map((step) => (
+          <li
+            key={step.id}
+            className={`${styles.step} ${
+              step.state === 'current' ? styles.stepCurrent
+              : step.state === 'past' ? styles.stepPast
+              : step.state === 'future' ? styles.stepFuture
+              : styles.stepUnknown
+            }`}
+            aria-current={step.state === 'current' ? 'step' : undefined}
+          >
+            <span className={styles.stepDot} aria-hidden="true" />
+            <div className={styles.stepBody}>
+              <span className={styles.stepLabel}>
+                {step.label}
+                {step.note && <span className={styles.stepNote}> ({step.note})</span>}
+              </span>
+              {step.date && step.iso
+                ? <time className={styles.stepDate} dateTime={step.iso}>{step.date}</time>
+                : <span className={styles.stepDateUnknown}>Not announced yet</span>}
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

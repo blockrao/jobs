@@ -1,63 +1,31 @@
 /**
  * Recruitment Hub Structured Data
  *
- * Emits a schema.org @graph for a Recruitment Hub page:
- *   - Organization — site identity node (JobOye)
- *   - BreadcrumbList — Home → Jobs → [Org] → Recruitment
- *   - Article — describes this hub as an editorial article about the recruitment
- *   - WebPage — describes this hub page as a web document
- *   - ItemList — structured list of every Post leaf URL, enabling Google
- *     and LLMs to discover all leaf pages from this hub's JSON-LD
+ * One schema.org @graph for /jobs/[recruitment-slug]:
+ *   - Organization   — site identity (JobOye), referenced as publisher
+ *   - BreadcrumbList — Home › Jobs › Org (only when an org page URL exists) › Recruitment
+ *   - Article        — headline = page H1; datePublished / dateModified; about; isBasedOn
+ *   - WebPage        — the hub page itself
+ *   - FAQPage        — exactly the FAQ items rendered on the page
+ *   - JobPosting     — ONLY when the recruitment has exactly one post
  *
- * Design principles (Gate 2 / approved spec, updated 2026-10-12):
- *   - Recruitment Hub is NOT a JobPosting. It is a WebPage that describes
- *     a recruitment event (a set of openings). Do not use JobPosting here.
- *   - BreadcrumbList: Home → Jobs → [Org Name] → Recruitment Name (4 nodes when
- *     org is known, 3 nodes otherwise). Home must be position 1 per reference spec.
- *   - Article: editorial content node; isBasedOn = official notification.
- *     Enables Google to surface rich article results for recruitment coverage.
- *   - ItemList: one ListItem per resolved Post, with url ONLY for posts that have
- *     a confirmed post slug. Items without a leaf page omit url entirely.
- *     This is the highest-impact GEO/LLM signal — makes every leaf discoverable
- *     from hub JSON-LD without a crawl hop.
- *   - dateModified: emitted ONLY when a genuine content-modification timestamp
- *     exists. Never derived from notificationDate, applicationEndDate, current
- *     date, or any unrelated timestamp.
- *   - expires / validThrough: applicationEndDate is a legitimate temporal bound.
- *   - datePosted: notificationDate (verified) or sourceListingPublishedDate
- *     (unverified) — the closest honest proxy for content publication date.
- *   - Organization.sameAs: wired to resolvedOfficialSource only when it is an
- *     authoritative domain (.gov.in / .nic.in). Never from raw officialSourceUrl.
- *   - No fabricated/inferred data.
+ * Nothing is emitted that is not visible on the page. Every value is taken
+ * from the same HubData the renderer uses, so the markup cannot drift from
+ * the visible facts. dateModified is emitted only from a genuine updatedAt.
+ * datePosted keys on source verification (notificationDate when verified,
+ * sourceListingPublishedDate when not); the JobPosting datePosted falls back
+ * to createdAt. baseSalary is emitted only when numeric bounds exist on the
+ * post AND the pay period is stated on the post's payLevel record
+ * (posts.salary_min/max carry no unit column); a free-text pay level never
+ * becomes a MonetaryAmount.
  */
 
 import { SITE_URL } from "@/lib/site";
-
-/** Minimal post shape needed for structured data — name + slug only. */
-interface PostForSchema {
-  slug: string | null | undefined;
-  name?: string | null;
-}
+import { jsonLdGraph } from "@/lib/structured-data";
+import type { HubData } from "../sections/types";
 
 interface RecruitmentHubSchemaProps {
-  recruitment: {
-    slug: string;
-    name: string;
-    organizationName?: string | null;
-    applicationEndDate?: Date | string | null;
-    notificationDate?: Date | string | null;
-    sourceVerificationStatus?: string | null;
-    sourceListingPublishedDate?: Date | string | null;
-    updatedAt?: Date | string | null;
-  };
-  /** All posts belonging to this recruitment — used to build ItemList. */
-  posts?: PostForSchema[];
-  totalPosts: number;
-  resolvedEmployer?: string | null;
-  /** Resolved official source URL — used for Organization.sameAs when authoritative. */
-  resolvedOfficialSource?: string | null;
-  /** Resolved vacancy count — enriches WebPage description for GEO signals. */
-  resolvedTotalVacancies?: number | null;
+  data: HubData;
 }
 
 function toIso(d: Date | string | null | undefined): string | undefined {
@@ -65,13 +33,14 @@ function toIso(d: Date | string | null | undefined): string | undefined {
   try {
     const ts = new Date(d);
     if (isNaN(ts.getTime()) || ts.getTime() <= 0) return undefined;
+    const y = ts.getUTCFullYear();
+    if (y < 1900 || y >= 2090) return undefined;
     return ts.toISOString();
   } catch {
     return undefined;
   }
 }
 
-/** Returns true when the URL points to an authoritative Indian government domain. */
 function isAuthoritativeDomain(url: string | null | undefined): boolean {
   if (!url) return false;
   try {
@@ -82,24 +51,42 @@ function isAuthoritativeDomain(url: string | null | undefined): boolean {
   }
 }
 
-export default function RecruitmentHubStructuredData({
-  recruitment,
-  posts = [],
-  totalPosts,
-  resolvedEmployer,
-  resolvedOfficialSource,
-  resolvedTotalVacancies,
-}: RecruitmentHubSchemaProps) {
-  const hubUrl = `${SITE_URL}/jobs/${recruitment.slug}`;
+const EMPLOYMENT_TYPE_SCHEMA: Record<string, string> = {
+  FULL_TIME: "FULL_TIME",
+  PART_TIME: "PART_TIME",
+  CONTRACTOR: "CONTRACTOR",
+  TEMPORARY: "TEMPORARY",
+  INTERN: "INTERN",
+  INTERNSHIP: "INTERN",
+  APPRENTICESHIP: "INTERN",
+  PERMANENT: "FULL_TIME",
+};
 
-  // Use resolvedEmployer (canonical, verified) when available; fall back to
-  // raw organizationName only as a last resort. Both may be null.
-  const orgName = resolvedEmployer ?? recruitment.organizationName ?? null;
+const SALARY_UNITS: Record<string, string> = {
+  MONTH: "MONTH", MONTHLY: "MONTH", PM: "MONTH", "PER MONTH": "MONTH",
+  YEAR: "YEAR", YEARLY: "YEAR", ANNUAL: "YEAR", "PER ANNUM": "YEAR", PA: "YEAR",
+  DAY: "DAY", DAILY: "DAY", HOUR: "HOUR", HOURLY: "HOUR", WEEK: "WEEK",
+};
 
+/** Google-valid unitText only when the stored pay-level record states a period. */
+function salaryUnit(payLevel: Record<string, unknown> | null | undefined): string | null {
+  const raw = payLevel?.period ?? payLevel?.unit ?? payLevel?.salaryPeriod;
+  if (typeof raw !== "string") return null;
+  return SALARY_UNITS[raw.trim().toUpperCase()] ?? null;
+}
+
+const escapeHtml = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+export default function RecruitmentHubStructuredData({ data }: RecruitmentHubSchemaProps) {
+  const { recruitment, posts } = data;
+  const hubUrl = `${SITE_URL}/jobs/${data.slug}`;
   const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
+  const orgName = data.orgName;
+  const orgUrl = data.orgHref ? `${SITE_URL}${data.orgHref}` : null;
+  const officialSite = data.officialWebsiteUrl ?? data.notificationUrl ?? null;
 
-  // ── Organization site-identity node ──────────────────────────────────────
-  // Identifies JobOye as the publisher. Referenced by Article.publisher.
+  // ── Organization (site identity) ─────────────────────────────────────────
   const siteOrg = {
     "@type": "Organization",
     "@id": `${SITE_URL}/#org`,
@@ -107,149 +94,66 @@ export default function RecruitmentHubStructuredData({
     url: SITE_URL,
   };
 
-  // ── BreadcrumbList ────────────────────────────────────────────────────────
-  // Home → Jobs → [Org] → Recruitment (4 nodes when org is known, 3 otherwise)
-  // Home is always position 1 per reference spec requirement.
-  const breadcrumbItems: object[] = [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: "Home",
-      item: SITE_URL,
-    },
-    {
-      "@type": "ListItem",
-      position: 2,
-      name: "Jobs",
-      item: `${SITE_URL}/jobs`,
-    },
+  // ── BreadcrumbList ───────────────────────────────────────────────────────
+  const crumbs: Array<{ name: string; item: string }> = [
+    { name: "Home", item: SITE_URL },
+    { name: "Jobs", item: `${SITE_URL}/jobs` },
   ];
-
-  // Org node intentionally omitted: Google requires `item` URL on every non-terminal
-  // breadcrumb node and we have no verified org page URL yet. Emitting a name-only
-  // node triggers a Rich Results Test validation error. Hub carries the recruitment
-  // name directly at position 3.
-  breadcrumbItems.push({
-    "@type": "ListItem",
-    position: 3,
-    name: recruitment.name,
-    item: hubUrl,
-  });
-
+  if (orgName && orgUrl) crumbs.push({ name: orgName, item: orgUrl });
+  crumbs.push({ name: recruitment.name, item: hubUrl });
   const breadcrumb = {
     "@type": "BreadcrumbList",
     "@id": `${hubUrl}#breadcrumb`,
-    itemListElement: breadcrumbItems,
+    itemListElement: crumbs.map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.name, item: c.item })),
   };
 
-  // ── datePosted — best honest proxy ────────────────────────────────────────
-  // Verified hubs: notificationDate. Unverified: sourceListingPublishedDate.
+  // ── Dates ────────────────────────────────────────────────────────────────
+  // Verified: the notification date. Unverified: the source listing's own
+  // publish date. Neither on record: the date this hub record was created,
+  // which is a genuine publication date for the page itself.
   const datePostedIso = factsVerified
     ? toIso(recruitment.notificationDate)
-    : toIso(recruitment.sourceListingPublishedDate);
-
-  // dateModified — emit only when a genuine update timestamp exists.
+    : toIso(recruitment.sourceListingPublishedDate) ?? toIso(recruitment.createdAt);
   const dateModifiedIso = toIso(recruitment.updatedAt);
 
-  // ── Article node ──────────────────────────────────────────────────────────
-  // Describes this hub page as an editorial article about a recruitment.
-  // This enables Google to surface article-rich results for recruitment coverage.
+  // ── Employer organization (about) ────────────────────────────────────────
+  const employer: Record<string, unknown> | null = orgName
+    ? {
+        "@type": "Organization",
+        name: orgName,
+        ...(isAuthoritativeDomain(officialSite) ? { sameAs: officialSite } : {}),
+      }
+    : null;
+
+  // ── Article ──────────────────────────────────────────────────────────────
   const article: Record<string, unknown> = {
     "@type": "Article",
     "@id": `${hubUrl}#article`,
     mainEntityOfPage: `${hubUrl}#webpage`,
-    headline: recruitment.name,
+    headline: data.heading,
+    description: data.description,
     inLanguage: "en-IN",
     publisher: { "@id": `${SITE_URL}/#org` },
     isPartOf: { "@id": `${hubUrl}#webpage` },
   };
-
-  if (datePostedIso) {
-    article["datePublished"] = datePostedIso;
-  }
-  if (dateModifiedIso && dateModifiedIso !== datePostedIso) {
-    article["dateModified"] = dateModifiedIso;
-  }
-
-  // about — the employer organization
-  if (orgName) {
-    const aboutOrg: Record<string, unknown> = {
-      "@type": "Organization",
-      name: orgName,
-    };
-    if (isAuthoritativeDomain(resolvedOfficialSource)) {
-      aboutOrg["sameAs"] = resolvedOfficialSource;
-    }
-    article["about"] = aboutOrg;
-  }
-
-  // isBasedOn — official notification, when we have an authoritative source URL
-  if (resolvedOfficialSource) {
-    article["isBasedOn"] = {
+  if (datePostedIso) article.datePublished = datePostedIso;
+  if (dateModifiedIso) article.dateModified = dateModifiedIso;
+  if (employer) article.about = employer;
+  if (data.notificationUrl) {
+    article.isBasedOn = {
       "@type": "CreativeWork",
-      url: resolvedOfficialSource,
+      url: data.notificationUrl,
       ...(orgName ? { publisher: { "@type": "Organization", name: orgName } } : {}),
     };
   }
 
-  // ── ItemList ──────────────────────────────────────────────────────────────
-  // One ListItem per resolved Post slug. ONLY posts with a confirmed slug get a
-  // url field — posts without a leaf page must not have a url in ItemList.
-  const resolvedPosts = posts.filter((p) => Boolean(p.slug));
-  const allPosts = posts; // includes unresolved ones for name-only entries
-  let itemList: object | undefined;
-
-  if (allPosts.length > 0) {
-    itemList = {
-      "@type": "ItemList",
-      "@id": `${hubUrl}#postlist`,
-      name: `${recruitment.name} — Available Posts`,
-      numberOfItems: allPosts.length,
-      itemListElement: allPosts.map((post, i) => {
-        const item: Record<string, unknown> = {
-          "@type": "ListItem",
-          position: i + 1,
-          name: post.name ?? post.slug ?? `Post ${i + 1}`,
-        };
-        // Only add url when the post has a confirmed slug (leaf page exists)
-        if (post.slug) {
-          item["url"] = `${SITE_URL}/jobs/${recruitment.slug}/${post.slug}`;
-        }
-        return item;
-      }),
-    };
-  } else if (resolvedPosts.length > 0) {
-    // Fallback: only resolved posts if allPosts was empty but resolvedPosts is not
-    itemList = {
-      "@type": "ItemList",
-      "@id": `${hubUrl}#postlist`,
-      name: `${recruitment.name} — Available Posts`,
-      numberOfItems: resolvedPosts.length,
-      itemListElement: resolvedPosts.map((post, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
-        name: post.name ?? post.slug,
-        url: `${SITE_URL}/jobs/${recruitment.slug}/${post.slug}`,
-      })),
-    };
-  }
-
-  // ── WebPage ───────────────────────────────────────────────────────────────
-  // Enrich description with vacancy count — GEO signal.
-  const vacancySnippet = resolvedTotalVacancies
-    ? `${resolvedTotalVacancies.toLocaleString("en-IN")} ${factsVerified ? "vacancies" : "reported vacancies"} · `
-    : "";
-  const positionsSnippet = factsVerified
-    ? `${totalPosts} open position${totalPosts !== 1 ? "s" : ""}`
-    : `${totalPosts} listed position${totalPosts !== 1 ? "s" : ""}`;
-  const webPageDescription = `${vacancySnippet}${recruitment.name} — ${positionsSnippet}. View available details and official-source status.`;
-
+  // ── WebPage ──────────────────────────────────────────────────────────────
   const webPage: Record<string, unknown> = {
     "@type": "WebPage",
     "@id": `${hubUrl}#webpage`,
     url: hubUrl,
-    name: recruitment.name,
-    description: webPageDescription,
+    name: data.title,
+    description: data.description,
     inLanguage: "en-IN",
     isPartOf: {
       "@type": "WebSite",
@@ -259,47 +163,88 @@ export default function RecruitmentHubStructuredData({
       publisher: { "@id": `${SITE_URL}/#org` },
     },
     breadcrumb: { "@id": `${hubUrl}#breadcrumb` },
-    ...(itemList ? { mainEntity: { "@id": `${hubUrl}#postlist` } } : {}),
   };
-
-  if (datePostedIso) {
-    webPage["datePublished"] = datePostedIso;
-  }
-
-  if (dateModifiedIso && dateModifiedIso !== datePostedIso) {
-    webPage["dateModified"] = dateModifiedIso;
-  }
-
-  // about.Organization — identify the employer by name.
-  // Organization.sameAs: only when resolvedOfficialSource points to a
-  // government domain — those are organizational identity URLs, not notices.
-  if (orgName) {
-    const orgNode: Record<string, unknown> = {
-      "@type": "Organization",
-      name: orgName,
-    };
-    if (isAuthoritativeDomain(resolvedOfficialSource)) {
-      orgNode["sameAs"] = resolvedOfficialSource;
-    }
-    webPage["about"] = orgNode;
-  }
-
-  // expires / validThrough — applicationEndDate is a legitimate temporal bound.
-  // Only emit on verified hubs to avoid surfacing inaccurate reported dates in SERP.
+  if (datePostedIso) webPage.datePublished = datePostedIso;
+  if (dateModifiedIso) webPage.dateModified = dateModifiedIso;
+  if (employer) webPage.about = employer;
   const expiresIso = factsVerified ? toIso(recruitment.applicationEndDate) : undefined;
-  if (expiresIso) {
-    webPage["expires"] = expiresIso;
-    webPage["validThrough"] = expiresIso;
+  if (expiresIso) webPage.expires = expiresIso;
+
+  // ── FAQPage (exactly the visible FAQ) ────────────────────────────────────
+  const faqPage = data.faqItems.length > 0
+    ? {
+        "@type": "FAQPage",
+        "@id": `${hubUrl}#faq`,
+        mainEntity: data.faqItems.map(({ q, a }) => ({
+          "@type": "Question",
+          name: q,
+          acceptedAnswer: { "@type": "Answer", text: a },
+        })),
+      }
+    : null;
+
+  // ── JobPosting (single-post recruitments only) ───────────────────────────
+  let jobPosting: Record<string, unknown> | null = null;
+  if (posts.length === 1 && data.postRows.length === 1) {
+    const post = posts[0];
+    const row = data.postRows[0];
+    const paragraphs: string[] = [];
+    if (row.qualification) paragraphs.push(`<p>Qualification: ${escapeHtml(row.qualification)}</p>`);
+    if (row.experience) paragraphs.push(`<p>Experience: ${escapeHtml(row.experience)}</p>`);
+    for (const t of data.ageTexts) paragraphs.push(`<p>Age: ${escapeHtml(t)}</p>`);
+    if (row.pay) paragraphs.push(`<p>Pay: ${escapeHtml(row.pay)}</p>`);
+    if (data.feeRows.length > 0) {
+      paragraphs.push(`<p>Application fee: ${escapeHtml(data.feeRows.map((f) => `${f.category}: ${f.amount}`).join("; "))}</p>`);
+    } else if (data.feeSummary ?? data.feeNote) {
+      paragraphs.push(`<p>Application fee: ${escapeHtml((data.feeSummary ?? data.feeNote) as string)}</p>`);
+    }
+    if (data.howToApply.length > 0) {
+      paragraphs.push(`<p>How to apply: ${escapeHtml(data.howToApply.join(" "))}</p>`);
+    }
+    const jobDatePosted = toIso(recruitment.notificationDate) ?? toIso(recruitment.createdAt);
+    const validThrough = toIso(recruitment.applicationEndDate);
+    const employmentType = EMPLOYMENT_TYPE_SCHEMA[(recruitment.employmentType ?? "").toUpperCase()];
+
+    if (paragraphs.length > 0 && jobDatePosted && orgName) {
+      jobPosting = {
+        "@type": "JobPosting",
+        "@id": `${hubUrl}#jobposting`,
+        mainEntityOfPage: { "@id": `${hubUrl}#webpage` },
+        title: row.name,
+        description: paragraphs.join(""),
+        datePosted: jobDatePosted,
+        hiringOrganization: {
+          "@type": "Organization",
+          name: orgName,
+          ...(isAuthoritativeDomain(officialSite) ? { sameAs: officialSite } : {}),
+        },
+        jobLocation: {
+          "@type": "Place",
+          address: {
+            "@type": "PostalAddress",
+            ...(data.state ? { addressRegion: data.state.name } : {}),
+            addressCountry: "IN",
+          },
+        },
+        directApply: false,
+      };
+      if (validThrough) jobPosting.validThrough = validThrough;
+      if (employmentType) jobPosting.employmentType = employmentType;
+      if (data.totalVacancies != null) jobPosting.totalJobOpenings = data.totalVacancies;
+      if (data.notificationNumber) {
+        jobPosting.identifier = { "@type": "PropertyValue", name: "Advertisement number", value: data.notificationNumber };
+      }
+      const unit = salaryUnit(post.payLevel);
+      if (unit && (post.salaryMin != null || post.salaryMax != null)) {
+        const value: Record<string, unknown> = { "@type": "QuantitativeValue", unitText: unit };
+        if (post.salaryMin != null) value.minValue = post.salaryMin;
+        if (post.salaryMax != null) value.maxValue = post.salaryMax;
+        jobPosting.baseSalary = { "@type": "MonetaryAmount", currency: "INR", value };
+      }
+    }
   }
 
-  // ── @graph ────────────────────────────────────────────────────────────────
-  const graphNodes: object[] = [siteOrg, breadcrumb, article, webPage];
-  if (itemList) graphNodes.push(itemList);
-
-  const graph = {
-    "@context": "https://schema.org",
-    "@graph": graphNodes,
-  };
+  const graph = jsonLdGraph(siteOrg, breadcrumb, article, webPage, faqPage, jobPosting);
 
   return (
     <script

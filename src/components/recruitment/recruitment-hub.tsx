@@ -1,105 +1,117 @@
-'use client';
-
 /**
- * Recruitment Hub — thin orchestrator
+ * Recruitment Hub — server-rendered orchestrator
  *
  * Route: /jobs/[recruitment-slug]
  *
- * This component computes HubData once from props, then delegates all
- * rendering to modular section components in ./sections/. Each section
- * is self-contained and only receives the fields it needs from HubData.
- *
- * Architecture (approved spec, 2026-10-09):
- *   Breadcrumb → Header (hero) → TOC → Quick Answers → Details →
- *   Dates → Posts → Eligibility → Selection → Apply → Documents →
- *   Conditions → Links → Source → FAQ
+ * Computes HubData once from the recruitment record and its posts, then
+ * delegates rendering to the section components in ./sections/. Every value
+ * in HubData is read from stored data; nothing is defaulted or templated.
+ * A section renders only when it has data, and the three "At a glance" rows
+ * that may say "Not stated in this notification" (age limit, fee, apply-from)
+ * are the only place an unknown is rendered at all.
  *
  * Rules in force:
- *   - No raw SQL fallbacks; no Hub→Leaf data inheritance.
- *   - ELIG-001 Phase 1: display text only, no "Can I apply?" logic.
- *   - Source verification gates all authoritative display claims.
- *   - Data track (DATA-000 → GATE-001) on hold — do not touch.
+ *   - Lifecycle (open / closed / upcoming, days left) comes from
+ *     src/lib/lifecycle.ts and nothing else.
+ *   - Source verification gates authoritative wording: while the recruitment's
+ *     own source-verification status is not VERIFIED and an extracted source
+ *     record exists, extracted facts are labelled "reported" and lifecycle
+ *     claims (closed state, countdown) are suppressed.
+ *   - No Hub -> Leaf data inheritance; post rows are plain text, never links.
+ *   - ELIG-001 Phase 1: display stored eligibility text only.
  */
 
 import type {
   RecruitmentHubRecruitment,
   RecruitmentHubPost,
   HubData,
+  HubSectionId,
   PostTableRow,
   SelectionRow,
+  FeeRow,
+  GlanceRow,
+  TimelineStep,
+  LinkRow,
+  FaqItem,
+  Pill,
 } from './sections/types';
+
+import { deriveLifecycle, lifecycleLabel } from '@/lib/lifecycle';
+import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
+import { stateFromIsoCode } from '@/lib/india-states';
+import { getQualification } from '@/lib/qualifications';
+import { publicLink } from '@/lib/aggregators';
+import { SITE_URL } from '@/lib/site';
+import {
+  composeRecruitmentDescription,
+  composeRecruitmentTitle,
+  formatTitleDate,
+} from '@/lib/seo/recruitment-title';
 
 import HubBreadcrumb from './sections/hub-breadcrumb';
 import HubHeader from './sections/hub-header';
 import HubToc from './sections/hub-toc';
-import HubQuickAnswers from './sections/hub-quick-answers';
 import HubDetails from './sections/hub-details';
-import HubDates from './sections/hub-dates';
 import HubPosts from './sections/hub-posts';
 import HubEligibility from './sections/hub-eligibility';
+import HubPayFee from './sections/hub-pay-fee';
+import HubDates from './sections/hub-dates';
 import HubSelection from './sections/hub-selection';
 import HubApply from './sections/hub-apply';
 import HubDocuments from './sections/hub-documents';
-import HubConditions from './sections/hub-conditions';
 import HubLinks from './sections/hub-links';
 import HubSource from './sections/hub-source';
 import HubFaq from './sections/hub-faq';
+import HubExplore from './sections/hub-explore';
 
+// Outfit for headings (Inter for body is loaded by the root shell). Loaded
+// through @fontsource like Inter, not through a Google Fonts link.
+import '@fontsource-variable/outfit';
 import styles from './recruitment-hub.module.css';
 
-// Re-export types for external consumers
 export type { RecruitmentHubRecruitment, RecruitmentHubPost };
 
-interface RecruitmentHubProps {
-  recruitment: RecruitmentHubRecruitment;
-  posts: RecruitmentHubPost[];
-  /** Resolved total vacancies from resolveRecruitmentVacancy() — null means unknown */
-  resolvedTotalVacancies?: number | null;
-  /** Resolved application URL from resolveApplicationUrl() */
-  resolvedApplicationUrl?: string | null;
-  /** Resolved official source URL from resolveOfficialSource() */
-  resolvedOfficialSource?: string | null;
-  /** Resolved employer name from resolveEmployer() */
-  resolvedEmployer?: string | null;
-  /** Resolved selection process from resolveSelectionProcess() */
-  resolvedSelectionProcess?: string | null;
-  /** Org slug for breadcrumb link — from organizations.slug */
-  orgSlug?: string | null;
-  /** Preserve locale-prefixed navigation for the supported Hindi route. */
-  locale?: string;
+export interface RecruitmentHubProps {
+  /** Pre-computed hub data (shared with the structured-data component). */
+  data: HubData;
 }
 
 // ---------------------------------------------------------------------------
-// Helpers (pure functions; not exported)
+// Helpers (pure; shared with the structured-data component via buildHubData)
 // ---------------------------------------------------------------------------
 
-const formatDate = (date: Date | string | null | undefined): string | null => {
-  if (!date) return null;
-  try {
-    return new Date(date).toLocaleDateString('en-IN', {
-      year: 'numeric', month: 'short', day: 'numeric',
-    });
-  } catch { return null; }
-};
-
-const daysUntil = (date: Date | string | null | undefined): number | null => {
-  if (!date) return null;
-  try {
-    const ms = new Date(date).getTime() - Date.now();
-    return Math.ceil(ms / (1000 * 60 * 60 * 24));
-  } catch { return null; }
-};
-
-const isRecruitmentClosed = (status: string | null | undefined): boolean => {
-  if (!status) return false;
-  const s = status.toLowerCase();
-  return s === 'closed' || s === 'expired' || s === 'completed';
-};
+const formatDate = (date: Date | string | null | undefined): string | null => formatTitleDate(date);
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+
+const str = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const t = value.replace(/\s+/g, ' ').trim();
+  return t.length > 0 ? t : null;
+};
+
+const strList = (value: unknown): string[] => {
+  if (typeof value === 'string') return str(value) ? [str(value) as string] : [];
+  if (Array.isArray(value)) return value.map(str).filter((s): s is string => Boolean(s));
+  return [];
+};
+
+const unique = (values: Array<string | null | undefined>): string[] => {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const t = str(v);
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+};
 
 const parseReportedVacancyCount = (value: string | null | undefined): number | null => {
   if (!value) return null;
@@ -109,73 +121,117 @@ const parseReportedVacancyCount = (value: string | null | undefined): number | n
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 };
 
-const formatEmploymentType = (et: string | null): string | null => {
-  if (!et) return null;
-  if (et === 'Mixed') return 'Mixed';
-  return et.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const JOB_TYPE_LABELS: Record<string, string> = {
+  FULL_TIME: 'Full-time',
+  PART_TIME: 'Part-time',
+  CONTRACTOR: 'Contract',
+  INTERN: 'Internship',
+  INTERNSHIP: 'Internship',
+  TEMPORARY: 'Temporary',
+  APPRENTICESHIP: 'Apprenticeship',
+  DEPUTATION: 'Deputation',
+  FELLOWSHIP: 'Fellowship',
+  PERMANENT: 'Permanent',
 };
+
+/** Human label for an employment_type enum value; null for OTHER/unknown (never a raw enum). */
+export function formatJobType(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return JOB_TYPE_LABELS[value.toUpperCase()] ?? null;
+}
+
+const EDUCATION_LEVEL_TO_QUALIFICATION_SLUG: Record<string, string> = {
+  SECONDARY: '10th-pass',
+  SENIOR_SECONDARY: '12th-pass',
+  ITI: 'iti',
+  DIPLOMA: 'diploma',
+  BACHELOR: 'graduate',
+  MASTER: 'post-graduate',
+};
+
+const inr = (n: number): string => `₹${n.toLocaleString('en-IN')}`;
+
+/** "SC/ST/PwBD: NIL; All Others: Rs. 500" → rows; null when the note is free text. */
+export function parseFeeNote(note: string | null | undefined): FeeRow[] {
+  if (!note) return [];
+  const parts = note.split(/\s*[;|\n]\s*/).map((p) => p.trim()).filter(Boolean);
+  const rows: FeeRow[] = [];
+  for (const part of parts) {
+    const m = part.match(/^([^:]{2,60}):\s*(.+)$/);
+    if (!m) return [];
+    rows.push({ category: m[1].trim(), amount: m[2].trim() });
+  }
+  return rows.length > 0 ? rows : [];
+}
+
+const money = (value: number | string | null | undefined): string | null => {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return str(value);
+  return n === 0 ? 'No fee' : inr(n);
+};
+
+function postDisplayName(post: RecruitmentHubPost): string | null {
+  return str(post.name) ?? str(post.position?.name) ?? null;
+}
+
+function postPay(post: RecruitmentHubPost): string | null {
+  const payRaw = str(post.payLevel?.raw);
+  if (payRaw) return payRaw;
+  if (post.salaryMin != null && post.salaryMax != null && post.salaryMax >= post.salaryMin) {
+    return post.salaryMin === post.salaryMax ? inr(post.salaryMin) : `${inr(post.salaryMin)} – ${inr(post.salaryMax)}`;
+  }
+  if (post.salaryMin != null) return `From ${inr(post.salaryMin)}`;
+  if (post.salaryMax != null) return `Up to ${inr(post.salaryMax)}`;
+  return str(post.fjaExtract?.salaryRaw);
+}
+
+function postQualification(post: RecruitmentHubPost): string | null {
+  const fromRows = post.eligibilities?.map((e) => str(e.qualificationText)).find(Boolean) ?? null;
+  return fromRows ?? str(post.fjaExtract?.qualificationRaw);
+}
+
+function postExperience(post: RecruitmentHubPost): string | null {
+  const fromRows = post.eligibilities?.map((e) => str(e.experienceText)).find(Boolean) ?? null;
+  return fromRows ?? str(post.fjaExtract?.experienceRaw);
+}
+
+function ageText(min: number | null | undefined, max: number | null | undefined): string | null {
+  if (min != null && max != null) return `${min}–${max} years`;
+  if (min != null) return `Minimum ${min} years`;
+  if (max != null) return `Maximum ${max} years`;
+  return null;
+}
+
+const HOW_TO_APPLY_KEYS = [
+  'how_to_apply', 'howToApply', 'how_to_apply_raw', 'application_process',
+  'application_procedure', 'application_steps', 'apply_steps', 'application_instructions',
+];
 
 // ---------------------------------------------------------------------------
 // Build HubData
 // ---------------------------------------------------------------------------
 
-function buildHubData(props: Required<RecruitmentHubProps>): HubData {
-  const {
-    recruitment, posts,
-    resolvedTotalVacancies, resolvedApplicationUrl, resolvedOfficialSource,
-    resolvedEmployer, resolvedSelectionProcess, orgSlug, locale,
-  } = props;
-
-  const localePrefix = locale === 'hi' ? '/hi' : '';
-  const displayOrg = resolvedEmployer ?? recruitment.organizationName ?? null;
+export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: RecruitmentHubPost[], now = new Date()): HubData {
+  const slug = recruitment.slug;
+  const orgName = str(recruitment.organizationName);
+  const orgSlug = str(recruitment.organizationSlug);
+  const orgHref = orgSlug ? `/organizations/${orgSlug}` : null;
+  const orgWebsite = publicLink(
+    str(recruitment.organization?.website_url) ?? str(recruitment.organization?.websiteUrl),
+  );
 
   const sourceFactsUnverified = Boolean(
     recruitment.sourceExtract &&
     recruitment.sourceVerificationStatus !== 'VERIFIED'
   );
+  const verified = recruitment.sourceVerificationStatus === 'VERIFIED';
 
-  // Dates
-  const notificationDate = formatDate(
-    sourceFactsUnverified ? recruitment.sourceListingPublishedDate : recruitment.notificationDate
-  );
-  const notificationDateLabel = sourceFactsUnverified
-    ? 'Source listing published' : 'Notification published';
-  const appStart = formatDate(sourceFactsUnverified
-    ? recruitment.sourceExtract?.applicationStartDate
-    : recruitment.applicationStartDate);
-  const appEndRaw = sourceFactsUnverified
-    ? (recruitment.sourceExtract?.applicationEndDate ?? recruitment.applicationEndDate ?? null)
-    : (recruitment.applicationEndDate ?? null);
-  const appEnd = formatDate(appEndRaw);
-  const appEndLabel = sourceFactsUnverified ? 'Application deadline (reported)' : 'Application closes';
+  // ── State ────────────────────────────────────────────────────────────────
+  const stateRef = stateFromIsoCode(recruitment.locationStateCode);
+  const state = stateRef ? { ...stateRef, href: `/states/${stateRef.slug}` } : null;
 
-  // Status
-  const closed = sourceFactsUnverified ? false : isRecruitmentClosed(recruitment.status);
-  const sourceStatusLabel = typeof recruitment.sourceExtract?.sourceStatus === 'string'
-    ? recruitment.sourceExtract.sourceStatus.toLowerCase().replace(/^./, (l) => l.toUpperCase())
-    : null;
-
-  // Description
-  const descriptionIsInternal = /seeded from .*sample article|ui\/db validation|sample listing seeded/i.test(
-    String(recruitment.description ?? '')
-  );
-  const descriptionIsProvisionalGrouping = sourceFactsUnverified &&
-    /provisional|grouped|individual official notices/i.test(String(recruitment.description ?? ''));
-  const displayDescription = descriptionIsProvisionalGrouping
-    ? 'This page brings together roles reported in source material. Confirm the exact role, eligibility, vacancy count and deadline in each official notice before applying.'
-    : recruitment.description ?? null;
-
-  // Vacancy
-  const extractedVacancies = sourceFactsUnverified
-    ? (recruitment.sourceExtract?.vacancyCount ?? null) : null;
-  const displayTotalVacancies =
-    extractedVacancies ?? resolvedTotalVacancies ?? recruitment.totalVacancies ?? null;
-
-  // URLs
-  const displayApplicationUrl = resolvedApplicationUrl ?? null;
-  const displayOfficialSource = resolvedOfficialSource ?? null;
-
-  // Source details
+  // ── Extracted source details ─────────────────────────────────────────────
   const sourceDetails = asRecord(recruitment.sourceExtract?.details);
   const sourceOtherInfo = asRecord(recruitment.sourceExtract?.otherInfoRaw);
   const sourceLocation = typeof sourceDetails?.location === 'string' ? sourceDetails.location : null;
@@ -184,321 +240,447 @@ function buildHubData(props: Required<RecruitmentHubProps>): HubData {
   const sourcePayRange = typeof sourceDetails?.pay_range === 'string' ? sourceDetails.pay_range : null;
   const tentativeInterviewDate = sourceFactsUnverified &&
     typeof sourceDetails?.interview_date_tentative === 'string'
-    ? formatDate(sourceDetails.interview_date_tentative) : null;
+    ? sourceDetails.interview_date_tentative : null;
+  const sourceStatusLabel = typeof recruitment.sourceExtract?.sourceStatus === 'string'
+    ? recruitment.sourceExtract.sourceStatus.toLowerCase().replace(/^./, (l) => l.toUpperCase())
+    : null;
 
-  // Email
-  const postEmails = Array.from(new Set(
-    posts.map((p: RecruitmentHubPost) => p.application_email ?? p.applicationEmail).filter(Boolean)
-  ));
-  const sharedApplicationEmail: string | null = postEmails.length === 1 ? (postEmails[0] as string) : null;
+  // ── Dates ────────────────────────────────────────────────────────────────
+  const notificationRaw = sourceFactsUnverified ? recruitment.sourceListingPublishedDate : recruitment.notificationDate;
+  const notificationDate = formatDate(notificationRaw);
+  const notificationDateLabel = sourceFactsUnverified
+    ? 'Source listing published' : 'Notification published';
+  const appStartRaw = sourceFactsUnverified
+    ? recruitment.sourceExtract?.applicationStartDate
+    : recruitment.applicationStartDate;
+  const appStart = formatDate(appStartRaw);
+  const appEndRaw = sourceFactsUnverified
+    ? (recruitment.sourceExtract?.applicationEndDate ?? recruitment.applicationEndDate ?? null)
+    : (recruitment.applicationEndDate ?? null);
+  const appEnd = formatDate(appEndRaw);
+  const appEndLabel = sourceFactsUnverified ? 'Application deadline (reported)' : 'Application closes';
 
-  // Documents
-  const sourceDocuments: string[] = Array.isArray(sourceOtherInfo?.application_documents)
-    ? (sourceOtherInfo.application_documents as unknown[]).filter((d): d is string => typeof d === 'string')
+  // ── Lifecycle (src/lib/lifecycle.ts is the only source of open/closed) ───
+  const lifecycle = deriveLifecycle(recruitment.status, recruitment.applicationEndDate, now);
+  const lifecycleState = sourceFactsUnverified ? null : lifecycle.state;
+  const closed = sourceFactsUnverified ? false : lifecycle.state === 'closed';
+  const daysLeft = sourceFactsUnverified ? null : lifecycle.daysLeft;
+  const updatedAtLabel = formatDate(recruitment.updatedAt);
+
+  // ── Vacancies and post names ─────────────────────────────────────────────
+  const extractedVacancies = sourceFactsUnverified
+    ? (recruitment.sourceExtract?.vacancyCount ?? null) : null;
+  let summed = 0;
+  let anySummed = false;
+  for (const p of posts) {
+    if (typeof p.vacancyTotal === 'number' && p.vacancyTotal > 0) { summed += p.vacancyTotal; anySummed = true; }
+  }
+  const totalVacancies = extractedVacancies
+    ?? (recruitment.totalVacancies && recruitment.totalVacancies > 0 ? recruitment.totalVacancies : null)
+    ?? (anySummed ? summed : null);
+  const postNames = unique(posts.map(postDisplayName));
+
+  // ── Title / heading / description ────────────────────────────────────────
+  const year = recruitment.year
+    ?? (toPlausibleRecruitmentDate(recruitment.notificationDate)?.getUTCFullYear() ?? null);
+  const composed = composeRecruitmentTitle({
+    organizationName: orgName,
+    recruitmentName: recruitment.name,
+    year,
+    totalVacancies,
+    postNames,
+    lastDate: closed ? null : appEnd,
+  });
+
+  // ── Fee ──────────────────────────────────────────────────────────────────
+  const feeNote = str(recruitment.feeNote);
+  const feeRowsFromNote = parseFeeNote(feeNote);
+  const feeRowsFromTable: FeeRow[] = Array.isArray(recruitment.recruitmentFees)
+    ? (recruitment.recruitmentFees as unknown[]).map((row) => {
+        const r = asRecord(row);
+        const category = str(r?.category) ?? str(r?.cat);
+        const amount = money((r?.amount ?? r?.fee ?? r?.amt) as number | string | null | undefined);
+        return category && amount ? { category, amount } : null;
+      }).filter((r): r is FeeRow => r !== null)
     : [];
+  const feeGeneral = money(recruitment.feeGeneral);
+  const feeReserved = money(recruitment.feeReserved);
+  const feeRows: FeeRow[] = feeRowsFromTable.length > 0
+    ? feeRowsFromTable
+    : feeRowsFromNote.length > 0
+    ? feeRowsFromNote
+    : [
+        ...(feeGeneral ? [{ category: 'General', amount: feeGeneral }] : []),
+        ...(feeReserved ? [{ category: 'Reserved categories', amount: feeReserved }] : []),
+      ];
+  const generalRow = feeRows.find((r) => /general|all others|^ur\b|unreserved/i.test(r.category)) ?? feeRows[0] ?? null;
+  const feeSummary = feeGeneral
+    ? (feeReserved && feeReserved !== feeGeneral ? `${feeGeneral} (General), ${feeReserved} (Reserved)` : `${feeGeneral} (General)`)
+    : generalRow
+    ? (feeRows.length > 1 ? `${generalRow.amount} (${generalRow.category})` : generalRow.amount)
+    : null;
+  const feeDisplayNote = feeRowsFromNote.length > 0 ? null : feeNote;
+  const hasFee = feeRows.length > 0 || Boolean(feeNote);
 
-  // Selection summary
-  const sourceSelectionSummary = typeof sourceOtherInfo?.interview === 'string'
-    ? sourceOtherInfo.interview : null;
-  const displaySelectionProcess =
-    resolvedSelectionProcess ?? recruitment.selectionProcess ??
-    (sourceFactsUnverified ? sourceSelectionSummary : null) ?? null;
+  // ── Pay ──────────────────────────────────────────────────────────────────
+  const payLines: { label: string | null; value: string }[] = [];
+  for (const post of posts) {
+    const pay = postPay(post);
+    if (pay) payLines.push({ label: posts.length > 1 ? postDisplayName(post) : null, value: pay });
+  }
+  if (payLines.length === 0 && sourcePayRange) {
+    payLines.push({ label: null, value: sourceFactsUnverified ? `${sourcePayRange} (reported)` : sourcePayRange });
+  }
 
-  // Urgency
-  const daysLeft = sourceFactsUnverified ? null : daysUntil(appEndRaw);
-  const isClosingSoon = !sourceFactsUnverified && daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && !closed;
-  const isLastDay = daysLeft === 0;
-
-  // Timeline
-  const hasTimeline = !!(notificationDate || appStart || appEnd || tentativeInterviewDate);
-
-  // Posts
-  const hasPosts = posts.length > 0;
-  const isSinglePost = posts.length === 1;
-
-  // Metadata
-  const examName = recruitment.exam?.name ?? recruitment.exam?.title ?? null;
-  const notificationNumber = recruitment.officialNotificationNumber ?? recruitment.official_notification_number
-    ?? recruitment.advertisementNumber ?? recruitment.advertisement_number ?? null;
-
-  // Fee
-  const feeRows = Array.isArray(recruitment.recruitmentFees) ? recruitment.recruitmentFees as Record<string, unknown>[] : [];
-  const feeGeneral = recruitment.feeGeneral ?? recruitment.fee_general ?? null;
-  const feeReserved = recruitment.feeReserved ?? recruitment.fee_reserved ?? null;
-  const feeNote = recruitment.feeNote ?? recruitment.fee_note ?? null;
-  const hasFeeDetails = feeRows.length > 0 || feeGeneral != null || feeReserved != null || Boolean(feeNote);
-
-  // Selection display rows
-  const selectionRows = Array.isArray(recruitment.selectionProcesses) ? recruitment.selectionProcesses : [];
-  const selectionDisplayRows: SelectionRow[] = (selectionRows as Record<string, unknown>[]).map((row) => {
-    const processName = row.process_type ?? row.processType ?? null;
-    const stages = Array.isArray(row.stages)
-      ? row.stages.map((stage: unknown) => {
-          if (typeof stage === 'string') return stage;
-          if (stage && typeof stage === 'object') {
-            const item = stage as Record<string, unknown>;
-            return item.name ?? item.title ?? item.stage ?? null;
-          }
-          return null;
-        }).filter((stage): stage is string => typeof stage === 'string').join(' → ')
-      : typeof row.stages === 'string' ? row.stages : null;
-    const details = typeof row.details === 'string' ? row.details : null;
-    return {
-      title: typeof processName === 'string' ? processName.replace(/_/g, ' ') : null,
-      detail: (typeof stages === 'string' ? stages : null) || details,
-    };
-  }).filter((row) => Boolean(row.title || row.detail));
-
-  // Employment type
-  const postEmploymentTypes = posts.map((p) => {
-    const et = (p as typeof p & { employmentType?: string | null }).employmentType ?? null;
-    return et;
-  }).filter((et): et is string => Boolean(et));
-  const uniqueEmploymentTypes = Array.from(new Set(postEmploymentTypes));
-  const hubEmploymentType: string | null = uniqueEmploymentTypes.length === 1
-    ? uniqueEmploymentTypes[0]
-    : uniqueEmploymentTypes.length > 1 ? 'Mixed' : null;
-  const displayEmploymentType = formatEmploymentType(hubEmploymentType);
-
-  // Posts table rows
-  const postsTableRows: PostTableRow[] = posts.map((post) => {
-    const postAny = post as typeof post & {
-      employmentType?: string | null;
-      payLevel?: Record<string, unknown> | null;
-      vacancyTotal?: number | null;
-    };
-    const payRaw = typeof postAny.payLevel?.raw === 'string' ? postAny.payLevel.raw : null;
-    const salaryFromFja = post.fjaExtract?.salaryRaw ?? null;
-    const payDisplay = payRaw ?? salaryFromFja ?? null;
-    const et = formatEmploymentType(postAny.employmentType ?? null);
+  // ── Posts table ──────────────────────────────────────────────────────────
+  const postRows: PostTableRow[] = posts.flatMap((post) => {
+    const name = postDisplayName(post);
+    if (!name) return [];
     const vacancies = post.resolvedVacancyCount
       ?? parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)
-      ?? postAny.vacancyTotal
+      ?? post.vacancyTotal
       ?? null;
-    const vacanciesVerified = post.resolvedVacancyCount != null
-      && post.fjaExtract?.verificationStatus === 'VERIFIED';
-    return {
+    const vacanciesVerified = post.vacancyTotal != null
+      || (post.resolvedVacancyCount != null && post.fjaExtract?.verificationStatus === 'VERIFIED');
+    const vacanciesUnverified = vacancies != null && !vacanciesVerified;
+    return [{
       id: post.id,
-      name: post.name ?? post.position?.name ?? null,
-      slug: post.slug ?? null,
-      vacancies,
-      vacanciesLabel: vacanciesVerified
-        ? `${post.resolvedVacancyCount!.toLocaleString('en-IN')}`
-        : vacancies != null ? `${vacancies.toLocaleString('en-IN')}*` : null,
-      payDisplay,
-      employmentType: et,
-    };
+      name,
+      vacanciesLabel: vacancies != null ? `${vacancies.toLocaleString('en-IN')}${vacanciesUnverified ? '*' : ''}` : null,
+      vacanciesUnverified,
+      qualification: postQualification(post),
+      experience: postExperience(post),
+      pay: postPay(post),
+    }];
   });
-  const hasPostsTable = posts.length > 1 && postsTableRows.some((r) => r.vacanciesLabel || r.payDisplay || r.employmentType);
+  const anyVacancyUnverified = postRows.some((r) => r.vacanciesUnverified);
 
-  // Eligibility
-  const hasEligibilityData = posts.some((p) => p.eligibilities && p.eligibilities.length > 0);
+  // ── Eligibility cards ────────────────────────────────────────────────────
+  const multi = posts.length > 1;
+  const prefixed = (post: RecruitmentHubPost, text: string | null): string | null => {
+    if (!text) return null;
+    const name = postDisplayName(post);
+    return multi && name ? `${name}: ${text}` : text;
+  };
+  const educationTexts = unique([
+    ...posts.flatMap((post) => [prefixed(post, postQualification(post)), prefixed(post, postExperience(post))]),
+    ...(posts.every((p) => !postQualification(p)) ? [str(recruitment.sourceExtract?.qualification)] : []),
+  ]);
+  const physicalTexts = unique(
+    posts.flatMap((post) => (post.eligibilities ?? []).map((e) => prefixed(post, str(e.physicalRequirements)))),
+  );
+  const ageNote = str(recruitment.ageNote);
+  // The recruitment-level age note already carries the limits and relaxations;
+  // per-post numeric ranges are shown only when no note exists.
+  const ageTexts = ageNote
+    ? [ageNote]
+    : unique(posts.flatMap((post) => (post.eligibilities ?? []).map((e) => prefixed(post, ageText(e.ageMin, e.ageMax)))));
 
-  // FAQ items
-  const faqItems: { q: string; a: string }[] = [];
+  // ── Selection ────────────────────────────────────────────────────────────
+  const selectionRowsRaw = Array.isArray(recruitment.selectionProcesses) ? recruitment.selectionProcesses as unknown[] : [];
+  const selectionRows: SelectionRow[] = selectionRowsRaw.map((row) => {
+    const r = asRecord(row) ?? {};
+    const processName = str(r.process_type) ?? str(r.processType);
+    const stages = Array.isArray(r.stages)
+      ? r.stages.map((stage: unknown) => {
+          if (typeof stage === 'string') return stage;
+          const item = asRecord(stage);
+          return item ? (str(item.name) ?? str(item.title) ?? str(item.stage)) : null;
+        }).filter((s): s is string => typeof s === 'string').join(' → ')
+      : str(r.stages);
+    const details = str(r.details);
+    return {
+      title: processName ? processName.replace(/_/g, ' ') : null,
+      detail: stages || details,
+    };
+  }).filter((row) => Boolean(row.title || row.detail));
+  const sourceSelectionSummary = str(sourceOtherInfo?.interview);
+  const selectionText = str(recruitment.selectionProcess)
+    ?? (sourceFactsUnverified && sourceSelectionSummary ? `${sourceSelectionSummary} (reported)` : null);
 
-  if (recruitment.name && displayOrg) {
-    faqItems.push({
-      q: `What is ${recruitment.name}?`,
-      a: `${recruitment.name} is a recruitment conducted by ${displayOrg}${recruitment.year ? ` for the year ${recruitment.year}` : ''}.`,
+  // ── How to apply (extracted only) + documents ────────────────────────────
+  const howToApply = unique(HOW_TO_APPLY_KEYS.flatMap((k) => strList(sourceOtherInfo?.[k])));
+  const sourceDocuments = strList(sourceOtherInfo?.application_documents);
+
+  // ── URLs ─────────────────────────────────────────────────────────────────
+  const notificationUrl = publicLink(
+    str(recruitment.officialNotificationUrl) ?? str(recruitment.notificationUrl),
+  );
+  const applyCandidate = publicLink(str(recruitment.officialApplicationUrl) ?? str(recruitment.applyUrl));
+  const applyUrl = applyCandidate && applyCandidate !== notificationUrl ? applyCandidate : null;
+  const officialWebsiteUrl = orgWebsite && orgWebsite !== notificationUrl && orgWebsite !== applyUrl ? orgWebsite : null;
+
+  const links: LinkRow[] = [];
+  if (applyUrl && !closed) links.push({ label: 'Apply online', href: applyUrl });
+  if (notificationUrl) links.push({ label: 'Notification PDF', href: notificationUrl });
+  if (officialWebsiteUrl) links.push({ label: 'Official website', href: officialWebsiteUrl });
+
+  const waText = encodeURIComponent(
+    `${composed.heading}${appEnd ? ` — Last date: ${appEnd}` : ''}\n${SITE_URL}/jobs/${slug}`,
+  );
+  const whatsappUrl = `https://wa.me/?text=${waText}`;
+
+  // ── Identity line ────────────────────────────────────────────────────────
+  const notificationNumber = str(recruitment.officialNotificationNumber) ?? str(recruitment.advertisementNumber);
+  const officialNoticeDate = sourceFactsUnverified ? null : formatDate(recruitment.notificationDate);
+  const noticeSource = notificationNumber
+    ? `notification ${notificationNumber}${officialNoticeDate ? ` dated ${officialNoticeDate}` : ''}`
+    : officialNoticeDate
+    ? `the official notification dated ${officialNoticeDate}`
+    : null;
+  const noticeLine = noticeSource
+    ? `Facts on this page are read from ${noticeSource}. Always confirm on the official site before applying.`
+    : null;
+
+  // ── Hero summary (known facts only) ──────────────────────────────────────
+  const summarySentences: string[] = [];
+  if (orgName && (totalVacancies != null || postNames.length > 0)) {
+    const what = [
+      totalVacancies != null ? `${totalVacancies.toLocaleString('en-IN')} ${totalVacancies === 1 ? 'vacancy' : 'vacancies'}` : null,
+      postNames.length > 0 ? `for ${postNames.slice(0, 3).join(', ')}${postNames.length > 3 ? ' and more' : ''}` : null,
+    ].filter(Boolean).join(' ');
+    summarySentences.push(`${orgName} has notified ${what}${sourceFactsUnverified ? ' (as reported in the source listing)' : ''}.`);
+  }
+  if (appStart && appEnd) summarySentences.push(`Applications open on ${appStart} and close on ${appEnd}.`);
+  else if (appEnd) summarySentences.push(closed ? `Applications closed on ${appEnd}.` : `Applications close on ${appEnd}.`);
+  const summary = summarySentences.length > 0 ? summarySentences.join(' ') : null;
+
+  // ── Job type / mode / location ───────────────────────────────────────────
+  const jobType = formatJobType(recruitment.employmentType);
+  const applicationMode = sourceApplicationMode ? str(sourceApplicationMode) : null;
+  const locationText = state ? null : str(sourceLocation);
+
+  // ── At a glance ──────────────────────────────────────────────────────────
+  const glance: GlanceRow[] = [];
+  if (orgName) glance.push({ label: 'Organisation', value: orgName, href: orgHref });
+  if (notificationNumber) glance.push({ label: 'Advertisement no.', value: notificationNumber });
+  if (postNames.length > 0) glance.push({ label: 'Posts', value: postNames.join(', ') });
+  if (totalVacancies != null) {
+    glance.push({
+      label: 'Total vacancies',
+      value: `${totalVacancies.toLocaleString('en-IN')}${sourceFactsUnverified ? ' (reported)' : ''}`,
     });
   }
+  glance.push({ label: 'Apply from', value: appStart });
+  if (appEnd) glance.push({ label: 'Last date', value: `${appEnd}${sourceFactsUnverified ? ' (reported)' : ''}` });
+  glance.push({ label: 'Application fee', value: feeSummary ?? feeNote });
+  if (applicationMode) glance.push({ label: 'Mode', value: applicationMode });
+  if (jobType) glance.push({ label: 'Job type', value: jobType });
+  if (state) glance.push({ label: 'Location', value: state.name, href: state.href });
+  else if (locationText) glance.push({ label: 'Location', value: locationText });
+  glance.push({ label: 'Age limit', value: ageNote });
 
-  if (displayTotalVacancies != null) {
-    faqItems.push({
-      q: 'How many vacancies are available?',
-      a: sourceFactsUnverified
-        ? `The source listing reports ${displayTotalVacancies.toLocaleString('en-IN')} vacancies across ${posts.length} listed post${posts.length !== 1 ? 's' : ''}. Confirm each role and vacancy count in the specific official notice.`
-        : `A total of ${displayTotalVacancies.toLocaleString('en-IN')} vacancies are available across ${posts.length} post${posts.length !== 1 ? 's' : ''}.`,
-    });
+  // ── Timeline ─────────────────────────────────────────────────────────────
+  const stepDefs: Array<{ id: TimelineStep['id']; label: string; raw: Date | string | null | undefined; note?: string }> = [
+    { id: 'notified', label: notificationDateLabel, raw: notificationRaw },
+    { id: 'open', label: 'Applications open', raw: appStartRaw },
+    { id: 'close', label: appEndLabel, raw: appEndRaw },
+    { id: 'exam', label: 'Exam / test', raw: recruitment.examDate },
+    { id: 'result', label: 'Result', raw: recruitment.resultDate },
+  ];
+  if (tentativeInterviewDate) {
+    stepDefs.push({ id: 'interview', label: 'Tentative interview date', raw: tentativeInterviewDate, note: 'tentative' });
   }
+  let currentMarked = false;
+  const timeline: TimelineStep[] = stepDefs.map((s) => {
+    const d = toPlausibleRecruitmentDate(s.raw);
+    if (!d) return { id: s.id, label: s.label, date: null, iso: null, note: s.note, state: 'unknown' };
+    const past = d.getTime() < now.getTime();
+    let stateOf: TimelineStep['state'] = past ? 'past' : 'future';
+    if (!past && !currentMarked) { stateOf = 'current'; currentMarked = true; }
+    return { id: s.id, label: s.label, date: formatDate(d), iso: d.toISOString(), note: s.note, state: stateOf };
+  });
+  const hasTimeline = timeline.some((t) => t.date);
 
+  // ── Source & verification ────────────────────────────────────────────────
+  const verificationLine = verified
+    ? 'Verified against the official notification PDF.'
+    : sourceFactsUnverified
+    ? 'Facts marked "reported" come from the source listing and have not been verified against the official notification.'
+    : notificationUrl
+    ? 'Facts read from the official notification. Not yet independently verified.'
+    : 'Official notification link not on record for this recruitment.';
+  const discoverySourceUrl = publicLink(recruitment.sourceExtract?.sourceUrl ?? null);
+
+  // ── FAQ (only known facts) ───────────────────────────────────────────────
+  const faqItems: FaqItem[] = [];
+  const subject = composed.heading;
   if (appEnd) {
     faqItems.push({
-      q: 'When does the application close?',
+      q: `What is the last date to apply for ${subject}?`,
       a: sourceFactsUnverified
-        ? `The source listing reports a deadline of ${appEnd}. Confirm the date in the specific official notice before applying.`
+        ? `The source listing reports a deadline of ${appEnd}. Confirm the date in the official notice before applying.`
         : `The last date to apply is ${appEnd}.`,
     });
   }
-
-  if (hasPosts && posts.length > 1) {
-    const postNames = posts.slice(0, 5).map((p) => p.name ?? p.position?.name).filter(Boolean);
-    if (postNames.length > 0) {
-      faqItems.push({
-        q: 'Which posts are included in this recruitment?',
-        a: `This recruitment includes ${posts.length} posts, including: ${postNames.join(', ')}${posts.length > 5 ? ', and more' : ''}.`,
-      });
-    }
-  }
-
-  if (displaySelectionProcess) {
+  if (totalVacancies != null) {
     faqItems.push({
-      q: 'What is the selection process?',
-      a: displaySelectionProcess,
+      q: `How many vacancies are there in ${subject}?`,
+      a: sourceFactsUnverified
+        ? `The source listing reports ${totalVacancies.toLocaleString('en-IN')} vacancies${postNames.length > 0 ? ` for ${postNames.join(', ')}` : ''}. Confirm the count in the official notice.`
+        : `There are ${totalVacancies.toLocaleString('en-IN')} vacancies${postNames.length > 0 ? ` for ${postNames.join(', ')}` : ''}.`,
+    });
+  }
+  if (feeSummary || feeNote) {
+    faqItems.push({
+      q: `What is the application fee for ${subject}?`,
+      a: feeRows.length > 1
+        ? feeRows.map((r) => `${r.category}: ${r.amount}`).join('; ') + '.'
+        : `${feeSummary ?? feeNote}.`,
+    });
+  }
+  if (payLines.length > 0) {
+    faqItems.push({
+      q: `What is the salary for ${subject}?`,
+      a: payLines.map((l) => (l.label ? `${l.label}: ${l.value}` : l.value)).join('; ') + '.',
+    });
+  }
+  if (selectionText || selectionRows.length > 0) {
+    faqItems.push({
+      q: `What is the selection process for ${subject}?`,
+      a: selectionText
+        ?? selectionRows.map((r) => [r.title, r.detail].filter(Boolean).join(': ')).join('; ') + '.',
+    });
+  }
+  if (educationTexts.length > 0) {
+    faqItems.push({
+      q: `What is the eligibility for ${subject}?`,
+      a: educationTexts.join(' '),
     });
   }
 
-  if (examName) {
-    faqItems.push({
-      q: 'Is there an exam or test involved?',
-      a: `Yes — this recruitment is conducted through the ${examName}. Check the selection process section for details on stages.`,
-    });
+  // ── Explore pills ────────────────────────────────────────────────────────
+  const explore: Pill[] = [];
+  if (orgName && orgHref) explore.push({ label: `All ${orgName} jobs`, href: orgHref });
+  if (state) explore.push({ label: `Jobs in ${state.name}`, href: state.href });
+  const levels = unique(posts.flatMap((p) => (p.eligibilities ?? []).map((e) => str(e.educationLevel))));
+  if (levels.length === 1) {
+    const qSlug = EDUCATION_LEVEL_TO_QUALIFICATION_SLUG[levels[0].toUpperCase()];
+    const q = qSlug ? getQualification(qSlug) : undefined;
+    if (q) explore.push({ label: q.label, href: `/qualifications/${q.slug}` });
   }
+  explore.push({ label: 'Jobs closing this week', href: '/closing-soon' });
 
-  if (displayOfficialSource) {
-    faqItems.push({
-      q: 'Where can I check the official recruitment notice?',
-      a: 'Use the official notification link in the "Official Links" section below to download or view the original recruitment notice.',
-    });
-  }
+  // ── Section list ─────────────────────────────────────────────────────────
+  const sections: HubSectionId[] = ['overview'];
+  if (postRows.length > 0) sections.push('posts');
+  if (educationTexts.length > 0 || physicalTexts.length > 0 || ageTexts.length > 0) sections.push('eligibility');
+  if (payLines.length > 0) sections.push('pay');
+  if (hasFee) sections.push('fee');
+  if (hasTimeline) sections.push('dates');
+  if (selectionText || selectionRows.length > 0) sections.push('selection');
+  if (howToApply.length > 0) sections.push('apply');
+  if (links.length > 0) sections.push('links');
+  sections.push('source');
+  if (faqItems.length > 0) sections.push('faq');
+
+  const description = composeRecruitmentDescription({
+    orgName: orgName ?? composed.heading.replace(/ Recruitment.*$/, ''),
+    totalVacancies,
+    postNames,
+    lastDate: closed ? null : appEnd,
+    fee: feeSummary,
+  });
 
   return {
-    // Raw records
     recruitment,
     posts,
-    // Resolved props
-    resolvedTotalVacancies: resolvedTotalVacancies ?? null,
-    resolvedApplicationUrl: resolvedApplicationUrl ?? null,
-    resolvedOfficialSource: resolvedOfficialSource ?? null,
-    resolvedEmployer: resolvedEmployer ?? null,
-    resolvedSelectionProcess: resolvedSelectionProcess ?? null,
-    orgSlug: orgSlug ?? null,
-    localePrefix,
-    // Computed
+    slug,
+    heading: composed.heading,
+    title: composed.title,
+    description,
+    orgName,
+    orgHref,
+    state,
+    notificationNumber,
     sourceFactsUnverified,
-    displayOrg,
-    displayTotalVacancies,
-    displayApplicationUrl,
-    displayOfficialSource,
-    displayDescription,
-    descriptionIsInternal,
-    // Dates
+    verified,
+    lifecycleState,
+    sourceStatusLabel,
+    closed,
+    daysLeft,
+    updatedAtLabel,
     notificationDate,
     notificationDateLabel,
     appStart,
     appEnd,
     appEndLabel,
     appEndRaw,
-    // Status
-    closed,
-    sourceStatusLabel,
-    // Urgency
-    daysLeft,
-    isClosingSoon,
-    isLastDay,
-    // Metadata
-    examName,
-    notificationNumber,
-    displayEmploymentType,
-    displaySelectionProcess,
-    // Source details
-    sourcePayRange,
-    sourceLocation,
-    sourceApplicationMode,
-    sharedApplicationEmail,
-    sourceDocuments,
-    tentativeInterviewDate,
-    // Fee
+    timeline,
+    summary,
+    applyUrl,
+    notificationUrl,
+    officialWebsiteUrl,
+    whatsappUrl,
+    noticeLine,
+    totalVacancies,
+    postNames,
+    jobType,
+    applicationMode,
+    locationText,
+    glance,
+    postRows,
+    anyVacancyUnverified,
+    educationTexts,
+    physicalTexts,
+    ageTexts,
+    payLines,
     feeRows,
-    feeGeneral,
-    feeReserved,
-    feeNote,
-    hasFeeDetails,
-    // Selection
-    selectionDisplayRows,
-    // Posts
-    hasPosts,
-    isSinglePost,
-    hasPostsTable,
-    postsTableRows,
-    hasEligibilityData,
-    // Timeline
-    hasTimeline,
-    // FAQ
+    feeSummary,
+    feeNote: feeDisplayNote,
+    selectionRows,
+    selectionText,
+    howToApply,
+    sourceDocuments,
+    links,
+    verificationLine,
+    discoverySourceUrl,
     faqItems,
+    explore,
+    sections,
   };
 }
 
+/** Status chip for the hero; null while lifecycle claims are suppressed and no reported status exists. */
+export function lifecycleChip(data: HubData): { text: string; tone: 'open' | 'closed' | 'upcoming' | 'neutral' } | null {
+  if (data.lifecycleState) {
+    if (data.lifecycleState === 'upcoming') return { text: 'Upcoming', tone: 'upcoming' };
+    if (data.lifecycleState === 'open') return { text: lifecycleLabel('open'), tone: 'open' };
+    return { text: lifecycleLabel(data.lifecycleState), tone: 'closed' };
+  }
+  return data.sourceStatusLabel ? { text: `${data.sourceStatusLabel} (reported)`, tone: 'neutral' } : null;
+}
+
 // ---------------------------------------------------------------------------
-// Main component
+// Main component (server)
 // ---------------------------------------------------------------------------
 
-export default function RecruitmentHub({
-  recruitment,
-  posts,
-  resolvedTotalVacancies = null,
-  resolvedApplicationUrl = null,
-  resolvedOfficialSource = null,
-  resolvedEmployer = null,
-  resolvedSelectionProcess = null,
-  orgSlug = null,
-  locale = 'en',
-}: RecruitmentHubProps) {
-  const data = buildHubData({
-    recruitment,
-    posts,
-    resolvedTotalVacancies,
-    resolvedApplicationUrl,
-    resolvedOfficialSource,
-    resolvedEmployer,
-    resolvedSelectionProcess,
-    orgSlug,
-    locale,
-  });
+export default function RecruitmentHub({ data }: RecruitmentHubProps) {
+  const has = (id: HubSectionId) => data.sections.includes(id);
 
   return (
     <div className={styles.page}>
       <div className={styles.wrap}>
-        {/* Breadcrumb */}
         <HubBreadcrumb data={data} />
 
-        <article
-          className={styles.article}
-          data-start={data.appStart ?? undefined}
-          data-end={data.appEndRaw ? new Date(data.appEndRaw).toISOString() : undefined}
-        >
-          {/* 1 — Hero header card */}
+        <article className={styles.article}>
           <HubHeader data={data} />
-
-          {/* 2 — TOC pill strip */}
           <HubToc data={data} />
 
-          {/* 3 — Quick Answers */}
-          <HubQuickAnswers data={data} />
-
-          {/* 4 — Recruitment Details */}
           <HubDetails data={data} />
-
-          {/* 5 — Important Dates */}
-          <HubDates data={data} />
-
-          {/* 6 — Posts & Compare table */}
-          <HubPosts data={data} />
-
-          {/* 7 — Eligibility at a glance (ELIG-001 Phase 1: display text only) */}
-          <HubEligibility data={data} />
-
-          {/* 8 — Selection process + fee */}
-          <HubSelection data={data} />
-
-          {/* 9 — How to Apply */}
-          <HubApply data={data} />
-
-          {/* 10 — Document checklist (client only) */}
-          <HubDocuments data={data} />
-
-          {/* 11 — Age & Conditions */}
-          <HubConditions data={data} />
-
-          {/* 12 — Official Links */}
-          <HubLinks data={data} />
-
-          {/* 13 — Source & Verification */}
+          {has('posts') && <HubPosts data={data} />}
+          {has('eligibility') && <HubEligibility data={data} />}
+          {(has('pay') || has('fee')) && <HubPayFee data={data} />}
+          {has('dates') && <HubDates data={data} />}
+          {has('selection') && <HubSelection data={data} />}
+          {has('apply') && <HubApply data={data} />}
+          {data.sourceDocuments.length > 0 && (
+            <HubDocuments documents={data.sourceDocuments} storageKey={`hub-docs-${data.slug}`} />
+          )}
+          {has('links') && <HubLinks data={data} />}
           <HubSource data={data} />
-
-          {/* 14 — FAQ */}
-          <HubFaq data={data} />
+          {has('faq') && <HubFaq data={data} />}
+          <HubExplore data={data} />
         </article>
       </div>
     </div>

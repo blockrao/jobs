@@ -1,9 +1,12 @@
 /**
  * Shared types for recruitment hub section components.
- * All sections receive a HubData object built by the orchestrator.
+ * All sections receive a HubData object built once by the orchestrator
+ * (recruitment-hub.tsx). Every field is a display-ready value or null; a
+ * section renders only what is non-null and never substitutes a default.
  */
 
 import type { recruitments, posts, positions } from '@/db/schema';
+import type { LifecycleState } from '@/lib/lifecycle';
 
 export type EligibilityRow = {
   id?: number;
@@ -13,24 +16,20 @@ export type EligibilityRow = {
   ageMin?: number | null;
   ageMax?: number | null;
   educationLevel?: string | null;
+  physicalRequirements?: string | null;
   qualification_record?: unknown;
   [key: string]: unknown;
 };
 
 export type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   organizationName?: string | null;
+  organizationSlug?: string | null;
+  /** Raw organizations row loaded by the hub query (snake_case columns). */
+  organization?: { website_url?: string | null; websiteUrl?: string | null } | null;
   exam?: { name?: string | null; title?: string | null } | null;
-  officialNotificationNumber?: string | null;
-  official_notification_number?: string | null;
-  advertisementNumber?: string | null;
-  advertisement_number?: string | null;
   recruitmentFees?: unknown;
   feeGeneral?: number | string | null;
-  fee_general?: number | string | null;
   feeReserved?: number | string | null;
-  fee_reserved?: number | string | null;
-  feeNote?: string | null;
-  fee_note?: string | null;
   selectionProcesses?: unknown;
   sourceVerificationStatus?: string | null;
   sourceListingPublishedDate?: Date | string | null;
@@ -51,10 +50,7 @@ export type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
 export type RecruitmentHubPost = typeof posts.$inferSelect & {
   position?: typeof positions.$inferSelect | null;
   resolvedVacancyCount?: number | null;
-  status?: string | null;
-  lifecycle_status?: string | null;
-  application_email?: string | null;
-  applicationEmail?: string | null;
+  employmentType?: string | null;
   eligibilities?: EligibilityRow[];
   fjaExtract?: {
     inventoryId?: number | string;
@@ -72,12 +68,12 @@ export type RecruitmentHubPost = typeof posts.$inferSelect & {
 
 export interface PostTableRow {
   id: number | string;
-  name: string | null;
-  slug: string | null;
-  vacancies: number | null;
+  name: string;
   vacanciesLabel: string | null;
-  payDisplay: string | null;
-  employmentType: string | null;
+  vacanciesUnverified: boolean;
+  qualification: string | null;
+  experience: string | null;
+  pay: string | null;
 }
 
 export interface SelectionRow {
@@ -86,84 +82,126 @@ export interface SelectionRow {
 }
 
 export interface FeeRow {
-  [key: string]: unknown;
+  category: string;
+  amount: string;
 }
 
-/** All computed/resolved data the hub sections need — built once by the orchestrator. */
+export interface GlanceRow {
+  label: string;
+  /** Display text; null means "Not stated in this notification". */
+  value: string | null;
+  href?: string | null;
+}
+
+export interface TimelineStep {
+  id: 'notified' | 'open' | 'close' | 'exam' | 'result' | 'interview';
+  label: string;
+  /** Formatted date or null (not announced). */
+  date: string | null;
+  iso: string | null;
+  note?: string;
+  state: 'past' | 'current' | 'future' | 'unknown';
+}
+
+export interface LinkRow {
+  label: string;
+  href: string;
+}
+
+export interface FaqItem {
+  q: string;
+  a: string;
+}
+
+export interface Pill {
+  label: string;
+  href: string;
+}
+
+export type HubSectionId =
+  | 'overview' | 'posts' | 'eligibility' | 'pay' | 'fee' | 'dates'
+  | 'selection' | 'apply' | 'links' | 'source' | 'faq';
+
 export interface HubData {
-  // Raw records
   recruitment: RecruitmentHubRecruitment;
   posts: RecruitmentHubPost[];
 
-  // Resolved props
-  resolvedTotalVacancies: number | null;
-  resolvedApplicationUrl: string | null;
-  resolvedOfficialSource: string | null;
-  resolvedEmployer: string | null;
-  resolvedSelectionProcess: string | null;
-  orgSlug: string | null;
-  localePrefix: string;
+  // Identity
+  slug: string;
+  heading: string;
+  /** Full <title> text including the "Apply by" suffix. */
+  title: string;
+  description: string;
+  orgName: string | null;
+  orgHref: string | null;
+  state: { name: string; slug: string; href: string } | null;
+  notificationNumber: string | null;
 
-  // Computed display values
+  // Verification + status
   sourceFactsUnverified: boolean;
-  displayOrg: string | null;
-  displayTotalVacancies: number | null;
-  displayApplicationUrl: string | null;
-  displayOfficialSource: string | null;
-  displayDescription: string | null;
-  descriptionIsInternal: boolean;
+  verified: boolean;
+  lifecycleState: LifecycleState | null;
+  /** Reported status from the source listing (shown only while lifecycle is suppressed). */
+  sourceStatusLabel: string | null;
+  closed: boolean;
+  daysLeft: number | null;
+  updatedAtLabel: string | null;
 
-  // Dates
+  // Dates (display)
   notificationDate: string | null;
   notificationDateLabel: string;
   appStart: string | null;
   appEnd: string | null;
   appEndLabel: string;
   appEndRaw: Date | string | null;
+  timeline: TimelineStep[];
 
-  // Status
-  closed: boolean;
-  sourceStatusLabel: string | null;
+  // Hero
+  summary: string | null;
+  applyUrl: string | null;
+  notificationUrl: string | null;
+  officialWebsiteUrl: string | null;
+  whatsappUrl: string;
+  noticeLine: string | null;
 
-  // Urgency
-  daysLeft: number | null;
-  isClosingSoon: boolean;
-  isLastDay: boolean;
-
-  // Metadata
-  examName: string | null;
-  notificationNumber: string | null;
-  displayEmploymentType: string | null;
-  displaySelectionProcess: string | null;
-
-  // Source / extracted details
-  sourcePayRange: string | null;
-  sourceLocation: string | null;
-  sourceApplicationMode: string | null;
-  sharedApplicationEmail: string | null;
-  sourceDocuments: string[];
-  tentativeInterviewDate: string | null;
-
-  // Fee
-  feeRows: FeeRow[];
-  feeGeneral: number | string | null;
-  feeReserved: number | string | null;
-  feeNote: string | null;
-  hasFeeDetails: boolean;
-
-  // Selection
-  selectionDisplayRows: SelectionRow[];
+  // Facts
+  totalVacancies: number | null;
+  postNames: string[];
+  jobType: string | null;
+  applicationMode: string | null;
+  locationText: string | null;
+  glance: GlanceRow[];
 
   // Posts
-  hasPosts: boolean;
-  isSinglePost: boolean;
-  hasPostsTable: boolean;
-  postsTableRows: PostTableRow[];
-  hasEligibilityData: boolean;
+  postRows: PostTableRow[];
+  anyVacancyUnverified: boolean;
 
-  // Timeline
-  hasTimeline: boolean;
+  // Eligibility
+  educationTexts: string[];
+  physicalTexts: string[];
+  ageTexts: string[];
 
-  // FAQ items
-  faqItems: { q: string; a: string }[];
+  // Pay & fee
+  payLines: { label: string | null; value: string }[];
+  feeRows: FeeRow[];
+  feeSummary: string | null;
+  feeNote: string | null;
+
+  // Selection + apply
+  selectionRows: SelectionRow[];
+  selectionText: string | null;
+  howToApply: string[];
+  sourceDocuments: string[];
+
+  // Links + source
+  links: LinkRow[];
+  verificationLine: string;
+  discoverySourceUrl: string | null;
+
+  // FAQ + explore
+  faqItems: FaqItem[];
+  explore: Pill[];
+
+  /** Sections that will render, in page order. */
+  sections: HubSectionId[];
 }

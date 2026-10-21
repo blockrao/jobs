@@ -1,15 +1,19 @@
 /**
- * Hub Header — Hero card
- * Blue hero card: chips, H1, lead stats, yellow deadline box, action buttons, trust line, tools row.
- * Matches BhartiDesk v2 reference design.
+ * Hub Header — hero
+ * Chips (lifecycle, days left, verification, updated) → H1 → plain summary →
+ * CTAs (Apply online / Official notification / Share) → notice line.
+ * Every chip and sentence comes from a stored fact; nothing is defaulted.
  */
 
-import Link from 'next/link';
 import type { HubData } from './types';
+import { lifecycleChip } from '../recruitment-hub';
 import styles from '../recruitment-hub.module.css';
 
-interface HubHeaderProps {
-  data: HubData;
+function daysLeftChip(daysLeft: number | null, closed: boolean): string | null {
+  if (closed || daysLeft === null || daysLeft < 0 || daysLeft > 14) return null;
+  if (daysLeft === 0) return 'Closes today';
+  if (daysLeft === 1) return 'Closes tomorrow';
+  return `${daysLeft} days left`;
 }
 
 function WhatsAppIcon() {
@@ -20,221 +24,64 @@ function WhatsAppIcon() {
   );
 }
 
-function CalendarIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-      <line x1="16" y1="2" x2="16" y2="6"/>
-      <line x1="8" y1="2" x2="8" y2="6"/>
-      <line x1="3" y1="10" x2="21" y2="10"/>
-    </svg>
-  );
-}
-
-export default function HubHeader({ data }: HubHeaderProps) {
+export default function HubHeader({ data }: { data: HubData }) {
   const {
-    recruitment, posts, sourceFactsUnverified, displayOrg, displayTotalVacancies,
-    displayApplicationUrl, displayOfficialSource, appEnd, closed, isClosingSoon, isLastDay,
-    daysLeft, hasPosts, isSinglePost, notificationNumber, feeGeneral, feeReserved,
-    hasFeeDetails, feeNote, displayDescription, descriptionIsInternal, sourceStatusLabel,
-    localePrefix,
+    heading, summary, applyUrl, notificationUrl, whatsappUrl, noticeLine,
+    closed, daysLeft, verified, updatedAtLabel,
   } = data;
 
-  // Chip state
-  // upcoming: app start date is in the future (not yet open)
-  const appStartRaw = recruitment.applicationStartDate ?? null;
-  const appStartIsUpcoming = appStartRaw
-    ? new Date(appStartRaw).getTime() > Date.now()
-    : false;
+  const status = lifecycleChip(data);
+  const days = daysLeftChip(daysLeft, closed);
+  const toneClass = status
+    ? status.tone === 'open' ? styles.chipOpen
+      : status.tone === 'closed' ? styles.chipClosed
+      : status.tone === 'upcoming' ? styles.chipUpcoming
+      : ''
+    : '';
 
-  let chipState: 'open' | 'closed' | 'upcoming' | 'unverified' = 'open';
-  if (closed) chipState = 'closed';
-  else if (appStartIsUpcoming) chipState = 'upcoming';
-  else if (sourceFactsUnverified) chipState = 'unverified';
-
-  const chipClass = chipState === 'open'
-    ? `${styles.chip} ${styles.chipOpen}`
-    : chipState === 'closed'
-    ? `${styles.chip} ${styles.chipClosed}`
-    : chipState === 'upcoming'
-    ? `${styles.chip} ${styles.chipUpcoming}`
-    : styles.chip;
-
-  const chipText = chipState === 'open' ? 'Open'
-    : chipState === 'closed' ? 'Closed'
-    : chipState === 'upcoming' ? 'Upcoming'
-    : sourceStatusLabel ? `${sourceStatusLabel} (reported)` : 'Check notification';
-
-  // Employment type chip
-  const employmentTypes = Array.from(new Set(
-    posts.map((p) => (p as typeof p & { employmentType?: string | null }).employmentType).filter(Boolean)
-  ));
-  const empChip = employmentTypes.length === 1
-    ? employmentTypes[0]!.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-    : employmentTypes.length > 1 ? 'Multiple types' : null;
-
-  // Lead: vacancy + post count
-  const leadParts: string[] = [];
-  if (displayTotalVacancies != null) {
-    leadParts.push(`${displayTotalVacancies.toLocaleString('en-IN')} ${displayTotalVacancies === 1 ? 'vacancy' : 'vacancies'}`);
-  }
-  if (posts.length > 0) {
-    leadParts.push(`${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`);
-  }
-
-  // WhatsApp share URL
-  const waText = encodeURIComponent(
-    `${recruitment.name} — Last date: ${appEnd ?? 'see notification'}${displayApplicationUrl ? `\nApply: ${displayApplicationUrl}` : displayOfficialSource ? `\nNotification: ${displayOfficialSource}` : ''}`
-  );
-  const waUrl = `https://wa.me/?text=${waText}`;
-
-  // Google Calendar URL
-  let calUrl: string | null = null;
-  if (!closed && recruitment.applicationEndDate) {
-    const endDate = new Date(recruitment.applicationEndDate);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const dateStr = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(endDate.getDate())}`;
-    const nextDay = new Date(endDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const nextDayStr = `${nextDay.getFullYear()}${pad(nextDay.getMonth() + 1)}${pad(nextDay.getDate())}`;
-    const calText = encodeURIComponent(`Last date — ${recruitment.name}`);
-    const calDetails = encodeURIComponent(
-      `Apply by this date${displayApplicationUrl ? `\n${displayApplicationUrl}` : displayOfficialSource ? `\n${displayOfficialSource}` : ''}`
-    );
-    calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calText}&dates=${dateStr}/${nextDayStr}&details=${calDetails}`;
-  }
+  const primary = applyUrl && !closed
+    ? { label: 'Apply online', href: applyUrl }
+    : notificationUrl
+    ? { label: 'Official notification', href: notificationUrl }
+    : null;
+  const secondary = primary && primary.href !== notificationUrl && notificationUrl
+    ? { label: 'Official notification', href: notificationUrl }
+    : null;
 
   return (
     <header className={`${styles.card} ${styles.hero}`}>
-      {/* Status + category chips */}
       <ul className={styles.chips}>
-        <li className={chipClass} data-status="true">{chipText}</li>
-        {empChip && <li className={styles.chip}>{empChip}</li>}
-        {displayOrg && <li className={styles.chip}>{displayOrg}</li>}
-        {notificationNumber && <li className={styles.chip}>Advt {notificationNumber}</li>}
+        {status && <li className={`${styles.chip} ${toneClass}`}>{status.text}</li>}
+        {days && <li className={`${styles.chip} ${styles.chipUrgent}`}>{days}</li>}
+        {verified
+          ? <li className={styles.chip}>Verified against official PDF</li>
+          : notificationUrl
+          ? <li className={styles.chip}>From official notification</li>
+          : null}
+        {updatedAtLabel && <li className={`${styles.chip} ${styles.chipMuted}`}>Updated {updatedAtLabel}</li>}
       </ul>
 
-      {/* H1 */}
-      <h1 className={styles.heroTitle}>{recruitment.name}</h1>
+      <h1 className={styles.heroTitle}>{heading}</h1>
 
-      {/* Lead */}
-      {leadParts.length > 0 && (
-        <p className={styles.lead}>
-          {leadParts.join(' · ')}{sourceFactsUnverified ? ' (reported)' : ''}.
-          {appEnd && !closed && (
-            <> Apply by <strong>{appEnd}</strong>{sourceFactsUnverified ? ' (reported)' : ''}.</>
-          )}
-        </p>
-      )}
+      {summary && <p className={styles.lead}>{summary}</p>}
 
-      {/* Description */}
-      {displayDescription && !descriptionIsInternal && (
-        <p className={styles.lead} style={{ opacity: 0.85 }}>{displayDescription}</p>
-      )}
-
-      {/* Yellow deadline box */}
-      {appEnd && !closed && (
-        <div className={`${styles.deadline}${isLastDay || isClosingSoon ? ' ' + styles.deadlineUrgent : ''}`}>
-          <strong className={styles.deadlineLabel}>
-            Last date to apply{sourceFactsUnverified ? ' (reported)' : ''}
-          </strong>
-          <time className={styles.deadlineDate}>{appEnd}</time>
-          <span className={styles.deadlineCountdown} data-countdown="true">
-            {isLastDay
-              ? 'Today is the last day!'
-              : isClosingSoon && daysLeft !== null
-              ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`
-              : `Closing ${appEnd}`}
-          </span>
-        </div>
-      )}
-
-      {/* Closed notice */}
-      {closed && (
-        <p className={styles.closedNote} style={{ display: 'block' }}>
-          Applications for this recruitment are closed.
-          Check the official notification for results or next steps.
-        </p>
-      )}
-
-      {/* Quick facts mini-strip (fee + selection mode if available) */}
-      {hasFeeDetails && (
-        <p className={styles.lead} style={{ fontSize: '0.92em', opacity: 0.9 }}>
-          Fee:{' '}
-          {feeGeneral != null
-            ? Number(feeGeneral) === 0
-              ? 'No fee'
-              : `₹${Number(feeGeneral).toLocaleString('en-IN')} (General)${feeReserved != null ? `, ₹${Number(feeReserved).toLocaleString('en-IN')} (Reserved)` : ''}`
-            : feeNote ?? 'See details'}
-        </p>
-      )}
-
-      {/* Action buttons */}
       <p className={styles.actions}>
-        {isSinglePost && posts[0]?.slug ? (
-          <Link
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            href={`${localePrefix}/jobs/${recruitment.slug}/${posts[0].slug}`}
-          >
-            View post details
-          </Link>
-        ) : hasPosts ? (
-          <a className={`${styles.btn} ${styles.btnPrimary}`} href="#posts">
-            View all posts ({posts.length})
+          {primary && (
+            <a className={`${styles.btn} ${styles.btnPrimary}`} href={primary.href} target="_blank" rel="noopener noreferrer">
+              {primary.label}
+            </a>
+          )}
+          {secondary && (
+            <a className={`${styles.btn} ${styles.btnSecondary}`} href={secondary.href} target="_blank" rel="noopener noreferrer">
+              {secondary.label}
+            </a>
+          )}
+          <a className={`${styles.btn} ${styles.btnGhost}`} href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp">
+            <WhatsAppIcon /> Share
           </a>
-        ) : null}
-
-        {displayApplicationUrl && !closed && (
-          <a
-            className={`${styles.btn} ${styles.btnSecondary}`}
-            href={displayApplicationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Apply on official portal
-          </a>
-        )}
-
-        {displayOfficialSource && (
-          <a
-            className={styles.btn}
-            href={displayOfficialSource}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Official notification
-          </a>
-        )}
       </p>
 
-      {/* Trust line */}
-      <p className={styles.trust}>
-        {sourceFactsUnverified
-          ? 'Facts sourced from aggregators — verify each detail in the official notification before applying.'
-          : 'Facts sourced from official notifications.'}
-      </p>
-
-      {/* Tools row: WhatsApp share + Google Calendar */}
-      <p className={styles.tools}>
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Share on WhatsApp"
-        >
-          <WhatsAppIcon /> Share
-        </a>
-        {calUrl && (
-          <a
-            href={calUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Add last date to Google Calendar"
-          >
-            <CalendarIcon /> Add to calendar
-          </a>
-        )}
-      </p>
+      {noticeLine && <p className={styles.notice}>{noticeLine}</p>}
     </header>
   );
 }

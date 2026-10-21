@@ -1,91 +1,52 @@
 /**
- * Hub Source — Source attribution and verification status
- * Shows where data came from and verification status.
+ * Hub Source — source & verification.
+ * Notification number/date, verification status line, last updated, a legend
+ * for the markers actually used on this page, and a report link.
  */
 
+import Link from 'next/link';
 import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
-import { publicLink } from '@/lib/aggregators';
 
-interface HubSourceProps {
-  data: HubData;
-}
+export default function HubSource({ data }: { data: HubData }) {
+  const {
+    notificationNumber, notificationDate, notificationDateLabel, verificationLine,
+    updatedAtLabel, sourceFactsUnverified, anyVacancyUnverified, discoverySourceUrl, notificationUrl,
+  } = data;
 
-export default function HubSource({ data }: HubSourceProps) {
-  const { recruitment, sourceFactsUnverified, displayOfficialSource } = data;
-
-  const verificationStatus = recruitment.sourceVerificationStatus;
-  const sourceUrl = publicLink(recruitment.sourceExtract?.sourceUrl ?? null);
-  const detailStatus = typeof recruitment.sourceExtract?.detailStatus === 'string'
-    ? recruitment.sourceExtract.detailStatus
-    : null;
-
-  const hasContent = verificationStatus || sourceUrl || displayOfficialSource || detailStatus;
-  if (!hasContent) return null;
+  const legend: string[] = [];
+  if (sourceFactsUnverified) legend.push('"(reported)" — value comes from the source listing, not yet checked against the official notice.');
+  if (anyVacancyUnverified) legend.push('"*" — vacancy count reported by the source listing.');
 
   return (
-    <section id="sources" aria-labelledby="sources-heading" className={styles.card}>
-      <h2 id="sources-heading" className={styles.sectionTitle}>Source &amp; Verification</h2>
-
-      <div className={styles.scroll}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">Item</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {verificationStatus && (
-              <tr>
-                <td>Verification status</td>
-                <td>
-                  <strong>
-                    {verificationStatus === 'VERIFIED'
-                      ? '✓ Verified against official notification'
-                      : verificationStatus === 'UNVERIFIED'
-                      ? 'Unverified (aggregator source)'
-                      : verificationStatus}
-                  </strong>
-                </td>
-              </tr>
-            )}
-            {detailStatus && (
-              <tr>
-                <td>Detail status</td>
-                <td>{detailStatus}</td>
-              </tr>
-            )}
-            {displayOfficialSource && (
-              <tr>
-                <td>Official notification</td>
-                <td>
-                  <a href={displayOfficialSource} target="_blank" rel="noopener noreferrer">
-                    View ↗
-                  </a>
-                </td>
-              </tr>
-            )}
-            {sourceUrl && sourceUrl !== displayOfficialSource && (
-              <tr>
-                <td>Discovery source</td>
-                <td>
-                  <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
-                    View ↗
-                  </a>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {sourceFactsUnverified && (
-        <p className={styles.warn} style={{ marginTop: '1rem' }}>
-          Facts on this page are sourced from aggregators and have not been independently verified against the official notification.
-          Always confirm eligibility, vacancy count, fee and deadline in the official notice before applying.
-        </p>
+    <section id="source" aria-labelledby="source-heading" className={styles.card}>
+      <h2 id="source-heading" className={styles.sectionTitle}>Source &amp; verification</h2>
+      <dl className={styles.kv}>
+        {notificationNumber && (
+          <div className={styles.kvRow}><dt>Notification no.</dt><dd>{notificationNumber}</dd></div>
+        )}
+        {notificationDate && (
+          <div className={styles.kvRow}><dt>{notificationDateLabel}</dt><dd>{notificationDate}</dd></div>
+        )}
+        <div className={styles.kvRow}><dt>Verification</dt><dd>{verificationLine}</dd></div>
+        {updatedAtLabel && (
+          <div className={styles.kvRow}><dt>Last updated</dt><dd>{updatedAtLabel}</dd></div>
+        )}
+        {discoverySourceUrl && discoverySourceUrl !== notificationUrl && (
+          <div className={styles.kvRow}>
+            <dt>Discovery source</dt>
+            <dd><a href={discoverySourceUrl} target="_blank" rel="noopener noreferrer">{discoverySourceUrl}</a></dd>
+          </div>
+        )}
+      </dl>
+      {legend.length > 0 && (
+        <ul className={`${styles.list} ${styles.note}`}>
+          {legend.map((l) => <li key={l}>{l}</li>)}
+        </ul>
       )}
+      <p className={styles.note}>
+        Spotted a mistake? <Link href="/contact">Report an error</Link>.
+      </p>
     </section>
   );
 }
