@@ -232,6 +232,102 @@ export const hubs: Record<string, Hub> = {
       "timelineToCeiling": "20–30 years",
       "successRate": "0.01–0.3% (elite positions)"
     }
+  },
+  "uttar-pradesh-government-jobs-2026": {
+    "slug": "uttar-pradesh-government-jobs-2026",
+    "title": "Uttar Pradesh Government Jobs 2026 | UPPSC, UPTET, Police | Entry Rs. 21,000–Rs. 45,000",
+    "keyword": "Uttar Pradesh government jobs 2026",
+    "description": "UP government jobs 2026. UPPSC, UPTET, UP Police 15,000+ vacancies. Entry Rs. 21,000–Rs. 45,000. 5,000+ jobs/year. Selection 0.8–2%. Complete guide.",
+    "content": "",
+    "category": "state",
+    "color": "#10B981",
+    "filters": { "state": "UP" },
+    "relatedHubs": ["police-constable-recruitment-2026", "education-comprehensive-guide", "upsc-comprehensive-guide", "30-50k-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "salaryRange": "Rs. 21,000–Rs. 45,000", "selectionRate": "0.8–2%" }
+  },
+  "police-constable-recruitment-2026": {
+    "slug": "police-constable-recruitment-2026",
+    "title": "Police Constable Recruitment 2026 | 15,000+ Vacancies | Entry Rs. 21,000–Rs. 25,000 | Physical Test",
+    "keyword": "Police constable recruitment 2026",
+    "description": "Police constable 2026. 15,000+ vacancies nationwide. Entry Rs. 21,000–Rs. 25,000. Physical test (5km run, 20 pullups), written. Selection 0.8–1.5%. Complete guide.",
+    "content": "",
+    "category": "department",
+    "color": "#F97316",
+    "filters": { "department": "police", "jobType": "constable" },
+    "relatedHubs": ["uttar-pradesh-government-jobs-2026", "government-jobs-for-women-2026", "easiest-government-jobs-to-get", "12th-pass-comprehensive-guide"],
+    "stats": { "totalJobs": 15000, "salaryRange": "Rs. 21,000–Rs. 25,000", "selectionRate": "0.8–1.5%" }
+  },
+  "railway-recruitment-2026-dates": {
+    "slug": "railway-recruitment-2026-dates",
+    "title": "Railway Recruitment 2026 Dates | NTPC, Group D, Technician | Notification Calendar & Exams",
+    "keyword": "Railway recruitment 2026 dates",
+    "description": "Railway recruitment 2026 calendar. NTPC, Group D, JE, Technician. 10,000+ vacancies. Notification dates, exam schedules. Entry Rs. 18,000–Rs. 35,000. Apply now.",
+    "content": "",
+    "category": "department",
+    "color": "#F97316",
+    "filters": { "department": "railways" },
+    "relatedHubs": ["railways-comprehensive-guide", "12th-pass-comprehensive-guide", "30-50k-comprehensive-guide", "easiest-government-jobs-to-get"],
+    "stats": { "totalJobs": 10000, "salaryRange": "Rs. 18,000–Rs. 35,000", "selectionRate": "1–3%" }
+  },
+  "delhi-government-jobs-2026": {
+    "slug": "delhi-government-jobs-2026",
+    "title": "Delhi Government Jobs 2026 | DSSC, BPSC, Delhi Police | Entry Rs. 25,000–Rs. 50,000 | Complete Guide",
+    "keyword": "Delhi government jobs 2026",
+    "description": "Delhi government jobs 2026. DSSC, BPSC, Delhi Police. 5,000+ vacancies/year. Entry Rs. 25,000–Rs. 50,000. Highest competition, national capital. Selection 0.5–1.5%. Guide.",
+    "content": "",
+    "category": "state",
+    "color": "#10B981",
+    "filters": { "state": "Delhi" },
+    "relatedHubs": ["police-constable-recruitment-2026", "30-50k-comprehensive-guide", "upsc-comprehensive-guide", "education-comprehensive-guide"],
+    "stats": { "totalJobs": 5000, "salaryRange": "Rs. 25,000–Rs. 50,000", "selectionRate": "0.5–1.5%" }
+  },
+  "government-jobs-without-exam-2026": {
+    "slug": "government-jobs-without-exam-2026",
+    "title": "Government Jobs Without Exam 2026 | Direct Recruitment | NTPC, NLC, PSU | Entry Rs. 40,000–Rs. 60,000",
+    "keyword": "Government jobs without exam 2026",
+    "description": "Government jobs without exam 2026. Direct recruitment via interview only. NTPC, NLC, BHEL, ONGC, BSNL. 3,000+ vacancies. Entry Rs. 40,000–Rs. 60,000. No 6-month exam prep.",
+    "content": "",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": { "recruitmentType": "direct" },
+    "relatedHubs": ["railways-comprehensive-guide", "30-50k-comprehensive-guide", "50-100k-comprehensive-guide", "it-tech-comprehensive-guide"],
+    "stats": { "totalJobs": 3000, "salaryRange": "Rs. 40,000–Rs. 60,000", "selectionRate": "5–15%" }
+  },
+  "tamil-nadu-government-jobs-2026": {
+    "slug": "tamil-nadu-government-jobs-2026",
+    "title": "Tamil Nadu Government Jobs 2026 | TNPSC, TNTET, Police | Entry Rs. 20,000–Rs. 45,000 | Tamil Medium Jobs",
+    "keyword": "Tamil Nadu government jobs 2026",
+    "description": "Tamil Nadu government jobs 2026. TNPSC, TNTET, TN Police. 4,000+ vacancies/year. Entry Rs. 20,000–Rs. 45,000. Tamil-medium advantage. Selection 0.8–2%. Complete guide.",
+    "content": "",
+    "category": "state",
+    "color": "#10B981",
+    "filters": { "state": "TamilNadu" },
+    "relatedHubs": ["police-constable-recruitment-2026", "education-comprehensive-guide", "30-50k-comprehensive-guide", "12th-pass-comprehensive-guide"],
+    "stats": { "totalJobs": 4000, "salaryRange": "Rs. 20,000–Rs. 45,000", "selectionRate": "0.8–2%" }
+  },
+  "easiest-government-jobs-to-get": {
+    "slug": "easiest-government-jobs-to-get",
+    "title": "Easiest Government Jobs to Get in India 2026 | Highest Pass Rate | Postal, Railway, Police | 5–10% Selection",
+    "keyword": "Easiest government jobs to get in India",
+    "description": "Easiest government jobs India 2026. Postal (0.5% cutoff), Railway (1%), Police. 5–10% acceptance rate. Lowest barrier entry. 2–3 month prep vs 12–18 months. Entry Rs. 21,000–Rs. 30,000.",
+    "content": "",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": { "difficulty": "easy" },
+    "relatedHubs": ["postal-comprehensive-guide", "railways-comprehensive-guide", "police-constable-recruitment-2026", "12th-pass-comprehensive-guide"],
+    "stats": { "totalJobs": 20000, "salaryRange": "Rs. 21,000–Rs. 30,000", "selectionRate": "5–10%" }
+  },
+  "government-jobs-for-women-2026": {
+    "slug": "government-jobs-for-women-2026",
+    "title": "Government Jobs for Women 2026 | Women's Quota, Maternity Benefits | Police, Teacher, Banking | Rs. 21,000–Rs. 50,000",
+    "keyword": "Government jobs for women 2026",
+    "description": "Government jobs for women 2026. 33% quota in some roles. Police women constable, teacher, banking. Maternity benefits, flexible posting. Entry Rs. 21,000–Rs. 50,000. 10,000+ vacancies.",
+    "content": "",
+    "category": "salary",
+    "color": "#3B82F6",
+    "filters": { "womenQuota": true },
+    "relatedHubs": ["police-constable-recruitment-2026", "education-comprehensive-guide", "banking-comprehensive-guide", "30-50k-comprehensive-guide"],
+    "stats": { "totalJobs": 10000, "salaryRange": "Rs. 21,000–Rs. 50,000", "selectionRate": "2–4%" }
   }
 };
 
