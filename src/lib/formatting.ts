@@ -65,3 +65,39 @@ export function isDeadlineSoon(date: Date | string | null | undefined, daysThres
   if (days === null) return false;
   return days <= daysThreshold && days >= 0;
 }
+
+/**
+ * Format salary value to Indian numbering system
+ * ₹100000 → Rs. 1 lac
+ * ₹50000 → Rs. 50,000
+ */
+function formatSalaryValue(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined) return '';
+
+  // Values >= 100,000 use lac notation
+  if (amount >= 100000) {
+    const lacs = amount / 100000;
+    if (lacs === Math.floor(lacs)) {
+      return `Rs. ${Math.floor(lacs)} lac${lacs > 1 ? 's' : ''}`;
+    } else {
+      return `Rs. ${lacs.toFixed(1)} lacs`;
+    }
+  }
+
+  // Values < 100,000 use regular format with commas
+  return `Rs. ${formatCurrency(amount)}`;
+}
+
+/**
+ * Format salary range to Indian numbering system
+ * (100000, 200000) → Rs. 1 lac–Rs. 2 lacs
+ * (50000, 75000) → Rs. 50,000–Rs. 75,000
+ */
+export function formatSalaryRange(salaryMin: number | null | undefined, salaryMax: number | null | undefined): string {
+  if (!salaryMin || !salaryMax) return '';
+
+  const minFormatted = formatSalaryValue(salaryMin);
+  const maxFormatted = formatSalaryValue(salaryMax);
+
+  return `${minFormatted}–${maxFormatted}`;
+}

@@ -5,6 +5,7 @@ import { getHub, getAllHubs } from "@/data/hubs-metadata";
 import { getHubJobs } from "@/lib/hubs-server";
 import { pageSeo } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
+import { formatSalaryRange } from "@/lib/formatting";
 
 export const revalidate = 21600; // ISR: 6 hours
 
@@ -192,7 +193,7 @@ export default async function HubPage({ params }: PageProps) {
                       )}
                       {job.salary_min && job.salary_max && (
                         <div className="text-xs font-semibold text-neutral-700 bg-neutral-100 px-2 py-1 rounded">
-                          ₹{(job.salary_min / 1000).toFixed(0)}K–₹{(job.salary_max / 1000).toFixed(0)}K
+                          {formatSalaryRange(job.salary_min, job.salary_max)}
                         </div>
                       )}
                     </div>
