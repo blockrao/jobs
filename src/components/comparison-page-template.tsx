@@ -19,8 +19,10 @@ interface ComparisonPageProps {
   };
   comparisonTable: Array<{
     aspect: string;
-    exam1Value: string;
-    exam2Value: string;
+    exam1Value?: string;
+    exam2Value?: string;
+    exam1?: string;
+    exam2?: string;
   }>;
   sections: Array<{
     id: string;
@@ -73,8 +75,8 @@ export default function ComparisonPageTemplate({
             {comparisonTable.map((row, idx) => (
               <tr key={idx} className={idx % 2 === 0 ? "bg-gray-50" : ""}>
                 <td className="border p-3 font-semibold">{row.aspect}</td>
-                <td className="border p-3">{row.exam1Value}</td>
-                <td className="border p-3">{row.exam2Value}</td>
+                <td className="border p-3">{row.exam1Value ?? row.exam1}</td>
+                <td className="border p-3">{row.exam2Value ?? row.exam2}</td>
               </tr>
             ))}
           </tbody>

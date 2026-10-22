@@ -6,6 +6,7 @@ import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
 import { getAllHubs } from "@/data/hubs-metadata";
 import { QUALIFICATIONS } from "@/lib/qualifications";
+import { STATES } from "@/lib/states/states";
 
 /**
  * Sitemap follows the URL contract (2026-10-20) exactly:
@@ -57,6 +58,14 @@ const STATIC: MetadataRoute.Sitemap = [
     lastModified: new Date(),
     changeFrequency: "daily" as const,
     priority: 0.75,
+  })),
+  // State pages
+  { url: `${SITE_URL}/states`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
+  ...STATES.map((s) => ({
+    url: `${SITE_URL}/states/${s.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "daily" as const,
+    priority: 0.7,
   })),
 ];
 

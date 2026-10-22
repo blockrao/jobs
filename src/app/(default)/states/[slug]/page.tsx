@@ -22,12 +22,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const state = getStateBySlug(slug);
   if (!state) return {};
-  const jobs = await safeQuery(() => listStateJobs(slug), []);
   return {
     title: `${state.name} Government Jobs ${new Date().getFullYear()} – Latest Notifications`,
     description: `Current government job notifications in ${state.name}: state recruitment bodies, universities, courts and institutions based in ${state.name}, with vacancies, last dates and application links.`,
-    // A state with nothing current is a thin page: keep it out of the index until it has jobs.
-    ...pageSeo(`/states/${state.slug}`, { index: jobs.length > 0 }),
+    ...pageSeo(`/states/${state.slug}`, { index: true }),
   };
 }
 
