@@ -149,6 +149,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       .where(and(eq(recruitments.slug, slug), notQuarantined))
       .limit(1);
     console.log(`[getRecruitmentWithPosts] Query result:`, recruitmentResult?.length ? `Found ${recruitmentResult.length} record(s)` : "No records");
+    console.log(`[getRecruitmentWithPosts] About to process recruitment result...`);
 
     // Legacy slugs still resolve through the redirect table as before.
     if (!recruitmentResult || recruitmentResult.length === 0) {
@@ -308,6 +309,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     });
 
     // Step 2: Get all posts for this recruitment with positions
+    console.log(`[getRecruitmentWithPosts] About to fetch posts for recruitment ID: ${recruitmentId}`);
     const postsResult = await db
       .select({
         post: posts,
@@ -316,6 +318,8 @@ export async function getRecruitmentWithPosts(slug: string) {
       .from(posts)
       .innerJoin(positions, eq(posts.positionId, positions.id))
       .where(eq(posts.recruitmentId, recruitmentId));
+
+    console.log(`[getRecruitmentWithPosts] Got ${postsResult.length} posts`);
 
     if (postsResult.length === 0) {
       return {
@@ -331,6 +335,7 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     // Step 3: Fetch ALL vacancies, eligibilities, and age rules in parallel, not per-post
     // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities, one for all age rules, one for posts vacancies
+    console.log(`[getRecruitmentWithPosts] About to fetch related data (vacancies, eligibilities, age rules) for ${postIds.length} posts`);
     const [allVacancies, allEligibilities, allAgeRules, allPostsVacancies, sourcePostInventoryResult] = await Promise.all([
       db
         .select()
@@ -355,6 +360,8 @@ export async function getRecruitmentWithPosts(slug: string) {
         ORDER BY last_seen_at DESC, id DESC
       `),
     ]);
+
+    console.log(`[getRecruitmentWithPosts] Successfully fetched: ${allVacancies.length} vacancies, ${allEligibilities.length} eligibilities, ${allAgeRules.length} age rules`);
 
     // Step 4: Group vacancies, eligibilities, age rules, and posts vacancies by post ID (client-side)
     const vacanciesByPostId = new Map<number, typeof allVacancies>();
