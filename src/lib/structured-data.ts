@@ -386,7 +386,7 @@ export function buildWebSiteSchema() {
   return {
     "@type": "WebSite",
     "@id": `${SITE_URL}#website`,
-    name: SITE_NAME,
+    name: "JobOye - Your Search Partner in Govt Jobs",
     url: SITE_URL,
     potentialAction: {
       "@type": "SearchAction",
