@@ -221,14 +221,10 @@ export default function ExamMatcherQuiz() {
   };
 
   const getResults = (): ExamResult[] => {
-    const results = Object.entries(scores).map(([exam, score]) => {
-      const key = exam as keyof typeof EXAM_DATA;
-      return {
-        ...EXAM_DATA[key],
-        exam: key,
-        match: score,
-      };
-    });
+    const results = Object.entries(scores).map(([exam, score]) => ({
+      ...(EXAM_DATA[exam] as ExamResult),
+      match: score,
+    }));
     return results.sort((a, b) => b.match - a.match);
   };
 
