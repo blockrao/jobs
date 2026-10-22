@@ -16,16 +16,16 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "GATE vs Civil Service: Engineer's Dilemma",
-  exam1: { name: "GATE", description: "Graduate Aptitude Test in Engineering - PSU recruitment" },
-  exam2: { name: "Civil Service (IES/UPSC)", description: "Engineering Services or IAS administrative roles" },
+  exam1Value: { name: "GATE", description: "Graduate Aptitude Test in Engineering - PSU recruitment" },
+  exam2Value: { name: "Civil Service (IES/UPSC)", description: "Engineering Services or IAS administrative roles" },
   comparisonTable: [
-    { aspect: "Entry Salary", exam1: "₹40,000-60,000", exam2: "₹56,100+ (IAS)" },
-    { aspect: "Employer", exam1: "PSU (NTPC, IOC, BHEL, etc.)", exam2: "Government (all India)" },
-    { aspect: "Difficulty", exam1: "Very Hard", exam2: "Even Harder" },
-    { aspect: "Pass Rate", exam1: "5-10%", exam2: "0.1-1%" },
-    { aspect: "Job Type", exam1: "Technical engineering role", exam2: "Administrative service" },
-    { aspect: "Career Ceiling", exam1: "CMD/Director (₹150,000+)", exam2: "IAS Secretary (₹300,000+)" },
-    { aspect: "Best For", exam1: "Engineering enthusiasts", exam2: "Administrative ambition" },
+    { aspect: "Entry Salary", exam1Value: "₹40,000-60,000", exam2Value: "₹56,100+ (IAS)" },
+    { aspect: "Employer", exam1Value: "PSU (NTPC, IOC, BHEL, etc.)", exam2Value: "Government (all India)" },
+    { aspect: "Difficulty", exam1Value: "Very Hard", exam2Value: "Even Harder" },
+    { aspect: "Pass Rate", exam1Value: "5-10%", exam2Value: "0.1-1%" },
+    { aspect: "Job Type", exam1Value: "Technical engineering role", exam2Value: "Administrative service" },
+    { aspect: "Career Ceiling", exam1Value: "CMD/Director (₹150,000+)", exam2Value: "IAS Secretary (₹300,000+)" },
+    { aspect: "Best For", exam1Value: "Engineering enthusiasts", exam2Value: "Administrative ambition" },
   ],
   sections: [
     {

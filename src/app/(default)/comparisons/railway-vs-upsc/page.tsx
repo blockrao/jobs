@@ -16,16 +16,16 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "Railway vs UPSC: Complete Comparison",
-  exam1: { name: "Railway (RRB Group D)", description: "50,000+ worker/technician positions annually" },
-  exam2: { name: "UPSC (IAS)", description: "1,000-1,500 administrative officer positions annually" },
+  exam1Value: { name: "Railway (RRB Group D)", description: "50,000+ worker/technician positions annually" },
+  exam2Value: { name: "UPSC (IAS)", description: "1,000-1,500 administrative officer positions annually" },
   comparisonTable: [
-    { aspect: "Entry Salary", exam1: "₹18,000-25,000", exam2: "₹56,100+" },
-    { aspect: "Peak Salary", exam1: "₹80,000-100,000", exam2: "₹300,000+" },
-    { aspect: "Difficulty", exam1: "Very Easy", exam2: "Very Hard" },
-    { aspect: "Positions", exam1: "50,000+ annually", exam2: "1,000 annually" },
-    { aspect: "Pass Rate", exam1: "20-30%", exam2: "0.1%" },
-    { aspect: "Selection Speed", exam1: "4-6 months", exam2: "24+ months" },
-    { aspect: "Career Scope", exam1: "Limited (max ₹100,000)", exam2: "Unlimited (₹300,000+)" },
+    { aspect: "Entry Salary", exam1Value: "₹18,000-25,000", exam2Value: "₹56,100+" },
+    { aspect: "Peak Salary", exam1Value: "₹80,000-100,000", exam2Value: "₹300,000+" },
+    { aspect: "Difficulty", exam1Value: "Very Easy", exam2Value: "Very Hard" },
+    { aspect: "Positions", exam1Value: "50,000+ annually", exam2Value: "1,000 annually" },
+    { aspect: "Pass Rate", exam1Value: "20-30%", exam2Value: "0.1%" },
+    { aspect: "Selection Speed", exam1Value: "4-6 months", exam2Value: "24+ months" },
+    { aspect: "Career Scope", exam1Value: "Limited (max ₹100,000)", exam2Value: "Unlimited (₹300,000+)" },
   ],
   sections: [
     {

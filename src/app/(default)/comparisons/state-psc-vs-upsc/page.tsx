@@ -16,16 +16,16 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "State PSC vs UPSC: Complete Comparison",
-  exam1: { name: "State PSC", description: "State civil service - administrative officers for one state" },
-  exam2: { name: "UPSC", description: "Union civil service - administrative officers for entire India" },
+  exam1Value: { name: "State PSC", description: "State civil service - administrative officers for one state" },
+  exam2Value: { name: "UPSC", description: "Union civil service - administrative officers for entire India" },
   comparisonTable: [
-    { aspect: "Entry Salary", exam1: "₹40,000-60,000", exam2: "₹56,100" },
-    { aspect: "Job Scope", exam1: "Single state", exam2: "All India postings" },
-    { aspect: "Difficulty", exam1: "Moderate", exam2: "Very Hard" },
-    { aspect: "Pass Rate", exam1: "2-5%", exam2: "0.1%" },
-    { aspect: "Preparation", exam1: "12-18 months", exam2: "18-24 months" },
-    { aspect: "Career Ceiling", exam1: "Chief Secretary (state)", exam2: "Chief Secretary (national)" },
-    { aspect: "Best For", exam1: "State posting preference", exam2: "National administration" },
+    { aspect: "Entry Salary", exam1Value: "₹40,000-60,000", exam2Value: "₹56,100" },
+    { aspect: "Job Scope", exam1Value: "Single state", exam2Value: "All India postings" },
+    { aspect: "Difficulty", exam1Value: "Moderate", exam2Value: "Very Hard" },
+    { aspect: "Pass Rate", exam1Value: "2-5%", exam2Value: "0.1%" },
+    { aspect: "Preparation", exam1Value: "12-18 months", exam2Value: "18-24 months" },
+    { aspect: "Career Ceiling", exam1Value: "Chief Secretary (state)", exam2Value: "Chief Secretary (national)" },
+    { aspect: "Best For", exam1Value: "State posting preference", exam2Value: "National administration" },
   ],
   sections: [
     {

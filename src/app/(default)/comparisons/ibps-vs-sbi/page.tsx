@@ -16,49 +16,49 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "IBPS vs SBI: Which Banking Exam to Choose?",
-  exam1: {
+  exam1Value: {
     name: "IBPS (Institute of Banking Personnel Selection)",
     description: "Conducts recruitment for 25+ public sector banks (SBI, PNB, BOI, Union, Canara, etc.)",
   },
-  exam2: {
+  exam2Value: {
     name: "SBI (State Bank of India)",
     description: "India's largest bank with its own independent recruitment process",
   },
   comparisonTable: [
     {
       aspect: "Employer",
-      exam1: "25+ different banks",
-      exam2: "Single bank (largest)",
+      exam1Value: "25+ different banks",
+      exam2Value: "Single bank (largest)",
     },
     {
       aspect: "Hiring Scale",
-      exam1: "10,000+ positions",
-      exam2: "5,000+ positions",
+      exam1Value: "10,000+ positions",
+      exam2Value: "5,000+ positions",
     },
     {
       aspect: "Entry Salary",
-      exam1: "₹18,000-22,000",
-      exam2: "₹20,000-23,000 (slightly higher)",
+      exam1Value: "₹18,000-22,000",
+      exam2Value: "₹20,000-23,000 (slightly higher)",
     },
     {
       aspect: "Difficulty",
-      exam1: "Moderate",
-      exam2: "Moderate (similar)",
+      exam1Value: "Moderate",
+      exam2Value: "Moderate (similar)",
     },
     {
       aspect: "Bank Stability",
-      exam1: "Varies by bank",
-      exam2: "Safest (largest)",
+      exam1Value: "Varies by bank",
+      exam2Value: "Safest (largest)",
     },
     {
       aspect: "Career Path",
-      exam1: "Inter-bank transfer possible",
-      exam2: "Single bank growth",
+      exam1Value: "Inter-bank transfer possible",
+      exam2Value: "Single bank growth",
     },
     {
       aspect: "Best For",
-      exam1: "Flexibility (choose bank)",
-      exam2: "Prestige (largest bank)",
+      exam1Value: "Flexibility (choose bank)",
+      exam2Value: "Prestige (largest bank)",
     },
   ],
   sections: [

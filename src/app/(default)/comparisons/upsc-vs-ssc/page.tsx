@@ -23,39 +23,39 @@ const pageContent = {
     name: "UPSC (Union Public Service Commission)",
     description: "IAS, IFS, and other Group A services - India's most prestigious government exams",
   },
-  exam2: {
+  exam2Value: {
     name: "SSC (Staff Selection Commission)",
     description: "CHSL, CGL, and other Group B/C jobs - accessible entry-level government positions",
   },
   comparisonTable: [
     {
       aspect: "Entry Salary",
-      exam1: "₹56,100/month (IAS)",
-      exam2: "₹21,000/month (CHSL)",
+      exam1Value: "₹56,100/month (IAS)",
+      exam2Value: "₹21,000/month (CHSL)",
     },
     {
       aspect: "Peak Salary",
-      exam1: "₹300,000+ (Chief Secretary)",
-      exam2: "₹75,000+ (Senior Officer)",
+      exam1Value: "₹300,000+ (Chief Secretary)",
+      exam2Value: "₹75,000+ (Senior Officer)",
     },
     {
       aspect: "Difficulty",
-      exam1: "Very Hard (0.1% selection)",
-      exam2: "Moderate (5-10% selection)",
+      exam1Value: "Very Hard (0.1% selection)",
+      exam2Value: "Moderate (5-10% selection)",
     },
     {
       aspect: "Preparation Time",
-      exam1: "18-24 months",
-      exam2: "6-12 months",
+      exam1Value: "18-24 months",
+      exam2Value: "6-12 months",
     },
     {
       aspect: "Job Security",
-      exam1: "Highest (constitutional position)",
-      exam2: "High (permanent government)",
+      exam1Value: "Highest (constitutional position)",
+      exam2Value: "High (permanent government)",
     },
     {
       aspect: "Prestige",
-      exam1: "Highest in India",
+      exam1Value: "Highest in India",
       exam2: "Good, widely respected",
     },
     {
