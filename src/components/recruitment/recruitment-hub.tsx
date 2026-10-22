@@ -766,9 +766,24 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
       })),
     }));
 
+  // Serialize Date objects to ISO strings for client component hydration
+  const sanitizeDate = (value: unknown): unknown => {
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, sanitizeDate(v)])
+      );
+    }
+    if (Array.isArray(value)) return value.map(sanitizeDate);
+    return value;
+  };
+
+  const sanitizedRecruitment = sanitizeDate(recruitment) as typeof recruitment;
+  const sanitizedPosts = posts.map((p) => sanitizeDate(p)) as typeof posts;
+
   return {
-    recruitment,
-    posts,
+    recruitment: sanitizedRecruitment,
+    posts: sanitizedPosts,
     slug,
     heading: composed.heading,
     title: composed.title,
