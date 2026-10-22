@@ -766,30 +766,20 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
       })),
     }));
 
-  // Serialize to plain JSON to remove Drizzle ORM metadata and ensure all values are JSON-serializable
-  // This converts Date objects to strings and removes any non-serializable properties
-  const jsonStringify = (value: unknown): unknown => {
-    try {
-      // Convert to JSON string (which handles Date -> ISO string conversion and removes non-serializable properties)
-      // Then parse back to ensure we have pure JavaScript objects
-      return JSON.parse(
-        JSON.stringify(value, (key, val) => {
-          // Handle Date objects by converting to ISO string
-          if (val instanceof Date) return val.toISOString();
-          // Skip functions, symbols, and undefined
-          if (typeof val === 'function' || typeof val === 'symbol' || val === undefined) return undefined;
-          return val;
-        })
+  // Serialize Date objects to ISO strings for client component hydration
+  const sanitizeDate = (value: unknown): unknown => {
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, sanitizeDate(v)])
       );
-    } catch (e) {
-      // If JSON serialization fails, return the original value
-      console.warn('Failed to serialize value:', value, e);
-      return value;
     }
+    if (Array.isArray(value)) return value.map(sanitizeDate);
+    return value;
   };
 
-  const sanitizedRecruitment = jsonStringify(recruitment) as typeof recruitment;
-  const sanitizedPosts = (posts as unknown[]).map((p) => jsonStringify(p)) as typeof posts;
+  const sanitizedRecruitment = sanitizeDate(recruitment) as typeof recruitment;
+  const sanitizedPosts = posts.map((p) => sanitizeDate(p)) as typeof posts;
 
   return {
     recruitment: sanitizedRecruitment,
