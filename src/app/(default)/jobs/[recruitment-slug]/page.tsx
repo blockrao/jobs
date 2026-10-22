@@ -22,7 +22,9 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
+import { generateAlternates } from "@/lib/hreflang";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
+import FAQPageSchema from "@/components/structured-data/faqpage-schema";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
@@ -85,6 +87,20 @@ export default async function RecruitmentHubPage({ params }: Props) {
   return (
     <>
       <RecruitmentHubStructuredData data={sanitizedHub} />
+      <FAQPageSchema faqs={[
+        {
+          question: `How to apply for ${recruitment.name}?`,
+          answer: "Visit the official government recruitment website and follow the application process. Ensure you meet all eligibility requirements including age, educational qualifications, and experience before applying."
+        },
+        {
+          question: `What is the application deadline for ${recruitment.name}?`,
+          answer: recruitment.application_end_date ? `Applications must be submitted by ${new Date(recruitment.application_end_date).toLocaleDateString('en-IN')}. Late applications will not be accepted.` : "Check the official notification for the application deadline."
+        },
+        {
+          question: "How can I track my application status?",
+          answer: "Visit the official recruitment portal and log in with your registration details to check your application status. You will also receive updates via email."
+        }
+      ]} />
       <RecruitmentHub data={sanitizedHub} />
     </>
   );

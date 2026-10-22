@@ -17,6 +17,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
+import { generateAlternates } from "@/lib/hreflang";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
@@ -83,6 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    alternates: generateAlternates(recruitmentSlug, postSlug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
     ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: true }),
