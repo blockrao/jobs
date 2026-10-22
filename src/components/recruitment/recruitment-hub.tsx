@@ -814,10 +814,10 @@ export function buildHubData(
   const sanitizedCutoffMarksData = toPlainJSON(cutoffMarksData) as typeof cutoffMarksData;
   const cutoffMarks = sanitizedCutoffMarksData
     .map((cm) => ({
-      category: str(cm.category) || 'Unknown',
+      category: str(cm.category) ?? 'Unknown',
       marks: str(cm.cutoffMarks),
     }))
-    .filter((cm) => cm.category !== 'Unknown');
+    .filter((cm) => cm.category && cm.marks);
 
   return {
     recruitment: sanitizedRecruitment,

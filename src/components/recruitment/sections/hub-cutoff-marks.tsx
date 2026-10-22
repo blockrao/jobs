@@ -8,7 +8,12 @@ interface CutoffMarksProps {
 }
 
 export default function HubCutoffMarks({ data }: CutoffMarksProps) {
-  if (!data.cutoffMarks || data.cutoffMarks.length === 0) {
+  if (!data || !Array.isArray(data.cutoffMarks) || data.cutoffMarks.length === 0) {
+    return null;
+  }
+
+  const validMarks = data.cutoffMarks.filter((row) => row && row.category && row.marks);
+  if (validMarks.length === 0) {
     return null;
   }
 
@@ -44,7 +49,7 @@ export default function HubCutoffMarks({ data }: CutoffMarksProps) {
             </tr>
           </thead>
           <tbody>
-            {data.cutoffMarks.map((row, idx) => (
+            {validMarks.map((row, idx) => (
               <tr
                 key={`${row.category}-${idx}`}
                 style={{
@@ -58,9 +63,9 @@ export default function HubCutoffMarks({ data }: CutoffMarksProps) {
                 <td style={{
                   textAlign: 'right',
                   padding: '10px',
-                  color: row.marks ? '#333' : '#999',
+                  color: '#333',
                 }}>
-                  {row.marks || '—'}
+                  {row.marks}
                 </td>
               </tr>
             ))}
