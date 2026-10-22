@@ -1324,6 +1324,16 @@ export const recruitments = pgTable(
     selectionProcess: text("selection_process"),
     // Age limits and relaxation rules (e.g. "Age limit: 20-28 years; Relaxation for SC/ST...")
     ageNote: text("age_note"),
+
+    // PHASE 3: Critical missing fields for schema completeness
+    // Timeline fields
+    admitCardDate: timestamp("admit_card_date", { withTimezone: true }),
+    interviewDate: timestamp("interview_date", { withTimezone: true }),
+
+    // Salary fields (both structured and text)
+    salaryNote: text("salary_note"), // e.g., "Level 2, Rs. 9300-34800 + DA"
+    salaryBreakdown: jsonb("salary_breakdown"), // Structured: {basicPay, maxPay, dAApplicable}
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1382,6 +1392,13 @@ export const posts = pgTable(
       total: number;
       pwbdHorizontal?: number; pwbdCategory?: string;
     }>(),
+
+    // PHASE 3: Job details fields
+    jobDescription: text("job_description"), // Full role description, responsibilities
+    jobDescriptionHi: text("job_description_hi"), // Hindi translation
+    postingLocation: text("posting_location"), // e.g., "New Delhi", "Mumbai"
+    postingLocationHi: text("posting_location_hi"), // Hindi translation
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1446,6 +1463,12 @@ export const eligibilities = pgTable("eligibilities", {
   sourceLocator: text("source_locator"),
   /** DIRECT (verbatim) | NORMALIZED (structured from text) | INFERRED (context only). */
   derivation: varchar("derivation", { length: 20 }),
+
+  // PHASE 3: Additional eligibility details
+  physicalTestRequirement: text("physical_test_requirement"), // e.g., "1.6km run in 6:40"
+  physicalTestRequirementHi: text("physical_test_requirement_hi"), // Hindi translation
+  promotionProspects: text("promotion_prospects"), // e.g., "Eligible for Group B after 5 years"
+  promotionProspectsHi: text("promotion_prospects_hi"), // Hindi translation
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1536,6 +1559,41 @@ export const evidence = pgTable("evidence", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
+// ── PHASE 3: New tables for extended data ───────────────────────────────────
+
+/** Historical cutoff marks to help candidates self-assess. */
+export const recruitmentCutoffs = pgTable(
+  "recruitment_cutoffs",
+  {
+    id: serial("id").primaryKey(),
+    recruitmentId: integer("recruitment_id").notNull().references(() => recruitments.id, { onDelete: "cascade" }),
+    year: smallint("year").notNull(),
+    category: varchar("category", { length: 50 }).notNull(), // UR, OBC, SC, ST, EWS
+    cutoffMarks: text("cutoff_marks"), // Stored as numeric(10,2) in DB
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("recruitment_cutoffs_recruitment_id_idx").on(table.recruitmentId),
+    index("recruitment_cutoffs_year_idx").on(table.year),
+  ],
+).enableRLS();
+
+/** Multiple posting cities for a single position. */
+export const postingLocations = pgTable(
+  "posting_locations",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    city: varchar("city", { length: 100 }).notNull(),
+    state: varchar("state", { length: 100 }),
+    count: integer("count").default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("posting_locations_post_id_idx").on(table.postId),
+  ],
+).enableRLS();
+
 // ── Relations for PQ-006 tables ───────────────────────────────────────────────
 
 export const postAgeRulesRelations = relations(postAgeRules, ({ one }) => ({
@@ -1573,6 +1631,7 @@ export const recruitmentsRelations = relations(recruitments, ({ one, many }) => 
   selectionProcesses: many(selectionProcesses),
   fees: many(recruitmentFees),
   slugRedirects: many(recruitment_slug_redirects),
+  cutoffs: many(recruitmentCutoffs),
 }));
 
 export const selectionProcessesRelations = relations(selectionProcesses, ({ one }) => ({
@@ -1590,6 +1649,7 @@ export const postsRelations = relations(posts, ({ one, many }) => ({
   eligibilities: many(eligibilities),
   vacancies: many(vacancies),
   ageRules: many(postAgeRules),
+  postingLocations: many(postingLocations),
 }));
 
 export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
@@ -1600,6 +1660,15 @@ export const eligibilitiesRelations = relations(eligibilities, ({ one }) => ({
 export const vacanciesRelations = relations(vacancies, ({ one }) => ({
   post: one(posts, { fields: [vacancies.postId], references: [posts.id] }),
   location: one(locations, { fields: [vacancies.locationId], references: [locations.id] }),
+}));
+
+// PHASE 3: Relations for new tables
+export const recruitmentCutoffsRelations = relations(recruitmentCutoffs, ({ one }) => ({
+  recruitment: one(recruitments, { fields: [recruitmentCutoffs.recruitmentId], references: [recruitments.id] }),
+}));
+
+export const postingLocationsRelations = relations(postingLocations, ({ one }) => ({
+  post: one(posts, { fields: [postingLocations.postId], references: [posts.id] }),
 }));
 
 // =====================================================================

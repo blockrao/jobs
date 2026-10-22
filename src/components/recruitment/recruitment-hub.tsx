@@ -346,6 +346,15 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
       });
     }
   }
+  // PHASE 3: Add recruitment-level salary note if available
+  const salaryNote = str(recruitment.salaryNote);
+  if (payLines.length === 0 && salaryNote) {
+    payLines.push({
+      label: null,
+      value: salaryNote,
+      verified: verified,
+    });
+  }
   if (payLines.length === 0 && sourcePayRange) {
     payLines.push({
       label: null,
@@ -570,8 +579,15 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     { id: 'exam', label: 'Exam / test', raw: recruitment.examDate },
     { id: 'result', label: 'Result', raw: recruitment.resultDate },
   ];
-  if (tentativeInterviewDate) {
-    stepDefs.push({ id: 'interview', label: 'Tentative interview date', raw: tentativeInterviewDate, note: 'tentative' });
+  // PHASE 3: Add admit card date if available
+  if (recruitment.admitCardDate) {
+    stepDefs.push({ id: 'result', label: 'Admit card release', raw: recruitment.admitCardDate });
+  }
+  // PHASE 3: Add interview date (use existing or fall back to tentative)
+  const interviewDateToShow = recruitment.interviewDate || tentativeInterviewDate;
+  if (interviewDateToShow) {
+    const note = recruitment.interviewDate ? undefined : 'tentative';
+    stepDefs.push({ id: 'interview', label: 'Interview', raw: interviewDateToShow, note });
   }
   let currentMarked = false;
   const timeline: TimelineStep[] = stepDefs.map((s) => {
