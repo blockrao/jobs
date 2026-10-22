@@ -59,6 +59,20 @@ const STATIC: MetadataRoute.Sitemap = [
     changeFrequency: "daily" as const,
     priority: 0.75,
   })),
+  // Salary Guide hub index + individual salary guide pages (Phase 2)
+  { url: `${SITE_URL}/salary-guides`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
+  { url: `${SITE_URL}/salary-guides/government-job-salary-by-grade`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/salary-guides/highest-paying-government-jobs`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/salary-guides/psu-salary-comparison`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/salary-guides/banking-salary-guide`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/salary-guides/railway-salary-guide`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  // Comparison hub index + individual comparison pages (Phase 2)
+  { url: `${SITE_URL}/comparisons`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
+  { url: `${SITE_URL}/comparisons/upsc-vs-ssc`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/comparisons/ibps-vs-sbi`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/comparisons/railway-vs-upsc`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/comparisons/state-psc-vs-upsc`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/comparisons/gate-vs-civil-service`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
   // State pages
   { url: `${SITE_URL}/states`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
   ...STATES.map((s) => ({
