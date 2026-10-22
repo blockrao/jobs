@@ -20,7 +20,9 @@ import { mergeArticleFacts } from "../enrich-facts";
 const SOURCE = "ext-1";
 const BASE = "https://www.freejobalert.com";
 const MAX_LISTING_PAGES = 3;
-const MAX_DETAIL_PAGES = 50;
+// Several hundred articles may be discovered in one run. Keep this configurable,
+// but raise the default detail-fetch ceiling well above the old 50-page pilot cap.
+const MAX_DETAIL_PAGES = Math.max(1, Number.parseInt(process.env.FJA_ADAPTER_MAX_DETAIL_PAGES || "500", 10) || 500);
 
 // robots.txt explicitly Allows ClaudeBot / anthropic-ai, so we self-identify.
 const LISTING_URLS = [
