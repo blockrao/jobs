@@ -107,7 +107,9 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
            (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count
     FROM recruitments r
     JOIN organizations o ON o.id = r.organization_id
-    WHERE r.location_state_code = ANY(${codes}::text[])
+    WHERE r.location_state_code IN (
+      ${sql.join(codes.map((code) => sql`${code}`), sql`, `)}
+    )
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       AND r.status IN ('ACTIVE', 'UPCOMING')
       AND (r.application_end_date IS NULL OR r.application_end_date >= now())
