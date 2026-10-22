@@ -75,6 +75,7 @@ import HubCutoffMarks from './sections/hub-cutoff-marks';
 import HubJobDescriptions from './sections/hub-job-descriptions';
 import RelatedOpportunities from './sections/related-opportunities';
 import HubFaqEnhanced from './sections/hub-faq-enhanced';
+import HubEnrichment from './sections/hub-enrichment';
 
 // Outfit for headings (Inter for body is loaded by the root shell). Loaded
 // through @fontsource like Inter, not through a Google Fonts link.
@@ -86,6 +87,8 @@ export type { RecruitmentHubRecruitment, RecruitmentHubPost };
 export interface RecruitmentHubProps {
   /** Pre-computed hub data (shared with the structured-data component). */
   data: HubData;
+  /** Enrichment data extracted from FJA pages. */
+  enrichment?: Record<string, any> | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -916,7 +919,7 @@ export function lifecycleChip(data: HubData): { text: string; tone: 'open' | 'cl
 // Main component (server)
 // ---------------------------------------------------------------------------
 
-export default function RecruitmentHub({ data }: RecruitmentHubProps) {
+export default function RecruitmentHub({ data, enrichment }: RecruitmentHubProps) {
   const has = (id: HubSectionId) => data.sections.includes(id);
   const isSinglePost = data.postRows.length === 1;
 
@@ -983,6 +986,7 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           {has('links') && <HubLinks data={data} />}
           <HubSource data={data} />
           {has('faq') && <HubFaqEnhanced items={data.faqItems} />}
+          {enrichment && <HubEnrichment data={enrichment} />}
           <HubExplore data={data} />
           </article>
 
