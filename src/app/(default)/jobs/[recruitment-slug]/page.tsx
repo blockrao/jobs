@@ -29,7 +29,7 @@ import RecruitmentHubStructuredData from "@/components/recruitment/structured-da
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
 
-export const revalidate = 86400; // 1 day ISR; revalidated on publish via /api/revalidate
+export const dynamic = 'force-dynamic'; // Always fetch fresh data from DB, no static caching
 
 type Props = { params: Promise<{ "recruitment-slug": string }> };
 
