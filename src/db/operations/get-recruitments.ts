@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { getDb } from "../index";
-import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules } from "../schema";
+import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 // Recruitments quarantined by the data-integrity process are not public pages.
@@ -330,8 +330,8 @@ export async function getRecruitmentWithPosts(slug: string) {
     const postIds = postsResult.map((r) => r.post.id);
 
     // Step 3: Fetch ALL vacancies, eligibilities, and age rules in parallel, not per-post
-    // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities, one for all age rules
-    const [allVacancies, allEligibilities, allAgeRules, sourcePostInventoryResult] = await Promise.all([
+    // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities, one for all age rules, one for posts vacancies
+    const [allVacancies, allEligibilities, allAgeRules, allPostsVacancies, sourcePostInventoryResult] = await Promise.all([
       db
         .select()
         .from(vacancies)
@@ -344,6 +344,10 @@ export async function getRecruitmentWithPosts(slug: string) {
         .select()
         .from(postAgeRules)
         .where(inArray(postAgeRules.postId, postIds)),
+      db
+        .select()
+        .from(postsVacancies)
+        .where(inArray(postsVacancies.postId, postIds)),
       db.execute(sql`
         SELECT *
         FROM fja_post_inventory
@@ -352,10 +356,11 @@ export async function getRecruitmentWithPosts(slug: string) {
       `),
     ]);
 
-    // Step 4: Group vacancies, eligibilities, and age rules by post ID (client-side)
+    // Step 4: Group vacancies, eligibilities, age rules, and posts vacancies by post ID (client-side)
     const vacanciesByPostId = new Map<number, typeof allVacancies>();
     const eligibilitiesByPostId = new Map<number, typeof allEligibilities>();
     const ageRulesByPostId = new Map<number, typeof allAgeRules>();
+    const postsVacanciesByPostId = new Map<number, typeof allPostsVacancies>();
 
     for (const vacancy of allVacancies) {
       if (!vacanciesByPostId.has(vacancy.postId)) {
@@ -376,6 +381,13 @@ export async function getRecruitmentWithPosts(slug: string) {
         ageRulesByPostId.set(ageRule.postId, []);
       }
       ageRulesByPostId.get(ageRule.postId)!.push(ageRule);
+    }
+
+    for (const postsVacancy of allPostsVacancies) {
+      if (!postsVacanciesByPostId.has(postsVacancy.postId)) {
+        postsVacanciesByPostId.set(postsVacancy.postId, []);
+      }
+      postsVacanciesByPostId.get(postsVacancy.postId)!.push(postsVacancy);
     }
 
     // Project extracted source facts separately so the hub can show reported
@@ -469,7 +481,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     }
     const postsWithDetails = enrichedPosts.map((post) => ({
       ...post,
-      vacancies: vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
+      vacancies: postsVacanciesByPostId.get(post.id) ?? vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
       eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
       ageRules: ageRulesByPostId.get(post.id) ?? [],
       postEnrichment: enrichmentByPostId.get(post.id) ?? null,
