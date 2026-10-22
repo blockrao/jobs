@@ -1,6 +1,10 @@
 /**
  * Organization page data — computed from canonical recruitments and posts only.
  *
+ * FIXED: 2026-10-22 14:01 UTC+5:30
+ * - Line 97: Changed e.name to e.label (exams table uses label, not name)
+ * - Migration applied to add missing eligibilities columns
+ *
  * Rules (2026-10-20 stability triage):
  *  - the legacy `postings` table is never read here;
  *  - quarantined recruitments are excluded everywhere;
