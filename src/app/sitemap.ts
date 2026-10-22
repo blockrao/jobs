@@ -96,7 +96,7 @@ const STATIC: MetadataRoute.Sitemap = [
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const db = getDb();
-    const [hubResult, leafResult, orgResult] = await Promise.all([
+    const [hubResult, leafResult, orgResult, examResult] = await Promise.all([
       db.execute(sql`
         SELECT r.slug, r.status::text AS status, r.application_end_date, r.updated_at
         FROM recruitments r
@@ -120,6 +120,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         HAVING count(*) >= ${ORG_INDEX_MIN_RECRUITMENTS}
         ORDER BY count(*) DESC
       `),
+      db.execute(sql`SELECT slug, created_at FROM exams ORDER BY id`),
     ]);
 
     const hubs = rowsOf<HubRow>(hubResult).map((h) => {
@@ -142,6 +143,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
+    type ExamRow = { slug: string; created_at: Date | string | null };
+    const examPages = rowsOf<ExamRow>(examResult).map((e) => ({
+      url: `${SITE_URL}/exams/${e.slug}`,
+      lastModified: toDate(e.created_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.75,
+    }));
+
     type OrgRow = { slug: string; updated_at: Date | string | null; n: number };
     const orgs = rowsOf<OrgRow>(orgResult).map((o) => ({
       url: `${SITE_URL}/organizations/${o.slug}`,
@@ -150,8 +159,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    console.log(`[sitemap] ${hubs.length} recruitment hubs, ${leaves.length} post leaves, ${orgs.length} organizations`);
-    return [...STATIC, ...orgs, ...hubs, ...leaves];
+    console.log(`[sitemap] ${hubs.length} recruitment hubs, ${leaves.length} post leaves, ${orgs.length} organizations, ${examPages.length} exam pages`);
+    return [...STATIC, ...examPages, ...orgs, ...hubs, ...leaves];
   } catch (error) {
     // Never emit a near-empty sitemap: a 4-URL sitemap served with 200 tells
     // search engines thousands of pages are gone. A 500 is retried and the
