@@ -70,6 +70,7 @@ import HubSource from './sections/hub-source';
 import HubFaq from './sections/hub-faq';
 import HubExplore from './sections/hub-explore';
 import HubPostsExpandable from './sections/hub-posts-expandable';
+import RelatedOpportunities from './sections/related-opportunities';
 
 // Outfit for headings (Inter for body is loaded by the root shell). Loaded
 // through @fontsource like Inter, not through a Google Fonts link.
@@ -821,24 +822,25 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
       <div className={styles.wrap}>
         <HubBreadcrumb data={data} />
 
-        <article className={styles.article}>
-          <HubHeader data={data} />
-          <HubToc data={data} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
+          <article className={styles.article}>
+            <HubHeader data={data} />
+            <HubToc data={data} />
 
-          {/* Key metrics at the top (critical info first) */}
-          {data.postRows.length > 0 && (
-            <HubKeyMetrics
-              applicationDeadline={data.appEnd}
-              daysUntilDeadline={data.daysLeft}
-              postsCount={data.postRows.length}
-              vacanciesCount={data.totalVacancies}
-              examDate={data.recruitment?.examDate ? formatDate(data.recruitment.examDate) : undefined}
-              applicationStatus={applicationStatus}
-            />
-          )}
+            {/* Key metrics at the top (critical info first) */}
+            {data.postRows.length > 0 && (
+              <HubKeyMetrics
+                applicationDeadline={data.appEnd}
+                daysUntilDeadline={data.daysLeft}
+                postsCount={data.postRows.length}
+                vacanciesCount={data.totalVacancies}
+                examDate={data.recruitment?.examDate ? formatDate(data.recruitment.examDate) : undefined}
+                applicationStatus={applicationStatus}
+              />
+            )}
 
-          <HubDetails data={data} />
-          {has('dates') && <HubDates data={data} />}
+            <HubDetails data={data} />
+            {has('dates') && <HubDates data={data} />}
 
           {/* Posts section - consolidated expandable table */}
           {has('posts') && data.postRows.length > 0 && (
@@ -872,7 +874,11 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           <HubSource data={data} />
           {has('faq') && <HubFaq data={data} />}
           <HubExplore data={data} />
-        </article>
+          </article>
+
+          {/* Sidebar */}
+          <RelatedOpportunities data={data} />
+        </div>
       </div>
     </div>
   );

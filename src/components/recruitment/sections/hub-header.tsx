@@ -42,6 +42,23 @@ function ShareIcon() {
   );
 }
 
+function TwitterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 7-7 7-7a10.6 10.6 0 01-9 5"/>
+    </svg>
+  );
+}
+
+function LinkedInIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <circle cx="4" cy="4" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
+    </svg>
+  );
+}
+
 export default function HubHeader({ data }: { data: HubData }) {
   const {
     heading, summary, applyUrl, notificationUrl, whatsappUrl, noticeLine,
@@ -78,6 +95,9 @@ export default function HubHeader({ data }: { data: HubData }) {
       });
     }
   };
+
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this job: ${heading}`)}&url=${encodeURIComponent(currentUrl)}`;
+  const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
 
   return (
     <header className={`${styles.card} ${styles.hero}`}>
@@ -116,6 +136,12 @@ export default function HubHeader({ data }: { data: HubData }) {
           <button className={`${styles.btn} ${styles.btnGhost}`} onClick={handleCopyLink} aria-label="Copy link">
             <ShareIcon /> Copy
           </button>
+          <a className={`${styles.btn} ${styles.btnGhost}`} href={twitterUrl} target="_blank" rel="noopener noreferrer" aria-label="Share on Twitter">
+            <TwitterIcon /> Tweet
+          </a>
+          <a className={`${styles.btn} ${styles.btnGhost}`} href={linkedinUrl} target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn">
+            <LinkedInIcon /> LinkedIn
+          </a>
       </p>
 
       {noticeLine && <p className={styles.notice}>{noticeLine}</p>}
