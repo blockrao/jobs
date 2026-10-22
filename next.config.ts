@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
       destination: "/jobs/:slug",
       permanent: true, // 301 redirect
     },
+    // Garbled slug redirect: Hindi characters mangled during slug generation
+    // Bad: /jobs/-ne-top-entre-ivasagar--2651/lecturer-assistant-teacher-and-more
+    // Good: /jobs/one-stop-centre-sivasagar-2026-02651/lecturer-assistant-teacher-and-more
+    {
+      source: "/jobs/-ne-top-entre-ivasagar--2651/:postSlug*",
+      destination: "/jobs/one-stop-centre-sivasagar-2026-02651/:postSlug*",
+      permanent: true,
+    },
   ],
   headers: async () => [
     {
