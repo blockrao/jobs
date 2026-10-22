@@ -332,27 +332,49 @@ export async function getRecruitmentWithPosts(slug: string) {
     }
 
     const postIds = postsResult.map((r) => r.post.id);
+    console.log(`[getRecruitmentWithPosts] Extracted ${postIds.length} post IDs: ${postIds.join(", ")}`);
 
     // Step 3: Fetch ALL vacancies, eligibilities, and age rules in parallel, not per-post
     // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities, one for all age rules, one for posts vacancies
     console.log(`[getRecruitmentWithPosts] About to fetch related data (vacancies, eligibilities, age rules) for ${postIds.length} posts`);
+    console.log(`[getRecruitmentWithPosts] Starting Promise.all for: vacancies, eligibilities, age rules, posts_vacancies, source_inventory...`);
     const [allVacancies, allEligibilities, allAgeRules, allPostsVacancies, sourcePostInventoryResult] = await Promise.all([
-      db
-        .select()
-        .from(vacancies)
-        .where(inArray(vacancies.postId, postIds)),
-      db
-        .select()
-        .from(eligibilities)
-        .where(inArray(eligibilities.postId, postIds)),
-      db
-        .select()
-        .from(postAgeRules)
-        .where(inArray(postAgeRules.postId, postIds)),
-      db
-        .select()
-        .from(postsVacancies)
-        .where(inArray(postsVacancies.postId, postIds)),
+      (async () => {
+        console.log(`[getRecruitmentWithPosts] Fetching vacancies...`);
+        const result = await db
+          .select()
+          .from(vacancies)
+          .where(inArray(vacancies.postId, postIds));
+        console.log(`[getRecruitmentWithPosts] Vacancies fetch complete: ${result.length} records`);
+        return result;
+      })(),
+      (async () => {
+        console.log(`[getRecruitmentWithPosts] Fetching eligibilities...`);
+        const result = await db
+          .select()
+          .from(eligibilities)
+          .where(inArray(eligibilities.postId, postIds));
+        console.log(`[getRecruitmentWithPosts] Eligibilities fetch complete: ${result.length} records`);
+        return result;
+      })(),
+      (async () => {
+        console.log(`[getRecruitmentWithPosts] Fetching age rules...`);
+        const result = await db
+          .select()
+          .from(postAgeRules)
+          .where(inArray(postAgeRules.postId, postIds));
+        console.log(`[getRecruitmentWithPosts] Age rules fetch complete: ${result.length} records`);
+        return result;
+      })(),
+      (async () => {
+        console.log(`[getRecruitmentWithPosts] Fetching posts_vacancies...`);
+        const result = await db
+          .select()
+          .from(postsVacancies)
+          .where(inArray(postsVacancies.postId, postIds));
+        console.log(`[getRecruitmentWithPosts] Posts_vacancies fetch complete: ${result.length} records`);
+        return result;
+      })(),
       db.execute(sql`
         SELECT *
         FROM fja_post_inventory
