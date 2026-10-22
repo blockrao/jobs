@@ -7,6 +7,7 @@
 import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import SalaryGuideTemplate from "@/components/salary-guide-template";
+import CareerROICalculator from "@/components/career-roi-calculator";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -705,5 +706,18 @@ const pageContent = {
 };
 
 export default function HighestPayingGovernmentJobsPage() {
-  return <SalaryGuideTemplate {...pageContent} />;
+  return (
+    <>
+      <SalaryGuideTemplate {...pageContent} />
+
+      {/* Interactive Career ROI Calculator */}
+      <section className="mt-16 py-12 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-2xl font-bold mb-4 text-center">Career ROI Calculator</h2>
+          <p className="text-center text-gray-600 mb-8">Compare lifetime earnings and benefits across different government career paths</p>
+          <CareerROICalculator />
+        </div>
+      </section>
+    </>
+  );
 }

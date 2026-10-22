@@ -8,6 +8,7 @@
 import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import ComparisonPageTemplate from "@/components/comparison-page-template";
+import ExamMatcherQuiz from "@/components/exam-matcher-quiz";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -631,5 +632,18 @@ const pageContent = {
 };
 
 export default function UPSCVsSSCPage() {
-  return <ComparisonPageTemplate {...pageContent} />;
+  return (
+    <>
+      <ComparisonPageTemplate {...pageContent} />
+
+      {/* Interactive Exam Matcher Quiz */}
+      <section className="mt-16 py-12 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg">
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-bold mb-4 text-center">Still Unsure Which Exam is Right for You?</h2>
+          <p className="text-center text-gray-600 mb-8">Take our 5-question Exam Matcher Quiz to find your perfect government job fit based on your goals and abilities</p>
+          <ExamMatcherQuiz />
+        </div>
+      </section>
+    </>
+  );
 }

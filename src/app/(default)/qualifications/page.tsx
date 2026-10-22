@@ -6,6 +6,7 @@ import { QUALIFICATIONS, qualificationHref } from "@/lib/qualifications";
 import { countLivePostsByAllQualifications } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
+import ExamMatcherQuiz from "@/components/exam-matcher-quiz";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,13 @@ export default async function QualificationsIndexPage() {
             );
           })}
         </div>
+
+        {/* Interactive Exam Matcher Quiz */}
+        <section className="mt-16 py-12 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg">
+          <h2 className="text-2xl font-bold mb-4 text-center">Not Sure Which Government Job is Right for You?</h2>
+          <p className="text-center text-gray-600 mb-8">Take our 5-question quiz to find your perfect government exam match based on your goals and abilities</p>
+          <ExamMatcherQuiz />
+        </section>
       </div>
     </>
   );

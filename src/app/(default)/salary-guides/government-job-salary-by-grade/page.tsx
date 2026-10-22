@@ -8,6 +8,7 @@
 import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import SalaryGuideTemplate from "@/components/salary-guide-template";
+import SalaryPredictor from "@/components/salary-predictor";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -836,5 +837,18 @@ const pageContent = {
 };
 
 export default function GovernmentJobSalaryByGradePage() {
-  return <SalaryGuideTemplate {...pageContent} />;
+  return (
+    <>
+      <SalaryGuideTemplate {...pageContent} />
+
+      {/* Interactive Salary Predictor Tool */}
+      <section className="mt-16 py-12 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-2xl font-bold mb-4 text-center">Try Our Interactive Salary Predictor</h2>
+          <p className="text-center text-gray-600 mb-8">Estimate your salary based on qualification, job path, and experience level</p>
+          <SalaryPredictor />
+        </div>
+      </section>
+    </>
+  );
 }
