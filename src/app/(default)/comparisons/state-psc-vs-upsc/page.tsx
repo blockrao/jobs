@@ -125,7 +125,7 @@ const pageContent = {
     </div>
   ),
   relatedPages: [
-    { title: "UPSC vs SSC", slug: "upsc-vs-ssc", type: "comparison" },
+    { title: "UPSC vs SSC", slug: "upsc-vs-ssc", type: "comparison" } as const,
   ],
   faqs: [
     {

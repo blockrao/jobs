@@ -203,8 +203,8 @@ const pageContent = {
     </div>
   ),
   relatedPages: [
-    { title: "Banking Salary Guide", slug: "banking-salary-guide", type: "salary" },
-    { title: "B.Com Government Jobs", slug: "b-com-government-jobs", type: "qualification" },
+    { title: "Banking Salary Guide", slug: "banking-salary-guide", type: "salary" } as const,
+    { title: "B.Com Government Jobs", slug: "b-com-government-jobs", type: "qualification" } as const,
   ],
   faqs: [
     {
