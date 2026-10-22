@@ -838,156 +838,70 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           <HubDetails data={data} />
           {has('dates') && <HubDates data={data} />}
 
-          {/* Posts section with vacancy breakdown, age by category, and eligibility details */}
+          {/* Posts section - consolidated table for market-competitive design */}
           {has('posts') && data.postRows.length > 0 && (
             <section id="posts" aria-labelledby="posts-heading" className={styles.card}>
               <h2 id="posts-heading" className={styles.sectionTitle}>
                 Posts &amp; vacancies <span className={styles.count}>({data.postRows.length})</span>
               </h2>
 
-              {data.postRows.map((postRow, index) => {
-                // Find the corresponding post from data.posts for ageRules
-                const postData = data.posts.find((p) => p.id === postRow.id);
+              {/* Consolidated posts table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--hub-line)', backgroundColor: 'var(--hub-bg2)' }}>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--hub-ink2)' }}>Post Name</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: 600, color: 'var(--hub-ink2)' }}>Vacancies</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: 600, color: 'var(--hub-ink2)' }}>Age Limit</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--hub-ink2)' }}>Qualification</th>
+                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--hub-ink2)' }}>Experience</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.postRows.map((postRow) => {
+                      const postData = data.posts.find((p) => p.id === postRow.id);
+                      const qualText = postData?.eligibilities?.[0]
+                        ? str(postData.eligibilities[0].qualification_text || postData.eligibilities[0].qualificationText)
+                        : postRow.qualification;
+                      const expText = postData?.eligibilities?.[0]
+                        ? str(postData.eligibilities[0].experience_text || postData.eligibilities[0].experienceText)
+                        : postRow.experience;
 
-                return (
-                  <div
-                    key={postRow.id}
-                    style={{
-                      marginTop: index > 0 ? 20 : 0,
-                      paddingTop: index > 0 ? 20 : 0,
-                      borderTop: index > 0 ? `1px solid var(--hub-line)` : 'none',
-                    }}
-                  >
-                    {/* Post name as H3 for multi-post, or as first row for single-post */}
-                    {!isSinglePost ? (
-                      <h3
-                        style={{
-                          fontSize: 18,
-                          fontWeight: 600,
-                          marginBottom: 12,
-                          marginTop: 0,
-                        }}
-                      >
-                        {postRow.href ? <a href={postRow.href}>{postRow.name}</a> : postRow.name}
-                      </h3>
-                    ) : (
-                      <div style={{ marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
-                        {postRow.href ? <a href={postRow.href}>{postRow.name}</a> : postRow.name}
-                      </div>
-                    )}
+                      return (
+                        <tr key={postRow.id} style={{ borderBottom: '1px solid var(--hub-line)' }}>
+                          <td style={{ padding: '12px 8px', fontWeight: 500 }}>
+                            {postRow.href ? <a href={postRow.href} style={{ color: 'var(--hub-link)' }}>{postRow.name}</a> : postRow.name}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            {postRow.vacanciesLabel || '—'}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            {postData?.eligibilities?.[0]?.age_max || postData?.eligibilities?.[0]?.ageMax ? `${postData.eligibilities[0].age_max || postData.eligibilities[0].ageMax} years` : '—'}
+                          </td>
+                          <td style={{ padding: '12px 8px', fontSize: 13, color: 'var(--hub-ink2)' }}>
+                            {qualText ? qualText.substring(0, 60) + (qualText.length > 60 ? '...' : '') : '—'}
+                          </td>
+                          <td style={{ padding: '12px 8px', fontSize: 13, color: 'var(--hub-ink2)' }}>
+                            {expText ? expText.substring(0, 50) + (expText.length > 50 ? '...' : '') : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-                    {/* Key details grid */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '12px 16px',
-                        fontSize: 14,
-                        marginBottom: 16,
-                      }}
-                    >
-                      {postRow.vacanciesLabel && (
-                        <>
-                          <dt style={{ color: 'var(--hub-ink3)' }}>Vacancies</dt>
-                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.vacanciesLabel}</dd>
-                        </>
-                      )}
-                      {postRow.qualification && (
-                        <>
-                          <dt style={{ color: 'var(--hub-ink3)' }}>Qualification</dt>
-                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.qualification}</dd>
-                        </>
-                      )}
-                      {postRow.experience && (
-                        <>
-                          <dt style={{ color: 'var(--hub-ink3)' }}>Experience</dt>
-                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.experience}</dd>
-                        </>
-                      )}
-                      {postRow.pay && (
-                        <>
-                          <dt style={{ color: 'var(--hub-ink3)' }}>Pay</dt>
-                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.pay}</dd>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Vacancy breakdown table */}
-                    {postRow.vacancyBreakdown && postRow.vacancyBreakdown.length > 0 && (
-                      <HubVacancyBreakdown
-                        postTitle={postRow.name}
-                        vacancyBreakdown={postRow.vacancyBreakdown}
-                        total={postRow.vacancyBreakdown.reduce((sum, cat) => sum + cat.count, 0)}
-                      />
-                    )}
-
-                    {/* Age by category table */}
-                    {postRow.ageBreakdown && postRow.ageBreakdown.length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        <HubAgeByCategory
-                          postTitle={postRow.name}
-                          ageBreakdown={postRow.ageBreakdown}
-                        />
-                      </div>
-                    )}
-
-                    {/* Eligibility details */}
-                    {postData?.eligibilities && postData.eligibilities.length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        {postData.eligibilities.map((elig, eligIndex) => {
-                          // Extract eligibility fields safely
-                          const eligData = asRecord(elig) ?? {};
-                          const physicalReqs = str(
-                            eligData.physicalRequirements ||
-                            eligData.physical_requirements ||
-                            null,
-                          );
-                          const experienceText = str(
-                            eligData.experienceText || eligData.experience_text || null,
-                          );
-                          const citizenship = str(
-                            eligData.citizenship || null,
-                          );
-                          const domicileType = str(
-                            eligData.domicileType || eligData.domicile_type || null,
-                          );
-
-                          // Only render if there's actual data
-                          if (!physicalReqs && !experienceText && !citizenship && !domicileType) {
-                            return null;
-                          }
-
-                          return (
-                            <HubEligibilityDetailed
-                              key={eligIndex}
-                              postTitle={postRow.name}
-                              eligibility={{
-                                domicile: domicileType,
-                                citizenship: citizenship,
-                                skills: null,
-                                physicalRequirements: physicalReqs,
-                                experience: experienceText,
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Apply button per post */}
-                    {!isSinglePost && (
-                      <div style={{ marginTop: 16 }}>
-                        <a href="#apply" className={`${styles.btn} ${styles.btnPrimary}`}>
-                          Apply for {postRow.name}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              <p style={{ fontSize: 12, color: 'var(--hub-ink3)', marginTop: 12, marginBottom: 0 }}>
+                Click on post name for full details, vacancy breakdown by category (UR/OBC/SC/ST/EWS/PwBD), and complete eligibility criteria.
+              </p>
 
               {data.anyVacancyUnverified && (
-                <p className={styles.note} style={{ marginTop: 16 }}>
+                <p className={styles.note} style={{ marginTop: 12 }}>
                   * Vacancy count reported by the source listing, not yet confirmed against the official notification.
                 </p>
               )}
