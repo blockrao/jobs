@@ -561,7 +561,7 @@ const pageContent = {
 
           <h3 className="font-bold text-lg mt-4">Step 3: Upload Scanned Documents</h3>
           <div className="bg-gray-50 p-4 rounded space-y-2">
-            <p className="font-bold">Required Documents (PDF format, <100KB each):</p>
+            <p className="font-bold">Required Documents (PDF format, under 100KB each):</p>
             <ol className="list-decimal pl-6 space-y-1 text-sm">
               <li><strong>Photo:</strong> Passport size, white background, color (JPG/PNG)</li>
               <li><strong>Signature:</strong> Black ink on white paper (JPG/PNG)</li>
