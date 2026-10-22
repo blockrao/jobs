@@ -261,6 +261,12 @@ const pageContent = {
       ),
     },
   ],
+  whichShouldYouChoose: (
+    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
+      <h3 className="text-lg font-semibold text-amber-900 mb-2">Which should you choose?</h3>
+      <p className="text-amber-800">Choose <strong>UPSC</strong> if you have 18-24 months to prepare and want the highest career ceiling. Choose <strong>SSC</strong> if you need a job quickly with guaranteed success and steady growth. Many candidates do SSC first, work for 5-10 years, then attempt UPSC.</p>
+    </div>
+  ),
   relatedPages: [
     { title: "SSC CHSL Government Jobs", slug: "b-a-government-jobs" },
     { title: "IAS Government Jobs", slug: "engineering-government-jobs" },

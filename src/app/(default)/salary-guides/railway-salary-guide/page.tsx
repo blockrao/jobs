@@ -346,6 +346,9 @@ const pageContent = {
     { title: "12th Pass Government Jobs", slug: "12th-pass-government-jobs" },
     { title: "Engineering Government Jobs", slug: "engineering-government-jobs" },
   ],
+  relatedComparisons: [
+    { title: "Railway vs UPSC", slug: "railway-vs-upsc" },
+  ],
   faqs: [
     {
       question: "What is the entry salary for railway Group D worker?",

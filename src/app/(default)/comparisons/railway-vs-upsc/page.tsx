@@ -123,6 +123,12 @@ const pageContent = {
       ),
     },
   ],
+  whichShouldYouChoose: (
+    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
+      <h3 className="text-lg font-semibold text-amber-900 mb-2">Which should you choose?</h3>
+      <p className="text-amber-800">Choose <strong>Railway</strong> if you want a job quickly with minimal competition (easier exams, faster recruitment). Choose <strong>UPSC</strong> if you want the highest career ceiling and administrative power. Railway is the faster path; UPSC is the higher ceiling.</p>
+    </div>
+  ),
   relatedPages: [
     { title: "UPSC vs SSC", slug: "upsc-vs-ssc" },
     { title: "Railway Salary Guide", slug: "railway-salary-guide" },

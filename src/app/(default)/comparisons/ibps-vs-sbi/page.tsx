@@ -196,6 +196,12 @@ const pageContent = {
       ),
     },
   ],
+  whichShouldYouChoose: (
+    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
+      <h3 className="text-lg font-semibold text-amber-900 mb-2">Which should you choose?</h3>
+      <p className="text-amber-800">Both offer identical salary and benefits. Choose <strong>IBPS</strong> for flexibility across multiple banks and better career mobility. Choose <strong>SBI</strong> if you prefer the prestige and stability of India's largest bank. Your salary will be the same either way.</p>
+    </div>
+  ),
   relatedPages: [
     { title: "Banking Salary Guide", slug: "banking-salary-guide" },
     { title: "B.Com Government Jobs", slug: "b-com-government-jobs" },

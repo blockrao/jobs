@@ -295,6 +295,9 @@ const pageContent = {
     { title: "B.Tech Government Jobs", slug: "b-tech-government-jobs" },
     { title: "MBA Government Jobs", slug: "mba-government-jobs" },
   ],
+  relatedComparisons: [
+    { title: "GATE vs Civil Service", slug: "gate-vs-civil-service" },
+  ],
   faqs: [
     {
       question: "Which PSU pays the highest salary in India?",

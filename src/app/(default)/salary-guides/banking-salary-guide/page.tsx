@@ -298,6 +298,9 @@ const pageContent = {
     { title: "12th Pass Government Jobs", slug: "12th-pass-government-jobs" },
     { title: "MBA Government Jobs", slug: "mba-government-jobs" },
   ],
+  relatedComparisons: [
+    { title: "IBPS vs SBI", slug: "ibps-vs-sbi" },
+  ],
   faqs: [
     {
       question: "What is the entry salary for banking clerk?",
