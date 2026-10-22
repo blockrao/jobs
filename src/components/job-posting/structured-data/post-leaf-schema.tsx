@@ -118,6 +118,28 @@ function isAuthoritativeDomain(url: string | null | undefined): boolean {
 const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/**
+ * Extract the hiring organisation name from a post title when organizationName
+ * is not available from the FK join.
+ *
+ * Titles for posts without an organizationId follow the pattern:
+ *   "Other - {Org Name}"          → "Org Name"
+ *   "{Post Name} - {Org Name}"    → "Org Name"  (last segment after " - ")
+ *
+ * We take the last " - " segment only when it looks like an organisation name
+ * (i.e. it doesn't look like a plain post-name suffix such as "Recruitment 2024").
+ * If no usable segment is found, returns null so we don't emit a fabricated value.
+ */
+function extractOrgFromTitle(title: string): string | null {
+  if (!title) return null;
+  const parts = title.split(" - ");
+  if (parts.length < 2) return null;
+  const candidate = parts[parts.length - 1].trim();
+  // Reject if empty or looks like a year/round suffix rather than an org name.
+  if (!candidate || /^\d{4}$/.test(candidate)) return null;
+  return candidate;
+}
+
 export default function PostLeafStructuredData({
   post,
   pageTitle = post.title,
@@ -225,10 +247,13 @@ export default function PostLeafStructuredData({
   const employmentType = EMPLOYMENT_TYPE_MAP[post.employmentType?.trim().toUpperCase() ?? ""];
   if (employmentType) jobPosting.employmentType = employmentType;
 
-  if (post.organizationName) {
+  // Use the joined org name if present; fall back to extracting from the title
+  // for the ~1,600 posts whose organizationId is null (title pattern: "Other - Org Name").
+  const hiringOrgName = post.organizationName ?? extractOrgFromTitle(post.title);
+  if (hiringOrgName) {
     jobPosting.hiringOrganization = {
       "@type": "Organization",
-      name: post.organizationName,
+      name: hiringOrgName,
       ...(isAuthoritativeDomain(officialSite) ? { sameAs: officialSite } : {}),
     };
   }
