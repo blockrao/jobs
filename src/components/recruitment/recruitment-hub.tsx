@@ -948,6 +948,9 @@ export default function RecruitmentHub({ data, enrichment }: RecruitmentHubProps
               />
             )}
 
+            {/* Enriched details (if available) - displayed prominently after key metrics */}
+            {enrichment && <HubEnrichment data={enrichment} />}
+
             <HubDetails data={data} />
             {has('dates') && <HubDates data={data} />}
 
@@ -986,7 +989,6 @@ export default function RecruitmentHub({ data, enrichment }: RecruitmentHubProps
           {has('links') && <HubLinks data={data} />}
           <HubSource data={data} />
           {has('faq') && <HubFaqEnhanced items={data.faqItems} />}
-          {enrichment && <HubEnrichment data={enrichment} />}
           <HubExplore data={data} />
           </article>
 
