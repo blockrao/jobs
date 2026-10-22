@@ -22,7 +22,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
-import RecruitmentHub, { buildHubData } from "@/components/recruitment/recruitment-hub";
+import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
@@ -72,11 +72,12 @@ export default async function RecruitmentHubPage({ params }: Props) {
 
   const { recruitment, posts } = data;
   const hub = buildHubData(recruitment, posts);
+  const sanitizedHub = toPlainJSON(hub) as typeof hub;
 
   return (
     <>
-      <RecruitmentHubStructuredData data={hub} />
-      <RecruitmentHub data={hub} />
+      <RecruitmentHubStructuredData data={sanitizedHub} />
+      <RecruitmentHub data={sanitizedHub} />
     </>
   );
 }

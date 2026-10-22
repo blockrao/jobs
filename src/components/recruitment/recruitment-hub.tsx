@@ -850,6 +850,27 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
   };
 }
 
+/**
+ * Sanitize hub data for client component serialization.
+ * Removes Drizzle ORM metadata and converts Date objects to ISO strings.
+ * Exported for use in page.tsx when passing hub data to client components.
+ */
+export function toPlainJSON(value: unknown): unknown {
+  try {
+    return JSON.parse(
+      JSON.stringify(value, (key, val) => {
+        if (val instanceof Date) {
+          return val.toISOString();
+        }
+        return val;
+      })
+    );
+  } catch (error) {
+    console.warn('Failed to serialize value to JSON:', error);
+    return value;
+  }
+}
+
 /** Status chip for the hero; null while lifecycle claims are suppressed and no reported status exists. */
 export function lifecycleChip(data: HubData): { text: string; tone: 'open' | 'closed' | 'upcoming' | 'neutral' } | null {
   if (data.lifecycleState) {
