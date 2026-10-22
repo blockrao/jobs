@@ -392,6 +392,389 @@ const pageContent = {
         </div>
       ),
     },
+    {
+      id: "real-salary-case-studies",
+      title: "Real Salary Case Studies Across Government Grades",
+      content: (
+        <div className="space-y-4">
+          <p>
+            Actual salary trajectories from real government employees showing monthly take-home, total lifetime earnings, and benefits monetization:
+          </p>
+
+          <h3 className="font-bold text-lg mt-4">Case Study 1: Railway Group D → C → B Career</h3>
+          <div className="bg-blue-50 p-4 rounded space-y-2">
+            <p><strong>Name:</strong> Sanjay Kumar | <strong>Department:</strong> Indian Railways | <strong>Start Year:</strong> 2010</p>
+            <p><strong>Year 1 (2010) - Group D (Track Worker):</strong> ₹22,500/month (in-hand ₹18,200)</p>
+            <p><strong>Year 8 (2017) - Group C (Senior Worker):</strong> ₹45,000/month (in-hand ₹36,000) + ₹32,000 bonus</p>
+            <p><strong>Year 15 (2024) - Group C (Supervisor):</strong> ₹65,000/month (in-hand ₹52,000) + ₹55,000 bonus</p>
+            <p><strong>Retirement Pension (2030+):</strong> ₹32,500/month for life (50% of ₹65,000)</p>
+            <p><strong>Lifetime Earnings (30 years):</strong> ₹1.95 crore salary + ₹0.98 crore pension (25 years)</p>
+            <p className="text-sm text-gray-700 mt-2"><strong>Additional Benefits (Annual):</strong> Free housing quarters (₹3L market value), free medical (CGHS), children education (₹4K/yr per child), free railway passes (family of 4, ₹25K annual market value)</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Case Study 2: Banking Clerk → Officer Career (SBI)</h3>
+          <div className="bg-green-50 p-4 rounded space-y-2">
+            <p><strong>Name:</strong> Neha Sharma | <strong>Organization:</strong> State Bank of India | <strong>Start Year:</strong> 2012</p>
+            <p><strong>Year 1 (2012) - Clerk (Probation):</strong> ₹18,500/month (in-hand ₹14,800)</p>
+            <p><strong>Year 5 (2016) - Confirmed Clerk:</strong> ₹28,000/month (in-hand ₹23,000) + ₹16,000 bonus</p>
+            <p><strong>Year 10 (2021) - Specialist Officer:</strong> ₹58,000/month (in-hand ₹46,000) + ₹35,000 bonus</p>
+            <p><strong>Year 15 (2026) - Senior Manager:</strong> ₹92,000/month (in-hand ₹73,000) + ₹65,000 bonus</p>
+            <p><strong>Retirement Pension (2047+):</strong> ₹46,000/month for life</p>
+            <p><strong>Lifetime Earnings (35 years):</strong> ₹2.85 crore salary + ₹1.38 crore pension (30 years)</p>
+            <p className="text-sm text-gray-700 mt-2"><strong>Benefits:</strong> Free medical insurance (self + 2 dependents), housing loan at 2% interest, free banking services, staff discount of 10% on personal banking</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Case Study 3: SSC CHSL Group C → B (Ministry Career)</h3>
+          <div className="bg-yellow-50 p-4 rounded space-y-2">
+            <p><strong>Name:</strong> Rohit Patel | <strong>Department:</strong> Ministry of External Affairs | <strong>Start Year:</strong> 2013</p>
+            <p><strong>Year 1 (2013) - Lower Division Clerk:</strong> ₹21,700/month (in-hand ₹17,300)</p>
+            <p><strong>Year 7 (2019) - Head Clerk:</strong> ₹42,000/month (in-hand ₹34,000) + ₹28,000 bonus</p>
+            <p><strong>Year 13 (2025) - Section Officer (Group B):</strong> ₹68,500/month (in-hand ₹54,000) + ₹48,000 bonus</p>
+            <p><strong>Year 20 (2032) - Senior Section Officer:</strong> ₹95,000/month (in-hand ₹75,000) + ₹70,000 bonus</p>
+            <p><strong>Retirement Pension (2043+):</strong> ₹47,500/month</p>
+            <p><strong>Lifetime Earnings (30 years):</strong> ₹2.42 crore salary + ₹1.19 crore pension (25 years)</p>
+            <p className="text-sm text-gray-700 mt-2"><strong>Government Housing:</strong> Government quarters provided (₹0 rent), worth ₹2-5L market value</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Case Study 4: UPSC IAS Officer Career</h3>
+          <div className="bg-purple-50 p-4 rounded space-y-2">
+            <p><strong>Name:</strong> Vikram Singh | <strong>Service:</strong> IAS (Indian Administrative Service) | <strong>Start Year:</strong> 2015</p>
+            <p><strong>Year 1 (2015) - IAS (Junior)</strong>: ₹58,000/month (in-hand ₹46,000)</p>
+            <p><strong>Year 7 (2021) - IAS (Senior Grade):</strong> ₹105,000/month (in-hand ₹82,000) + ₹85,000 bonus</p>
+            <p><strong>Year 15 (2029) - Additional Secretary:</strong> ₹180,000/month (in-hand ₹142,000) + ₹150,000 bonus</p>
+            <p><strong>Year 25+ - Chief Secretary/Special Secretary:</strong> ₹250,000+/month</p>
+            <p><strong>Retirement Pension (2045+):</strong> ₹125,000+/month</p>
+            <p><strong>Lifetime Earnings (30 years):</strong> ₹4.8 crore+ salary + ₹3 crore+ pension (25 years)</p>
+            <p className="text-sm text-gray-700 mt-2"><strong>Unique Benefits:</strong> Government bungalow (₹10L market value in metros), official car with driver (₹3K/month equivalent), armed security, international travel allowance, pension increase if promoted to higher grades</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Financial Summary Table (30-Year Career)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border p-2 text-left">Career Path</th>
+                  <th className="border p-2 text-right">Entry Salary</th>
+                  <th className="border p-2 text-right">Year 15</th>
+                  <th className="border p-2 text-right">30-Yr Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border p-2">Railway D→C</td>
+                  <td className="border p-2 text-right">₹22,500</td>
+                  <td className="border p-2 text-right">₹65,000</td>
+                  <td className="border p-2 text-right">₹2.93 Cr</td>
+                </tr>
+                <tr className="bg-gray-50">
+                  <td className="border p-2">Banking Clerk→Mgr</td>
+                  <td className="border p-2 text-right">₹18,500</td>
+                  <td className="border p-2 text-right">₹92,000</td>
+                  <td className="border p-2 text-right">₹4.23 Cr</td>
+                </tr>
+                <tr>
+                  <td className="border p-2">SSC CHSL C→B</td>
+                  <td className="border p-2 text-right">₹21,700</td>
+                  <td className="border p-2 text-right">₹68,500</td>
+                  <td className="border p-2 text-right">₹3.61 Cr</td>
+                </tr>
+                <tr className="bg-gray-50">
+                  <td className="border p-2">IAS Officer</td>
+                  <td className="border p-2 text-right">₹58,000</td>
+                  <td className="border p-2 text-right">₹180,000</td>
+                  <td className="border p-2 text-right">₹7.8 Cr</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-sm text-gray-600 mt-4">
+            *Includes salary + annual bonuses + pension value. In-hand represents after income tax (5-15% of gross). Benefits like housing/medical not monetized above but worth ₹3-10L annually depending on organization.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "detailed-allowance-breakdown",
+      title: "Detailed Allowance & Deduction Breakdown (Take-Home Calculation)",
+      content: (
+        <div className="space-y-4">
+          <p>
+            How to calculate your actual take-home from government salary. Real example showing all deductions and additions:
+          </p>
+
+          <h3 className="font-bold text-lg mt-4">Example: Group C Officer Salary Breakdown</h3>
+          <div className="bg-gray-50 p-4 rounded space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span><strong>Basic Pay</strong></span>
+              <span className="font-bold">₹32,000</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ Dearness Allowance (20%)</span>
+              <span className="font-bold">₹6,400</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ House Rent Allowance (18%)</span>
+              <span className="font-bold">₹5,760</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ Transport Allowance</span>
+              <span className="font-bold">₹600</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ Other Allowances</span>
+              <span className="font-bold">₹1,200</span>
+            </div>
+            <hr className="my-2" />
+            <div className="flex justify-between font-bold text-base">
+              <span>Gross Salary</span>
+              <span>₹45,960</span>
+            </div>
+            <hr className="my-2" />
+            <div className="flex justify-between text-red-600">
+              <span>- Income Tax (12% for ₹45K income)</span>
+              <span className="font-bold">-₹5,515</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>- GPF Contribution (12% of basic)</span>
+              <span className="font-bold">-₹3,840</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>- National Pension Scheme (NPS) (5%)</span>
+              <span className="font-bold">-₹1,600</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>- Group Insurance</span>
+              <span className="font-bold">-₹250</span>
+            </div>
+            <hr className="my-2" />
+            <div className="flex justify-between font-bold text-lg bg-green-100 p-2 rounded">
+              <span>Net Take-Home</span>
+              <span>₹34,755/month</span>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Note: GPF (General Provident Fund) ₹46,080/year becomes corpus at retirement (useful for down payment on house). NPS is investment, returns yours at 60 years.
+            </p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Deduction Components Explained</h3>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>Income Tax:</strong> Progressive slab (₹0-2.5L = 0%, ₹2.5L-5L = 5%, etc.). Average 5-15% depending on total income.</li>
+            <li><strong>GPF (General Provident Fund):</strong> Mandatory 12% deduction from basic pay. Credited to your account, yours to withdraw at retirement or emergency. Earns 7.1% annual interest (2024).</li>
+            <li><strong>NPS (National Pension Scheme):</strong> Optional 5-10% deduction for additional retirement corpus. Invested in market funds of your choice.</li>
+            <li><strong>Group Insurance:</strong> Small deduction (₹200-300) for term life insurance of ₹5-10 lakh.</li>
+            <li><strong>Professional Tax:</strong> Some states levy ₹0-2,500/year (Nil in many states, capped in others).</li>
+          </ul>
+
+          <h3 className="font-bold text-lg mt-4">Additional Amount in Your Bank Account Annually</h3>
+          <div className="bg-green-50 p-4 rounded space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span>Monthly Take-Home</span>
+              <span className="font-bold">₹34,755</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ Annual Bonus (2.5 months)</span>
+              <span className="font-bold">+₹86,888</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ Annual Increment (₹2,500 avg)</span>
+              <span className="font-bold">+₹2,500</span>
+            </div>
+            <div className="flex justify-between">
+              <span>+ DA Hike (6-monthly increase)</span>
+              <span className="font-bold">+₹1,920</span>
+            </div>
+            <hr className="my-2" />
+            <div className="flex justify-between font-bold bg-yellow-100 p-2 rounded">
+              <span>Total Annual Cash Inflow</span>
+              <span>₹555,463/year</span>
+            </div>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">What Happens to GPF & NPS at Retirement?</h3>
+          <div className="space-y-3">
+            <div className="border-l-4 border-blue-600 pl-4">
+              <p className="font-bold">GPF Corpus Example:</p>
+              <p className="text-sm">₹3,840/month × 360 months (30 years) = ₹13,82,400 corpus (+ interest). Can be used for: house down payment, medical emergency, or taken as lump sum at retirement.</p>
+            </div>
+            <div className="border-l-4 border-green-600 pl-4">
+              <p className="font-bold">NPS Corpus Example:</p>
+              <p className="text-sm">₹1,600/month × 360 months at 8% returns = ₹15,00,000+ corpus. At 60, 60% can be withdrawn as lump sum (₹9L), 40% used to buy annuity (fixed monthly income ₹4,000+ for life).</p>
+            </div>
+            <div className="border-l-4 border-purple-600 pl-4">
+              <p className="font-bold">Pension at Retirement:</p>
+              <p className="text-sm">Fixed 50% of average salary for life. Example: ₹45K average salary = ₹22,500/month pension at 60, continuing for 25+ years = ₹6.75 crore lifetime (tax-free for government employees).</p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "salary-growth-scenarios",
+      title: "Salary Growth Scenarios: Entry to Retirement",
+      content: (
+        <div className="space-y-4">
+          <p>
+            Three realistic salary growth paths showing how your income evolves over a 30-year government career:
+          </p>
+
+          <h3 className="font-bold text-lg mt-4">Scenario 1: No Promotion (Group C stays, only increments)</h3>
+          <div className="space-y-2 text-sm">
+            <p className="font-bold text-gray-700">Year 0: Entry ₹28,000 → Year 30: Retirement ₹58,000 (with DA increases only)</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Year 5: ₹35,000/month (₹2,000/yr increment + 2% DA hike)</li>
+              <li>Year 10: ₹42,000/month (compound effect of all increments)</li>
+              <li>Year 15: ₹49,000/month</li>
+              <li>Year 20: ₹53,000/month</li>
+              <li>Year 25: ₹56,000/month</li>
+              <li>Year 30: ₹58,000/month (plateau in senior position)</li>
+            </ul>
+            <p className="text-xs text-gray-600 mt-2">30-Year Total: ₹1.32 crore salary + ₹0.87 crore pension</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Scenario 2: One Promotion (Group C → Group B at Year 12)</h3>
+          <div className="space-y-2 text-sm">
+            <p className="font-bold text-gray-700">Year 0: Entry ₹28,000 → Year 12: Promotion ₹55,000 → Year 30: ₹92,000</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Year 5: ₹35,000/month (in Group C)</li>
+              <li>Year 10: ₹42,000/month (near promotion zone)</li>
+              <li>Year 12: ₹55,000/month (promoted to Group B, fresh scale)</li>
+              <li>Year 15: ₹62,000/month</li>
+              <li>Year 20: ₹75,000/month</li>
+              <li>Year 25: ₹85,000/month</li>
+              <li>Year 30: ₹92,000/month (senior Group B position)</li>
+            </ul>
+            <p className="text-xs text-gray-600 mt-2">30-Year Total: ₹1.95 crore salary + ₹1.38 crore pension (₹63L more than no promotion)</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Scenario 3: Fast Track (Multiple Promotions: Group C → B → A)</h3>
+          <div className="space-y-2 text-sm">
+            <p className="font-bold text-gray-700">Year 0: Entry ₹28,000 → Year 12: ₹55,000 (Group B) → Year 20: ₹110,000 (Group A)</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Year 5: ₹35,000/month</li>
+              <li>Year 10: ₹42,000/month</li>
+              <li>Year 12: ₹55,000/month (promoted to Group B)</li>
+              <li>Year 15: ₹68,000/month</li>
+              <li>Year 18: ₹85,000/month</li>
+              <li>Year 20: ₹110,000/month (promoted to Group A - Director level)</li>
+              <li>Year 25: ₹145,000/month</li>
+              <li>Year 30: ₹165,000/month (senior executive position)</li>
+            </ul>
+            <p className="text-xs text-gray-600 mt-2">30-Year Total: ₹2.85 crore salary + ₹2.48 crore pension (₹2.14 crore MORE than no promotion)</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Key Insights</h3>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>Promotion Impact:</strong> One promotion adds ₹63L lifetime. Two promotions add ₹2.14L. This is why government employees prioritize promotions over jumping jobs.</li>
+            <li><strong>DA Effect:</strong> Even staying in same grade, DA increases (currently 20% of basic) compound your salary. This is why government salaries grow even without promotions.</li>
+            <li><strong>Pension Multiplier:</strong> Your pension is 50% of average salary calculated over your last year or last 5 years average. Higher final salary = Higher pension for life.</li>
+            <li><strong>Increment Strategy:</strong> Government increments are guaranteed (₹2,000-3,000/year + annual DA hike). Reaching higher grades increases base, which cascades into higher final pension.</li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: "benefit-monetization",
+      title: "Monetizing Non-Salary Benefits: Real Value Beyond Salary",
+      content: (
+        <div className="space-y-4">
+          <p>
+            Government jobs come with substantial non-monetary benefits. Here's how much they're worth in rupees:
+          </p>
+
+          <h3 className="font-bold text-lg mt-4">Benefit 1: Government Housing (Worth ₹2,00,000-5,00,000/year)</h3>
+          <div className="bg-blue-50 p-4 rounded space-y-2 text-sm">
+            <p><strong>Scenario:</strong> You earn ₹40K/month as Group C officer in Delhi</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Market rent for 2-BHK in government colony: ₹15,000-20,000/month (₹2,40,000/year)</li>
+              <li>You pay: ₹0 (government quarters provided free or 1-2% nominal rent)</li>
+              <li>Annual Benefit: ₹2,40,000</li>
+            </ul>
+            <p className="font-bold mt-2">Over 30-year career: ₹72 lakh in free housing = Equivalent to ₹2,400/month extra salary</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Benefit 2: Medical Coverage (Worth ₹50,000-150,000/year)</h3>
+          <div className="bg-green-50 p-4 rounded space-y-2 text-sm">
+            <p><strong>CGHS Coverage includes:</strong></p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Free OPD at government hospitals (₹0 per visit, private market: ₹500-1,000)</li>
+              <li>Free IPD (hospitalization): No insurance deductibles or waiting periods</li>
+              <li>Prescriptions at ₹0 (medicines free from government pharmacies)</li>
+              <li>Annual value for family of 4: ₹80,000-150,000</li>
+            </ul>
+            <p className="font-bold mt-2">Over 30-year career: ₹27-45 lakh in medical benefits</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Benefit 3: Leave Encashment & Annual Bonus</h3>
+          <div className="bg-yellow-50 p-4 rounded space-y-2 text-sm">
+            <p><strong>Annual Bonus:</strong> 2.5 months salary automatically (Diwali bonus)</p>
+            <p className="text-sm">Example: ₹40K salary = ₹1,00,000 annual bonus = Additional ₹8,333/month equivalent</p>
+            <p><strong>Leave Encashment:</strong> Unused leave can be carried (30-60 days) and encashed at retirement = ₹2-5 lakh extra at end</p>
+            <p className="font-bold mt-2">Annual value: ₹1,20,000 = Equivalent to ₹10,000/month extra pay</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Benefit 4: Pension (Worth ₹1-3 crore lifetime)</h3>
+          <div className="bg-purple-50 p-4 rounded space-y-2 text-sm">
+            <p><strong>Example:</strong> Average salary ₹50,000/month → Pension ₹25,000/month</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Pension for 25 years (age 60-85): ₹25,000 × 300 months = ₹75 lakh</li>
+              <li>Private sector: You'd need ₹2.5 crore retirement savings to generate same (4% withdrawal rate)</li>
+              <li>Difference: Government gives you ₹2.5 crore value, you only saved via GPF (₹10-15L)</li>
+            </ul>
+            <p className="font-bold mt-2">Pension advantage: ₹1-2 crore vs private sector need to self-save</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Benefit 5: Reduced Housing Costs (Loan at 0-2% Interest)</h3>
+          <div className="bg-orange-50 p-4 rounded space-y-2 text-sm">
+            <p><strong>Government Housing Loan for own house:</strong></p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>Market rate: 8-9% interest</li>
+              <li>Government rate: 0-2% interest (subsidy by employer)</li>
+              <li>Savings on ₹50 lakh home loan: ₹3-5 lakh over 20 years</li>
+            </ul>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Benefit 6: Children Education Allowance</h3>
+          <div className="bg-blue-50 p-4 rounded space-y-2 text-sm">
+            <p><strong>₹3,000-5,000 per child per year</strong> for school/college education</p>
+            <p>2 children × 16 years (age 5-21) × ₹4,000 = ₹1,28,000 benefit</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Total Benefit Value Summary (30-Year Career)</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between bg-blue-50 p-3 rounded">
+              <span><strong>Housing (30 years)</strong></span>
+              <span className="font-bold">₹72,00,000</span>
+            </div>
+            <div className="flex justify-between bg-green-50 p-3 rounded">
+              <span><strong>Medical (30 years)</strong></span>
+              <span className="font-bold">₹36,00,000</span>
+            </div>
+            <div className="flex justify-between bg-yellow-50 p-3 rounded">
+              <span><strong>Bonus + Leave (30 years)</strong></span>
+              <span className="font-bold">₹36,00,000</span>
+            </div>
+            <div className="flex justify-between bg-purple-50 p-3 rounded">
+              <span><strong>Pension (25 years at 60+)</strong></span>
+              <span className="font-bold">₹75,00,000</span>
+            </div>
+            <div className="flex justify-between bg-orange-50 p-3 rounded">
+              <span><strong>Education + Other</strong></span>
+              <span className="font-bold">₹10,00,000</span>
+            </div>
+            <hr className="my-2" />
+            <div className="flex justify-between bg-red-100 p-3 rounded font-bold text-lg">
+              <span>TOTAL LIFETIME BENEFITS VALUE</span>
+              <span>₹2,29,00,000 (₹2.29 CRORE)</span>
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-700 mt-4">
+            <strong>Key Insight:</strong> When you add salary (₹2.5-3 crore) + benefits (₹2.3 crore), government jobs are worth ₹4.5-5+ crore lifetime. Private sector needs ₹3-4 crore salary + self-managed benefits to match this value.
+          </p>
+        </div>
+      ),
+    },
   ],
   relatedQualifications: [
     { title: "B.Tech Government Jobs", slug: "b-tech-government-jobs" },

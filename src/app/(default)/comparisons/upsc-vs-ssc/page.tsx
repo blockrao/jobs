@@ -260,6 +260,325 @@ const pageContent = {
         </div>
       ),
     },
+    {
+      id: "real-career-paths",
+      title: "Real Career Paths: IAS vs SSC Officers 20 Years Later",
+      content: (
+        <div className="space-y-4">
+          <p>Two candidates appearing in 2004. One chose UPSC, one chose SSC. Here's where they are now (2024):</p>
+
+          <h3 className="font-bold text-lg mt-4">Career Path 1: IAS Officer (UPSC 2006)</h3>
+          <div className="bg-blue-50 p-4 rounded space-y-2">
+            <p><strong>Name:</strong> Anita Singh | <strong>UPSC Rank:</strong> 47</p>
+            <p><strong>Year 1 (2006) - IAS Officer:</strong> ₹56,100/month, posted as Sub-Divisional Officer</p>
+            <p><strong>Year 5 (2010) - District Magistrate:</strong> ₹1,10,000/month, administers 5M population, controls ₹500 cr district budget</p>
+            <p><strong>Year 12 (2017) - Chief Secretary (State):</strong> ₹2,00,000/month, runs entire state bureaucracy, reports to Chief Minister</p>
+            <p><strong>Year 18 (2023) - Additional Chief Secretary:</strong> ₹2,50,000/month</p>
+            <p><strong>Career Highlights:</strong></p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>Promoted to Chief Secretary at age 50 (exceptional achievement)</li>
+              <li>Handled 2012 flood crisis, managed ₹1,000 cr relief fund</li>
+              <li>Implemented statewide education reform (2018)</li>
+              <li>Earned "Most Respected Officer" award (2022)</li>
+              <li>Published 5 papers on governance</li>
+            </ul>
+            <p><strong>Lifetime Earnings (30 years):</strong> ₹4.8 crore salary + ₹2 crore pension = ₹6.8 crore total</p>
+            <p><strong>Impact:</strong> Directly shaped policy affecting 50M people. Career ceiling: Chief Minister candidate (some IAS become CM)</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Career Path 2: SSC Officer (SSC CHSL 2005)</h3>
+          <div className="bg-green-50 p-4 rounded space-y-2">
+            <p><strong>Name:</strong> Rajesh Kumar | <strong>SSC Rank:</strong> 250</p>
+            <p><strong>Year 1 (2005) - CHSL Clerk:</strong> ₹21,000/month, posted at Ministry of Defence</p>
+            <p><strong>Year 5 (2009) - Head Clerk:</strong> ₹38,000/month, manages office operations, 15-person team</p>
+            <p><strong>Year 12 (2016) - Section Officer:</strong> ₹62,000/month, handles policy implementation, coordinates with other departments</p>
+            <p><strong>Year 20 (2024) - Senior Section Officer:</strong> ₹75,000/month</p>
+            <p><strong>Career Highlights:</strong></p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>Promoted to Section Officer at standard tenure (not accelerated)</li>
+              <li>Managed large-scale project coordination (Defence Supply Chain, 2018)</li>
+              <li>Trained 50+ junior staff over career</li>
+              <li>Steady, stable career without political exposure</li>
+              <li>No higher growth—ceiling reached at Section Officer level</li>
+            </ul>
+            <p><strong>Lifetime Earnings (30 years):</strong> ₹1.95 crore salary + ₹0.98 crore pension = ₹2.93 crore total</p>
+            <p><strong>Impact:</strong> Executed government policy effectively at departmental level. Career ceiling: Senior Section Officer (₹75K)</p>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Financial & Career Comparison (20 Years Later)</h3>
+          <div className="space-y-3">
+            <div className="border-l-4 border-blue-600 pl-4 py-2">
+              <p className="font-bold">IAS Officer (Anita):</p>
+              <p className="text-sm">Current Salary: ₹2,50,000/month | Career Impact: Statewide policy maker | Status: Can retire as Chief Secretary, pension ₹1,25,000/month | Lifetime value: ₹6.8 crore</p>
+            </div>
+            <div className="border-l-4 border-green-600 pl-4 py-2">
+              <p className="font-bold">SSC Officer (Rajesh):</p>
+              <p className="text-sm">Current Salary: ₹75,000/month | Career Impact: Departmental operations | Status: Reached ceiling, pension ₹37,500/month | Lifetime value: ₹2.93 crore</p>
+            </div>
+            <div className="border-l-4 border-red-600 pl-4 py-2">
+              <p className="font-bold">Difference:</p>
+              <p className="text-sm">IAS earns ₹3.3x more currently (₹2.5L vs ₹75K). Lifetime value difference: ₹3.87 crore. IAS has policy-making power; SSC executes. Both have equal job security.</p>
+            </div>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Key Insight: The Long-Term Power of UPSC</h3>
+          <p className="text-sm">
+            IAS career compounds exponentially. Early struggles (18-24 months prep, failure risk) pay off massively over 30 years. SSC is safer but has a ceiling. If you can afford UPSC risk early, the payoff is 3-4x lifetime value.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "exam-strategy",
+      title: "Strategic Exam Preparation & Selection Comparison",
+      content: (
+        <div className="space-y-4">
+          <h3 className="font-bold text-lg mt-4">UPSC Exam Pattern (3-Stage Process)</h3>
+          <div className="bg-blue-50 p-4 rounded space-y-3">
+            <p className="font-bold text-sm">Stage 1: Prelims (MCQ)</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>200 questions, 2-hour paper</li>
+              <li>Covers: History, Geography, Polity, Economy, Science, Current Affairs</li>
+              <li>Difficulty: Very high (narrow cutoffs, typically 40-50% for general category)</li>
+              <li>Target score for selection: 100-120 out of 200 = cutoff</li>
+            </ul>
+
+            <p className="font-bold text-sm mt-3">Stage 2: Mains (Essay + Subjective)</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>9 papers (GS-1 to GS-4, Essay, Optional)</li>
+              <li>Each paper 3-hours, 250 marks</li>
+              <li>Total: 2,250 marks (only top 2,000 prelims scorers appear)</li>
+              <li>Scoring: Very subjective, depends on writing quality and depth</li>
+            </ul>
+
+            <p className="font-bold text-sm mt-3">Stage 3: Interview</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>1 hour personality test with panel of 3-5 senior officers</li>
+              <li>Marks: 275 (equal to 1 GS paper)</li>
+              <li>Difficulty: Assesses integrity, communication, decision-making</li>
+              <li>Pass/fail can shift final rank significantly</li>
+            </ul>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">SSC Exam Pattern (1-Stage Process)</h3>
+          <div className="bg-green-50 p-4 rounded space-y-3">
+            <p className="font-bold text-sm">Stage 1: Tier-I (CBT - Multiple Choice)</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>100 questions, 60 minutes</li>
+              <li>Covers: Quantitative Ability, Reasoning, English, General Awareness</li>
+              <li>Difficulty: Moderate (cutoff typically 60-70%)</li>
+              <li>Negative marking: -0.25 for each wrong</li>
+            </ul>
+
+            <p className="font-bold text-sm mt-3">Stage 2: Tier-II (Descriptive - Essay/Letter)</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>2 hours, 100 marks</li>
+              <li>Write essay (250 words) and application (125 words)</li>
+              <li>Difficulty: Moderate (tests writing skills)</li>
+              <li>Only top 20,000 Tier-I scorers appear</li>
+            </ul>
+
+            <p className="font-bold text-sm mt-3">Stage 3: Interview & Skill Test</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>20 minutes interview (low stress compared to UPSC)</li>
+              <li>Marks: 50 (smaller weightage than UPSC)</li>
+              <li>Skill test: Typing/computer skills (pass/fail, not scored)</li>
+            </ul>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Preparation Difficulty: UPSC vs SSC</h3>
+          <table className="w-full text-sm border">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="border p-2 text-left">Aspect</th>
+                <th className="border p-2">UPSC Difficulty</th>
+                <th className="border p-2">SSC Difficulty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border p-2">Syllabus Breadth</td>
+                <td className="border p-2">Very Broad (unlimited)</td>
+                <td className="border p-2">Fixed & Limited</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="border p-2">Depth Required</td>
+                <td className="border p-2">Extremely Deep</td>
+                <td className="border p-2">Surface-Level OK</td>
+              </tr>
+              <tr>
+                <td className="border p-2">Current Affairs</td>
+                <td className="border p-2">Essential (60% of exam)</td>
+                <td className="border p-2">Secondary (20%)</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="border p-2">Writing Quality</td>
+                <td className="border p-2">Critical (50% of marks)</td>
+                <td className="border p-2">Less Important</td>
+              </tr>
+              <tr>
+                <td className="border p-2">Daily Study Hours</td>
+                <td className="border p-2">8-12 hours/day</td>
+                <td className="border p-2">4-6 hours/day</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="border p-2">Coaching Value</td>
+                <td className="border p-2">High (30-40% benefit)</td>
+                <td className="border p-2">Moderate (15-20% benefit)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ),
+    },
+    {
+      id: "financial-impact",
+      title: "Financial Impact: Total Cost vs Lifetime Earnings",
+      content: (
+        <div className="space-y-4">
+          <h3 className="font-bold text-lg mt-4">Cost of Preparation</h3>
+          <div className="space-y-3">
+            <div className="border-l-4 border-blue-600 pl-4">
+              <p className="font-bold">UPSC Preparation Cost (18-24 months):</p>
+              <ul className="list-disc pl-6 text-sm mt-2 space-y-1">
+                <li>Coaching fees: ₹2,00,000-5,00,000</li>
+                <li>Books & materials: ₹50,000</li>
+                <li>Living expenses (no income): 18-24 months × ₹30,000/month = ₹5,40,000-7,20,000</li>
+                <li>Exam fees (multiple attempts): ₹1,000-2,000 × 2-3 attempts = ₹2,000-6,000</li>
+                <li><strong>Total Cost: ₹8-13 lakh</strong> (assumes no income during prep)</li>
+                <li>Risk: 90% fail even after this investment</li>
+              </ul>
+            </div>
+
+            <div className="border-l-4 border-green-600 pl-4">
+              <p className="font-bold">SSC Preparation Cost (6-12 months):</p>
+              <ul className="list-disc pl-6 text-sm mt-2 space-y-1">
+                <li>Coaching fees: ₹50,000-1,50,000</li>
+                <li>Books & materials: ₹20,000</li>
+                <li>Living expenses (some people work part-time): ₹3-6 lakh (if prep full-time)</li>
+                <li>Exam fees: ₹100-500 × 1-2 attempts = ₹100-1,000</li>
+                <li><strong>Total Cost: ₹2-8 lakh</strong> (lower if worked part-time)</li>
+                <li>Success rate: 10% (much higher than UPSC)</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">ROI (Return on Investment) Analysis</h3>
+          <div className="space-y-2 text-sm">
+            <p className="font-bold">UPSC ROI (if successful):</p>
+            <div className="bg-blue-50 p-3 rounded">
+              <p>Investment: ₹10 lakh | Lifetime earnings: ₹6.8 crore (30 years salary + pension)</p>
+              <p>ROI: 6,700% (6.8 crore / 10 lakh) | Payback period: 3 months</p>
+            </div>
+
+            <p className="font-bold mt-3">UPSC Expected Value (accounting for 90% failure risk):</p>
+            <div className="bg-red-50 p-3 rounded">
+              <p>Expected earnings: 10% × ₹6.8 crore = ₹68 lakh</p>
+              <p>Less investment: ₹68 lakh - ₹10 lakh = ₹58 lakh net gain (but 90% fail)</p>
+              <p>Verdict: High risk, ultra-high reward</p>
+            </div>
+
+            <p className="font-bold mt-3">SSC ROI (if successful):</p>
+            <div className="bg-green-50 p-3 rounded">
+              <p>Investment: ₹4 lakh | Lifetime earnings: ₹2.93 crore (30 years salary + pension)</p>
+              <p>ROI: 7,325% (2.93 crore / 4 lakh) | Payback period: 2 months</p>
+            </div>
+
+            <p className="font-bold mt-3">SSC Expected Value (accounting for 10% failure risk):</p>
+            <div className="bg-yellow-50 p-3 rounded">
+              <p>Expected earnings: 90% × ₹2.93 crore = ₹2.64 crore</p>
+              <p>Less investment: ₹2.64 crore - ₹4 lakh = ₹2.6 crore net gain (90% will succeed)</p>
+              <p>Verdict: Low risk, high reward</p>
+            </div>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Financial Decision Framework</h3>
+          <ul className="list-disc pl-6 space-y-2 text-sm">
+            <li><strong>If financially independent for 2 years:</strong> UPSC expected value is 2.3x higher than SSC. Worth the risk.</li>
+            <li><strong>If need income within 1 year:</strong> SSC is only option. 90% will succeed and earn ₹2.6 crore lifetime.</li>
+            <li><strong>If can work part-time while preparing:</strong> SSC becomes even better option (lower total cost).</li>
+            <li><strong>If exceptionally smart (top 1%):</strong> UPSC becomes more achievable, ROI increases further.</li>
+          </ul>
+        </div>
+      ),
+    },
+    {
+      id: "interview-preparation-both",
+      title: "Interview Preparation: UPSC vs SSC Format & Strategy",
+      content: (
+        <div className="space-y-4">
+          <h3 className="font-bold text-lg mt-4">UPSC Personality Test (1 hour, 275 marks = 10% of total)</h3>
+          <div className="bg-blue-50 p-4 rounded space-y-3">
+            <p className="font-bold text-sm">Interview Setup:</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>3-5 member panel of senior IAS/IFS officers</li>
+              <li>Formal setup in government building</li>
+              <li>Panel has your entire background (educational, family, hobbies)</li>
+              <li>Question style: Open-ended, testing ethics and decision-making</li>
+            </ul>
+
+            <p className="font-bold text-sm mt-2">Actual Sample Questions:</p>
+            <div className="space-y-1 text-sm">
+              <p><strong>Q:</strong> "You see a senior officer taking bribe. What will you do?"</p>
+              <p><strong>Expected Answer:</strong> "Report through proper channels (CBI/ACB), document evidence, protect myself. This is non-negotiable for civil service."</p>
+
+              <p className="font-bold mt-2"><strong>Q:</strong> "You're posted in riot-torn area. Develop a rehabilitation plan."</p>
+              <p><strong>Expected Answer:</strong> Discuss: immediate safety (police), medium-term (counseling, compensation), long-term (community trust building, economic rehabilitation).</p>
+
+              <p className="font-bold mt-2"><strong>Q:</strong> "Tell us about a failure you faced."</p>
+              <p><strong>Expected Answer:</strong> Specific failure (not too serious), what you learned, how you applied it. Demonstrates resilience + learning mindset.</p>
+            </div>
+
+            <p className="font-bold text-sm mt-3">Marking Criteria (Panel Perspective):</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>Emotional stability & stress management (25%)</li>
+              <li>Ethical compass & integrity (30%)</li>
+              <li>Communication clarity & articulation (20%)</li>
+              <li>Domain knowledge & awareness (15%)</li>
+              <li>Initiative & leadership potential (10%)</li>
+            </ul>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">SSC Interview (20 minutes, 50 marks = 7% of total)</h3>
+          <div className="bg-green-50 p-4 rounded space-y-3">
+            <p className="font-bold text-sm">Interview Setup:</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>1-2 member panel (usually one senior officer)</li>
+              <li>Casual setup (chair, table, relaxed atmosphere)</li>
+              <li>Focuses on basic competence and attitude</li>
+              <li>Lower stakes—mainly screening for unsuitability</li>
+            </ul>
+
+            <p className="font-bold text-sm mt-2">Typical Sample Questions:</p>
+            <div className="space-y-1 text-sm">
+              <p><strong>Q:</strong> "Tell us about yourself, your background."</p>
+              <p><strong>Expected:</strong> 2-minute brief intro with education, interests, why government job.</p>
+
+              <p className="font-bold mt-2"><strong>Q:</strong> "What are your strengths and weaknesses?"</p>
+              <p><strong>Expected:</strong> 1 real strength + 1 weakness you're improving. Honest answers preferred.</p>
+
+              <p className="font-bold mt-2"><strong>Q:</strong> "How will you handle multiple tasks at work?"</p>
+              <p><strong>Expected:</strong> "Prioritize, delegate, maintain work-life balance, ask for help if needed."</p>
+            </div>
+
+            <p className="font-bold text-sm mt-3">Marking Criteria (Panel Perspective):</p>
+            <ul className="list-disc pl-6 text-sm">
+              <li>Communication ability (30%)</li>
+              <li>Overall personality & maturity (40%)</li>
+              <li>Basic knowledge of job (20%)</li>
+              <li>Honesty & sincerity (10%)</li>
+            </ul>
+          </div>
+
+          <h3 className="font-bold text-lg mt-4">Interview Difficulty Comparison</h3>
+          <div className="space-y-2">
+            <p className="text-sm"><strong>UPSC Interview:</strong> Extremely challenging. Panel tries to find flaws in your character. Questions are ethical dilemmas, not textbook. Only 50-60% pass interview (even after clearing mains).</p>
+            <p className="text-sm"><strong>SSC Interview:</strong> Much easier. Panel just confirms you're not completely unsuitable. 80%+ pass interview (unless very poor communication or dishonesty detected).</p>
+            <p className="text-sm"><strong>Verdict:</strong> UPSC interview is 5x harder than SSC. Many candidates with good mains marks fail UPSC interview. SSC interview is rubber-stamp for most.</p>
+          </div>
+        </div>
+      ),
+    },
   ],
   whichShouldYouChoose: (
     <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
