@@ -17,8 +17,8 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { deriveLifecycle, type Lifecycle } from "@/lib/lifecycle";
 
-/** All organizations with at least one recruitment are indexable. */
-export const ORG_INDEX_MIN_RECRUITMENTS = 1;
+/** Every organization is indexable regardless of recruitment count. */
+export const ORG_INDEX_MIN_RECRUITMENTS = 0;
 
 export interface OrgRecruitment {
   id: number;
@@ -180,7 +180,7 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
     nextDeadline,
     roles,
     exams,
-    indexable: recruitments.length >= ORG_INDEX_MIN_RECRUITMENTS,
+    indexable: true,
   };
 }
 
@@ -193,12 +193,11 @@ export async function listIndexableOrganizations(): Promise<{ slug: string; upda
   const result = await db.execute(sql`
     SELECT o.slug, max(r.updated_at) AS updated_at
     FROM organizations o
-    JOIN recruitments r ON r.organization_id = o.id
+    LEFT JOIN recruitments r ON r.organization_id = o.id
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
     WHERE o.merged_into_id IS NULL
     GROUP BY o.id, o.slug
-    HAVING count(*) >= ${ORG_INDEX_MIN_RECRUITMENTS}
-    ORDER BY count(*) DESC
+    ORDER BY count(r.id) DESC
   `);
   return rowsOf<{ slug: string; updated_at: Date | string | null }>(result).map((r) => ({
     slug: r.slug,
