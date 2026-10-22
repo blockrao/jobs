@@ -463,6 +463,88 @@
   text-decoration: underline;
 }
 
+/* ── Alert signup ── */
+.alertSignup {
+  margin: 18px 0 0;
+  padding: 16px 14px;
+  background: var(--hub-blue-t);
+  border: 1px solid #c7d6fb;
+  border-radius: 10px;
+}
+.alertContent {
+  max-width: 100%;
+}
+.alertTitle {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--hub-blue-d);
+}
+.alertDescription {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--hub-blue-d);
+  opacity: 0.85;
+}
+.alertForm {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+.alertInput {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #c7d6fb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--hub-ink);
+  font-size: 14px;
+  font-family: var(--hub-font-body);
+}
+.alertInput:focus {
+  outline: none;
+  border-color: var(--hub-blue);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+}
+.alertInput::placeholder {
+  color: var(--hub-ink3);
+}
+.btnAlertPrimary {
+  background: var(--hub-blue);
+  border-color: var(--hub-blue);
+  color: #fff;
+  padding: 8px 16px;
+  min-height: 40px;
+}
+.btnAlertPrimary:hover {
+  background: var(--hub-blue-d);
+  border-color: var(--hub-blue-d);
+}
+.btnAlertPrimary:disabled {
+  background: #cbd5e1;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+}
+.alertSuccess {
+  padding: 10px 12px;
+  background: #e7f6ee;
+  border: 1px solid #bfe6cd;
+  border-radius: 8px;
+  color: var(--hub-green);
+  font-size: 13px;
+  font-weight: 500;
+}
+.alertSuccess p {
+  margin: 0;
+}
+.alertError {
+  margin: 8px 0 0;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 /* ── Mobile ── */
 @media (max-width: 720px) {
   .glance,

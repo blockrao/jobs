@@ -7,6 +7,7 @@
 
 import type { HubData } from './types';
 import { lifecycleChip } from '../recruitment-hub';
+import AlertSignup from './alert-signup';
 import styles from '../recruitment-hub.module.css';
 
 function daysLeftChip(daysLeft: number | null, closed: boolean): string | null {
@@ -118,6 +119,12 @@ export default function HubHeader({ data }: { data: HubData }) {
       </p>
 
       {noticeLine && <p className={styles.notice}>{noticeLine}</p>}
+
+      {/* Alert signup CTA */}
+      <AlertSignup
+        recruitmentName={heading}
+        recruitmentSlug={slug}
+      />
 
       {/* Trust signals and reporting */}
       <div className={styles.trustFooter}>
