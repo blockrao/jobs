@@ -543,6 +543,19 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
   if (jobType) glance.push({ label: 'Job type', value: jobType });
   if (state) glance.push({ label: 'Location', value: state.name, href: state.href });
   else if (locationText) glance.push({ label: 'Location', value: locationText });
+
+  // PHASE 2: Display official application URL if it exists
+  // (Show even when closed so candidates know where to apply next time)
+  const officialApplicationUrlValue = publicLink(str(recruitment.officialApplicationUrl));
+  if (officialApplicationUrlValue && officialApplicationUrlValue !== notificationUrl) {
+    glance.push({
+      label: 'Official portal',
+      value: officialApplicationUrlValue,
+      href: officialApplicationUrlValue,
+      verificationNote: recruitment.officialLinkSource === 'MANUAL_VERIFIED' ? 'verified' : undefined,
+    });
+  }
+
   glance.push({
     label: 'Age limit',
     value: ageNote,
