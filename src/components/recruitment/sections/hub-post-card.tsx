@@ -48,7 +48,6 @@ export default function HubPostCard({
 
   // Determine container styling
   const containerClass = isSinglePost ? styles.card : styles.card;
-  const headerLevel = isSinglePost ? 'h2' : 'h2';
 
   // Transform ageRules to ageBreakdown format
   const ageBreakdown = ageRules
@@ -60,12 +59,10 @@ export default function HubPostCard({
       }))
     : [];
 
-  const Header = headerLevel as keyof JSX.IntrinsicElements;
-
   return (
     <div className={containerClass}>
       {!isSinglePost && (
-        <Header
+        <h3
           style={{
             fontSize: 18,
             fontWeight: 600,
@@ -74,7 +71,7 @@ export default function HubPostCard({
           }}
         >
           {href ? <Link href={href}>{name}</Link> : name}
-        </Header>
+        </h3>
       )}
 
       {isSinglePost && (

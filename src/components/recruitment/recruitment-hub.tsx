@@ -55,10 +55,13 @@ import HubBreadcrumb from './sections/hub-breadcrumb';
 import HubHeader from './sections/hub-header';
 import HubToc from './sections/hub-toc';
 import HubDetails from './sections/hub-details';
-import HubPosts from './sections/hub-posts';
+import HubKeyMetrics from './sections/hub-key-metrics';
+import HubDates from './sections/hub-dates';
+import HubVacancyBreakdown from './sections/hub-vacancy-breakdown';
+import HubAgeByCategory from './sections/hub-age-by-category';
+import HubEligibilityDetailed from './sections/hub-eligibility-detailed';
 import HubEligibility from './sections/hub-eligibility';
 import HubPayFee from './sections/hub-pay-fee';
-import HubDates from './sections/hub-dates';
 import HubSelection from './sections/hub-selection';
 import HubApply from './sections/hub-apply';
 import HubDocuments from './sections/hub-documents';
@@ -578,7 +581,6 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
   // how-to-apply, job type, location, posts (for long-tail discovery).
   const faqItems: FaqItem[] = [];
   const subject = composed.heading;
-  const orgAndJob = orgName ? `${orgName} ${postNames.length === 1 ? postNames[0] : 'job'}` : subject;
   const postList = postNames.length > 0 ? postNames.join(', ') : null;
 
   // Q1: Application deadline (critical long-tail query)
@@ -806,6 +808,10 @@ export function lifecycleChip(data: HubData): { text: string; tone: 'open' | 'cl
 
 export default function RecruitmentHub({ data }: RecruitmentHubProps) {
   const has = (id: HubSectionId) => data.sections.includes(id);
+  const isSinglePost = data.postRows.length === 1;
+
+  // Determine application status for HubKeyMetrics
+  const applicationStatus: 'open' | 'closed' | 'extended' = data.closed ? 'closed' : 'open';
 
   return (
     <div className={styles.page}>
@@ -816,9 +822,173 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           <HubHeader data={data} />
           <HubToc data={data} />
 
+          {/* Key metrics at the top (critical info first) */}
+          {data.postRows.length > 0 && (
+            <HubKeyMetrics
+              applicationDeadline={data.appEnd}
+              daysUntilDeadline={data.daysLeft}
+              postsCount={data.postRows.length}
+              vacanciesCount={data.totalVacancies}
+              examDate={data.recruitment?.examDate ? formatDate(data.recruitment.examDate) : undefined}
+              applicationStatus={applicationStatus}
+            />
+          )}
+
           <HubDetails data={data} />
           {has('dates') && <HubDates data={data} />}
-          {has('posts') && <HubPosts data={data} />}
+
+          {/* Posts section with vacancy breakdown, age by category, and eligibility details */}
+          {has('posts') && data.postRows.length > 0 && (
+            <section id="posts" aria-labelledby="posts-heading" className={styles.card}>
+              <h2 id="posts-heading" className={styles.sectionTitle}>
+                Posts &amp; vacancies <span className={styles.count}>({data.postRows.length})</span>
+              </h2>
+
+              {data.postRows.map((postRow, index) => {
+                // Find the corresponding post from data.posts for ageRules
+                const postData = data.posts.find((p) => p.id === postRow.id);
+
+                return (
+                  <div
+                    key={postRow.id}
+                    style={{
+                      marginTop: index > 0 ? 20 : 0,
+                      paddingTop: index > 0 ? 20 : 0,
+                      borderTop: index > 0 ? `1px solid var(--hub-line)` : 'none',
+                    }}
+                  >
+                    {/* Post name as H3 for multi-post, section content for single-post */}
+                    {!isSinglePost && (
+                      <h3
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 600,
+                          marginBottom: 12,
+                          marginTop: 0,
+                        }}
+                      >
+                        {postRow.href ? <a href={postRow.href}>{postRow.name}</a> : postRow.name}
+                      </h3>
+                    )}
+
+                    {/* Key details grid */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '12px 16px',
+                        fontSize: 14,
+                        marginBottom: 16,
+                      }}
+                    >
+                      {postRow.vacanciesLabel && (
+                        <>
+                          <dt style={{ color: 'var(--hub-ink3)' }}>Vacancies</dt>
+                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.vacanciesLabel}</dd>
+                        </>
+                      )}
+                      {postRow.qualification && (
+                        <>
+                          <dt style={{ color: 'var(--hub-ink3)' }}>Qualification</dt>
+                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.qualification}</dd>
+                        </>
+                      )}
+                      {postRow.experience && (
+                        <>
+                          <dt style={{ color: 'var(--hub-ink3)' }}>Experience</dt>
+                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.experience}</dd>
+                        </>
+                      )}
+                      {postRow.pay && (
+                        <>
+                          <dt style={{ color: 'var(--hub-ink3)' }}>Pay</dt>
+                          <dd style={{ fontWeight: 500, margin: 0 }}>{postRow.pay}</dd>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Vacancy breakdown table */}
+                    {postRow.vacancyBreakdown && postRow.vacancyBreakdown.length > 0 && (
+                      <HubVacancyBreakdown
+                        postTitle={postRow.name}
+                        vacancyBreakdown={postRow.vacancyBreakdown}
+                        total={postRow.vacancyBreakdown.reduce((sum, cat) => sum + cat.count, 0)}
+                      />
+                    )}
+
+                    {/* Age by category table */}
+                    {postRow.ageBreakdown && postRow.ageBreakdown.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <HubAgeByCategory
+                          postTitle={postRow.name}
+                          ageBreakdown={postRow.ageBreakdown}
+                        />
+                      </div>
+                    )}
+
+                    {/* Eligibility details */}
+                    {postData?.eligibilities && postData.eligibilities.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        {postData.eligibilities.map((elig, eligIndex) => {
+                          // Extract eligibility fields safely
+                          const eligData = asRecord(elig) ?? {};
+                          const physicalReqs = str(
+                            eligData.physicalRequirements ||
+                            eligData.physical_requirements ||
+                            null,
+                          );
+                          const experienceText = str(
+                            eligData.experienceText || eligData.experience_text || null,
+                          );
+                          const citizenship = str(
+                            eligData.citizenship || null,
+                          );
+                          const domicileType = str(
+                            eligData.domicileType || eligData.domicile_type || null,
+                          );
+
+                          // Only render if there's actual data
+                          if (!physicalReqs && !experienceText && !citizenship && !domicileType) {
+                            return null;
+                          }
+
+                          return (
+                            <HubEligibilityDetailed
+                              key={eligIndex}
+                              postTitle={postRow.name}
+                              eligibility={{
+                                domicile: domicileType,
+                                citizenship: citizenship,
+                                skills: null,
+                                physicalRequirements: physicalReqs,
+                                experience: experienceText,
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Apply button per post */}
+                    {!isSinglePost && (
+                      <div style={{ marginTop: 16 }}>
+                        <a href="#apply" className={`${styles.btn} ${styles.btnPrimary}`}>
+                          Apply for {postRow.name}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {data.anyVacancyUnverified && (
+                <p className={styles.note} style={{ marginTop: 16 }}>
+                  * Vacancy count reported by the source listing, not yet confirmed against the official notification.
+                </p>
+              )}
+            </section>
+          )}
+
           {has('eligibility') && <HubEligibility data={data} />}
           {(has('pay') || has('fee')) && <HubPayFee data={data} />}
           {has('selection') && <HubSelection data={data} />}

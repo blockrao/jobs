@@ -20,8 +20,8 @@ export default function HubDates({ data }: { data: HubData }) {
   // Build metadata summary if any are present
   const metadataParts: string[] = [];
 
-  if (recruitment?.advertisement_number) {
-    metadataParts.push(`Advertisement #: ${recruitment.advertisement_number}`);
+  if (recruitment?.advertisementNumber) {
+    metadataParts.push(`Advertisement #: ${recruitment.advertisementNumber}`);
   }
   if (notificationNumber) {
     metadataParts.push(`Notification #: ${notificationNumber}`);
