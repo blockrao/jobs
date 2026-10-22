@@ -442,6 +442,27 @@
   font-style: italic;
 }
 
+/* ── Trust signals & reporting ── */
+.trustFooter {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hub-line);
+  text-align: center;
+}
+.trustText {
+  color: var(--hub-ink3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.reportLink {
+  color: var(--hub-blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+.reportLink:hover {
+  text-decoration: underline;
+}
+
 /* ── Mobile ── */
 @media (max-width: 720px) {
   .glance,

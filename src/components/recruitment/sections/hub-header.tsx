@@ -24,10 +24,27 @@ function WhatsAppIcon() {
   );
 }
 
+function EmailIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" strokeWidth="2"/>
+      <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" fill="none"/>
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M12 2v10M5.586 7.586a2 2 0 1 1 2.828 0" stroke="currentColor" strokeWidth="2" fill="none"/>
+    </svg>
+  );
+}
+
 export default function HubHeader({ data }: { data: HubData }) {
   const {
     heading, summary, applyUrl, notificationUrl, whatsappUrl, noticeLine,
-    closed, daysLeft, verified, updatedAtLabel,
+    closed, daysLeft, verified, updatedAtLabel, slug,
   } = data;
 
   const status = lifecycleChip(data);
@@ -48,13 +65,26 @@ export default function HubHeader({ data }: { data: HubData }) {
     ? { label: 'Official notification', href: notificationUrl }
     : null;
 
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const emailSubject = encodeURIComponent(`Check out: ${heading}`);
+  const emailBody = encodeURIComponent(`I found this job posting: ${heading}\n\nLink: ${currentUrl}`);
+  const emailUrl = `mailto:?subject=${emailSubject}&body=${emailBody}`;
+
+  const handleCopyLink = () => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(currentUrl).then(() => {
+        alert('Link copied to clipboard!');
+      });
+    }
+  };
+
   return (
     <header className={`${styles.card} ${styles.hero}`}>
       <ul className={styles.chips}>
         {status && <li className={`${styles.chip} ${toneClass}`}>{status.text}</li>}
         {days && <li className={`${styles.chip} ${styles.chipUrgent}`}>{days}</li>}
         {verified
-          ? <li className={styles.chip}>Verified against official PDF</li>
+          ? <li className={styles.chip}>✓ Verified against official PDF</li>
           : notificationUrl
           ? <li className={styles.chip}>From official notification</li>
           : null}
@@ -77,11 +107,25 @@ export default function HubHeader({ data }: { data: HubData }) {
             </a>
           )}
           <a className={`${styles.btn} ${styles.btnGhost}`} href={whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp">
-            <WhatsAppIcon /> Share
+            <WhatsAppIcon /> WhatsApp
           </a>
+          <a className={`${styles.btn} ${styles.btnGhost}`} href={emailUrl} aria-label="Share via Email">
+            <EmailIcon /> Email
+          </a>
+          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={handleCopyLink} aria-label="Copy link">
+            <ShareIcon /> Copy
+          </button>
       </p>
 
       {noticeLine && <p className={styles.notice}>{noticeLine}</p>}
+
+      {/* Trust signals and reporting */}
+      <div className={styles.trustFooter}>
+        <small className={styles.trustText}>
+          🔒 Data verified against official notification •
+          <a href={`/report?page=${encodeURIComponent(currentUrl)}`} className={styles.reportLink}> Report an error</a>
+        </small>
+      </div>
     </header>
   );
 }
