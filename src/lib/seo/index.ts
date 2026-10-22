@@ -83,7 +83,13 @@ export function pageSeo(
         follow: true,
         ...(opts.noarchive ? { noarchive: true } : {}),
       }
-    : undefined;
+    : {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      };
   return {
     alternates: { canonical: path },
     robots,

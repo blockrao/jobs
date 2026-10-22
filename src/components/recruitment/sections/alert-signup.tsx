@@ -20,13 +20,13 @@ export default function AlertSignup({ recruitmentName, recruitmentSlug, email }:
     setError('');
     setLoading(true);
 
-    if (!userEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setError('Please enter a valid email address');
-      setLoading(false);
-      return;
-    }
-
     try {
+      if (!userEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        setError('Please enter a valid email address');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/alerts/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,12 +42,16 @@ export default function AlertSignup({ recruitmentName, recruitmentSlug, email }:
         setUserEmail('');
         setTimeout(() => setSubmitted(false), 5000);
       } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to subscribe. Please try again.');
+        try {
+          const data = await response.json();
+          setError(data.error || 'Failed to subscribe. Please try again.');
+        } catch {
+          setError('Failed to subscribe. Please try again.');
+        }
       }
     } catch (err) {
       setError('Something went wrong. Please try again.');
-      console.error(err);
+      console.error('Alert subscription error:', err);
     } finally {
       setLoading(false);
     }

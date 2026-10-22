@@ -39,6 +39,10 @@ function str(value: unknown): string | null {
 export default function HubPostsExpandable({ postRows, posts }: HubPostsExpandableProps) {
   const [expandedId, setExpandedId] = useState<number | string | null>(null);
 
+  if (!postRows || postRows.length === 0) {
+    return <p>No posts available.</p>;
+  }
+
   const toggleExpand = (id: number | string) => {
     setExpandedId(expandedId === id ? null : id);
   };

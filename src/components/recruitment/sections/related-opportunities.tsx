@@ -6,8 +6,13 @@ interface RelatedOpportunitiesProps {
 }
 
 export default function RelatedOpportunities({ data }: RelatedOpportunitiesProps) {
-  // Show explore opportunities (similar jobs)
-  if (!data.explore || data.explore.length === 0) {
+  try {
+    // Show explore opportunities (similar jobs)
+    if (!data || !data.explore || data.explore.length === 0) {
+      return null;
+    }
+  } catch (error) {
+    console.error('RelatedOpportunities error:', error);
     return null;
   }
 
