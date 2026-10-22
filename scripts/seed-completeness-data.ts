@@ -158,7 +158,7 @@ function generatePostingLocations(
     Punjab: ['Chandigarh', 'Amritsar', 'Ludhiana'],
     Rajasthan: ['Jaipur', 'Jodhpur', 'Udaipur', 'Ajmer'],
     Sikkim: ['Gangtok'],
-    Tamil Nadu: ['Chennai', 'Coimbatore', 'Madurai'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
     Tripura: ['Agartala'],
     'Uttar Pradesh': [
       'Lucknow',
