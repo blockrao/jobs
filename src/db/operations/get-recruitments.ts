@@ -496,6 +496,10 @@ export async function getRecruitmentWithPosts(slug: string) {
     };
   } catch (err) {
     console.error("Error fetching recruitment with posts:", err);
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+    }
     return null;
   }
 }
