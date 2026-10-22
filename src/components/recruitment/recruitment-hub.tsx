@@ -72,6 +72,7 @@ import HubExplore from './sections/hub-explore';
 import HubPostsExpandable from './sections/hub-posts-expandable';
 import HubPostingLocations from './sections/hub-posting-locations';
 import HubCutoffMarks from './sections/hub-cutoff-marks';
+import HubJobDescriptions from './sections/hub-job-descriptions';
 import RelatedOpportunities from './sections/related-opportunities';
 import HubFaqEnhanced from './sections/hub-faq-enhanced';
 
@@ -965,6 +966,7 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           )}
 
           <HubPostingLocations data={data} />
+          <HubJobDescriptions posts={data.posts} />
           <HubCutoffMarks data={data} />
 
           {has('eligibility') && <HubEligibility data={data} />}
