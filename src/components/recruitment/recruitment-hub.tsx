@@ -69,6 +69,7 @@ import HubLinks from './sections/hub-links';
 import HubSource from './sections/hub-source';
 import HubFaq from './sections/hub-faq';
 import HubExplore from './sections/hub-explore';
+import HubPostsExpandable from './sections/hub-posts-expandable';
 
 // Outfit for headings (Inter for body is loaded by the root shell). Loaded
 // through @fontsource like Inter, not through a Google Fonts link.
@@ -839,66 +840,17 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           <HubDetails data={data} />
           {has('dates') && <HubDates data={data} />}
 
-          {/* Posts section - consolidated table for market-competitive design */}
+          {/* Posts section - consolidated expandable table */}
           {has('posts') && data.postRows.length > 0 && (
             <section id="posts" aria-labelledby="posts-heading" className={styles.card}>
               <h2 id="posts-heading" className={styles.sectionTitle}>
                 Posts &amp; vacancies <span className={styles.count}>({data.postRows.length})</span>
               </h2>
 
-              {/* Consolidated posts table */}
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid var(--hub-line)', backgroundColor: 'var(--hub-bg2)' }}>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--hub-ink2)' }}>Post Name</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: 600, color: 'var(--hub-ink2)' }}>Vacancies</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: 600, color: 'var(--hub-ink2)' }}>Age Limit</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--hub-ink2)' }}>Qualification</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--hub-ink2)' }}>Experience</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.postRows.map((postRow) => {
-                      const postData = data.posts.find((p) => p.id === postRow.id);
-                      const qualText = postData?.eligibilities?.[0]
-                        ? str(postData.eligibilities[0].qualification_text || postData.eligibilities[0].qualificationText)
-                        : postRow.qualification;
-                      const expText = postData?.eligibilities?.[0]
-                        ? str(postData.eligibilities[0].experience_text || postData.eligibilities[0].experienceText)
-                        : postRow.experience;
-
-                      return (
-                        <tr key={postRow.id} style={{ borderBottom: '1px solid var(--hub-line)' }}>
-                          <td style={{ padding: '12px 8px', fontWeight: 500 }}>
-                            {postRow.href ? <a href={postRow.href} style={{ color: 'var(--hub-link)' }}>{postRow.name}</a> : postRow.name}
-                          </td>
-                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                            {postRow.vacanciesLabel || '—'}
-                          </td>
-                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                            {postData?.eligibilities?.[0]?.age_max || postData?.eligibilities?.[0]?.ageMax ? `${postData.eligibilities[0].age_max || postData.eligibilities[0].ageMax} years` : '—'}
-                          </td>
-                          <td style={{ padding: '12px 8px', fontSize: 13, color: 'var(--hub-ink2)' }}>
-                            {qualText ? qualText.substring(0, 60) + (qualText.length > 60 ? '...' : '') : '—'}
-                          </td>
-                          <td style={{ padding: '12px 8px', fontSize: 13, color: 'var(--hub-ink2)' }}>
-                            {expText ? expText.substring(0, 50) + (expText.length > 50 ? '...' : '') : '—'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <HubPostsExpandable postRows={data.postRows} posts={data.posts} />
 
               <p style={{ fontSize: 12, color: 'var(--hub-ink3)', marginTop: 12, marginBottom: 0 }}>
-                Click on post name for full details, vacancy breakdown by category (UR/OBC/SC/ST/EWS/PwBD), and complete eligibility criteria.
+                💡 Click the expand icon or post name to view full eligibility criteria, vacancy breakdown by category (UR/OBC/SC/ST/EWS/PwBD), and age limits.
               </p>
 
               {data.anyVacancyUnverified && (
