@@ -17,8 +17,8 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { deriveLifecycle, type Lifecycle } from "@/lib/lifecycle";
 
-/** Organizations with fewer recruitments on record than this are noindex (thin). */
-export const ORG_INDEX_MIN_RECRUITMENTS = 3;
+/** All organizations with at least one recruitment are indexable. */
+export const ORG_INDEX_MIN_RECRUITMENTS = 1;
 
 export interface OrgRecruitment {
   id: number;
