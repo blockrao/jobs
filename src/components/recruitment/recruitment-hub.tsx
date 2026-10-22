@@ -857,8 +857,8 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
                       borderTop: index > 0 ? `1px solid var(--hub-line)` : 'none',
                     }}
                   >
-                    {/* Post name as H3 for multi-post, section content for single-post */}
-                    {!isSinglePost && (
+                    {/* Post name as H3 for multi-post, or as first row for single-post */}
+                    {!isSinglePost ? (
                       <h3
                         style={{
                           fontSize: 18,
@@ -869,6 +869,10 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
                       >
                         {postRow.href ? <a href={postRow.href}>{postRow.name}</a> : postRow.name}
                       </h3>
+                    ) : (
+                      <div style={{ marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
+                        {postRow.href ? <a href={postRow.href}>{postRow.name}</a> : postRow.name}
+                      </div>
                     )}
 
                     {/* Key details grid */}
