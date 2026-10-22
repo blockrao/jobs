@@ -800,15 +800,19 @@ export function buildHubData(
   const sanitizedPosts = toPlainJSON(posts) as typeof posts;
 
   // Phase 3-5: Process posting locations and cutoff marks
+  // Sanitize posting locations data to ensure it's serializable
+  const sanitizedPostingLocationsData = toPlainJSON(postingLocationsData) as typeof postingLocationsData;
   const postingLocations = Array.from(
     new Set(
-      postingLocationsData
+      sanitizedPostingLocationsData
         .map((loc) => loc.city)
         .filter((city): city is string => Boolean(city))
     )
   ).sort();
 
-  const cutoffMarks = cutoffMarksData
+  // Sanitize cutoff marks data and process
+  const sanitizedCutoffMarksData = toPlainJSON(cutoffMarksData) as typeof cutoffMarksData;
+  const cutoffMarks = sanitizedCutoffMarksData
     .map((cm) => ({
       category: str(cm.category) || 'Unknown',
       marks: str(cm.cutoffMarks),
