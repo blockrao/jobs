@@ -4,7 +4,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  applicationName: "JobOye - Your Search Partner in Govt Jobs",
+  applicationName: "JobOye — India's Best Portal For Govt Job Seekers",
   title: {
     default: `${SITE_NAME} — Govt & Private Job Notifications, Results, Guides`,
     template: `%s | ${SITE_NAME}`,
