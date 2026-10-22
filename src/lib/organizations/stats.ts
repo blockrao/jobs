@@ -94,7 +94,7 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
       SELECT r.id, r.slug, r.name, r.status, r.notification_date, r.application_end_date,
              r.total_vacancies,
              (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count,
-             e.slug AS exam_slug, e.name AS exam_name
+             e.slug AS exam_slug, e.label AS exam_name
       FROM recruitments r
       LEFT JOIN exams e ON e.id = r.exam_id
       WHERE r.organization_id = ${organizationId}
