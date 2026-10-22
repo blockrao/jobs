@@ -112,35 +112,33 @@ export function CommissionContent({
             const displayEligibility =
               isHi && eligibilityHi ? eligibilityHi : exam.eligibility;
             return (
-              <Link key={exam.id} href={`/exams/${exam.slug}`}>
-                <div className="p-4 border border-black/10 rounded-lg hover:shadow-md transition-shadow cursor-pointer">
-                  <h3 className="font-semibold text-base mb-2">
-                    {displayLabel}
-                  </h3>
-                  <div className="text-sm text-neutral-600 space-y-1">
-                    {openCount > 0 && (
-                      <p>
-                        <span className="font-medium text-green-600">
-                          {openCount}{" "}
-                          {openCount !== 1 ? L.positions : L.position}
-                        </span>{" "}
-                        {L.open}
-                      </p>
-                    )}
-                    {exam.salaryMin && (
-                      <p>
-                        {L.salary}: ₹{exam.salaryMin.toLocaleString("en-IN")} - ₹
-                        {exam.salaryMax?.toLocaleString("en-IN")}
-                      </p>
-                    )}
-                    {displayEligibility && (
-                      <p className="text-xs">
-                        {L.eligibility}: {displayEligibility}
-                      </p>
-                    )}
-                  </div>
+              <div key={exam.id} className="p-4 border border-black/10 rounded-lg">
+                <h3 className="font-semibold text-base mb-2">
+                  {displayLabel}
+                </h3>
+                <div className="text-sm text-neutral-600 space-y-1">
+                  {openCount > 0 && (
+                    <p>
+                      <span className="font-medium text-green-600">
+                        {openCount}{" "}
+                        {openCount !== 1 ? L.positions : L.position}
+                      </span>{" "}
+                      {L.open}
+                    </p>
+                  )}
+                  {exam.salaryMin && (
+                    <p>
+                      {L.salary}: ₹{exam.salaryMin.toLocaleString("en-IN")} - ₹
+                      {exam.salaryMax?.toLocaleString("en-IN")}
+                    </p>
+                  )}
+                  {displayEligibility && (
+                    <p className="text-xs">
+                      {L.eligibility}: {displayEligibility}
+                    </p>
+                  )}
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
@@ -170,15 +168,19 @@ export function CommissionContent({
                 isHi && orgNameHi ? orgNameHi : posting.organization.name;
               const displayExamLabel =
                 isHi && examLabelHi ? examLabelHi : posting.exam?.label;
-              const detailHref = legacyPostingHref(posting) ?? "/jobs";
+              const detailHref = legacyPostingHref(posting);
               return (
                 <li key={posting.id} className="py-4">
-                  <Link
-                    href={detailHref}
-                    className="text-base font-semibold hover:underline block"
-                  >
-                    {displayTitle}
-                  </Link>
+                  {detailHref ? (
+                    <Link
+                      href={detailHref}
+                      className="text-base font-semibold hover:underline block"
+                    >
+                      {displayTitle}
+                    </Link>
+                  ) : (
+                    <span className="text-base font-semibold block">{displayTitle}</span>
+                  )}
                   <p className="text-sm text-neutral-600 mt-1">
                     {displayOrgName}
                     {posting.locationCity ? ` · ${posting.locationCity}` : ""} ·{" "}
