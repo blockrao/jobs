@@ -94,7 +94,7 @@ export default async function RecruitmentHubPage({ params }: Props) {
         },
         {
           question: `What is the application deadline for ${recruitment.name}?`,
-          answer: recruitment.application_end_date ? `Applications must be submitted by ${new Date(recruitment.application_end_date).toLocaleDateString('en-IN')}. Late applications will not be accepted.` : "Check the official notification for the application deadline."
+          answer: recruitment.applicationEndDate ? `Applications must be submitted by ${new Date(recruitment.applicationEndDate).toLocaleDateString('en-IN')}. Late applications will not be accepted.` : "Check the official notification for the application deadline."
         },
         {
           question: "How can I track my application status?",
