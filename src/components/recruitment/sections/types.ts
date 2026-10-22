@@ -46,7 +46,7 @@ export type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
     detailStatus?: string | null;
   } | null;
   /** Enriched data extracted from FJA pages */
-  enrichment_data?: Record<string, any> | null;
+  enrichmentData?: Record<string, any> | null;
 };
 
 export type RecruitmentHubPost = typeof posts.$inferSelect & {

@@ -101,7 +101,7 @@ export default async function RecruitmentHubPage({ params }: Props) {
           answer: "Visit the official recruitment portal and log in with your registration details to check your application status. You will also receive updates via email."
         }
       ]} />
-      <RecruitmentHub data={sanitizedHub} enrichment={recruitment.enrichment_data} />
+      <RecruitmentHub data={sanitizedHub} enrichment={recruitment.enrichmentData} />
     </>
   );
 }
