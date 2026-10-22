@@ -370,14 +370,14 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
       const vacancyMap = new Map<string, number>();
       for (const vacRow of post.vacancies) {
         const vacRecord = asRecord(vacRow);
-        const category = vacRecord?.category_type ?? vacRecord?.categoryType;
-        const count = Number(vacRecord?.count);
+        const category = vacRecord?.category ?? vacRecord?.categoryType;
+        const count = Number(vacRecord?.category_count ?? vacRecord?.count);
         if (typeof category === 'string' && Number.isFinite(count) && count > 0) {
           vacancyMap.set(category, (vacancyMap.get(category) ?? 0) + count);
         }
       }
       // Sort categories in a standard order
-      const categoryOrder = ['General', 'OBC', 'SC', 'ST', 'EWS', 'PwBD'];
+      const categoryOrder = ['UR', 'OBC', 'SC', 'ST', 'EWS', 'PwBD'];
       const sortedEntries = Array.from(vacancyMap.entries()).sort(([catA], [catB]) => {
         const indexA = categoryOrder.indexOf(catA);
         const indexB = categoryOrder.indexOf(catB);
@@ -392,9 +392,10 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     const ageBreakdown: PostTableRow['ageBreakdown'] = [];
     if (post.ageRules && Array.isArray(post.ageRules)) {
       for (const rule of post.ageRules) {
-        const categoryName = str(rule.category);
-        const maxAge = Number.isFinite(rule.maxAge) ? rule.maxAge : null;
-        const relaxation = Number.isFinite(rule.relaxationYears) ? rule.relaxationYears : undefined;
+        const ruleRecord = asRecord(rule);
+        const categoryName = str(ruleRecord?.category);
+        const maxAge = Number.isFinite(ruleRecord?.max_age) ? ruleRecord.max_age : null;
+        const relaxation = Number.isFinite(ruleRecord?.relaxation_years) ? ruleRecord.relaxation_years : undefined;
         if (categoryName) {
           ageBreakdown.push({ categoryName, maxAge, ...(relaxation !== undefined && { relaxation }) });
         }
