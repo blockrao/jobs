@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Hub Header — hero
  * Chips (lifecycle, days left, verification, updated) → H1 → plain summary →
