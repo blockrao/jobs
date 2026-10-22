@@ -1,3 +1,5 @@
+'use client';
+
 import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
 
