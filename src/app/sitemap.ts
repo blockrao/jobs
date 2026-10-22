@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
 import { getAllHubs } from "@/data/hubs-metadata";
+import { QUALIFICATIONS } from "@/lib/qualifications";
 
 /**
  * Sitemap follows the URL contract (2026-10-20) exactly:
@@ -48,6 +49,14 @@ const STATIC: MetadataRoute.Sitemap = [
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.7,
+  })),
+  // Qualification hub index + individual qualification pages
+  { url: `${SITE_URL}/qualifications`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
+  ...QUALIFICATIONS.map((q) => ({
+    url: `${SITE_URL}/qualifications/${q.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "daily" as const,
+    priority: 0.75,
   })),
 ];
 

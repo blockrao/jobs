@@ -7,6 +7,7 @@ import {
   listLivePostsByQualification,
   countLivePostsByQualification,
 } from "@/lib/queries";
+
 import { safeQuery } from "@/lib/safe-query";
 import { parsePage } from "@/lib/pagination";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
@@ -39,15 +40,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const title = `${hub.label} 2026${page > 1 ? ` — Page ${page}` : ""} — Sarkari Naukri`;
   const description = `${hub.description} Updated daily with the latest government job notifications, vacancy counts and last dates.`;
 
-  // Check if hub has any live postings; noindex empty hubs
-  const total = await countLivePostsByQualification(hub.namePattern).catch(() => 0);
-  const robots = total === 0 ? { index: false } : undefined;
-
   return {
     title,
     description,
     ...pageSeo(path),
-    robots,
     openGraph: {
       title,
       description,
