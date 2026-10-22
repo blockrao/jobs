@@ -393,9 +393,10 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     if (post.ageRules && Array.isArray(post.ageRules)) {
       for (const rule of post.ageRules) {
         const ruleRecord = asRecord(rule);
-        const categoryName = str(ruleRecord?.category);
-        const maxAge = Number.isFinite(ruleRecord?.max_age) ? ruleRecord.max_age : null;
-        const relaxation = Number.isFinite(ruleRecord?.relaxation_years) ? ruleRecord.relaxation_years : undefined;
+        if (!ruleRecord) continue;
+        const categoryName = str(ruleRecord.category);
+        const maxAge = Number.isFinite(Number(ruleRecord.max_age)) ? Number(ruleRecord.max_age) : null;
+        const relaxation = Number.isFinite(Number(ruleRecord.relaxation_years)) ? Number(ruleRecord.relaxation_years) : undefined;
         if (categoryName) {
           ageBreakdown.push({ categoryName, maxAge, ...(relaxation !== undefined && { relaxation }) });
         }
