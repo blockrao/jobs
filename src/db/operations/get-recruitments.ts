@@ -140,6 +140,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     let recruitmentResult = await db
       .select({
         recruitment: recruitments,
+        enrichmentData: recruitments.enrichmentData,
         organizationName: organizations.name,
         organizationSlug: organizations.slug,
         organizationSector: organizations.sector,
@@ -165,6 +166,7 @@ export async function getRecruitmentWithPosts(slug: string) {
         recruitmentResult = await db
           .select({
             recruitment: recruitments,
+            enrichmentData: recruitments.enrichmentData,
             organizationName: organizations.name,
             organizationSlug: organizations.slug,
             organizationSector: organizations.sector,
@@ -188,6 +190,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       recruitmentResult = await db
         .select({
           recruitment: recruitments,
+          enrichmentData: recruitments.enrichmentData,
           organizationName: organizations.name,
           organizationSlug: organizations.slug,
           organizationSector: organizations.sector,
@@ -218,6 +221,7 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     const recruitment = {
       ...recruitmentResult[0].recruitment,
+      enrichmentData: recruitmentResult[0].enrichmentData,
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
       organizationSector: recruitmentResult[0].organizationSector as string,
