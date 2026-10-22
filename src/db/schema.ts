@@ -1334,6 +1334,9 @@ export const recruitments = pgTable(
     salaryNote: text("salary_note"), // e.g., "Level 2, Rs. 9300-34800 + DA"
     salaryBreakdown: jsonb("salary_breakdown"), // Structured: {basicPay, maxPay, dAApplicable}
 
+    // Enriched data extracted from FJA pages (At a Glance, Important Dates, Selection Process, etc.)
+    enrichmentData: jsonb("enrichment_data").$type<Record<string, unknown>>(),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
