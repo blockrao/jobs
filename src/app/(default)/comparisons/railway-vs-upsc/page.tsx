@@ -130,8 +130,8 @@ const pageContent = {
     </div>
   ),
   relatedPages: [
-    { title: "UPSC vs SSC", slug: "upsc-vs-ssc" },
-    { title: "Railway Salary Guide", slug: "railway-salary-guide" },
+    { title: "UPSC vs SSC", slug: "upsc-vs-ssc", type: "comparison" },
+    { title: "Railway Salary Guide", slug: "railway-salary-guide", type: "salary" },
   ],
   faqs: [
     {

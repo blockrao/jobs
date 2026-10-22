@@ -159,8 +159,8 @@ const pageContent = {
     </div>
   ),
   relatedPages: [
-    { title: "Engineering Government Jobs", slug: "engineering-government-jobs" },
-    { title: "PSU Salary Comparison", slug: "psu-salary-comparison" },
+    { title: "Engineering Government Jobs", slug: "engineering-government-jobs", type: "qualification" },
+    { title: "PSU Salary Comparison", slug: "psu-salary-comparison", type: "salary" },
   ],
   faqs: [
     {

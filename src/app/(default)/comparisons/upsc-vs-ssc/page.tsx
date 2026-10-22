@@ -268,9 +268,9 @@ const pageContent = {
     </div>
   ),
   relatedPages: [
-    { title: "SSC CHSL Government Jobs", slug: "b-a-government-jobs" },
-    { title: "IAS Government Jobs", slug: "engineering-government-jobs" },
-    { title: "Government Job Salary by Grade", slug: "government-job-salary-by-grade" },
+    { title: "SSC CHSL Government Jobs", slug: "b-a-government-jobs", type: "qualification" },
+    { title: "IAS Government Jobs", slug: "engineering-government-jobs", type: "qualification" },
+    { title: "Government Job Salary by Grade", slug: "government-job-salary-by-grade", type: "salary" },
   ],
   faqs: [
     {
