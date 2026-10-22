@@ -17,10 +17,13 @@ SET
     'gradesOrLevels', jsonb_build_array('Level 10', 'IAS'),
     'additionalBenefits', jsonb_build_array('DA', 'HRA', 'Medical', 'LTC')
   )
-WHERE title ILIKE '%UPSC%Civil%'
-  AND salary_note IS NULL
-  AND notification_text ILIKE '%salary%'
-LIMIT 10;
+WHERE id IN (
+  SELECT id FROM recruitments
+  WHERE title ILIKE '%UPSC%Civil%'
+    AND salary_note IS NULL
+    AND notification_text ILIKE '%salary%'
+  LIMIT 10
+);
 
 -- Example: SSC Combined Graduate Level Exam
 UPDATE recruitments
@@ -33,10 +36,13 @@ SET
     'gradesOrLevels', jsonb_build_array('Level 4', 'Level 5', 'Level 6'),
     'additionalBenefits', jsonb_build_array('DA', 'TA', 'HRA')
   )
-WHERE title ILIKE '%SSC%CGL%'
-  AND salary_note IS NULL
-  AND notification_text ILIKE '%salary%'
-LIMIT 20;
+WHERE id IN (
+  SELECT id FROM recruitments
+  WHERE title ILIKE '%SSC%CGL%'
+    AND salary_note IS NULL
+    AND notification_text ILIKE '%salary%'
+  LIMIT 20
+);
 
 -- Example: Bank PO Recruitment
 UPDATE recruitments
@@ -49,10 +55,13 @@ SET
     'gradesOrLevels', jsonb_build_array('Scale I', 'Scale II', 'Scale III'),
     'additionalBenefits', jsonb_build_array('DA', 'HRA', 'Bonus', 'Gratuity')
   )
-WHERE title ILIKE '%IBPS%PO%' OR title ILIKE '%Bank%Officer%'
-  AND salary_note IS NULL
-  AND notification_text ILIKE '%salary%'
-LIMIT 15;
+WHERE id IN (
+  SELECT id FROM recruitments
+  WHERE (title ILIKE '%IBPS%PO%' OR title ILIKE '%Bank%Officer%')
+    AND salary_note IS NULL
+    AND notification_text ILIKE '%salary%'
+  LIMIT 15
+);
 
 -- Example: Railway Recruitment
 UPDATE recruitments
@@ -65,10 +74,13 @@ SET
     'gradesOrLevels', jsonb_build_array('Level 5'),
     'additionalBenefits', jsonb_build_array('DA', 'TA', 'HRA', 'Medical')
   )
-WHERE title ILIKE '%Railway%' OR title ILIKE '%RRB%'
-  AND salary_note IS NULL
-  AND notification_text ILIKE '%salary%'
-LIMIT 25;
+WHERE id IN (
+  SELECT id FROM recruitments
+  WHERE (title ILIKE '%Railway%' OR title ILIKE '%RRB%')
+    AND salary_note IS NULL
+    AND notification_text ILIKE '%salary%'
+  LIMIT 25
+);
 
 -- Verify updates
 SELECT
