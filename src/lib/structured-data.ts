@@ -405,6 +405,83 @@ export function jsonLdGraph(...nodes: (Record<string, unknown> | null)[]) {
   };
 }
 
+/**
+ * JobCollection Schema for hub pages (qualifications, salary-guides, comparisons, etc.)
+ * Tells Google "this page is about multiple job opportunities"
+ * Improves SERP visibility for "government jobs by [category]"
+ */
+export function buildJobCollectionSchema(
+  pageTitle: string,
+  jobTitles: string[],
+  pageUrl: string,
+  description?: string,
+) {
+  return {
+    "@type": "CollectionPage",
+    "@id": `${pageUrl}#collection`,
+    name: pageTitle,
+    description: description || pageTitle,
+    url: pageUrl,
+    hasPart: jobTitles.map((title) => ({
+      "@type": "JobPosting",
+      title,
+      hiringOrganization: {
+        "@type": "GovernmentOrganization",
+        name: SITE_NAME,
+      },
+    })),
+  };
+}
+
+/**
+ * Enhanced Organization Schema for site-wide use
+ * Includes logo, social profiles, and jobPosting search action
+ */
+export function buildSiteOrganizationSchema() {
+  return {
+    "@type": "Organization",
+    "@id": `${SITE_URL}#organization`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+    description: "India's largest government job discovery platform - UPSC, SSC, banking, railway, state PSC jobs",
+    sameAs: [
+      "https://twitter.com/joboye",
+      "https://linkedin.com/company/joboye",
+    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "Customer Support",
+      email: "support@joboye.com",
+    },
+  };
+}
+
+/**
+ * LocalBusiness Schema for state-specific pages
+ * Improves visibility for location-based searches
+ */
+export function buildStateLandingPageSchema(
+  stateName: string,
+  stateCode: string,
+  pageUrl: string,
+  description?: string,
+) {
+  return {
+    "@type": "WebPage",
+    "@id": `${pageUrl}#page`,
+    name: `Government Jobs in ${stateName}`,
+    description: description || `Government job opportunities in ${stateName}`,
+    url: pageUrl,
+    image: undefined,
+    inLanguage: "en-IN",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}#website`,
+    },
+  };
+}
+
 export function postingTimelineToText(updates: PostingUpdate[]) {
   return updates
     .slice()

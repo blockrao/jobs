@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import SalaryGuideTemplate from "@/components/salary-guide-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "PSU Salary Comparison India 2025 - NTPC vs Indian Oil vs BHEL vs HAL",

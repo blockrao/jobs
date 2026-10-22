@@ -6,6 +6,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { pageSeo } from "@/lib/seo";
+import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Government Job Salary Guides | Pay Scale by Grade & Role",
@@ -47,8 +49,20 @@ const salaryGuides = [
 ];
 
 export default function SalaryGuidesPage() {
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Salary Guides", path: "/salary-guides" },
+    ]),
+  );
+
   return (
-    <main className="container mx-auto px-4 py-12">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <main className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-4">Government Job Salary Guides</h1>
         <p className="text-xl text-gray-600 mb-12">
@@ -106,5 +120,6 @@ export default function SalaryGuidesPage() {
         </section>
       </div>
     </main>
+    </>
   );
 }

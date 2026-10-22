@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import QualificationHubTemplate from "@/components/qualification-hub-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "M.Sc Government Jobs in India 2025 - Research, Lab, Scientist Roles",

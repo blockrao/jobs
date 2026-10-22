@@ -9,6 +9,7 @@ import { pageSeo } from "@/lib/seo";
 import SalaryGuideTemplate from "@/components/salary-guide-template";
 import CareerROICalculator from "@/components/career-roi-calculator";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "Highest Paying Government Jobs in India 2025 - Top Salary Positions",
@@ -706,7 +707,22 @@ const pageContent = {
 };
 
 export default function HighestPayingGovernmentJobsPage() {
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Salary Guides", path: "/salary-guides" },
+      { name: pageContent.title || "highest-paying-government-jobs", path: "/salary-guides/highest-paying-government-jobs" },
+    ]),
+    pageContent.faqs ? buildFAQSchema(pageContent.faqs) : null,
+  );
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      
     <>
       <SalaryGuideTemplate {...pageContent} />
 
@@ -719,5 +735,6 @@ export default function HighestPayingGovernmentJobsPage() {
         </div>
       </section>
     </>
+      </>
   );
 }

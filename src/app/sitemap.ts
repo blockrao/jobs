@@ -73,6 +73,16 @@ const STATIC: MetadataRoute.Sitemap = [
   { url: `${SITE_URL}/comparisons/railway-vs-upsc`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
   { url: `${SITE_URL}/comparisons/state-psc-vs-upsc`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
   { url: `${SITE_URL}/comparisons/gate-vs-civil-service`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  // Government Jobs Strategy Pages (Phase 3)
+  { url: `${SITE_URL}/government-jobs/age-limit-40-plus`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/age-limit-35-plus`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/age-relaxation`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/age-limit-exemption`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/by-location`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/delhi-government-jobs`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/maharashtra-government-jobs`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/no-exam-required`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
+  { url: `${SITE_URL}/government-jobs/walk-in-interviews`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.75 },
   // State pages
   { url: `${SITE_URL}/states`, lastModified: new Date(), changeFrequency: "daily" as const, priority: 0.8 },
   ...STATES.map((s) => ({

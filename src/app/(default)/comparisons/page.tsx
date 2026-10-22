@@ -6,6 +6,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { pageSeo } from "@/lib/seo";
+import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Government Exam Comparisons | UPSC vs SSC vs GATE vs Railway",
@@ -47,8 +49,20 @@ const comparisons = [
 ];
 
 export default function ComparisonsPage() {
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Comparisons", path: "/comparisons" },
+    ]),
+  );
+
   return (
-    <main className="container mx-auto px-4 py-12">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <main className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-4">Government Exam Comparisons</h1>
         <p className="text-xl text-gray-600 mb-12">
@@ -93,5 +107,6 @@ export default function ComparisonsPage() {
         </section>
       </div>
     </main>
+    </>
   );
 }

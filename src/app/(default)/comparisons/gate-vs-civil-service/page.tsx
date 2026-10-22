@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import ComparisonPageTemplate from "@/components/comparison-page-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "GATE vs Civil Service: Which Should Engineers Choose?",
@@ -187,5 +188,22 @@ const pageContent = {
 };
 
 export default function GATEVsCivilServicePage() {
-  return <ComparisonPageTemplate {...pageContent} />;
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Comparisons", path: "/comparisons" },
+      { name: "GATE vs Civil Service", path: "/comparisons/gate-vs-civil-service" },
+    ]),
+    buildFAQSchema(pageContent.faqs),
+  );
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <ComparisonPageTemplate {...pageContent} />
+    </>
+  );
 }

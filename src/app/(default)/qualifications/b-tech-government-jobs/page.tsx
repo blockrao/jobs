@@ -16,6 +16,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import QualificationHubTemplate from "@/components/qualification-hub-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "B.Tech Government Jobs in India 2025 - Salary, Exams, Career Path",
@@ -976,5 +977,22 @@ const pageContent = {
 };
 
 export default function BTechGovernmentJobsPage() {
-  return <QualificationHubTemplate {...pageContent} />;
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Qualifications", path: "/qualifications" },
+      { name: pageContent.title || "b-tech-government-jobs", path: "/qualifications/b-tech-government-jobs" },
+    ]),
+    pageContent.faqs ? buildFAQSchema(pageContent.faqs) : null,
+  );
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <QualificationHubTemplate {...pageContent} />
+    </>
+  );
 }

@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import ComparisonPageTemplate from "@/components/comparison-page-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "State PSC vs UPSC: Which Civil Service Exam is Better?",
@@ -152,5 +153,22 @@ const pageContent = {
 };
 
 export default function StatePSCVsUPSCPage() {
-  return <ComparisonPageTemplate {...pageContent} />;
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Comparisons", path: "/comparisons" },
+      { name: "State PSC vs UPSC", path: "/comparisons/state-psc-vs-upsc" },
+    ]),
+    buildFAQSchema(pageContent.faqs),
+  );
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <ComparisonPageTemplate {...pageContent} />
+    </>
+  );
 }

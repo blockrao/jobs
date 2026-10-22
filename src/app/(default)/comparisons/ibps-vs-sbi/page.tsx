@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import ComparisonPageTemplate from "@/components/comparison-page-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "IBPS vs SBI: Which Bank Job is Better? Salary, Selection, Growth",
@@ -231,5 +232,22 @@ const pageContent = {
 };
 
 export default function IBPSVsSBIPage() {
-  return <ComparisonPageTemplate {...pageContent} />;
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Comparisons", path: "/comparisons" },
+      { name: "IBPS vs SBI", path: "/comparisons/ibps-vs-sbi" },
+    ]),
+    buildFAQSchema(pageContent.faqs),
+  );
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <ComparisonPageTemplate {...pageContent} />
+    </>
+  );
 }

@@ -10,6 +10,7 @@ import { pageSeo } from "@/lib/seo";
 import SalaryGuideTemplate from "@/components/salary-guide-template";
 import SalaryPredictor from "@/components/salary-predictor";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "Government Job Salary by Grade in India 2025 - SSC, Railway, Banking Pay Scale",
@@ -837,7 +838,22 @@ const pageContent = {
 };
 
 export default function GovernmentJobSalaryByGradePage() {
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Salary Guides", path: "/salary-guides" },
+      { name: pageContent.title || "government-job-salary-by-grade", path: "/salary-guides/government-job-salary-by-grade" },
+    ]),
+    pageContent.faqs ? buildFAQSchema(pageContent.faqs) : null,
+  );
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      
     <>
       <SalaryGuideTemplate {...pageContent} />
 
@@ -850,5 +866,6 @@ export default function GovernmentJobSalaryByGradePage() {
         </div>
       </section>
     </>
+      </>
   );
 }

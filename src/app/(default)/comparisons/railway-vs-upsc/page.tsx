@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import ComparisonPageTemplate from "@/components/comparison-page-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "Railway vs UPSC: Which Government Job is Better? Difficulty, Salary, Career",
@@ -158,5 +159,22 @@ const pageContent = {
 };
 
 export default function RailwayVsUPSCPage() {
-  return <ComparisonPageTemplate {...pageContent} />;
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Comparisons", path: "/comparisons" },
+      { name: "Railway vs UPSC", path: "/comparisons/railway-vs-upsc" },
+    ]),
+    buildFAQSchema(pageContent.faqs),
+  );
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <ComparisonPageTemplate {...pageContent} />
+    </>
+  );
 }

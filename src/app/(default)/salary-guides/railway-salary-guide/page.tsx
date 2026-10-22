@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import SalaryGuideTemplate from "@/components/salary-guide-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "Railway Salary Guide India 2025 - RRB Group D to Officer Pay Scale",

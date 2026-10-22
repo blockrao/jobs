@@ -10,6 +10,7 @@ import { pageSeo } from "@/lib/seo";
 import ComparisonPageTemplate from "@/components/comparison-page-template";
 import ExamMatcherQuiz from "@/components/exam-matcher-quiz";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "UPSC vs SSC: Which Exam Should You Take? Difficulty, Salary, Career",
@@ -632,8 +633,21 @@ const pageContent = {
 };
 
 export default function UPSCVsSSCPage() {
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Comparisons", path: "/comparisons" },
+      { name: "UPSC vs SSC", path: "/comparisons/upsc-vs-ssc" },
+    ]),
+    buildFAQSchema(pageContent.faqs),
+  );
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
       <ComparisonPageTemplate {...pageContent} />
 
       {/* Interactive Exam Matcher Quiz */}

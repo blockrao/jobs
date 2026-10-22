@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import QualificationHubTemplate from "@/components/qualification-hub-template";
 import { SITE_URL } from "@/lib/site";
+import { buildBreadcrumbSchema, buildFAQSchema, jsonLdGraph } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "Engineering Government Jobs in India 2025 - All Branches, Salary Guide",
@@ -711,5 +712,22 @@ const pageContent = {
 };
 
 export default function EngineeringGovernmentJobsPage() {
-  return <QualificationHubTemplate {...pageContent} />;
+  const schema = jsonLdGraph(
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Qualifications", path: "/qualifications" },
+      { name: pageContent.title || "engineering-government-jobs", path: "/qualifications/engineering-government-jobs" },
+    ]),
+    pageContent.faqs ? buildFAQSchema(pageContent.faqs) : null,
+  );
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <QualificationHubTemplate {...pageContent} />
+    </>
+  );
 }
