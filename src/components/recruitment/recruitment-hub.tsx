@@ -767,14 +767,24 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     }));
 
   // Serialize Date objects to ISO strings for client component hydration
-  const sanitizeDate = (value: unknown): unknown => {
+  const sanitizeDate = (value: unknown, depth = 0): unknown => {
+    // Prevent infinite recursion on circular references
+    if (depth > 10) return value;
+
     if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'function') return undefined;
+    if (typeof value === 'symbol') return undefined;
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      return Object.fromEntries(
-        Object.entries(value).map(([k, v]) => [k, sanitizeDate(v)])
-      );
+      const result: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value)) {
+        // Skip non-enumerable properties and functions
+        if (typeof v !== 'function') {
+          result[k] = sanitizeDate(v, depth + 1);
+        }
+      }
+      return result;
     }
-    if (Array.isArray(value)) return value.map(sanitizeDate);
+    if (Array.isArray(value)) return value.map((v) => sanitizeDate(v, depth + 1));
     return value;
   };
 
