@@ -155,8 +155,12 @@ export default function HubHeader({ data }: { data: HubData }) {
       {/* Trust signals and reporting */}
       <div className={styles.trustFooter}>
         <small className={styles.trustText}>
-          🔒 Data verified against official notification •
-          <a href={`/report?page=${encodeURIComponent(currentUrl)}`} className={styles.reportLink}> Report an error</a>
+          {verified ? '✓ Data verified against official PDF' : '📋 Data from official notification'}
+          {updatedAtLabel && ` • Last updated ${updatedAtLabel}`}
+          <br />
+          <a href={`/report?page=${encodeURIComponent(currentUrl)}`} className={styles.reportLink}>💬 Report an issue</a>
+          {' • '}
+          <a href="/help" className={styles.reportLink}>📖 Help & FAQs</a>
         </small>
       </div>
     </header>

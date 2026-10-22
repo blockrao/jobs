@@ -576,6 +576,53 @@
   padding: 16px;
 }
 
+/* ── Print styles ── */
+@media print {
+  .page {
+    background: white;
+    padding: 0;
+  }
+  .wrap {
+    max-width: 100%;
+    padding: 0;
+  }
+  .card {
+    page-break-inside: avoid;
+    border: 1px solid #ddd;
+    box-shadow: none;
+  }
+  .btn,
+  .actions {
+    display: none;
+  }
+  .sidebar {
+    display: none;
+  }
+  .hero {
+    border-bottom: 2px solid #333;
+  }
+  .trustFooter {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #333;
+  }
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  .table th {
+    background: #f0f0f0;
+    border-bottom: 2px solid #333;
+    font-weight: bold;
+  }
+  .table tr {
+    page-break-inside: avoid;
+  }
+}
+
 /* ── Mobile ── */
 @media (max-width: 1024px) {
   /* Two-column layout collapses to single column on tablets */

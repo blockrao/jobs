@@ -71,6 +71,7 @@ import HubFaq from './sections/hub-faq';
 import HubExplore from './sections/hub-explore';
 import HubPostsExpandable from './sections/hub-posts-expandable';
 import RelatedOpportunities from './sections/related-opportunities';
+import HubFaqEnhanced from './sections/hub-faq-enhanced';
 
 // Outfit for headings (Inter for body is loaded by the root shell). Loaded
 // through @fontsource like Inter, not through a Google Fonts link.
@@ -872,7 +873,7 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
           )}
           {has('links') && <HubLinks data={data} />}
           <HubSource data={data} />
-          {has('faq') && <HubFaq data={data} />}
+          {has('faq') && <HubFaqEnhanced items={data.faqItems} />}
           <HubExplore data={data} />
           </article>
 
