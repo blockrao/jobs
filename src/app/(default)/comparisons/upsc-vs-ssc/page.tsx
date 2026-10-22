@@ -23,7 +23,7 @@ const pageContent = {
     name: "UPSC (Union Public Service Commission)",
     description: "IAS, IFS, and other Group A services - India's most prestigious government exams",
   },
-  exam2Value: {
+  exam2: {
     name: "SSC (Staff Selection Commission)",
     description: "CHSL, CGL, and other Group B/C jobs - accessible entry-level government positions",
   },

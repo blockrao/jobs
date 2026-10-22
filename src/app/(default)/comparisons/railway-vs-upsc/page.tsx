@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "Railway vs UPSC: Complete Comparison",
-  exam1Value: { name: "Railway (RRB Group D)", description: "50,000+ worker/technician positions annually" },
-  exam2Value: { name: "UPSC (IAS)", description: "1,000-1,500 administrative officer positions annually" },
+  exam1: { name: "Railway (RRB Group D)", description: "50,000+ worker/technician positions annually" },
+  exam2: { name: "UPSC (IAS)", description: "1,000-1,500 administrative officer positions annually" },
   comparisonTable: [
     { aspect: "Entry Salary", exam1Value: "₹18,000-25,000", exam2Value: "₹56,100+" },
     { aspect: "Peak Salary", exam1Value: "₹80,000-100,000", exam2Value: "₹300,000+" },

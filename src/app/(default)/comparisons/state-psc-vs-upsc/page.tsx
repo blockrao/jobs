@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "State PSC vs UPSC: Complete Comparison",
-  exam1Value: { name: "State PSC", description: "State civil service - administrative officers for one state" },
-  exam2Value: { name: "UPSC", description: "Union civil service - administrative officers for entire India" },
+  exam1: { name: "State PSC", description: "State civil service - administrative officers for one state" },
+  exam2: { name: "UPSC", description: "Union civil service - administrative officers for entire India" },
   comparisonTable: [
     { aspect: "Entry Salary", exam1Value: "₹40,000-60,000", exam2Value: "₹56,100" },
     { aspect: "Job Scope", exam1Value: "Single state", exam2Value: "All India postings" },

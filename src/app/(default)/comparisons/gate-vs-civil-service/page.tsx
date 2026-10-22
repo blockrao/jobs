@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "GATE vs Civil Service: Engineer's Dilemma",
-  exam1Value: { name: "GATE", description: "Graduate Aptitude Test in Engineering - PSU recruitment" },
-  exam2Value: { name: "Civil Service (IES/UPSC)", description: "Engineering Services or IAS administrative roles" },
+  exam1: { name: "GATE", description: "Graduate Aptitude Test in Engineering - PSU recruitment" },
+  exam2: { name: "Civil Service (IES/UPSC)", description: "Engineering Services or IAS administrative roles" },
   comparisonTable: [
     { aspect: "Entry Salary", exam1Value: "₹40,000-60,000", exam2Value: "₹56,100+ (IAS)" },
     { aspect: "Employer", exam1Value: "PSU (NTPC, IOC, BHEL, etc.)", exam2Value: "Government (all India)" },

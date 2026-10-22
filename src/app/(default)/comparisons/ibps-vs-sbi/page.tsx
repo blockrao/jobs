@@ -16,11 +16,11 @@ export const metadata: Metadata = {
 
 const pageContent = {
   title: "IBPS vs SBI: Which Banking Exam to Choose?",
-  exam1Value: {
+  exam1: {
     name: "IBPS (Institute of Banking Personnel Selection)",
     description: "Conducts recruitment for 25+ public sector banks (SBI, PNB, BOI, Union, Canara, etc.)",
   },
-  exam2Value: {
+  exam2: {
     name: "SBI (State Bank of India)",
     description: "India's largest bank with its own independent recruitment process",
   },
