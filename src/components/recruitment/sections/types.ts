@@ -52,6 +52,16 @@ export type RecruitmentHubPost = typeof posts.$inferSelect & {
   resolvedVacancyCount?: number | null;
   employmentType?: string | null;
   eligibilities?: EligibilityRow[];
+  vacancies?: unknown[];
+  ageRules?: Array<{
+    postId: number;
+    category: string;
+    maxAge: number | null;
+    relaxationYears: number | null;
+    note: string | null;
+    ruleType: string | null;
+    conditionText: string | null;
+  }>;
   fjaExtract?: {
     inventoryId?: number | string;
     vacancyCountRaw?: string | null;
@@ -76,6 +86,17 @@ export interface PostTableRow {
   qualification: string | null;
   experience: string | null;
   pay: string | null;
+  /** Category-wise vacancy breakdown (SC/ST/OBC/EWS/General/PwBD). */
+  vacancyBreakdown?: {
+    categoryName: string;
+    count: number;
+  }[];
+  /** Category-wise age limits and relaxations. */
+  ageBreakdown?: {
+    categoryName: string;
+    maxAge: number | null;
+    relaxation?: number | null;
+  }[];
 }
 
 export interface SelectionRow {
@@ -179,6 +200,16 @@ export interface HubData {
   // Posts
   postRows: PostTableRow[];
   anyVacancyUnverified: boolean;
+  /** Per-post age rules by category (from postAgeRules table). */
+  postAgeBreakdown?: {
+    postId: number;
+    categories: {
+      categoryName: string;
+      maxAge: number | null;
+      relaxation?: number | null;
+      relaxationPwbd?: number | null;
+    }[];
+  }[];
 
   // Eligibility
   educationTexts: string[];

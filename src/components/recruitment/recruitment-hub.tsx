@@ -360,6 +360,44 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
       || (post.resolvedVacancyCount != null && post.fjaExtract?.verificationStatus === 'VERIFIED');
     const vacanciesUnverified = vacancies != null && !vacanciesVerified;
     const postSlug = str(post.slug);
+
+    // Compute vacancy breakdown by category from vacancies table
+    const vacancyBreakdown: PostTableRow['vacancyBreakdown'] = [];
+    if (post.vacancies && Array.isArray(post.vacancies)) {
+      const vacancyMap = new Map<string, number>();
+      for (const vacRow of post.vacancies) {
+        const vacRecord = asRecord(vacRow);
+        const category = vacRecord?.category_type ?? vacRecord?.categoryType;
+        const count = Number(vacRecord?.count);
+        if (typeof category === 'string' && Number.isFinite(count) && count > 0) {
+          vacancyMap.set(category, (vacancyMap.get(category) ?? 0) + count);
+        }
+      }
+      // Sort categories in a standard order
+      const categoryOrder = ['General', 'OBC', 'SC', 'ST', 'EWS', 'PwBD'];
+      const sortedEntries = Array.from(vacancyMap.entries()).sort(([catA], [catB]) => {
+        const indexA = categoryOrder.indexOf(catA);
+        const indexB = categoryOrder.indexOf(catB);
+        return (indexA >= 0 ? indexA : 999) - (indexB >= 0 ? indexB : 999);
+      });
+      for (const [categoryName, count] of sortedEntries) {
+        vacancyBreakdown.push({ categoryName, count });
+      }
+    }
+
+    // Compute age breakdown by category from postAgeRules table
+    const ageBreakdown: PostTableRow['ageBreakdown'] = [];
+    if (post.ageRules && Array.isArray(post.ageRules)) {
+      for (const rule of post.ageRules) {
+        const categoryName = str(rule.category);
+        const maxAge = Number.isFinite(rule.maxAge) ? rule.maxAge : null;
+        const relaxation = Number.isFinite(rule.relaxationYears) ? rule.relaxationYears : undefined;
+        if (categoryName) {
+          ageBreakdown.push({ categoryName, maxAge, ...(relaxation !== undefined && { relaxation }) });
+        }
+      }
+    }
+
     return [{
       id: post.id,
       name,
@@ -369,6 +407,8 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
       qualification: postQualification(post),
       experience: postExperience(post),
       pay: postPay(post),
+      ...(vacancyBreakdown.length > 0 && { vacancyBreakdown }),
+      ...(ageBreakdown.length > 0 && { ageBreakdown }),
     }];
   });
   const anyVacancyUnverified = postRows.some((r) => r.vacanciesUnverified);
@@ -677,6 +717,19 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     fee: feeSummary,
   });
 
+  // ── Post age breakdown (from postAgeRules) ──────────────────────────────────
+  const postAgeBreakdown = posts
+    .filter((post) => post.ageRules && post.ageRules.length > 0)
+    .map((post) => ({
+      postId: post.id,
+      categories: post.ageRules!.map((rule) => ({
+        categoryName: str(rule.category) ?? 'Unknown',
+        maxAge: Number.isFinite(rule.maxAge) ? rule.maxAge : null,
+        ...(Number.isFinite(rule.relaxationYears) && { relaxation: rule.relaxationYears }),
+        // Future: add relaxationPwbd when available in schema
+      })),
+    }));
+
   return {
     recruitment,
     posts,
@@ -716,6 +769,7 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     glance,
     postRows,
     anyVacancyUnverified,
+    postAgeBreakdown: postAgeBreakdown.length > 0 ? postAgeBreakdown : undefined,
     educationTexts,
     physicalTexts,
     ageTexts,
