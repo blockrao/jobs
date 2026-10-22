@@ -86,9 +86,7 @@ export function pageSeo(
     : {
         index: true,
         follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
+        "max-image-preview": "large" as const,
       };
   return {
     alternates: { canonical: path },

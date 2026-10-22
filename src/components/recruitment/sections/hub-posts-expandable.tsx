@@ -219,44 +219,49 @@ export default function HubPostsExpandable({ postRows, posts }: HubPostsExpandab
                               <h4 style={{ margin: '0 0 6px', fontSize: '13px', fontWeight: 600, color: 'var(--hub-ink)' }}>
                                 📅 Age Limits by Category
                               </h4>
-                              <table
-                                style={{
-                                  width: '100%',
-                                  fontSize: '12px',
-                                  borderCollapse: 'collapse',
-                                }}
-                              >
-                                <thead>
-                                  <tr style={{ borderBottom: '1px solid var(--hub-line)' }}>
-                                    <th style={{ padding: '6px 0', textAlign: 'left', fontWeight: 500, color: 'var(--hub-ink2)' }}>
-                                      Category
-                                    </th>
-                                    <th style={{ padding: '6px 0', textAlign: 'center', fontWeight: 500, color: 'var(--hub-ink2)' }}>
-                                      Max Age
-                                    </th>
-                                    {postRow.ageBreakdown.some((ab) => ab.relaxation) && (
-                                      <th style={{ padding: '6px 0', textAlign: 'center', fontWeight: 500, color: 'var(--hub-ink2)' }}>
-                                        Relaxation
-                                      </th>
-                                    )}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {postRow.ageBreakdown.map((ab) => (
-                                    <tr key={ab.categoryName} style={{ borderBottom: '1px solid var(--hub-line)' }}>
-                                      <td style={{ padding: '6px 0', color: 'var(--hub-ink2)' }}>{ab.categoryName}</td>
-                                      <td style={{ padding: '6px 0', textAlign: 'center', color: 'var(--hub-ink2)', fontWeight: 500 }}>
-                                        {ab.maxAge ? `${ab.maxAge} years` : '—'}
-                                      </td>
-                                      {postRow.ageBreakdown.some((ab) => ab.relaxation) && (
-                                        <td style={{ padding: '6px 0', textAlign: 'center', color: 'var(--hub-ink2)' }}>
-                                          {ab.relaxation ? `+${ab.relaxation} years` : '—'}
-                                        </td>
-                                      )}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                              {(() => {
+                                const hasRelaxation = postRow.ageBreakdown?.some((ab) => ab.relaxation) ?? false;
+                                return (
+                                  <table
+                                    style={{
+                                      width: '100%',
+                                      fontSize: '12px',
+                                      borderCollapse: 'collapse',
+                                    }}
+                                  >
+                                    <thead>
+                                      <tr style={{ borderBottom: '1px solid var(--hub-line)' }}>
+                                        <th style={{ padding: '6px 0', textAlign: 'left', fontWeight: 500, color: 'var(--hub-ink2)' }}>
+                                          Category
+                                        </th>
+                                        <th style={{ padding: '6px 0', textAlign: 'center', fontWeight: 500, color: 'var(--hub-ink2)' }}>
+                                          Max Age
+                                        </th>
+                                        {hasRelaxation && (
+                                          <th style={{ padding: '6px 0', textAlign: 'center', fontWeight: 500, color: 'var(--hub-ink2)' }}>
+                                            Relaxation
+                                          </th>
+                                        )}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {postRow.ageBreakdown?.map((ab) => (
+                                        <tr key={ab.categoryName} style={{ borderBottom: '1px solid var(--hub-line)' }}>
+                                          <td style={{ padding: '6px 0', color: 'var(--hub-ink2)' }}>{ab.categoryName}</td>
+                                          <td style={{ padding: '6px 0', textAlign: 'center', color: 'var(--hub-ink2)', fontWeight: 500 }}>
+                                            {ab.maxAge ? `${ab.maxAge} years` : '—'}
+                                          </td>
+                                          {hasRelaxation && (
+                                            <td style={{ padding: '6px 0', textAlign: 'center', color: 'var(--hub-ink2)' }}>
+                                              {ab.relaxation ? `+${ab.relaxation} years` : '—'}
+                                            </td>
+                                          )}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                );
+                              })()}
                             </div>
                           )}
 
