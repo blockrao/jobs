@@ -24,7 +24,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
-import { getRecruitmentWithPostsCached } from "@/db/operations/get-recruitments";
+import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
 
 export const revalidate = 86400; // 1 day ISR; revalidated on publish via /api/revalidate
@@ -38,7 +38,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
   }
   const { recruitment, posts } = data;
-  const hub = buildHubData(recruitment, posts);
+  const [postingLocations, cutoffMarks] = await Promise.all([
+    getRecruitmentPostingLocations(recruitment.id),
+    getRecruitmentCutoffMarks(recruitment.id),
+  ]);
+  const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
   const { title, description } = hub;
 
   return {
@@ -71,7 +75,11 @@ export default async function RecruitmentHubPage({ params }: Props) {
   }
 
   const { recruitment, posts } = data;
-  const hub = buildHubData(recruitment, posts);
+  const [postingLocations, cutoffMarks] = await Promise.all([
+    getRecruitmentPostingLocations(recruitment.id),
+    getRecruitmentCutoffMarks(recruitment.id),
+  ]);
+  const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
   const sanitizedHub = toPlainJSON(hub) as typeof hub;
 
   return (

@@ -237,6 +237,13 @@ export interface HubData {
   faqItems: FaqItem[];
   explore: Pill[];
 
+  // Phase 3-5 features
+  postingLocations: string[]; // ["Delhi", "Mumbai", "Bangalore"]
+  cutoffMarks: Array<{
+    category: string; // "UR", "OBC", "SC", "ST", "EWS"
+    marks: string | null;
+  }>;
+
   /** Sections that will render, in page order. */
   sections: HubSectionId[];
 }

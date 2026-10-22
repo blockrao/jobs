@@ -70,6 +70,8 @@ import HubSource from './sections/hub-source';
 import HubFaq from './sections/hub-faq';
 import HubExplore from './sections/hub-explore';
 import HubPostsExpandable from './sections/hub-posts-expandable';
+import HubPostingLocations from './sections/hub-posting-locations';
+import HubCutoffMarks from './sections/hub-cutoff-marks';
 import RelatedOpportunities from './sections/related-opportunities';
 import HubFaqEnhanced from './sections/hub-faq-enhanced';
 
@@ -221,7 +223,13 @@ const HOW_TO_APPLY_KEYS = [
 // Build HubData
 // ---------------------------------------------------------------------------
 
-export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: RecruitmentHubPost[], now = new Date()): HubData {
+export function buildHubData(
+  recruitment: RecruitmentHubRecruitment, 
+  posts: RecruitmentHubPost[], 
+  now = new Date(),
+  postingLocationsData: Array<{ city: string; state: string | null }> = [],
+  cutoffMarksData: Array<{ category: string; cutoffMarks: string | null }> = [],
+): HubData {
   const slug = recruitment.slug;
   const orgName = str(recruitment.organizationName);
   const orgSlug = str(recruitment.organizationSlug);
@@ -790,6 +798,22 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
   const sanitizedRecruitment = toPlainJSON(recruitment) as typeof recruitment;
   const sanitizedPosts = toPlainJSON(posts) as typeof posts;
 
+  // Phase 3-5: Process posting locations and cutoff marks
+  const postingLocations = Array.from(
+    new Set(
+      postingLocationsData
+        .map((loc) => loc.city)
+        .filter((city): city is string => Boolean(city))
+    )
+  ).sort();
+
+  const cutoffMarks = cutoffMarksData
+    .map((cm) => ({
+      category: str(cm.category) || 'Unknown',
+      marks: str(cm.cutoffMarks),
+    }))
+    .filter((cm) => cm.category !== 'Unknown');
+
   return {
     recruitment: sanitizedRecruitment,
     posts: sanitizedPosts,
@@ -846,6 +870,8 @@ export function buildHubData(recruitment: RecruitmentHubRecruitment, posts: Recr
     discoverySourceUrl,
     faqItems,
     explore,
+    postingLocations,
+    cutoffMarks,
     sections,
   };
 }
@@ -937,6 +963,9 @@ export default function RecruitmentHub({ data }: RecruitmentHubProps) {
               )}
             </section>
           )}
+
+          <HubPostingLocations data={data} />
+          <HubCutoffMarks data={data} />
 
           {has('eligibility') && <HubEligibility data={data} />}
           {(has('pay') || has('fee')) && <HubPayFee data={data} />}

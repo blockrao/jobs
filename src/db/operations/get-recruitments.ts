@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { getDb } from "../index";
-import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies } from "../schema";
+import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 // Recruitments quarantined by the data-integrity process are not public pages.
@@ -661,4 +661,62 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
 
   const list = Array.isArray(rows) ? rows : ((rows as unknown as { rows?: unknown[] }).rows ?? []);
   return list as unknown as RecruitmentListRow[];
+}
+
+/**
+ * Get posting locations for a recruitment
+ * Returns unique cities where positions are posted
+ */
+export async function getRecruitmentPostingLocations(recruitmentId: number) {
+  const db = getDb();
+
+  const result = await db
+    .select({
+      city: postingLocations.city,
+      state: postingLocations.state,
+    })
+    .from(postingLocations)
+    .innerJoin(posts, eq(postingLocations.postId, posts.id))
+    .where(eq(posts.recruitmentId, recruitmentId));
+
+  // Get unique cities and states
+  const uniqueLocations = Array.from(
+    new Map(result.map((r) => [`${r.city}-${r.state}`, r])).values()
+  );
+
+  return uniqueLocations;
+}
+
+/**
+ * Get cutoff marks for a recruitment
+ * Returns latest year cutoff marks by category
+ */
+export async function getRecruitmentCutoffMarks(recruitmentId: number) {
+  const db = getDb();
+
+  // Get the latest year
+  const latestYearResult = await db
+    .select({ year: sql<number>`MAX(${recruitmentCutoffs.year})` })
+    .from(recruitmentCutoffs)
+    .where(eq(recruitmentCutoffs.recruitmentId, recruitmentId));
+
+  if (!latestYearResult || latestYearResult.length === 0 || latestYearResult[0].year === null) {
+    return [];
+  }
+
+  const latestYear = latestYearResult[0].year;
+
+  // Get cutoffs for the latest year
+  const result = await db
+    .select()
+    .from(recruitmentCutoffs)
+    .where(
+      and(
+        eq(recruitmentCutoffs.recruitmentId, recruitmentId),
+        eq(recruitmentCutoffs.year, latestYear)
+      )
+    )
+    .orderBy(recruitmentCutoffs.category);
+
+  return result;
 }
