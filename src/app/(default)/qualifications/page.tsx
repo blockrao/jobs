@@ -7,6 +7,7 @@ import { countLivePostsByAllQualifications } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
 import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
 import ExamMatcherQuiz from "@/components/exam-matcher-quiz";
+import HubFAQ from "@/components/hub-faq";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,74 @@ export default async function QualificationsIndexPage() {
           <p className="text-center text-gray-600 mb-8">Take our 5-question quiz to find your perfect government exam match based on your goals and abilities</p>
           <ExamMatcherQuiz />
         </section>
+
+        {/* Cross-Hub Navigation */}
+        <section className="mt-16 pt-8 border-t">
+          <h2 className="text-2xl font-bold mb-8">Explore Government Job Paths</h2>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Link
+              href="/salary-guides"
+              className="block p-6 border border-green-200 rounded-lg hover:shadow-lg hover:bg-green-50 transition-all"
+            >
+              <h3 className="text-xl font-bold text-green-600 mb-2">Salary Guides</h3>
+              <p className="text-gray-600">See salary potential by qualification level, from entry to peak earnings</p>
+            </Link>
+            <Link
+              href="/comparisons"
+              className="block p-6 border border-blue-200 rounded-lg hover:shadow-lg hover:bg-blue-50 transition-all"
+            >
+              <h3 className="text-xl font-bold text-blue-600 mb-2">Exam Comparisons</h3>
+              <p className="text-gray-600">Compare exams to find the right path for your qualification and goals</p>
+            </Link>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <HubFAQ
+          title="Frequently Asked Questions"
+          items={[
+            {
+              question: "How many qualification categories are available for government jobs?",
+              answer: "Government jobs in India are open to candidates with 11 different qualification levels, from 10th pass to post-graduation (MBA, M.Tech, M.Sc). Each qualification has multiple job opportunities across various sectors including civil services, banking, railways, and state governments.",
+            },
+            {
+              question: "Which qualification has the highest salary for government jobs?",
+              answer: "Engineering qualifications (B.Tech/BE) and professional degrees (MBA, MBBS) typically lead to the highest salaries in government jobs. IAS/IFS positions (civil services) offer the highest peak salaries (₹200,000+/month), but require an undergraduate degree and clearing the UPSC exam.",
+            },
+            {
+              question: "Can I switch qualifications in a government job career?",
+              answer: "Most government jobs require a specific qualification for entry. However, after joining, many officers pursue further education and certifications. For example, an engineer might pursue an MBA while working, or a bachelor's degree holder might pursue a master's. The primary role doesn't change, but career growth can be enhanced with additional qualifications.",
+            },
+            {
+              question: "Is B.Tech better than MBA for government jobs?",
+              answer: "Both have different advantages. B.Tech graduates qualify for technical positions in PSUs, GATE exams, and engineering roles in government. MBA graduates are suited for administrative, management, and policy roles in civil services and government organizations. The choice depends on your interests and career goals.",
+            },
+            {
+              question: "What's the salary progression for each qualification?",
+              answer: "Salary progression in government jobs follows a fixed pay scale based on grade and experience level. A 10th pass government employee starts at ₹18,000/month and can reach ₹40,000/month. B.Tech graduates start at ₹35,000+/month and can reach ₹100,000+. IAS officers start at ₹56,100/month and can reach ₹200,000+/month.",
+            },
+            {
+              question: "How many government job notifications are available for each qualification?",
+              answer: "Notifications vary by year and qualification. B.Tech and Engineering have 8,000-10,000 vacancies annually across UPSC, PSUs, railways, and state governments. Commerce (B.Com) has 5,000+ vacancies. Arts and Science graduates have even more opportunities through SSC, banking, and state exams.",
+            },
+            {
+              question: "Are there more government jobs for technical or non-technical qualifications?",
+              answer: "Non-technical qualifications (B.A, B.Com) have significantly more opportunities overall because they qualify for administrative and general posts across all sectors. However, technical qualifications (B.Tech, ITI) have higher salary ceilings and more specialized roles in PSUs and technical departments.",
+            },
+            {
+              question: "Can I apply for government jobs with just 10th or 12th pass?",
+              answer: "Yes, there are hundreds of government job categories exclusively for 10th and 12th pass candidates. Railway Group D, SSC Stenographer, various state government posts, and bank clerk positions accept 10th/12th pass applications. These roles typically start at ₹18,000-₹21,000/month.",
+            },
+            {
+              question: "Which government exams accept each qualification?",
+              answer: "Different exams have different qualification requirements: UPSC requires graduation, SSC accepts 10th pass (Group D) and graduation (CGL), Banking accepts graduation, Railway Group D accepts 10th pass, State PSCs vary by state. Each qualification opens doors to specific exams and job categories.",
+            },
+            {
+              question: "What's the difference between Group A, B, C, and D government jobs?",
+              answer: "Government jobs are classified by grade: Group A (highest salary ₹56,100+/month, requires graduation, 0.1% pass rate), Group B (₹44,900+/month), Group C (₹21,000+/month, requires 10th/12th pass), and Group D (entry level ₹18,000/month). Your qualification determines which group you can qualify for.",
+            },
+          ]}
+        />
       </div>
     </>
   );
