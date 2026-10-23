@@ -75,7 +75,6 @@ import HubCutoffMarks from './sections/hub-cutoff-marks';
 import HubJobDescriptions from './sections/hub-job-descriptions';
 import RelatedOpportunities from './sections/related-opportunities';
 import HubFaqEnhanced from './sections/hub-faq-enhanced';
-import HubEnrichment from './sections/hub-enrichment';
 
 // Outfit for headings (Inter for body is loaded by the root shell). Loaded
 // through @fontsource like Inter, not through a Google Fonts link.
@@ -948,10 +947,8 @@ export default function RecruitmentHub({ data, enrichment }: RecruitmentHubProps
               />
             )}
 
-            {/* Enriched details (if available) - displayed prominently after key metrics */}
-            {enrichment && <HubEnrichment data={enrichment} />}
-
-            <HubDetails data={data} />
+            {/* Details + integrated enrichment data */}
+            <HubDetails data={data} enrichment={enrichment} />
             {has('dates') && <HubDates data={data} />}
 
           {/* Posts section - consolidated expandable table */}
