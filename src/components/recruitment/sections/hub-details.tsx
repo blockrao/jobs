@@ -15,10 +15,7 @@ import type { HubData } from './types';
 import styles from '../recruitment-hub.module.css';
 
 interface EnrichmentData {
-  at_a_glance?: Record<string, string>;
-  important_dates?: Record<string, string>;
-  selection_process?: string[];
-  application_requirements?: string[];
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 export default function HubDetails({
@@ -30,24 +27,29 @@ export default function HubDetails({
 }) {
   const { glance } = data;
 
-  // Merge enrichment at_a_glance into the main glance rows
+  // Merge enrichment data into the main glance rows
   const enhancedGlance = [...glance];
 
-  if (enrichment?.at_a_glance) {
-    // Add enrichment items (salary, age limit, qualification, etc.)
-    Object.entries(enrichment.at_a_glance).forEach(([label, value]) => {
-      // Avoid duplicates - check if label already exists
-      if (!enhancedGlance.some(row => row.label === label)) {
-        enhancedGlance.push({ label, value });
+  if (enrichment && typeof enrichment === 'object') {
+    // Add enrichment items as key-value pairs
+    Object.entries(enrichment).forEach(([key, value]) => {
+      // Format the label: convert snake_case/camelCase to Title Case
+      const label = key
+        .replace(/([A-Z])/g, ' $1') // camelCase
+        .replace(/_/g, ' ') // snake_case
+        .replace(/\b\w/g, c => c.toUpperCase()) // title case
+        .trim();
+
+      // Convert value to string
+      const strValue = value ? String(value) : null;
+
+      if (strValue && !enhancedGlance.some(row => row.label.toLowerCase() === label.toLowerCase())) {
+        enhancedGlance.push({ label, value: strValue });
       }
     });
   }
 
-  const hasEnrichmentData = enrichment && (
-    enrichment.important_dates ||
-    enrichment.selection_process ||
-    enrichment.application_requirements
-  );
+  const hasEnrichmentData = enrichment && typeof enrichment === 'object' && Object.keys(enrichment).length > 0;
 
   if (enhancedGlance.length === 0 && !hasEnrichmentData) return null;
 
@@ -81,54 +83,6 @@ export default function HubDetails({
         ))}
       </dl>
 
-      {/* Important Dates subsection */}
-      {enrichment?.important_dates && Object.keys(enrichment.important_dates).length > 0 && (
-        <>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, marginTop: '20px', marginBottom: '12px', color: 'var(--hub-ink)' }}>
-            Important Dates
-          </h3>
-          <dl className={styles.glance}>
-            {Object.entries(enrichment.important_dates).map(([label, value]) => (
-              <div key={label} className={styles.glanceRow}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </>
-      )}
-
-      {/* Selection Process subsection */}
-      {enrichment?.selection_process && enrichment.selection_process.length > 0 && (
-        <>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, marginTop: '20px', marginBottom: '12px', color: 'var(--hub-ink)' }}>
-            Selection Process
-          </h3>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {enrichment.selection_process.map((step, idx) => (
-              <li key={idx} style={{ padding: '8px 0', color: 'var(--hub-ink2)' }}>
-                • {step}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {/* Application Requirements subsection */}
-      {enrichment?.application_requirements && enrichment.application_requirements.length > 0 && (
-        <>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, marginTop: '20px', marginBottom: '12px', color: 'var(--hub-ink)' }}>
-            Application Requirements
-          </h3>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {enrichment.application_requirements.map((req, idx) => (
-              <li key={idx} style={{ padding: '8px 0', color: 'var(--hub-ink2)' }}>
-                • {req}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
     </section>
   );
 }
