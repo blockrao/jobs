@@ -28,7 +28,7 @@ export async function GET(
     return NextResponse.json(
       {
         slug,
-        title: recruitment.title,
+        title: recruitment.name,
         organization: recruitment.organizationName,
         enrichment: recruitment.enrichmentData || null,
         metadata: {
