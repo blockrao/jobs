@@ -3,7 +3,7 @@
 **Repository:** `blockrao/jobs`  
 **Reviewed ref:** `main` at `67b98fcdb8b40b1b26beb66cae965d423989ce51`  
 **Scope:** URL/entity architecture, canonical/indexing signals, sitemap/robots, post/recruitment data flow, vacancy integrity, caching, and release verification.  
-**Evidence limitation:** This is a repository/code audit plus prior documented production findings. The current environment could not retrieve `https://joboye.com` or its live sitemap/robots endpoints, so this document does **not** claim live HTTP verification. Production database values and rendered HTML must be checked separately.
+**Evidence limitation:** This is a repository/code audit plus read-only queries against the connected production Supabase database. The current environment could not retrieve `https://joboye.com` or its live sitemap/robots endpoints, so this document does **not** claim live HTTP verification. Rendered HTML and HTTP behavior must be checked separately.
 
 ## Executive decision
 
@@ -22,7 +22,7 @@ The agreed URL contract remains:
 
 ### P0 — Vacancy facts are not governed by one end-to-end trust policy
 
-**Evidence:** `src/lib/vacancy-integrity.ts` provides a plausibility predicate and the latest `src/lib/queries.ts` homepage paths apply a stricter gate (verified status, official notification URL, and a 1–100,000 range). However, `src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx` composes page titles/descriptions and passes the visible vacancy value using `enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0`. The post schema component documents resolver-gated vacancy facts, so visible metadata/UI and structured data may use different policies.
+**Evidence:** Read-only production queries found 1,025 recruitment rows with a non-null `total_vacancies`; 12 are outside the 1–100,000 sanity range, all 12 have `VERIFIED` status but no official notification URL. Of the totals present, 499 are not in `VERIFIED` or `MANUALLY_VERIFIED` status. In `posts`, 130 rows have non-positive `vacancy_total`, 4,148 have values from 1 to 100,000, and none exceed 100,000. The `post_enrichments` table has 2,095 rows with non-null `vacanciesTotal` and a maximum of 33,320. The leaf page composes metadata and passes a visible vacancy value using `enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0`, while the post schema component documents resolver-gated vacancy facts, so visible metadata/UI and structured data may use different policies.
 
 **Risk:** absurd or unverified counts can leak into title tags, descriptions, visible UI, hub cards, related pages, or JSON-LD even after the homepage fix.
 
@@ -33,26 +33,25 @@ The agreed URL contract remains:
 4. Omit unknown/untrusted totals; never sum post totals to manufacture a recruitment total.
 5. Add contract tests covering each public surface, including metadata and schema output, with implausible and unverified fixtures.
 
-### P0 — Slug uniqueness and lookup determinism need production proof
+### P0 — Slug uniqueness and lookup determinism need a database constraint
 
-**Evidence:** `getPostCoreData` in `src/db/operations/get-posts.ts` selects by `p.slug = postSlug` plus recruitment match/redirect mapping and then uses `LIMIT 1` without explicit ordering. The prior audit recorded 279 groups of duplicate live post slugs; those groups must be checked specifically for collisions within the same recruitment and for ambiguity in any lookup that selects by slug alone.
+**Evidence:** Read-only production queries (2026-10-25) found 4,932 posts, zero missing/blank post slugs, zero duplicate recruitment slugs, zero duplicate `(recruitment_id, slug)` groups, and zero posts orphaned by `recruitment_id`. There are 864 global duplicate `posts.slug` groups (for example, `junior-research-fellow` appears in 44 different recruitments). Because the public URL includes the recruitment slug as well as post slug, these global repeats are not themselves canonical URL collisions. The post lookup is scoped by recruitment, but its `LIMIT 1` is still nondeterministic if a duplicate pair is ever introduced.
 
-**Risk:** duplicate candidates can make the displayed post nondeterministic or bind a valid URL to the wrong entity. This is a correctness and trust failure, not merely an SEO issue.
+**Risk:** global slug-only consumers may confuse posts across recruitments; future data can create an ambiguous URL unless the pair uniqueness is enforced.
 
 **Remedy:**
-1. Run read-only production queries for duplicate `posts.slug`, duplicate `(recruitment_id, slug)`, null/empty slugs, and duplicate canonical URL strings.
-2. Confirm the actual DB unique constraints/indexes and compare them with the route lookup contract.
-3. Where a canonical URL can identify more than one row, quarantine/resolve the data before creating a unique constraint; do not choose a row by arbitrary `LIMIT 1`.
-4. Add database-enforced uniqueness for the chosen canonical identity and CI tests for duplicate fixtures.
-5. Preserve a redirect only when its target is unique, exists, and is not itself a redirect.
+1. Confirm DB unique constraints/indexes for `(recruitment_id, slug)` and the canonical lookup contract.
+2. Add a database-enforced unique constraint for the chosen canonical identity after verifying current data.
+3. Keep all public lookups scoped by both recruitment and post slug; prohibit slug-only canonical lookups.
+4. Add CI tests for duplicate pair fixtures and verify global repeated role slugs remain valid when attached to different recruitments.
 
 ### P0 — Legacy redirects need a complete, executable integrity audit
 
-**Evidence:** `src/proxy.ts` handles locale-prefix redirects, allowlisted legacy exam paths, and sector query redirects; recruitment legacy redirects are resolved by data loaders and route pages. The route code relies on `recruitment_slug_redirects` and `permanentRedirect`.
+**Evidence:** Read-only production queries found 32,199 rows in `recruitment_slug_redirects`: 5,412 identity rows where `old_slug = new_slug` (these are not HTTP redirects when the exact canonical lookup succeeds) and 26,787 actual old-to-new mappings. All actual mappings had existing targets, zero actual redirect chains, zero old-slug collisions with current canonical recruitment slugs, and zero targets that disagree with the row's `recruitment_id`. The identity rows are redundant and should be understood before cleanup, but must not be misreported as HTTP redirect loops.
 
-**Risk:** a redirect mapping can point to a missing target, a quarantined record, itself, or another old slug and create a chain. The source comments say redirects target guaranteed URLs, but this must be verified against current production data.
+**Risk:** mapping integrity is encouraging at the database level, but live HTTP responses, route resolution, and cache behavior have not yet been exercised. Identity rows add noise and may be mistaken for actual redirects by future audits.
 
-**Remedy:** create a read-only redirect audit that reports missing targets, self-maps, cycles, multi-hop chains, duplicate old slugs, targets outside the canonical contract, and target routes that return 404. Require every valid mapping to resolve in one hop to a canonical URL and test all mappings after deployment.
+**Remedy:** keep the current rows unchanged during stabilization; add a read-only redirect report that distinguishes identity mappings from true redirects, validates every true target against a 200 canonical route, and tests all mappings after deployment. Do not delete identity rows without a separately rehearsed migration.
 
 ### P1 — Sitemap generation is not yet demonstrably unique or route-valid
 
@@ -130,6 +129,20 @@ The agreed URL contract remains:
 **Risk:** a future developer or agent may follow obsolete guidance and reintroduce route churn.
 
 **Remedy:** mark the document superseded and point it to the current URL contract; update or archive outdated migration instructions so the repository has one source of truth.
+
+## Read-only production database snapshot (2026-10-25)
+
+The connected Supabase project named `jobs` is active and healthy. The following queries were read-only; no production rows or schema were changed:
+
+- 5,412 recruitments; 4,932 posts; 1,523 organizations; 3,262 legacy `postings`; 32,199 recruitment redirect-table rows.
+- Recruitment slugs: no missing/blank slugs and no duplicate recruitment slug groups.
+- Post slugs: no missing/blank slugs; 864 globally duplicated slug groups, but **zero** duplicate `(recruitment_id, slug)` groups. Most are reusable role slugs such as `junior-research-fellow` across different recruitments.
+- Recruitment redirects: 26,787 actual old-to-new mappings, all target an existing recruitment, with zero actual redirect chains and zero old-slug collisions against current recruitment slugs. The other 5,412 rows are identity mappings (`old_slug = new_slug`) and are not necessarily HTTP redirects.
+- Vacancy values: 12 recruitment totals exceed 100,000 and lack an official notification URL; 499 recruitment rows with totals are not in a verified state. There are 130 post totals that are zero/negative, 4,148 plausible positive post totals, and 654 null post totals. Enrichment vacancy totals max out at 33,320.
+- 817 live/upcoming recruitments currently reference the unresolved placeholder organization; the sitemap and hub indexability logic exclude this placeholder, but it remains a major content-quality backlog.
+- The queried `posts` legacy/camelCase relationship columns had zero disagreement for `recruitmentId` vs `recruitment_id` and `organizationId` vs `employing_organization_id` on rows where both were populated; `recruitmentName` matched the joined recruitment name in the sampled comparison. This does not eliminate broader legacy-column ambiguity.
+
+These findings refine earlier hypotheses: global duplicate post slugs are expected under the two-segment entity URL contract; the urgent vacancy issue is recruitment-level totals and non-positive post totals, not post totals above 100,000 in the current DB snapshot.
 
 ## Release gates (must pass before certification)
 
