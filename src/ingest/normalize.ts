@@ -79,9 +79,20 @@ export function slugify(input: string): string {
     .slice(0, 180);
 }
 
-// Deterministic slug: same (source, externalId) always yields the same slug,
-// so re-ingestion maps to the existing canonical URL. The short hash keeps
-// slugs unique across sources/titles without leaking ids.
+/**
+ * @deprecated NEVER use this function for recruitment slugs.
+ *
+ * This function was used for old slug generation but created 95+ character
+ * URLs that harm SEO and user experience. All new recruitments use
+ * generateSequentialSlug() instead, which creates short, semantic URLs.
+ *
+ * Existing data has been migrated to sequential format via database migration
+ * 20261024100000_slug_corruption_fix.sql. This function is kept for
+ * backwards compatibility with old posting slugs only, never for recruiting.
+ *
+ * If you're about to call this, you probably want generateSequentialSlug()
+ * from src/ingest/slug-generator.ts instead.
+ */
 export function deterministicSlug(
   source: string,
   externalId: string,
