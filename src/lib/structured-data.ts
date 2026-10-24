@@ -50,10 +50,12 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   PERMANENT: "FULL_TIME",
 };
 
-/** Maps a DB employmentType value to the schema.org string used in JobPosting markup. */
-export function employmentTypeToSchema(value: string | null | undefined): string {
-  if (!value) return "FULL_TIME";
-  return EMPLOYMENT_TYPE_MAP[value] ?? "FULL_TIME";
+/** Maps a DB employmentType value to the schema.org string used in JobPosting markup.
+ * Returns undefined if no value is provided - only real data should be rendered.
+ */
+export function employmentTypeToSchema(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  return EMPLOYMENT_TYPE_MAP[value] ?? undefined;
 }
 
 export function buildOrganizationSchema(org: Organization, kind?: string | null) {
@@ -265,9 +267,9 @@ export function buildJobPostingSchema(
     // Falls back to updatedAt so Google always sees a fresh signal.
     dateModified: (posting.contentChangedAt ?? posting.updatedAt)?.toISOString(),
     validThrough: posting.validThrough?.toISOString(),
-    // Indian government jobs are permanent positions; FULL_TIME is the correct
-    // default. "OTHER" triggers a Google non-critical warning and adds no value.
-    employmentType: EMPLOYMENT_TYPE_MAP[posting.employmentType] ?? "FULL_TIME",
+    // Only include employmentType if real data exists.
+    // Do not default to FULL_TIME for jobs without explicit employment type data.
+    ...(posting.employmentType ? { employmentType: employmentTypeToSchema(posting.employmentType) } : {}),
     hiringOrganization: hiringOrg,
     jobLocation,
     jobLocationType:

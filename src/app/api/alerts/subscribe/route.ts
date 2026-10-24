@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * POST /api/alerts/subscribe
- * Subscribe a user to job alerts for a specific recruitment
+ *
+ * DEPRECATED: This endpoint does not work.
+ *
+ * Job alert subscriptions are not yet implemented. Requests to this
+ * endpoint are logged but not processed. Users will not receive any emails.
+ *
+ * This endpoint will be removed in a future version.
+ * Do not rely on it for any functionality.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -25,22 +32,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // TODO: Implement alert subscription logic
-    // For now, we'll just return a success response
-    // In production, this would:
-    // 1. Store the subscription in the database
-    // 2. Send a confirmation email
-    // 3. Integrate with email service (SendGrid, Mailgun, etc.)
+    // Log the request for debugging purposes only
+    // No data is saved, no email is sent
+    console.log(`[DEPRECATED] Alert subscription attempt: ${email} for ${recruitmentSlug}`);
 
-    console.log(`Alert subscription: ${email} for ${recruitmentSlug}`);
-
+    // Honest response: This feature is not implemented
     return NextResponse.json(
       {
-        success: true,
-        message: 'Successfully subscribed to job alerts',
+        success: false,
+        message: 'Job alert subscriptions are not yet implemented. This feature is coming soon.',
         recruitment: recruitmentName,
       },
-      { status: 200 }
+      { status: 501 }  // 501 Not Implemented
     );
   } catch (error) {
     console.error('Alert subscription error:', error);
