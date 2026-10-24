@@ -180,52 +180,15 @@ async function getPostCoreData(
 }
 
 /**
- * Fetch FJA extraction data separately (can be lazy-loaded)
+ * REMOVED: Fetch FJA extraction data separately (can be lazy-loaded)
+ * FJA inventory tables were dropped as part of Step 3 cleanup.
+ * FJA data should be sourced from official recruiter APIs only.
  */
 async function getFjaExtractForPost(postId: number): Promise<any> {
-  try {
-    const db = getDb();
-
-    const result = await db.execute<any>(sql`
-      SELECT
-        fi.id AS "fjaInventoryPostId",
-        fi.external_id AS "fjaExternalId",
-        fi.source_post_code_raw AS "fjaSourcePostCodeRaw",
-        fi.vacancy_count_raw AS "fjaVacancyCountRaw",
-        fi.qualification_raw AS "fjaQualificationRaw",
-        fi.experience_raw AS "fjaExperienceRaw",
-        fi.age_limit_raw AS "fjaAgeLimitRaw",
-        fi.age_reference_date_raw AS "fjaAgeReferenceDateRaw",
-        fi.age_relaxation_rules_raw AS "fjaAgeRelaxationRulesRaw",
-        fi.salary_raw AS "fjaSalaryRaw",
-        fi.pay_level_raw AS "fjaPayLevelRaw",
-        fi.employment_type_raw AS "fjaEmploymentTypeRaw",
-        fi.tenure_raw AS "fjaTenureRaw",
-        fi.location_raw AS "fjaLocationRaw",
-        fi.duties_responsibilities_raw AS "fjaDutiesRaw",
-        fi.eligibility_conditions_raw AS "fjaEligibilityRaw",
-        fi.milestones_raw AS "fjaMilestonesRaw",
-        fi.application_selection_raw AS "fjaApplicationSelectionRaw",
-        fi.other_info_raw AS "fjaOtherInfoRaw",
-        fi.extraction_status AS "fjaExtractionStatus",
-        fi.official_verification_status AS "fjaVerificationStatus",
-        ji.published_date AS "fjaSourcePublishedDate",
-        ji.application_end_date AS "fjaSourceApplicationEndDate",
-        ji.details AS "fjaRecruitmentDetails",
-        ji.other_info_raw AS "fjaRecruitmentOtherInfoRaw",
-        ji.advertisement_number AS "fjaAdvertisementNumber"
-      FROM fja_post_inventory fi
-      LEFT JOIN fja_job_inventory ji ON ji.id = fi.recruitment_inventory_id
-      WHERE fi.other_info_raw->>'canonical_post_id' = ${postId}::text
-      ORDER BY fi.last_seen_at DESC, fi.id DESC
-      LIMIT 1
-    `);
-
-    return result && result.length > 0 ? result[0] : null;
-  } catch (err) {
-    console.warn("Error fetching FJA extract for post", postId, ":", err);
-    return null;
-  }
+  // FJA extraction tables no longer exist in production schema.
+  // Return null to prevent breaking any remaining code paths.
+  console.warn(`[getFjaExtractForPost] FJA tables removed; returning null for post ${postId}`);
+  return null;
 }
 
 /**

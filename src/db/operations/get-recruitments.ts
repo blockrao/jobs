@@ -238,25 +238,7 @@ export async function getRecruitmentWithPosts(
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
-      db.execute(sql`
-        SELECT
-          other_info_raw->>'canonical_verification_status' AS source_verification_status,
-          published_date AS source_listing_published_date,
-          title AS source_title,
-          source_url,
-          application_start_date AS source_application_start_date,
-          application_end_date AS source_application_end_date,
-          vacancy_count AS source_vacancy_count,
-          qualification AS source_qualification,
-          details AS source_details,
-          other_info_raw AS source_other_info_raw,
-          source_status,
-          detail_status
-        FROM fja_job_inventory
-        WHERE other_info_raw->>'canonical_recruitment_id' = ${String(recruitmentId)}
-        ORDER BY id DESC
-        LIMIT 1
-      `),
+      Promise.resolve([]), // FJA job inventory removed in Step 3 cleanup
     ]);
     const rowsOf = (
       result: unknown
@@ -373,12 +355,7 @@ export async function getRecruitmentWithPosts(
         console.log(`[getRecruitmentWithPosts] Posts_vacancies fetch complete: ${result.length} records`);
         return result;
       })(),
-      db.execute(sql`
-        SELECT *
-        FROM fja_post_inventory
-        WHERE other_info_raw->>'canonical_post_id' IN (${sql.join(postIds.map((id) => sql`${String(id)}`), sql`,`)})
-        ORDER BY last_seen_at DESC, id DESC
-      `),
+      Promise.resolve([]), // FJA post inventory removed in Step 3 cleanup
     ]);
 
     console.log(`[getRecruitmentWithPosts] Successfully fetched: ${allVacancies.length} vacancies, ${allEligibilities.length} eligibilities, ${allAgeRules.length} age rules`);
