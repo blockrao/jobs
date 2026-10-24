@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
+import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 
 import { normalizeEducation, normalizeExperience, normalizeSelectionProcess, auditEnrichmentShape } from "@/lib/enrichment-normalization";
 // Before DATABASE_URL is configured, every query degrades to an empty
@@ -290,6 +291,16 @@ const liveGovRecruitment = sql`
   AND (r.application_end_date IS NULL OR r.application_end_date > NOW())
   AND r.slug IS NOT NULL
   AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+  AND o.slug <> 'unclassified-government-jobs'
+`;
+
+// Homepage vacancy rankings are intentionally stricter than general page
+// visibility: only officially verified recruitment totals in a conservative
+// range are eligible. Extreme values remain available for review, not promotion.
+const verifiedHomeVacancy = sql`
+  r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+  AND r.official_notification_url ~ '^https?://'
+  AND r.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
 `;
 
 /**
@@ -335,7 +346,10 @@ function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
     orgNameHi: r.org_name_hi ? String(r.org_name_hi) : null,
     orgSlug: String(r.org_slug),
     sector: String(r.sector),
-    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    totalVacancies:
+      r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
+        ? Number(r.total_vacancies)
+        : null,
     applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
     postCount: Number(r.post_count ?? 0),
     daysLeft: r.days_left != null ? Number(r.days_left) : null,
@@ -362,8 +376,8 @@ export async function listClosingSoon(opts: { days: number; limit: number; offse
   const rows = await db.execute(sql`
     ${homeRecruitmentSelect}
     WHERE ${liveGovRecruitment}
+      AND ${verifiedHomeVacancy}
       AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${opts.days}::int)
-      AND r.total_vacancies IS NOT NULL
     ORDER BY r.total_vacancies DESC, r.application_end_date ASC, r.id
     LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
   `);
@@ -377,8 +391,8 @@ export async function countClosingSoon(days: number): Promise<number> {
     SELECT COUNT(*)::int AS n FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
     WHERE ${liveGovRecruitment}
+      AND ${verifiedHomeVacancy}
       AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${days}::int)
-      AND r.total_vacancies IS NOT NULL
   `);
   return Number((rows as unknown as Record<string, unknown>[])[0]?.n ?? 0);
 }
@@ -389,7 +403,7 @@ export async function listBiggestOpen(opts: { limit: number; offset?: number }):
   const db = getDb();
   const rows = await db.execute(sql`
     ${homeRecruitmentSelect}
-    WHERE ${liveGovRecruitment} AND r.total_vacancies IS NOT NULL
+    WHERE ${liveGovRecruitment} AND ${verifiedHomeVacancy}
     ORDER BY r.total_vacancies DESC, r.application_end_date ASC NULLS LAST, r.id
     LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
   `);
@@ -403,7 +417,7 @@ export async function listTopHiringOrgs(limit = 12): Promise<HomeOrgRow[]> {
     SELECT o.name, o.name_hi, o.slug, COALESCE(SUM(r.total_vacancies), 0)::int AS vacancies
     FROM public.organizations o
     JOIN public.recruitments r ON r.organization_id = o.id
-    WHERE ${liveGovRecruitment} AND o.merged_into_id IS NULL
+    WHERE ${liveGovRecruitment} AND ${verifiedHomeVacancy} AND o.merged_into_id IS NULL
     GROUP BY o.id
     HAVING COALESCE(SUM(r.total_vacancies), 0) > 0
     ORDER BY vacancies DESC, o.name
@@ -423,7 +437,19 @@ export async function getHomeStats(): Promise<HomeStats> {
   const rows = await db.execute(sql`
     SELECT
       COUNT(p.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_7d_posts,
-      COALESCE(SUM(p.vacancy_total), 0)::int AS total_vacancies,
+      (
+        SELECT COALESCE(SUM(r2.total_vacancies), 0)::int
+        FROM public.recruitments r2
+        JOIN public.organizations o2 ON o2.id = r2.organization_id
+        WHERE r2.status IN ('ACTIVE','UPCOMING')
+          AND (r2.application_end_date IS NULL OR r2.application_end_date > NOW())
+          AND r2.slug IS NOT NULL
+          AND r2.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+          AND r2.official_notification_url ~ '^https?://'
+          AND r2.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
+          AND r2.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND o2.slug <> 'unclassified-government-jobs'
+      ) AS total_vacancies,
       COUNT(DISTINCT r.id)::int AS live_recruitments
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
