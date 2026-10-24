@@ -14,7 +14,8 @@
  * the visible facts. dateModified is emitted only from a genuine updatedAt.
  * datePosted keys on source verification (notificationDate when verified,
  * sourceListingPublishedDate when not); the JobPosting datePosted falls back
- * to createdAt. baseSalary is emitted only when numeric bounds exist on the
+ * to createdAt (first published on JobOye), and no JobPosting is emitted once
+ * the application end date has passed. baseSalary is emitted only when numeric bounds exist on the
  * post AND the pay period is stated on the post's payLevel record
  * (posts.salary_min/max carry no unit column); a free-text pay level never
  * becomes a MonetaryAmount.
@@ -201,11 +202,14 @@ export default function RecruitmentHubStructuredData({ data }: RecruitmentHubSch
     if (data.howToApply.length > 0) {
       paragraphs.push(`<p>How to apply: ${escapeHtml(data.howToApply.join(" "))}</p>`);
     }
+    // datePosted: the notification's publication date when known, otherwise
+    // the date this page was first published on JobOye (same rule as post pages).
     const jobDatePosted = toIso(recruitment.notificationDate) ?? toIso(recruitment.createdAt);
     const validThrough = toIso(recruitment.applicationEndDate);
+    const postingClosed = validThrough != null && new Date(validThrough).getTime() < Date.now();
     const employmentType = EMPLOYMENT_TYPE_SCHEMA[(recruitment.employmentType ?? "").toUpperCase()];
 
-    if (paragraphs.length > 0 && jobDatePosted && orgName) {
+    if (paragraphs.length > 0 && jobDatePosted && orgName && !postingClosed) {
       jobPosting = {
         "@type": "JobPosting",
         "@id": `${hubUrl}#jobposting`,

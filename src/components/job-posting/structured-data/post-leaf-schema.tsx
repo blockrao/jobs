@@ -308,8 +308,15 @@ export default function PostLeafStructuredData({
       }
     : null;
 
-  // One @graph: site org, breadcrumb, web page, the JobPosting, visible FAQ.
-  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, jobPosting, faqPage);
+  // A closed job is no longer an open position: Google's JobPosting policy
+  // requires expired postings to drop the markup (validThrough alone is not
+  // enough). The page itself stays, labelled closed, with no JobPosting.
+  const postingClosed = resolvedDeadline.state === "CLOSED";
+  if (postingClosed) delete webPage.mainEntity;
+
+  // One @graph: site org, breadcrumb, web page, the JobPosting (open/unknown
+  // deadline only), visible FAQ.
+  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed ? null : jobPosting, faqPage);
 
   return (
     <script

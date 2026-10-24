@@ -57,3 +57,32 @@ export function containsAggregatorReference(text: string | null | undefined): bo
   }
   return false;
 }
+
+const AGGREGATOR_KEY_RE = /^(fja|fja_.*|.*_fja|fjaUrl|fja_url|fja_source|source_url|sourceUrl|aggregator.*)$/i;
+
+/**
+ * Deep-copies a JSON value with aggregator provenance removed: drops keys that
+ * name an aggregator source (fja_url, source_url, ...) and any string value that
+ * links to or names an aggregator. Used on stored enrichment JSON before it is
+ * passed to page components, because everything passed to a client component
+ * is serialised into the public HTML payload.
+ */
+export function stripAggregatorData<T>(value: T): T {
+  const walk = (v: unknown): unknown => {
+    if (typeof v === "string") {
+      return /https?:\/\//i.test(v) ? (isAggregatorUrl(v.trim()) ? undefined : v) : (mentionsAggregator(v) ? undefined : v);
+    }
+    if (Array.isArray(v)) return v.map(walk).filter((x) => x !== undefined);
+    if (v && typeof v === "object" && !(v instanceof Date)) {
+      const out: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+        if (AGGREGATOR_KEY_RE.test(k)) continue;
+        const w = walk(val);
+        if (w !== undefined) out[k] = w;
+      }
+      return out;
+    }
+    return v;
+  };
+  return walk(value) as T;
+}

@@ -1183,10 +1183,10 @@ export const recruitments = pgTable(
     // Official online application portal URL from the issuing body's website.
     // Populated from postings.official_application_url during ingestion (A-082).
     officialApplicationUrl: text("official_application_url"),
-    // Employment classification for this recruitment (A-042).
-    // FULL_TIME for most permanent Indian govt positions; APPRENTICESHIP,
-    // DEPUTATION etc. for the extended enum values added in the same migration.
-    employmentType: employmentTypeEnum("employment_type").notNull().default("FULL_TIME"),
+    // Employment classification for this recruitment (A-042), only when the
+    // notification states it. NULL = not stated. No default: a defaulted
+    // FULL_TIME was being published as fact (removed 2026-10-24).
+    employmentType: employmentTypeEnum("employment_type"),
     // The real identity-key field. Government recruitments are published
     // with a reference number (e.g. "No. 22/2026-RC") that's far more
     // reliable than matching on year+title. Nullable because not every

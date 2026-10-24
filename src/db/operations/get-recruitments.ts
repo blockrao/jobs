@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { stripAggregatorData } from "@/lib/aggregators";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -66,7 +67,7 @@ export async function getRecruitmentPosts(recruitmentId: number) {
   for (const row of result) {
     if (!postsMap.has(row.post.id)) {
       postsMap.set(row.post.id, {
-        ...row.post,
+        ...stripAggregatorData(row.post),
         position: row.position,
         eligibilities: [],
       });
@@ -189,8 +190,9 @@ export async function getRecruitmentWithPosts(slug: string) {
     }
 
     const recruitment = {
-      ...recruitmentResult[0].recruitment,
-      enrichmentData: recruitmentResult[0].enrichmentData,
+      ...stripAggregatorData(recruitmentResult[0].recruitment),
+      // Aggregator provenance never reaches the page payload.
+      enrichmentData: stripAggregatorData(recruitmentResult[0].enrichmentData),
       organizationName: recruitmentResult[0].organizationName,
       organizationSlug: recruitmentResult[0].organizationSlug,
       organizationSector: recruitmentResult[0].organizationSector as string,
@@ -395,7 +397,7 @@ export async function getRecruitmentWithPosts(slug: string) {
         ? rawInfo as Record<string, unknown>
         : null;
       return {
-        ...row.post,
+        ...stripAggregatorData(row.post),
         // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
         title: row.post.name,
         position: row.position,

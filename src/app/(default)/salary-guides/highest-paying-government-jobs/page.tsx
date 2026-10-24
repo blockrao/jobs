@@ -658,7 +658,7 @@ const pageContent = {
             </div>
             <div className="border-l-4 border-green-600 pl-4">
               <p className="font-bold text-green-700">Choose Banking if:</p>
-              <p className="text-sm">You want guaranteed ₹250,000+ career (90% success rate), prefer steady growth over competition, want easiest entry (any degree OK)</p>
+              <p className="text-sm">You prefer steady growth over competition, want easiest entry (any degree OK)</p>
             </div>
             <div className="border-l-4 border-yellow-600 pl-4">
               <p className="font-bold text-yellow-700">Choose PSU Engineering if:</p>

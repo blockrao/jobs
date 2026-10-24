@@ -25,7 +25,6 @@ import { pageSeo } from "@/lib/seo";
 import { generateAlternates } from "@/lib/hreflang";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
-import JobPostingSchema from "@/components/recruitment/structured-data/job-posting-schema";
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { safeQuery } from "@/lib/safe-query";
 
@@ -87,7 +86,6 @@ export default async function RecruitmentHubPage({ params }: Props) {
   return (
     <>
       <RecruitmentHubStructuredData data={sanitizedHub} />
-      <JobPostingSchema data={sanitizedHub} enrichment={recruitment.enrichmentData} />
       <RecruitmentHub data={sanitizedHub} enrichment={recruitment.enrichmentData} />
     </>
   );
