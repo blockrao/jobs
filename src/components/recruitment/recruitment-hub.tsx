@@ -41,6 +41,7 @@ import type {
 } from './sections/types';
 
 import { deriveLifecycle, lifecycleLabel } from '@/lib/lifecycle';
+import { resolveRecruitmentVacancy } from '@/lib/resolvers/fact-resolvers';
 import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
 import { stateFromIsoCode } from '@/lib/india-states';
 import { getQualification } from '@/lib/qualifications';
@@ -294,16 +295,13 @@ export function buildHubData(
   const updatedAtLabel = formatDate(recruitment.updatedAt);
 
   // ── Vacancies and post names ─────────────────────────────────────────────
-  const extractedVacancies = sourceFactsUnverified
-    ? (recruitment.sourceExtract?.vacancyCount ?? null) : null;
-  let summed = 0;
-  let anySummed = false;
-  for (const p of posts) {
-    if (typeof p.vacancyTotal === 'number' && p.vacancyTotal > 0) { summed += p.vacancyTotal; anySummed = true; }
-  }
-  const totalVacancies = extractedVacancies
-    ?? (recruitment.totalVacancies && recruitment.totalVacancies > 0 ? recruitment.totalVacancies : null)
-    ?? (anySummed ? summed : null);
+  // Vacancy totals are recruitment-scoped facts. Never derive a recruitment
+  // total by summing Post rows, and never publish an unverified source extract.
+  // The source status is checked here; the shared resolver validates the stored
+  // recruitment total's shape. Missing evidence means no authoritative total.
+  const totalVacancies = verified
+    ? resolveRecruitmentVacancy(recruitment)
+    : null;
   const postNames = unique(posts.map(postDisplayName));
 
   // ── Title / heading / description ────────────────────────────────────────
@@ -384,12 +382,14 @@ export function buildHubData(
   const postRows: PostTableRow[] = posts.flatMap((post) => {
     const name = postDisplayName(post);
     if (!name) return [];
-    const vacancies = post.resolvedVacancyCount
-      ?? parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)
-      ?? post.vacancyTotal
-      ?? null;
-    const vacanciesVerified = post.vacancyTotal != null
-      || (post.resolvedVacancyCount != null && post.fjaExtract?.verificationStatus === 'VERIFIED');
+    // Only a resolver-produced count with an explicitly verified source may
+    // be presented as authoritative. Raw legacy columns and extracted strings
+    // are not evidence and must not be used as fallbacks.
+    const vacancies = post.resolvedVacancyCount != null
+      && post.fjaExtract?.verificationStatus === 'VERIFIED'
+      ? post.resolvedVacancyCount
+      : null;
+    const vacanciesVerified = vacancies !== null;
     const vacanciesUnverified = vacancies != null && !vacanciesVerified;
     const postSlug = str(post.slug);
 
