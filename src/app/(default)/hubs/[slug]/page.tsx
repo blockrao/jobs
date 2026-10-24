@@ -148,13 +148,6 @@ export default async function HubPage({ params }: PageProps) {
               >
                 Browse {hub.title}
               </Link>
-              <Link
-                href="/alerts"
-                className="inline-block px-6 py-3 rounded-lg font-semibold border-2 text-neutral-900"
-                style={{ borderColor: hub.color }}
-              >
-                Set Job Alert
-              </Link>
             </div>
           </div>
         </section>
@@ -178,7 +171,7 @@ export default async function HubPage({ params }: PageProps) {
                 {hubJobs.map((job) => (
                   <Link
                     key={job.id}
-                    href={`/jobs/${job.recruitment_slug}/${job.post_slug}`}
+                    href={`/jobs/${job.recruitment_slug}`}
                     className="group p-6 rounded-lg border border-black/8 hover:border-brand-600/50 hover:bg-brand-50 transition-colors"
                   >
                     <h3 className="font-semibold text-base text-neutral-900 group-hover:text-brand-600 line-clamp-2 mb-2">

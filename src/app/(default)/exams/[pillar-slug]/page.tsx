@@ -110,7 +110,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!exam) return {};
 
   const year = new Date().getFullYear();
-  const title = `${exam.label} ${year} – Eligibility, Salary, Exam Pattern | JobOye`;
+  const title = `${exam.label} ${year} – Eligibility, Salary, Exam Pattern`; // layout template adds "| JobOye"
   const description = exam.eligibility
     ? `${exam.label}: ${exam.eligibility.slice(0, 120)}… Check salary, vacancies, and open positions on JobOye.`
     : `${exam.description?.slice(0, 140) ?? exam.label} – eligibility, salary, exam pattern and current vacancies on JobOye.`;

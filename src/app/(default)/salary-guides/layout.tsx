@@ -56,9 +56,9 @@ export default function SalaryGuidesLayout({
             <div>
               <h3 className="font-bold mb-4">Government Jobs by Qualification</h3>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="/qualifications/b-tech" className="hover:text-blue-600">B.Tech Jobs</a></li>
-                <li><a href="/qualifications/mba" className="hover:text-blue-600">MBA Jobs</a></li>
-                <li><a href="/qualifications/b-com" className="hover:text-blue-600">B.Com Jobs</a></li>
+                <li><a href="/qualifications/b-tech-government-jobs" className="hover:text-blue-600">B.Tech Jobs</a></li>
+                <li><a href="/qualifications/mba-government-jobs" className="hover:text-blue-600">MBA Jobs</a></li>
+                <li><a href="/qualifications/b-com-government-jobs" className="hover:text-blue-600">B.Com Jobs</a></li>
                 <li><a href="/qualifications" className="hover:text-blue-600">View All</a></li>
               </ul>
             </div>
@@ -67,8 +67,8 @@ export default function SalaryGuidesLayout({
               <h3 className="font-bold mb-4">Salary Guides</h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><a href="/salary-guides/government-job-salary-by-grade" className="hover:text-blue-600">By Grade</a></li>
-                <li><a href="/salary-guides/highest-paying-jobs" className="hover:text-blue-600">Highest Paying</a></li>
-                <li><a href="/salary-guides/salary-progression" className="hover:text-blue-600">Salary Growth</a></li>
+                <li><a href="/salary-guides/highest-paying-government-jobs" className="hover:text-blue-600">Highest Paying</a></li>
+                <li><a href="/salary-guides/government-job-salary-by-grade" className="hover:text-blue-600">Salary Growth</a></li>
                 <li><a href="/salary-guides" className="hover:text-blue-600">View All</a></li>
               </ul>
             </div>

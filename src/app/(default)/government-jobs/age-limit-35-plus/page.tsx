@@ -217,7 +217,7 @@ export default function Age35PlusGovernmentJobsPage() {
       />
       <main className="max-w-4xl mx-auto px-4 py-8">
         <nav className="text-sm text-gray-600 mb-4">
-          <a href="/" className="hover:underline">Home</a> / <a href="/government-jobs" className="hover:underline">Government Jobs</a> / <span>{pageContent.title}</span>
+          <a href="/" className="hover:underline">Home</a> / <a href="/jobs" className="hover:underline">Government Jobs</a> / <span>{pageContent.title}</span>
         </nav>
 
         <h1 className="text-4xl font-bold mb-6">{pageContent.title}</h1>

@@ -7,7 +7,7 @@ import { SITE_URL } from "@/lib/site";
 export const revalidate = 86400; // Daily revalidation
 
 export const metadata: Metadata = {
-  title: "Government Job Guides & Hub Pages | JobOye",
+  title: "Government Job Guides & Hub Pages",
   description:
     "Comprehensive guides for government jobs by exam, state, salary range, and qualification. UPSC, SSC, Banking, Railways, Police, ISRO, and 28+ specialized hubs.",
   ...pageSeo(`${SITE_URL}/hubs`),
@@ -153,12 +153,6 @@ export default function HubsIndexPage() {
               className="inline-block px-6 py-3 rounded-lg bg-neutral-900 text-white font-semibold hover:bg-neutral-800 transition-colors"
             >
               Browse All Jobs
-            </Link>
-            <Link
-              href="/alerts"
-              className="inline-block px-6 py-3 rounded-lg border-2 border-neutral-900 text-neutral-900 font-semibold hover:bg-neutral-50 transition-colors"
-            >
-              Set Job Alert
             </Link>
           </div>
         </div>
