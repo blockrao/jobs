@@ -29,7 +29,14 @@
     "approve-jobs": "dotenv -e .env.local -- tsx src/scripts/approve-pending-jobs.ts",
     "test:contracts": "vitest run",
     "test:contracts:watch": "vitest",
-    "test:contracts:typecheck": "tsc -p tests/tsconfig.json --noEmit"
+    "test:contracts:typecheck": "tsc -p tests/tsconfig.json --noEmit",
+    "verify:slugs:all": "dotenv -e .env.local -- tsx src/scripts/verify-slug-migration.ts",
+    "verify:slugs:quick": "dotenv -e .env.local -- tsx src/scripts/verify-slug-migration.ts -- --quick",
+    "verify:slugs:db": "dotenv -e .env.local -- tsx src/scripts/verify-slug-migration.ts -- --db-only",
+    "verify:urls:sample": "dotenv -e .env.local -- tsx src/scripts/verify-urls-accessibility.ts -- --sample 100",
+    "verify:urls:full": "dotenv -e .env.local -- tsx src/scripts/verify-urls-accessibility.ts -- --full",
+    "verify:urls:performance": "dotenv -e .env.local -- tsx src/scripts/verify-urls-accessibility.ts -- --performance",
+    "verify:all": "npm run verify:slugs:all && npm run verify:urls:sample"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.38.0",
