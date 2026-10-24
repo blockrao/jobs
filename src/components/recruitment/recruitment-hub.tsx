@@ -429,10 +429,16 @@ export function buildHubData(
       }
     }
 
+    // CRITICAL: Ensure postSlug comes ONLY from database, never generated from enrichment titles
+    // This prevents URL corruption when enrichment data contains post titles
+    const validPostSlug = postSlug && postSlug.length > 0 && !postSlug.startsWith('-') ? postSlug : null;
+
     return [{
       id: post.id,
       name,
-      href: postSlug ? `/jobs/${slug}/${postSlug}` : null,
+      // Only construct href if we have a valid post slug from database
+      // If postSlug is missing or malformed, href is null (no link)
+      href: validPostSlug ? `/jobs/${slug}/${validPostSlug}` : null,
       vacanciesLabel: vacancies != null ? `${vacancies.toLocaleString('en-IN')}${vacanciesUnverified ? '*' : ''}` : null,
       vacanciesUnverified,
       qualification: postQualification(post),
