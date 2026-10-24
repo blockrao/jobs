@@ -122,6 +122,14 @@ The agreed URL contract remains:
 
 **Remedy:** test rendered page HTML and JSON-LD together. Assert one canonical URL, one intended JobPosting graph on eligible post leaves only, no JobPosting on hubs/listings, no fabricated fields, and exact parity for salary/vacancies/deadline/employer/source. Run Rich Results Test / Schema Markup Validator on a representative sample after deployment.
 
+### P1 — Supabase security advisor still reports database hardening work
+
+**Evidence:** On 2026-10-25, the connected production Supabase project's advisors reported 32 functions with mutable `search_path` (WARN), one extension in the `public` schema (`unaccent`, WARN), and 64 RLS-enabled tables without policies (INFO). The no-policy findings include many backup/internal schemas and some `public` tables. The same snapshot reported three RLS init-plan warnings, 16 unindexed foreign keys, 6 duplicate indexes, 22 unused indexes, and 65 tables without primary keys (many are backups/staging tables).
+
+**Risk:** mutable function search paths can create name-resolution/security risks depending on function privileges and body. RLS enabled with no policies is normally fail-closed for API roles, but may break intended API access; backups/internal schemas should not be exposed. Index findings can affect performance but should not trigger blind index deletion.
+
+**Remedy:** classify findings by schema and exposure. Inspect each of the 32 function definitions and privileges; pin a safe search path (or schema-qualify references) where appropriate. Confirm no backup/internal schema is exposed through PostgREST and no service-role credentials reach the client. For no-policy tables, explicitly document whether access should be denied or add least-privilege policies only where required. Review duplicate/unused indexes with query plans and usage windows before changing them.
+
 ### P2 — Repository documentation contains contradictory routing instructions
 
 **Evidence:** `CANONICAL_ROUTES_DEPLOYMENT_CHECKLIST.md` still describes locale-prefixed routes as a required migration and labels the current English-only routes broken, which conflicts with the currently locked unprefixed URL contract and the explicit decision to defer Hindi.
@@ -141,6 +149,7 @@ The connected Supabase project named `jobs` is active and healthy. The following
 - Vacancy values: 12 recruitment totals exceed 100,000 and lack an official notification URL; 499 recruitment rows with totals are not in a verified state. There are 130 post totals that are zero/negative, 4,148 plausible positive post totals, and 654 null post totals. Enrichment vacancy totals max out at 33,320.
 - 817 live/upcoming recruitments currently reference the unresolved placeholder organization; the sitemap and hub indexability logic exclude this placeholder, but it remains a major content-quality backlog.
 - The queried `posts` legacy/camelCase relationship columns had zero disagreement for `recruitmentId` vs `recruitment_id` and `organizationId` vs `employing_organization_id` on rows where both were populated; `recruitmentName` matched the joined recruitment name in the sampled comparison. This does not eliminate broader legacy-column ambiguity.
+- Supabase advisors reported 32 mutable-search-path functions, one public-schema extension, 64 RLS-enabled/no-policy tables, 16 unindexed foreign keys, 3 RLS init-plan warnings, 6 duplicate indexes, 22 unused indexes, and 65 no-primary-key tables. Most no-PK/no-policy findings appear to involve backups/staging, but each must be classified before remediation.
 
 These findings refine earlier hypotheses: global duplicate post slugs are expected under the two-segment entity URL contract; the urgent vacancy issue is recruitment-level totals and non-positive post totals, not post totals above 100,000 in the current DB snapshot.
 
