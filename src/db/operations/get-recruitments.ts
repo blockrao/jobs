@@ -20,7 +20,7 @@ export async function getRecruitmentBySlug(slug: string) {
   let result = await db
     .select()
     .from(recruitments)
-    .where(eq(recruitments.slug, slug))
+    .where(and(eq(recruitments.slug, slug), notQuarantined))
     .limit(1);
 
   // If not found, check if this is an old slug that was redirected
@@ -36,7 +36,7 @@ export async function getRecruitmentBySlug(slug: string) {
       result = await db
         .select()
         .from(recruitments)
-        .where(eq(recruitments.slug, newSlug))
+        .where(and(eq(recruitments.slug, newSlug), notQuarantined))
         .limit(1);
     }
   }
