@@ -24,6 +24,7 @@ import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
 import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
+import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
 
 export const revalidate = 86400; // 1 day ISR
 
@@ -41,7 +42,7 @@ interface Props {
  */
 function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
   const enrichment = post.enrichment;
-  const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
+  const vacancies = resolvePostVacancy(post) ?? 0;
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const deadlineRaw = post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null;
@@ -117,7 +118,7 @@ export default async function JobDetailPage({ params }: Props) {
   const enrichment = post.enrichment;
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
-  const vacancies = enrichment?.vacanciesTotal ?? post.vacancyTotal ?? 0;
+  const vacancies = resolvePostVacancy(post) ?? 0;
 
   // Fetch related posts (semantically grouped)
   const relatedPosts = await getRelatedPostsGrouped(
