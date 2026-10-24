@@ -175,9 +175,8 @@ export async function resolveRecruitment(
   // No confident match — create a new recruitment rather than attaching to
   // the nearest existing one.
   //
-  // Generate a sequential slug in the format {org-slug}-{year}-{2-digit-number}
-  // This replaces the old deterministic slug approach for new recruitments,
-  // providing human-readable, professional URLs.
+  // Slug in the live DB format org{id}-{year}-{nnnn} (same rule as the
+  // recruitment_slug_auto_gen trigger; see src/ingest/slug-generator.ts).
   const finalYear = identity.year ?? new Date().getFullYear();
   const finalSlug = await generateSequentialSlug(db, identity.organizationId, finalYear);
 
