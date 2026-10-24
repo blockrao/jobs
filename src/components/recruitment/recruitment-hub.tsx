@@ -132,14 +132,6 @@ const unique = (values: Array<string | null | undefined>): string[] => {
   return out;
 };
 
-const parseReportedVacancyCount = (value: string | null | undefined): number | null => {
-  if (!value) return null;
-  const normalized = value.replace(/,/g, '').trim();
-  if (!/^\d+$/.test(normalized)) return null;
-  const parsed = Number(normalized);
-  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
-};
-
 const JOB_TYPE_LABELS: Record<string, string> = {
   FULL_TIME: 'Full-time',
   PART_TIME: 'Part-time',
