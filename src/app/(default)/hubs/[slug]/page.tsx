@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { jsonLdGraph } from "@/lib/structured-data";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getHub, getAllHubs } from "@/data/hubs-metadata";
@@ -71,7 +72,6 @@ export default async function HubPage({ params }: PageProps) {
   };
 
   const breadcrumbSchema = {
-    "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       {
@@ -99,7 +99,7 @@ export default async function HubPage({ params }: PageProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdGraph(breadcrumbSchema)) }}
       />
 
       <div className="mx-auto max-w-6xl px-4">

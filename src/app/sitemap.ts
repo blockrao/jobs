@@ -116,6 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         FROM organizations o
         JOIN recruitments r ON r.organization_id = o.id
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        WHERE o.merged_into_id IS NULL
         GROUP BY o.id, o.slug
         HAVING count(*) >= ${ORG_INDEX_MIN_RECRUITMENTS}
         ORDER BY count(*) DESC

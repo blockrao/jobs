@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { jsonLdGraph } from "@/lib/structured-data";
 import Link from "next/link";
 import { getAllHubs } from "@/data/hubs-metadata";
 import { pageSeo } from "@/lib/seo";
@@ -162,8 +163,7 @@ export default function HubsIndexPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
+          __html: JSON.stringify(jsonLdGraph({
             "@type": "CollectionPage",
             name: "Government Job Guides",
             description:
@@ -184,7 +184,7 @@ export default function HubsIndexPage() {
                 description: hub.description,
               })),
             },
-          }),
+          })),
         }}
       />
     </div>

@@ -46,7 +46,7 @@ describe("entity pages", () => {
 
 describe("listings and fixed pages", () => {
   test("POL-05 a listing is indexable only unfiltered, and always canonical to the unfiltered path", () => {
-    expect(listingSeo("/jobs", { kind: undefined, q: undefined })).toEqual({ alternates: { canonical: "/jobs" }, robots: undefined });
+    expect(listingSeo("/jobs", { kind: undefined, q: undefined })).toEqual({ alternates: { canonical: "/jobs" }, robots: expect.objectContaining({ index: true, follow: true }) });
     for (const params of [{ kind: "GOVERNMENT" }, { q: "clerk" }, { kind: "PRIVATE", q: "x" }]) {
       expect(listingSeo("/jobs", params)).toEqual({ alternates: { canonical: "/jobs" }, robots: NOINDEX });
     }

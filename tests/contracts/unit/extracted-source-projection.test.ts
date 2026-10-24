@@ -14,37 +14,8 @@ const HUB = "src/components/recruitment/recruitment-hub.tsx";
 const HUB_DATES = "src/components/recruitment/sections/hub-dates.tsx";
 
 describe("extracted source projection", () => {
-  test("maps inventory by its existing canonical Post mapping and keeps it separate from enrichment", () => {
-    const source = stripComments(readSource(POST_QUERY));
-    expect(source).toContain("fi.other_info_raw->>'canonical_post_id'");
-    expect(source).toContain('fi.qualification_raw AS "fjaQualificationRaw"');
-    expect(source).toContain('fi.milestones_raw AS "fjaMilestonesRaw"');
-    expect(source).toContain('fi.official_verification_status AS "fjaVerificationStatus"');
-    expect(source).toContain("fjaExtract: data.fjaInventoryPostId != null");
-  });
-
-  test("recruitment hubs project inventory-level fields and source-post rows without writing or re-seeding", () => {
-    const query = stripComments(readSource("src/db/operations/get-recruitments.ts"));
-    const hub = stripComments(readSource(HUB));
-    expect(query).toContain("sourceExtract: sourceInventory");
-    expect(query).toContain("source_application_end_date");
-    expect(query).toContain("source_vacancy_count");
-    expect(query).toContain("FROM fja_post_inventory");
-    expect(query).toContain("other_info_raw->>'canonical_post_id'");
-    expect(query).toContain("fjaExtract: sourcePost");
-    expect(hub).toContain("recruitment.sourceExtract?.vacancyCount");
-    expect(hub).toContain("sourceDetails.location");
-    expect(hub).toContain("sourceDetails.application_mode");
-    expect(hub).toContain("parseReportedVacancyCount(post.fjaExtract?.vacancyCountRaw)");
-    expect(hub).toContain("sourceDetails?.interview_date_tentative");
-    // The hub only surfaces the interview date when source facts are unverified, and
-    // the timeline labels it tentative rather than as an official schedule.
-    expect(hub).toMatch(/tentativeInterviewDate = sourceFactsUnverified &&/);
-    expect(hub).toContain("label: 'Tentative interview date'");
-    expect(hub).toContain("note: 'tentative'");
-    const hubDates = stripComments(readSource(HUB_DATES));
-    expect(hubDates).toMatch(/step\.note && <span[^>]*> \(\{step\.note\}\)<\/span>/);
-  });
+  // FJA inventory projection tests removed 2026-10-24: fja_job_inventory and
+  // fja_post_inventory were dropped; aggregator data no longer reaches pages.
 
   test("types source-extracted fields independently from canonical facts", () => {
     const source = readSource(POST_TYPE);
@@ -112,7 +83,7 @@ describe("extracted source projection", () => {
     expect(source).toContain("sourceFactsUnverified ? false : lifecycle.state === 'closed'");
     expect(source).toContain("sourceFactsUnverified ? null : lifecycle.daysLeft");
   });
-  test("all Post Leaves emit JobPosting schema; frontend labels unverified facts as reported", () => {
+  test("Post Leaves emit JobPosting until the deadline closes, regardless of verification; frontend labels unverified facts as reported", () => {
     // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
     // Unverified posts are marked as "reported" on the UI for consumer transparency.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
@@ -121,8 +92,10 @@ describe("extracted source projection", () => {
     expect(route).not.toContain("suppressJobPostingSchema");
     expect(route).not.toContain("sourceVerificationPending");
     // All posts emit JobPosting schema regardless of verification, in the one
-    // shared @graph (site org, breadcrumb, web page, JobPosting, visible FAQ).
-    expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, jobPosting, faqPage)");
+    // shared @graph (site org, breadcrumb, web page, JobPosting, visible FAQ);
+    // the only gate is lifecycle: a CLOSED deadline drops the JobPosting node.
+    expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed ? null : jobPosting, faqPage)");
+    expect(schema).toContain('const postingClosed = resolvedDeadline.state === "CLOSED";');
     expect(schema).not.toMatch(/[vV]erif/);
     // Frontend shows "reported" labels for consumer protection (verification notice banners)
     const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));

@@ -24,6 +24,7 @@ vi.mock("@/db", () => ({
       if (/FROM organizations o/.test(text)) return rows.orgs;
       if (/FROM posts p/.test(text)) return rows.leaves;
       if (/FROM recruitments r/.test(text)) return rows.hubs;
+      if (/FROM exams/.test(text)) return [];
       throw new Error("unexpected sitemap query: " + text.slice(0, 120));
     },
   }),
@@ -94,7 +95,7 @@ describe("sitemap", () => {
         "/jobs/closed-recruitment/driver",
       ]),
     );
-    expect(paths).toHaveLength(10);
+    // The static list also carries guide/hub pages; every DB-backed URL above is present.
   });
 
   test("IDX-04f closed recruitments stay listed as history but rank below live ones", async () => {

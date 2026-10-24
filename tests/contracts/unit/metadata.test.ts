@@ -13,6 +13,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Metadata } from "next";
 import { SITE, canonicalOf, isNoindex, languagesOf, params } from "../helpers/metadata";
+import { ORG_INDEX_MIN_RECRUITMENTS as ORG_MIN } from "../../../src/lib/organizations/stats";
 
 const getArticleBySlug = vi.fn();
 const getRecruitmentWithPostsCached = vi.fn();
@@ -26,6 +27,8 @@ vi.mock("@/lib/queries", async (importOriginal) => ({
 }));
 vi.mock("@/db/operations/get-recruitments", () => ({
   getRecruitmentWithPostsCached: (...a: unknown[]) => getRecruitmentWithPostsCached(...a),
+  getRecruitmentPostingLocations: async () => [],
+  getRecruitmentCutoffMarks: async () => [],
 }));
 vi.mock("@/db/operations/get-posts", () => ({
   getPostBySlugCached: (...a: unknown[]) => getPostBySlugCached(...a),
@@ -75,7 +78,7 @@ const stats = (recruitmentCount: number) => ({
   nextDeadline: null,
   roles: [],
   exams: [],
-  indexable: recruitmentCount >= 3,
+  indexable: recruitmentCount >= ORG_MIN,
 });
 
 /**
@@ -194,9 +197,11 @@ describe("recruitment hub canonical (URL contract 2026-10-20)", () => {
 });
 
 describe("organization page indexability (ORG_INDEX_MIN_RECRUITMENTS)", () => {
-  test("IDX-08a an organization below the recruitment threshold is noindex, follow, still self-canonical", async () => {
+  // With ORG_INDEX_MIN_RECRUITMENTS = 0 (owner policy: every organization is
+  // indexable) no organization is below the threshold, so 08a has nothing to test.
+  test.skipIf(ORG_MIN === 0)("IDX-08a an organization below the recruitment threshold is noindex, follow, still self-canonical", async () => {
     resolveOrganization.mockResolvedValue({ kind: "canonical", org });
-    getOrganizationStats.mockResolvedValue(stats(1));
+    getOrganizationStats.mockResolvedValue(stats(Math.max(ORG_MIN - 1, 0)));
     const mod = await import("@/app/(default)/organizations/[slug]/page");
     const meta = await mod.generateMetadata(params({ slug: "sample-org" }));
     expect(isNoindex(meta)).toBe(true);
