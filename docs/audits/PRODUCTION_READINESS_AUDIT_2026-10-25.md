@@ -33,6 +33,19 @@ The agreed URL contract remains:
 4. Omit unknown/untrusted totals; never sum post totals to manufacture a recruitment total.
 5. Add contract tests covering each public surface, including metadata and schema output, with implausible and unverified fixtures.
 
+### P0 — Recruitment Hub still derives totals by summing Post totals
+
+**Evidence:** `src/components/recruitment/recruitment-hub.tsx` currently calculates `totalVacancies` from `sourceExtract.vacancyCount`, then `recruitment.totalVacancies`, then a sum of every positive `post.vacancyTotal`. Its post rows also fall back to raw `fjaExtract.vacancyCountRaw` and `post.vacancyTotal`; `vacanciesVerified` is true whenever `post.vacancyTotal != null`, which treats mere column presence as verification. This conflicts with the documented data-to-UI integrity contract, which explicitly forbids deriving a recruitment-wide total by summing Post records.
+
+**Risk:** incomplete or stale Post rows can inflate the recruitment headline and title, even when the recruitment-level total is unknown. Unverified counts can be presented without a reported/unverified label. This is a direct data correctness issue and must be fixed before production certification.
+
+**Remedy:**
+1. Never sum Post totals to produce a Recruitment total.
+2. Resolve Recruitment totals only from the recruitment-owned total field and the agreed verification/source/plausibility gate. If not trusted, omit the count from the title and headline.
+3. Resolve each Post count through `resolvePostVacancy`; do not treat non-null legacy columns as proof of verification.
+4. Keep a separately labelled “reported by source listing” value only if the product deliberately chooses to show it, and never represent it as verified or use it as a canonical vacancy fact in JSON-LD.
+5. Add unit tests for a recruitment with multiple Posts where the recruitment total is null, wrong, implausible, or unverified; ensure the Hub never sums the Posts.
+
 ### P0 — Slug uniqueness and lookup determinism need a database constraint
 
 **Evidence:** Read-only production queries (2026-10-25) found 4,932 posts, zero missing/blank post slugs, zero duplicate recruitment slugs, zero duplicate `(recruitment_id, slug)` groups, and zero posts orphaned by `recruitment_id`. There are 864 global duplicate `posts.slug` groups (for example, `junior-research-fellow` appears in 44 different recruitments). Because the public URL includes the recruitment slug as well as post slug, these global repeats are not themselves canonical URL collisions. The post lookup is scoped by recruitment, but its `LIMIT 1` is still nondeterministic if a duplicate pair is ever introduced.
