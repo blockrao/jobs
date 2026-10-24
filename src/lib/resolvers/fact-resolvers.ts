@@ -164,7 +164,7 @@ function salaryConsistentWithPayLevel(
  *      - vacanciesTotal does NOT match the recruitment-level total (entity scope guard)
  *      Note: vacanciesByCategory must be non-null for the entity scope check to pass
  *        when vacanciesTotal looks like a recruitment total (see note below).
- *   2. posts.vacancy_total — passes when non-null, > 0, and does NOT equal the recruitment's total_vacancies (scope guard).
+ *   2. No legacy-column fallback: posts.vacancy_total is not accepted without persisted provenance.
  *   3. null — insufficient evidence.
  */
 export function resolvePostVacancy(
