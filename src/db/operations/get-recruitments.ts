@@ -592,7 +592,12 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
       o.slug AS "organizationSlug",
       o.sector::text AS "organizationSector",
       r.location_state_code AS "locationStateCode",
-      COALESCE(r.total_vacancies, NULLIF(pc.vacancies, 0)) AS "totalVacancies",
+      CASE
+        WHEN r.source_verification_status = 'VERIFIED'
+          AND r.total_vacancies BETWEEN 1 AND 100000
+        THEN r.total_vacancies
+        ELSE NULL
+      END AS "totalVacancies",
       COALESCE(pc.post_count, 0)::int AS "postCount",
       r.notification_date AS "notificationDate",
       r.application_start_date AS "applicationStartDate",
@@ -604,7 +609,7 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     FROM recruitments r
     LEFT JOIN organizations o ON o.id = r.organization_id
     LEFT JOIN LATERAL (
-      SELECT count(*)::int AS post_count, sum(p.vacancy_total)::int AS vacancies
+      SELECT count(*)::int AS post_count
       FROM posts p WHERE p.recruitment_id = r.id
     ) pc ON true
     ${where}
