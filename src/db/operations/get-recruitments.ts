@@ -12,9 +12,7 @@ const notQuarantined = sql`${recruitments}.verification_status IS DISTINCT FROM 
  * Returns the full recruitment object with related organization
  * Handles both new semantic slugs and old descriptive slugs (via redirect table)
  */
-export async function getRecruitmentBySlug(
-  slug: string
-): Promise<Record<string, unknown> | null> {
+export async function getRecruitmentBySlug(slug: string) {
   const db = getDb();
 
   // First, try to find by the current slug
@@ -49,9 +47,7 @@ export async function getRecruitmentBySlug(
  * Get all posts for a recruitment
  * Includes position details and eligibility info
  */
-export async function getRecruitmentPosts(
-  recruitmentId: number
-): Promise<Array<Record<string, unknown>>> {
+export async function getRecruitmentPosts(recruitmentId: number) {
   const db = getDb();
 
   const result = await db
@@ -66,7 +62,7 @@ export async function getRecruitmentPosts(
     .where(eq(posts.recruitmentId, recruitmentId));
 
   // Group by post ID since there can be multiple eligibilities per post
-  const postsMap = new Map<number, Record<string, unknown>>();
+  const postsMap = new Map();
   for (const row of result) {
     if (!postsMap.has(row.post.id)) {
       postsMap.set(row.post.id, {
@@ -75,9 +71,8 @@ export async function getRecruitmentPosts(
         eligibilities: [],
       });
     }
-    const postEntry = postsMap.get(row.post.id);
-    if (postEntry && row.eligibility) {
-      (postEntry.eligibilities as Array<Record<string, unknown>>).push(row.eligibility);
+    if (row.eligibility) {
+      postsMap.get(row.post.id).eligibilities.push(row.eligibility);
     }
   }
 
@@ -88,9 +83,7 @@ export async function getRecruitmentPosts(
  * Get vacancy breakdown for a recruitment
  * Groups by location, category, and gender
  */
-export async function getRecruitmentVacancies(
-  recruitmentId: number
-): Promise<Array<Record<string, unknown>>> {
+export async function getRecruitmentVacancies(recruitmentId: number) {
   const db = getDb();
 
   const result = await db
@@ -109,9 +102,7 @@ export async function getRecruitmentVacancies(
 /**
  * Get total vacancies for a recruitment across all posts
  */
-export async function getRecruitmentVacancyCount(
-  recruitmentId: number
-): Promise<number> {
+export async function getRecruitmentVacancyCount(recruitmentId: number) {
   const db = getDb();
 
   const result = await db
@@ -122,11 +113,7 @@ export async function getRecruitmentVacancyCount(
     .innerJoin(posts, eq(vacancies.postId, posts.id))
     .where(eq(posts.recruitmentId, recruitmentId));
 
-  const total = result.reduce(
-    (sum: number, row: Record<string, unknown>) =>
-      sum + (typeof row.total === "number" ? row.total : 0),
-    0
-  );
+  const total = result.reduce((sum, row) => sum + (row.total || 0), 0);
   return total;
 }
 
@@ -141,15 +128,7 @@ export async function getRecruitmentVacancyCount(
  * - Exact match or smart slug resolution: render as-is (no redirect)
  * - Legacy slug from recruitment_slug_redirects: should redirect to canonical
  */
-export async function getRecruitmentWithPosts(
-  slug: string
-): Promise<{
-  recruitment: Record<string, unknown>;
-  posts: Array<Record<string, unknown>>;
-  totalPosts: number;
-  isSingleJobRecruitment: boolean;
-  resolutionMethod: "exact" | "legacy-redirect" | "smart-resolution";
-} | null> {
+export async function getRecruitmentWithPosts(slug: string) {
   try {
     console.log(`[getRecruitmentWithPosts] Starting for slug: ${slug}`);
     const db = getDb();
@@ -238,16 +217,13 @@ export async function getRecruitmentWithPosts(
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
-      Promise.resolve([]), // FJA job inventory removed in Step 3 cleanup
+      // fja_job_inventory was dropped (aggregator data removed 2026-10-24).
+      Promise.resolve([] as Array<Record<string, unknown>>),
     ]);
-    const rowsOf = (
-      result: unknown
-    ): Array<Record<string, unknown>> => {
-      const value = result as { rows?: unknown[] | null };
+    const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
+      const value = result as { rows?: unknown[] };
       const rows = value?.rows ?? result;
-      return Array.isArray(rows)
-        ? (rows as Array<Record<string, unknown>>)
-        : [];
+      return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
     };
     const sourceInventory = rowsOf(sourceInventoryResult)[0] ?? null;
     Object.assign(recruitment, {
@@ -355,166 +331,90 @@ export async function getRecruitmentWithPosts(
         console.log(`[getRecruitmentWithPosts] Posts_vacancies fetch complete: ${result.length} records`);
         return result;
       })(),
-      Promise.resolve([]), // FJA post inventory removed in Step 3 cleanup
+      // fja_post_inventory was dropped (aggregator data removed 2026-10-24).
+      Promise.resolve([] as Array<Record<string, unknown>>),
     ]);
 
     console.log(`[getRecruitmentWithPosts] Successfully fetched: ${allVacancies.length} vacancies, ${allEligibilities.length} eligibilities, ${allAgeRules.length} age rules`);
 
     // Step 4: Group vacancies, eligibilities, age rules, and posts vacancies by post ID (client-side)
-    const vacanciesByPostId = new Map<
-      number,
-      Array<Record<string, unknown>>
-    >();
-    const eligibilitiesByPostId = new Map<
-      number,
-      Array<Record<string, unknown>>
-    >();
-    const ageRulesByPostId = new Map<
-      number,
-      Array<Record<string, unknown>>
-    >();
-    const postsVacanciesByPostId = new Map<
-      number,
-      Array<Record<string, unknown>>
-    >();
+    const vacanciesByPostId = new Map<number, typeof allVacancies>();
+    const eligibilitiesByPostId = new Map<number, typeof allEligibilities>();
+    const ageRulesByPostId = new Map<number, typeof allAgeRules>();
+    const postsVacanciesByPostId = new Map<number, typeof allPostsVacancies>();
 
     for (const vacancy of allVacancies) {
-      const postId = vacancy.postId as number;
-      if (!vacanciesByPostId.has(postId)) {
-        vacanciesByPostId.set(postId, []);
+      if (!vacanciesByPostId.has(vacancy.postId)) {
+        vacanciesByPostId.set(vacancy.postId, []);
       }
-      const arr = vacanciesByPostId.get(postId);
-      if (arr) {
-        arr.push(vacancy as Record<string, unknown>);
-      }
+      vacanciesByPostId.get(vacancy.postId)!.push(vacancy);
     }
 
     for (const eligibility of allEligibilities) {
-      const postId = eligibility.postId as number;
-      if (!eligibilitiesByPostId.has(postId)) {
-        eligibilitiesByPostId.set(postId, []);
+      if (!eligibilitiesByPostId.has(eligibility.postId)) {
+        eligibilitiesByPostId.set(eligibility.postId, []);
       }
-      const arr = eligibilitiesByPostId.get(postId);
-      if (arr) {
-        arr.push(eligibility as Record<string, unknown>);
-      }
+      eligibilitiesByPostId.get(eligibility.postId)!.push(eligibility);
     }
 
     for (const ageRule of allAgeRules) {
-      const postId = ageRule.postId as number;
-      if (!ageRulesByPostId.has(postId)) {
-        ageRulesByPostId.set(postId, []);
+      if (!ageRulesByPostId.has(ageRule.postId)) {
+        ageRulesByPostId.set(ageRule.postId, []);
       }
-      const arr = ageRulesByPostId.get(postId);
-      if (arr) {
-        arr.push(ageRule as Record<string, unknown>);
-      }
+      ageRulesByPostId.get(ageRule.postId)!.push(ageRule);
     }
 
     for (const postsVacancy of allPostsVacancies) {
-      const postId = postsVacancy.postId as number;
-      if (!postsVacanciesByPostId.has(postId)) {
-        postsVacanciesByPostId.set(postId, []);
+      if (!postsVacanciesByPostId.has(postsVacancy.postId)) {
+        postsVacanciesByPostId.set(postsVacancy.postId, []);
       }
-      const arr = postsVacanciesByPostId.get(postId);
-      if (arr) {
-        arr.push(postsVacancy as Record<string, unknown>);
-      }
+      postsVacanciesByPostId.get(postsVacancy.postId)!.push(postsVacancy);
     }
 
     // Project extracted source facts separately so the hub can show reported
     // listing values without treating them as canonical/verified Post facts.
     const sourcePostRows = rowsOf(sourcePostInventoryResult);
-    const sourcePostByCanonicalId = new Map<
-      string,
-      Record<string, unknown>
-    >();
+    const sourcePostByCanonicalId = new Map<string, Record<string, unknown>>();
     for (const sourcePost of sourcePostRows) {
       const rawInfo = sourcePost.other_info_raw;
-      const info =
-        rawInfo &&
-        typeof rawInfo === "object" &&
-        !Array.isArray(rawInfo)
-          ? (rawInfo as Record<string, unknown>)
-          : {};
-      const canonicalPostId =
-        typeof info.canonical_post_id === "string"
-          ? info.canonical_post_id
-          : null;
+      const info = rawInfo && typeof rawInfo === "object" && !Array.isArray(rawInfo)
+        ? rawInfo as Record<string, unknown>
+        : {};
+      const canonicalPostId = typeof info.canonical_post_id === "string"
+        ? info.canonical_post_id
+        : null;
       if (canonicalPostId && !sourcePostByCanonicalId.has(canonicalPostId)) {
         sourcePostByCanonicalId.set(canonicalPostId, sourcePost);
       }
     }
 
-    const enrichedPosts: Array<Record<string, unknown>> = postsResult.map(
-      (row) => {
-        const sourcePost = sourcePostByCanonicalId.get(
-          String(row.post.id)
-        );
-        const rawInfo = sourcePost?.other_info_raw;
-        const sourceOtherInfo =
-          rawInfo &&
-          typeof rawInfo === "object" &&
-          !Array.isArray(rawInfo)
-            ? (rawInfo as Record<string, unknown>)
-            : null;
-        return {
-          ...row.post,
-          // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
-          title: row.post.name,
-          position: row.position,
-          vacancies: vacanciesByPostId.get(
-            row.post.id as number
-          ) ?? [],
-          eligibilities: eligibilitiesByPostId.get(
-            row.post.id as number
-          ) ?? [],
-          fjaExtract: sourcePost
-            ? {
-                inventoryId:
-                  sourcePost.id as number | string,
-                vacancyCountRaw:
-                  typeof sourcePost.vacancy_count_raw ===
-                  "string"
-                    ? sourcePost.vacancy_count_raw
-                    : null,
-                qualificationRaw:
-                  typeof sourcePost.qualification_raw ===
-                  "string"
-                    ? sourcePost.qualification_raw
-                    : null,
-                experienceRaw:
-                  typeof sourcePost.experience_raw === "string"
-                    ? sourcePost.experience_raw
-                    : null,
-                salaryRaw:
-                  typeof sourcePost.salary_raw === "string"
-                    ? sourcePost.salary_raw
-                    : null,
-                tenureRaw:
-                  typeof sourcePost.tenure_raw === "string"
-                    ? sourcePost.tenure_raw
-                    : null,
-                locationRaw:
-                  typeof sourcePost.location_raw === "string"
-                    ? sourcePost.location_raw
-                    : null,
-                employmentTypeRaw:
-                  typeof sourcePost.employment_type_raw ===
-                  "string"
-                    ? sourcePost.employment_type_raw
-                    : null,
-                verificationStatus:
-                  typeof sourcePost.official_verification_status ===
-                  "string"
-                    ? sourcePost.official_verification_status
-                    : null,
-                otherInfoRaw: sourceOtherInfo,
-              }
-            : null,
-        };
-      }
-    );
+    const enrichedPosts = postsResult.map((row) => {
+      const sourcePost = sourcePostByCanonicalId.get(String(row.post.id));
+      const rawInfo = sourcePost?.other_info_raw;
+      const sourceOtherInfo = rawInfo && typeof rawInfo === "object" && !Array.isArray(rawInfo)
+        ? rawInfo as Record<string, unknown>
+        : null;
+      return {
+        ...row.post,
+        // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
+        title: row.post.name,
+        position: row.position,
+        vacancies: vacanciesByPostId.get(row.post.id) ?? [],
+        eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
+        fjaExtract: sourcePost ? {
+          inventoryId: sourcePost.id as number | string,
+          vacancyCountRaw: typeof sourcePost.vacancy_count_raw === "string" ? sourcePost.vacancy_count_raw : null,
+          qualificationRaw: typeof sourcePost.qualification_raw === "string" ? sourcePost.qualification_raw : null,
+          experienceRaw: typeof sourcePost.experience_raw === "string" ? sourcePost.experience_raw : null,
+          salaryRaw: typeof sourcePost.salary_raw === "string" ? sourcePost.salary_raw : null,
+          tenureRaw: typeof sourcePost.tenure_raw === "string" ? sourcePost.tenure_raw : null,
+          locationRaw: typeof sourcePost.location_raw === "string" ? sourcePost.location_raw : null,
+          employmentTypeRaw: typeof sourcePost.employment_type_raw === "string" ? sourcePost.employment_type_raw : null,
+          verificationStatus: typeof sourcePost.official_verification_status === "string" ? sourcePost.official_verification_status : null,
+          otherInfoRaw: sourceOtherInfo,
+        } : null,
+      };
+    });
 
     const [enrichmentResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
       db.execute(sql`
@@ -539,69 +439,34 @@ export async function getRecruitmentWithPosts(
       `)
     ]);
     const enrichmentRows = (
-      (enrichmentResult as unknown as { rows?: unknown[] | null })
-        ?.rows ?? enrichmentResult
+      (enrichmentResult as unknown as { rows?: unknown[] }).rows ?? enrichmentResult
     ) as Array<Record<string, unknown>>;
-    const enrichmentByPostId = new Map<
-      number,
-      Record<string, unknown>
-    >();
+    const enrichmentByPostId = new Map<number, Record<string, unknown>>();
     for (const item of enrichmentRows) {
       const postId = Number(item.post_id);
-      if (Number.isFinite(postId)) {
-        enrichmentByPostId.set(postId, item);
-      }
+      if (Number.isFinite(postId)) enrichmentByPostId.set(postId, item);
     }
     const vacancyDetailRows = rowsOf(vacancyDetailResult);
-    const vacancyDetailsByPostId = new Map<
-      number,
-      Array<Record<string, unknown>>
-    >();
+    const vacancyDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
     for (const row of vacancyDetailRows) {
       const postId = Number(row.post_id);
-      if (!vacancyDetailsByPostId.has(postId)) {
-        vacancyDetailsByPostId.set(postId, []);
-      }
-      const arr = vacancyDetailsByPostId.get(postId);
-      if (arr) {
-        arr.push(row);
-      }
+      if (!vacancyDetailsByPostId.has(postId)) vacancyDetailsByPostId.set(postId, []);
+      vacancyDetailsByPostId.get(postId)!.push(row);
     }
-    const eligibilityDetailRows = rowsOf(
-      eligibilityQualificationResult
-    );
-    const eligibilityDetailsByPostId = new Map<
-      number,
-      Array<Record<string, unknown>>
-    >();
+    const eligibilityDetailRows = rowsOf(eligibilityQualificationResult);
+    const eligibilityDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
     for (const row of eligibilityDetailRows) {
       const postId = Number(row.post_id);
-      if (!eligibilityDetailsByPostId.has(postId)) {
-        eligibilityDetailsByPostId.set(postId, []);
-      }
-      const arr = eligibilityDetailsByPostId.get(postId);
-      if (arr) {
-        arr.push(row);
-      }
+      if (!eligibilityDetailsByPostId.has(postId)) eligibilityDetailsByPostId.set(postId, []);
+      eligibilityDetailsByPostId.get(postId)!.push(row);
     }
-    const postsWithDetails: Array<Record<string, unknown>> =
-      enrichedPosts.map((post) => ({
-        ...post,
-        vacancies:
-          postsVacanciesByPostId.get(post.id as number) ??
-          vacancyDetailsByPostId.get(post.id as number) ??
-          vacanciesByPostId.get(post.id as number) ??
-          [],
-        eligibilities:
-          eligibilityDetailsByPostId.get(
-            post.id as number
-          ) ??
-          eligibilitiesByPostId.get(post.id as number) ??
-          [],
-        ageRules: ageRulesByPostId.get(post.id as number) ?? [],
-        postEnrichment:
-          enrichmentByPostId.get(post.id as number) ?? null,
-      }));
+    const postsWithDetails = enrichedPosts.map((post) => ({
+      ...post,
+      vacancies: postsVacanciesByPostId.get(post.id) ?? vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
+      eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
+      ageRules: ageRulesByPostId.get(post.id) ?? [],
+      postEnrichment: enrichmentByPostId.get(post.id) ?? null,
+    }));
 
     return {
       recruitment,
@@ -754,9 +619,7 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
  * Get posting locations for a recruitment
  * Returns unique cities where positions are posted
  */
-export async function getRecruitmentPostingLocations(
-  recruitmentId: number
-): Promise<Array<Record<string, unknown>>> {
+export async function getRecruitmentPostingLocations(recruitmentId: number) {
   const db = getDb();
 
   const result = await db
@@ -770,18 +633,7 @@ export async function getRecruitmentPostingLocations(
 
   // Get unique cities and states
   const uniqueLocations = Array.from(
-    new Map<
-      string,
-      Record<string, unknown>
-    >(
-      result.map(
-        (r) =>
-          [
-            `${r.city}-${r.state}`,
-            r as Record<string, unknown>,
-          ] as const
-      )
-    ).values()
+    new Map(result.map((r) => [`${r.city}-${r.state}`, r])).values()
   );
 
   return uniqueLocations;
@@ -791,26 +643,16 @@ export async function getRecruitmentPostingLocations(
  * Get cutoff marks for a recruitment
  * Returns latest year cutoff marks by category
  */
-export async function getRecruitmentCutoffMarks(
-  recruitmentId: number
-): Promise<Array<Record<string, unknown>>> {
+export async function getRecruitmentCutoffMarks(recruitmentId: number) {
   const db = getDb();
 
   // Get the latest year
   const latestYearResult = await db
-    .select({
-      year: sql<number>`MAX(${recruitmentCutoffs.year})`,
-    })
+    .select({ year: sql<number>`MAX(${recruitmentCutoffs.year})` })
     .from(recruitmentCutoffs)
-    .where(
-      eq(recruitmentCutoffs.recruitmentId, recruitmentId)
-    );
+    .where(eq(recruitmentCutoffs.recruitmentId, recruitmentId));
 
-  if (
-    !latestYearResult ||
-    latestYearResult.length === 0 ||
-    latestYearResult[0].year === null
-  ) {
+  if (!latestYearResult || latestYearResult.length === 0 || latestYearResult[0].year === null) {
     return [];
   }
 
@@ -828,5 +670,5 @@ export async function getRecruitmentCutoffMarks(
     )
     .orderBy(recruitmentCutoffs.category);
 
-  return result as Array<Record<string, unknown>>;
+  return result;
 }
