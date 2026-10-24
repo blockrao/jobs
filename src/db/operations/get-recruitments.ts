@@ -153,6 +153,11 @@ export async function getRecruitmentWithPosts(slug: string) {
     console.log(`[getRecruitmentWithPosts] About to process recruitment result...`);
 
     // Legacy slugs still resolve through the redirect table as before.
+    // CRITICAL FIX (2026-10-24): Removed "smart slug resolution" fallback that was
+    // matching partial slugs like 'org1121-2026' to the most recent recruitment,
+    // causing wrong jobs to be shown when URLs were malformed or truncated by the
+    // next.config.ts regex rule. Now ONLY the recruitment_slug_redirects table
+    // can map old slugs to new ones. Everything else returns 404.
     if (!recruitmentResult || recruitmentResult.length === 0) {
       const redirectRecord = await db
         .select()
@@ -175,42 +180,6 @@ export async function getRecruitmentWithPosts(slug: string) {
           .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
           .where(and(eq(recruitments.slug, redirectRecord[0].new_slug), notQuarantined))
           .limit(1);
-      }
-    }
-
-    // Smart slug resolution: If the slug is not found, try to resolve it as a
-    // short organization-based slug (e.g., "bihar-public-service-commission")
-    // to the most recent recruitment for that organization.
-    // Example: /jobs/bihar-public-service-commission → most recent BPSC recruitment
-    if (!recruitmentResult || recruitmentResult.length === 0) {
-      resolutionMethod = "smart-resolution";
-      console.log(`[getRecruitmentWithPosts] Trying smart slug resolution for: ${slug}`);
-      // Find recruitments where slug starts with the requested slug + dash
-      // Order by year DESC, then by ID DESC to get the most recent
-      recruitmentResult = await db
-        .select({
-          recruitment: recruitments,
-          enrichmentData: recruitments.enrichmentData,
-          organizationName: organizations.name,
-          organizationSlug: organizations.slug,
-          organizationSector: organizations.sector,
-        })
-        .from(recruitments)
-        .innerJoin(organizations, eq(recruitments.organizationId, organizations.id))
-        .where(
-          and(
-            sql`${recruitments.slug} LIKE ${slug + "-%"}`,
-            notQuarantined
-          )
-        )
-        .orderBy(
-          sql`${recruitments.year} DESC`,
-          sql`${recruitments.id} DESC`
-        )
-        .limit(1);
-
-      if (recruitmentResult && recruitmentResult.length > 0) {
-        console.log(`[getRecruitmentWithPosts] Smart resolution found: ${recruitmentResult[0].recruitment.slug}`);
       }
     }
 

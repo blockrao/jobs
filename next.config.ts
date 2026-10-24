@@ -7,14 +7,12 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
   },
   redirects: async () => [
-    // PHASE 2: Redirect old /jobs/{recruitment-slug}-{id} pattern to recruitment hub
-    // Old URLs like /jobs/directorate-of-medical-health-and-family-welfare-services-government-of-rajasthan-2026-02812
-    // are now served at /jobs/{recruitment-slug}
-    {
-      source: "/jobs/:slug-:id(\\d+)",
-      destination: "/jobs/:slug",
-      permanent: true, // 301 redirect
-    },
+    // CRITICAL FIX (2026-10-24): Removed the regex redirect rule that was stripping
+    // trailing numbers from new slugs. New slugs like 'org1121-2026-0004' were being
+    // treated as 'org1121-2026' + id '0004', causing 308 redirect chains that showed
+    // the wrong job. The recruitment_slug_redirects table is the ONLY mechanism for
+    // redirecting old slugs to new ones. See SLUG_CORRUPTION_RESOLUTION_ROADMAP_2026_10_24.md.
+
     // Garbled slug redirect: Hindi characters mangled during slug generation
     // Bad: /jobs/-ne-top-entre-ivasagar--2651/lecturer-assistant-teacher-and-more
     // Good: /jobs/one-stop-centre-sivasagar-2026-02651/lecturer-assistant-teacher-and-more
