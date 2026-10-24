@@ -6,6 +6,7 @@
  * decided by data volume (ORG_INDEX_MIN_RECRUITMENTS), not by whether an
  * editorial file exists.
  */
+import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    ...pageSeo(`/organizations/${org.slug}`, { index: stats.indexable }),
+    ...pageSeo(`/organizations/${org.slug}`, { index: stats.indexable && !isUnresolvedOrganization(org.slug) }),
     openGraph: {
       title,
       description,

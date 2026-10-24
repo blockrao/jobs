@@ -26,15 +26,21 @@ import { generateAlternates } from "@/lib/hreflang";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
-import { safeQuery } from "@/lib/safe-query";
+import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 
-export const dynamic = 'force-dynamic'; // Always fetch fresh data from DB, no static caching
+// ISR: each recruitment page is rendered on its first visit, served from cache,
+// and regenerated at most once an hour (or on demand via /api/revalidate).
+// A database error throws (500, never cached) instead of rendering a cached 404.
+export const revalidate = 3600;
+export async function generateStaticParams() {
+  return [];
+}
 
 type Props = { params: Promise<{ "recruitment-slug": string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "recruitment-slug": slug } = await params;
-  const data = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  const data = await getRecruitmentWithPostsCached(slug);
   if (!data) {
     return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
   }
@@ -49,7 +55,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    ...pageSeo(`/jobs/${recruitment.slug}`, { index: true }),
+    // Recruitments whose issuing organisation is not identified yet stay out of the index.
+    ...pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) }),
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
   };
@@ -57,7 +64,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function RecruitmentHubPage({ params }: Props) {
   const { "recruitment-slug": slug } = await params;
-  const data = await safeQuery(() => getRecruitmentWithPostsCached(slug), null);
+  const data = await getRecruitmentWithPostsCached(slug);
   if (!data) notFound();
 
   // FIX (2026-10-20): Only redirect for legacy slugs, not smart slug resolution.

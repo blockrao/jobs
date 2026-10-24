@@ -21,6 +21,7 @@
  */
 
 import { SITE_URL } from "@/lib/site";
+import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 import { jsonLdGraph } from "@/lib/structured-data";
 import type { ResolvedDeadline, ResolvedSalary } from "@/lib/resolvers/fact-resolvers";
 
@@ -249,7 +250,9 @@ export default function PostLeafStructuredData({
 
   // Use the joined org name if present; fall back to extracting from the title
   // for the ~1,600 posts whose organizationId is null (title pattern: "Other - Org Name").
-  const hiringOrgName = post.organizationName ?? extractOrgFromTitle(post.title);
+  // Never publish the "Unclassified" placeholder as an employer.
+  const knownOrgName = isUnresolvedOrganization(post.organizationName) ? null : post.organizationName;
+  const hiringOrgName = knownOrgName ?? extractOrgFromTitle(post.title);
   if (hiringOrgName) {
     jobPosting.hiringOrganization = {
       "@type": "Organization",

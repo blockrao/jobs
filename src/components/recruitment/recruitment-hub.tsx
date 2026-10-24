@@ -24,6 +24,7 @@
  *   - ELIG-001 Phase 1: display stored eligibility text only.
  */
 
+import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 import type {
   RecruitmentHubRecruitment,
   RecruitmentHubPost,
@@ -237,8 +238,10 @@ export function buildHubData(
   cutoffMarksData: Array<{ category: string; cutoffMarks: string | null }> = [],
 ): HubData {
   const slug = recruitment.slug;
-  const orgName = str(recruitment.organizationName);
-  const orgSlug = str(recruitment.organizationSlug);
+  // The placeholder "Unclassified" organisation is never shown or published as the employer.
+  const orgUnresolved = isUnresolvedOrganization(str(recruitment.organizationSlug));
+  const orgName = orgUnresolved ? null : str(recruitment.organizationName);
+  const orgSlug = orgUnresolved ? null : str(recruitment.organizationSlug);
   const orgHref = orgSlug ? `/organizations/${orgSlug}` : null;
   const orgWebsite = publicLink(
     str(recruitment.organization?.website_url) ?? str(recruitment.organization?.websiteUrl),

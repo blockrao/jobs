@@ -17,6 +17,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
+import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 import { generateAlternates } from "@/lib/hreflang";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
@@ -87,7 +88,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: generateAlternates(recruitmentSlug, postSlug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: true }),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) }),
   };
 }
 

@@ -45,3 +45,14 @@ describe("recruitment slug format", () => {
     await expect(generateSequentialSlug(fakeDb(["org87-2026-0001", "org87-2026-0007"]), 87, 2026)).resolves.toBe("org87-2026-0008");
   });
 });
+
+import { isUnresolvedOrganization } from "../../../src/lib/organizations/unresolved";
+
+describe("unresolved (placeholder) organisation", () => {
+  it("is recognised by slug or name and nothing else", () => {
+    expect(isUnresolvedOrganization("unclassified-government-jobs")).toBe(true);
+    expect(isUnresolvedOrganization("Unclassified Government Jobs")).toBe(true);
+    expect(isUnresolvedOrganization("union-public-service-commission")).toBe(false);
+    expect(isUnresolvedOrganization(null)).toBe(false);
+  });
+});

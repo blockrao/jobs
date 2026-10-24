@@ -118,7 +118,8 @@ describe("extracted source projection", () => {
     expect(route).not.toContain("singleLeafSlug");
     expect(route).not.toContain("/posts/${roleSlugs[0]}");
     // Canonical and robots go through src/lib/seo (CAN-05): self-canonical, indexable.
-    expect(route).toContain("pageSeo(`/jobs/${recruitment.slug}`, { index: true })");
+    // Indexable unless the issuing organisation is still unidentified (placeholder org).
+    expect(route).toContain("pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) })");
     // Only a legacy slug (recruitment_slug_redirects) redirects; smart resolution renders in place.
     expect(route).toMatch(/if \(data\.resolutionMethod === "legacy-redirect"\) \{\s*permanentRedirect\(`\/jobs\/\$\{data\.recruitment\.slug\}`\);/);
     // Hub structured data keys its dates on source verification, never fabricating them.

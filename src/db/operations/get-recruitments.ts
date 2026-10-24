@@ -478,12 +478,11 @@ export async function getRecruitmentWithPosts(slug: string) {
       resolutionMethod,
     };
   } catch (err) {
+    // Rethrow: a database failure must surface as an error (500, retried, never
+    // cached), not masquerade as "not found". Swallowing it here is what turned
+    // the 24 Oct dropped-table incident into 5,412 silent 404s.
     console.error("Error fetching recruitment with posts:", err);
-    if (err instanceof Error) {
-      console.error("Error message:", err.message);
-      console.error("Error stack:", err.stack);
-    }
-    return null;
+    throw err;
   }
 }
 
