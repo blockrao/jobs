@@ -207,21 +207,9 @@ export function resolvePostVacancy(
     }
   }
 
-  // --- Branch 2: enrichment.vacancies_total with scope check ---
-  // Accept vacancies_total when it does NOT equal the recruitment's total_vacancies.
-  // A vacancies_total that matches the recruitment total on a multi-post recruitment
-  // is almost certainly a scope leak (the aggregator scraped the full-recruitment
-  // figure onto this individual Post). Our DB audit confirmed zero such cases exist
-  // in the current dataset, but the guard is retained for correctness as new data arrives.
-  if (post.enrichment?.vacanciesTotal != null && post.enrichment.vacanciesTotal > 0) {
-    const recruitmentTotal = post.recruitmentVacancyTotal ?? null;
-    const scopeViolation =
-      recruitmentTotal !== null && post.enrichment.vacanciesTotal === recruitmentTotal;
-    if (!scopeViolation) {
-      return post.enrichment.vacanciesTotal;
-    }
-  }
-
+  // Do not fall back to an unverified enrichment value. A plausible positive
+  // number is not authoritative without accepted source status and extraction
+  // confidence; this rule is shared by visible UI, metadata, and structured data.
   return null;
 }
 
