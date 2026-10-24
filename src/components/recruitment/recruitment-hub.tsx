@@ -75,6 +75,9 @@ import HubCutoffMarks from './sections/hub-cutoff-marks';
 import HubJobDescriptions from './sections/hub-job-descriptions';
 import RelatedOpportunities from './sections/related-opportunities';
 import HubFaqEnhanced from './sections/hub-faq-enhanced';
+import Phase1BEnrichmentRenderer from './sections/phase1b-enrichment-renderer';
+
+import { transformPhase1BToEnrichmentSchema, isPhase1BEnrichment, getPhase1BRawData } from '@/lib/enrichment-transformer';
 
 // Outfit for headings (Inter for body is loaded by the root shell). Loaded
 // through @fontsource like Inter, not through a Google Fonts link.
@@ -925,6 +928,14 @@ export default function RecruitmentHub({ data, enrichment }: RecruitmentHubProps
   // Determine application status for HubKeyMetrics
   const applicationStatus: 'open' | 'closed' | 'extended' = data.closed ? 'closed' : 'open';
 
+  // Handle enrichment data transformation
+  // If Phase 1B format detected, offer both transformed schema view and raw renderer
+  const isPhase1B = isPhase1BEnrichment(enrichment);
+  const transformedEnrichment = isPhase1B
+    ? transformPhase1BToEnrichmentSchema(enrichment)
+    : enrichment;
+  const phase1bRawData = isPhase1B ? getPhase1BRawData(enrichment) : null;
+
   return (
     <div className={styles.page}>
       <div className={styles.wrap}>
@@ -947,8 +958,12 @@ export default function RecruitmentHub({ data, enrichment }: RecruitmentHubProps
               />
             )}
 
-            {/* Details + integrated enrichment data */}
-            <HubDetails data={data} enrichment={enrichment} />
+            {/* Details + integrated enrichment data (standard or transformed) */}
+            <HubDetails data={data} enrichment={transformedEnrichment || enrichment} />
+
+            {/* Phase 1B raw enrichment renderer (detailed structured rendering) */}
+            {phase1bRawData && <Phase1BEnrichmentRenderer data={phase1bRawData} />}
+
             {has('dates') && <HubDates data={data} />}
 
           {/* Posts section - consolidated expandable table */}
