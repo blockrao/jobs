@@ -56,12 +56,12 @@ async function verifySlugsAreInCorrectFormat(): Promise<void> {
     sql`
       SELECT id, slug, name
       FROM recruitments
-      WHERE slug !~ '^[a-z0-9]+-\d{4}-\d{2}$'
+      WHERE slug !~ '^org\d+-\d{4}-\d{4}$'
       LIMIT 50
     `
   );
 
-  if (badSlugs.length > 0) {
+  const badSlugsTyped = badSlugs as any[]; if (badSlugsTyped.length > 0) {
     report("CRITICAL", "FORMAT", "Sequential format check", `FAILED: ${badSlugs.length} malformed slugs found`, badSlugs);
   } else {
     report("SUCCESS", "FORMAT", "Sequential format check", "PASSED: All 5,412 slugs match ^[a-z0-9]+-\\d{4}-\\d{2}$");
@@ -254,7 +254,7 @@ async function verifyRedirectTable(): Promise<void> {
     sql`
       SELECT COUNT(*) as count
       FROM recruitment_slug_redirects
-      WHERE new_slug !~ '^[a-z0-9]+-\d{4}-\d{2}$'
+      WHERE new_slug !~ '^org\d+-\d{4}-\d{4}$'
     `
   );
 
