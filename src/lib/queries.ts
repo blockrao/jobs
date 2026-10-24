@@ -299,6 +299,7 @@ const liveGovRecruitment = sql`
 // range are eligible. Extreme values remain available for review, not promotion.
 const verifiedHomeVacancy = sql`
   r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+  AND r.official_notification_url ~ '^https?://'
   AND r.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
 `;
 
@@ -444,6 +445,7 @@ export async function getHomeStats(): Promise<HomeStats> {
           AND (r2.application_end_date IS NULL OR r2.application_end_date > NOW())
           AND r2.slug IS NOT NULL
           AND r2.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+          AND r2.official_notification_url ~ '^https?://'
           AND r2.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
           AND r2.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND o2.slug <> 'unclassified-government-jobs'
