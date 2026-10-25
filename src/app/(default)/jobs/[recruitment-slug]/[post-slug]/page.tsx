@@ -86,7 +86,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: generateAlternates(recruitmentSlug, postSlug),
+    alternates: generateAlternates(post.recruitmentSlug, post.slug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
     ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) }),
@@ -102,9 +102,12 @@ export default async function JobDetailPage({ params }: Props) {
     notFound();
   }
 
-  // A legacy recruitment slug resolves (via recruitment_slug_redirects) but is
-  // not canonical: 301 to the canonical leaf instead of serving a duplicate.
-  if (post.recruitmentSlug && post.recruitmentSlug !== recruitmentSlug) {
+  // Legacy recruitment and post slugs must 301 to the canonical leaf.
+  // getPostCoreData only accepts exact, recruitment-scoped legacy post aliases.
+  if (
+    (post.recruitmentSlug && post.recruitmentSlug !== recruitmentSlug) ||
+    post.slug !== postSlug
+  ) {
     permanentRedirect(`/jobs/${post.recruitmentSlug}/${post.slug}`);
   }
 
