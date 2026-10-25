@@ -26,7 +26,6 @@ import { generateAlternates } from "@/lib/hreflang";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
-import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 
 // ISR: each recruitment page is rendered on its first visit, served from cache,
 // and regenerated at most once an hour (or on demand via /api/revalidate).
@@ -56,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     // Recruitments whose issuing organisation is not identified yet stay out of the index.
-    ...pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) }),
+    ...pageSeo(`/jobs/${recruitment.slug}`, { index: true }),
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
   };
