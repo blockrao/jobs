@@ -41,7 +41,7 @@ async function main() {
     }
     collectStaticRoutes(appRoot);
     const validated = validateLegacyExamSlugs(existing, reservedRootPaths);
-    process.stdout.write(`Validated committed legacy exam manifest: ${validated.length} unique slugs (DATABASE_URL unavailable)\\n`);
+    process.stdout.write(`Validated committed legacy exam manifest: ${validated.length} unique slugs (DATABASE_URL unavailable)\n`);
     return;
   }
 
