@@ -17,6 +17,7 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
+import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 import { generateAlternates } from "@/lib/hreflang";
 import { getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
@@ -287,7 +288,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable={true}
+      jobPostingSchemaAllowed={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
     />
   );
 }
