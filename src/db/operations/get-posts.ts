@@ -543,6 +543,7 @@ export async function getPostBySlug(
       positionId: (data as any).positionId ?? null,
       organizationId: data.organizationId,
       organizationName: data.organizationName,
+      organizationSlug: data.organizationSlug ?? null,
       // org_sector; PRIVATE indicates unresolved organization (data quality signal).
       organizationSector: (data.organizationSector ?? null) as string | null,
       recruitmentId: data.recruitmentId,
