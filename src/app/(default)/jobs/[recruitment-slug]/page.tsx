@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    // Recruitments whose issuing organisation is not identified yet stay out of the index.
+    // Organization resolution is tracked for enrichment; it does not block canonical hub discovery.
     ...pageSeo(`/jobs/${recruitment.slug}`, { index: true }),
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
