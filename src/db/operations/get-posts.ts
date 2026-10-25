@@ -158,36 +158,7 @@ async function getPostCoreData(
       FROM posts p
       INNER JOIN recruitments r ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
-      WHERE (
-          p.slug = ${postSlug}
-          OR p.id IN (
-            /*
-             * Legacy Google URLs sometimes use the old postings slug tail,
-             * whose initials were lost by the legacy slug generator. Resolve
-             * only an exact tail match under the same resolved recruitment,
-             * and only when that legacy tail identifies one canonical post.
-             * Never use a global/fuzzy post-slug fallback.
-             */
-            SELECT po.inferred_post_id
-            FROM postings po
-            WHERE po.inferred_recruitment_id = r.id
-              AND po.inferred_post_id IS NOT NULL
-              AND regexp_replace(split_part(po.slug, '/', 2), '^[-/]+', '') = ${postSlug}
-              AND (
-                SELECT COUNT(DISTINCT po2.inferred_post_id)
-                FROM postings po2
-                WHERE po2.inferred_recruitment_id = r.id
-                  AND po2.inferred_post_id IS NOT NULL
-                  AND regexp_replace(split_part(po2.slug, '/', 2), '^[-/]+', '') = ${postSlug}
-              ) = 1
-              AND EXISTS (
-                SELECT 1
-                FROM posts canonical_post
-                WHERE canonical_post.id = po.inferred_post_id
-                  AND canonical_post.recruitment_id = r.id
-              )
-          )
-        )
+      WHERE p.slug = ${postSlug}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
           r.slug = ${recruitmentSlug}
@@ -200,8 +171,65 @@ async function getPostCoreData(
       LIMIT 1
     `);
 
-    console.log(`[getPostCoreData] Query result: ${result?.length ? `Found row` : 'No rows'}`);
-    return result && result.length > 0 ? result[0] : null;
+    if (result && result.length > 0) {
+      console.log("[getPostCoreData] Found canonical post");
+      return result[0];
+    }
+
+    /*
+     * Legacy Google URLs sometimes use the old postings slug tail, whose
+     * initials were lost by a legacy slug generator. Resolve only an exact
+     * tail match under the already-resolved recruitment, and only when that
+     * tail identifies one canonical post. The inferred relationship must
+     * agree with posts.recruitment_id; no global or fuzzy fallback is allowed.
+     *
+     * This runs only after the normal canonical lookup misses, so current
+     * canonical URLs do not pay the legacy lookup cost.
+     */
+    const legacyMatch = await db.execute<any>(sql`
+      SELECT p.slug AS "postSlug", r.slug AS "recruitmentSlug"
+      FROM posts p
+      INNER JOIN recruitments r ON r.id = p.recruitment_id
+      WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND (
+          r.slug = ${recruitmentSlug}
+          OR r.id IN (
+            SELECT recruitment_id
+            FROM recruitment_slug_redirects
+            WHERE old_slug = ${recruitmentSlug}
+          )
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM postings po
+          WHERE po.inferred_recruitment_id = r.id
+            AND po.inferred_post_id = p.id
+            AND regexp_replace(split_part(po.slug, '/', 2), '^[-/]+', '') = ${postSlug}
+        )
+        AND (
+          SELECT COUNT(DISTINCT po2.inferred_post_id)
+          FROM postings po2
+          WHERE po2.inferred_recruitment_id = r.id
+            AND po2.inferred_post_id IS NOT NULL
+            AND regexp_replace(split_part(po2.slug, '/', 2), '^[-/]+', '') = ${postSlug}
+        ) = 1
+      LIMIT 1
+    `);
+
+    if (legacyMatch && legacyMatch.length > 0) {
+      const canonicalRecruitmentSlug = String(legacyMatch[0].recruitmentSlug);
+      const canonicalPostSlug = String(legacyMatch[0].postSlug);
+      if (
+        canonicalRecruitmentSlug !== recruitmentSlug ||
+        canonicalPostSlug !== postSlug
+      ) {
+        console.log("[getPostCoreData] Resolving exact legacy post alias to canonical URL");
+        return await getPostCoreData(canonicalRecruitmentSlug, canonicalPostSlug);
+      }
+    }
+
+    console.log("[getPostCoreData] No canonical or safe legacy post match");
+    return null;
   } catch (err) {
     console.error(`[getPostCoreData] Error executing query:`, err instanceof Error ? err.message : String(err));
     throw err;
