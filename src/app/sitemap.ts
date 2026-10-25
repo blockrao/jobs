@@ -23,7 +23,10 @@ import { STATES } from "@/lib/states/states";
  * recruitments first.
  */
 
-export const revalidate = 3600;
+// Sitemap reads live canonical URLs from the database. Keep it request-time rendered
+// so Preview builds without DATABASE_URL can complete, while Production uses its
+// configured runtime connection and never publishes a partial build-time snapshot.
+export const dynamic = "force-dynamic";
 
 type HubRow = { slug: string; status: string; application_end_date: Date | string | null; updated_at: Date | string | null };
 type LeafRow = HubRow & { post_slug: string; post_updated_at: Date | string | null };
