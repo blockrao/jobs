@@ -14,6 +14,8 @@ export interface JobPostingData {
   positionId?: number | null;
   organizationId: string;
   organizationName: string;
+  /** Canonical organization slug; null when the recruitment has no resolved organization. */
+  organizationSlug?: string | null;
   /** org_sector of the issuing body; PRIVATE = unresolved (data quality signal). */
   organizationSector?: string | null;
   recruitmentId: string;

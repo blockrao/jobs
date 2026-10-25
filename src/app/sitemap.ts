@@ -4,7 +4,7 @@ import { getDb } from "@/db";
 import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
-import { UNRESOLVED_ORG_SLUG } from "@/lib/organizations/unresolved";
+import { UNRESOLVED_ORG_NAME, UNRESOLVED_ORG_SLUG } from "@/lib/organizations/unresolved";
 import { getAllHubs } from "@/data/hubs-metadata";
 import { QUALIFICATIONS } from "@/lib/qualifications";
 import { STATES } from "@/lib/states/states";
@@ -117,6 +117,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         JOIN organizations ro ON ro.id = r.organization_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND ro.slug <> ${UNRESOLVED_ORG_SLUG}
+          AND lower(btrim(ro.name)) <> ${UNRESOLVED_ORG_NAME.toLowerCase()}
         ORDER BY p.updated_at DESC NULLS LAST, p.id DESC
       `),
       db.execute(sql`

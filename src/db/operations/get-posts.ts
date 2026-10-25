@@ -111,6 +111,7 @@ async function getPostCoreData(
         p.position_id AS "positionId",
         r.organization_id AS "organizationId",
         o.name AS "organizationName",
+        o.slug AS "organizationSlug",
         p.recruitment_id AS "recruitmentId",
         r.name AS "recruitmentName",
         r.slug AS "recruitmentSlug",
@@ -542,6 +543,7 @@ export async function getPostBySlug(
       positionId: (data as any).positionId ?? null,
       organizationId: data.organizationId,
       organizationName: data.organizationName,
+      organizationSlug: data.organizationSlug ?? null,
       // org_sector; PRIVATE indicates unresolved organization (data quality signal).
       organizationSector: (data.organizationSector ?? null) as string | null,
       recruitmentId: data.recruitmentId,
