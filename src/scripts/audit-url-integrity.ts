@@ -83,7 +83,7 @@ function titleFrom(html: string): string | null {
 function normalizeText(value: string): string {
   return decodeHtml(value)
     .normalize("NFKD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
@@ -202,8 +202,8 @@ async function check(row: UrlRow): Promise<Result> {
     if (!response.body) result.checks.push("empty/non-HTML response body");
     if (response.body && /Recruitment not found|Job Posting Not Found|404 - Not Found/i.test(result.title ?? "")) result.checks.push("page title indicates not-found page despite HTTP response");
     if (row.expectedEntityName && response.body) {
-      const expected = row.expectedEntityName.trim().replace(/\s+/g, " ");
-      const htmlText = response.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      const expected = normalizeText(row.expectedEntityName);
+      const htmlText = normalizeText(response.body.replace(/<[^>]+>/g, " "));
       if (expected.length > 8 && !htmlText.includes(expected)) result.checks.push("expected entity name not found verbatim in rendered HTML (review; may be text-encoding/formatting difference)");
     }
   } catch (error) {
