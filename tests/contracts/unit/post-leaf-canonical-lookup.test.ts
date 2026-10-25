@@ -17,7 +17,7 @@ describe("canonical Post leaf lookup", () => {
     const sql = source();
     expect(sql).toContain("po.inferred_recruitment_id = r.id");
     expect(sql).toContain("po.inferred_post_id = p.id");
-    expect(sql).toContain("regexp_replace(split_part(po.slug, '/', 2), '^[-/]+', '') = ${postSlug}");
+    expect(sql).toContain("po.slug = ${postSlug}");
     expect(sql).toContain("COUNT(DISTINCT po2.inferred_post_id)");
     expect(sql).toContain("INNER JOIN recruitments r ON r.id = p.recruitment_id");
   });
