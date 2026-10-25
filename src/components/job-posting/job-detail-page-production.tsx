@@ -104,8 +104,8 @@ interface JobDetailPageProps {
   pageTitle?: string;
   pageDescription?: string;
   lifecycle?: { state: string; isOpen: boolean; isLive: boolean; deadline: Date | null };
-  /** Mirrors route-level robots eligibility; prevents JobPosting on noindex leaves. */
-  indexable?: boolean;
+  /** Prevents JobPosting markup when the issuing organization is unresolved; page indexing is independent. */
+  jobPostingSchemaAllowed?: boolean;
   pillarSlug?: string | null;
 }
 
@@ -142,7 +142,7 @@ export default function JobDetailPageProduction({
   pageTitle,
   pageDescription,
   lifecycle,
-  indexable = true,
+  jobPostingSchemaAllowed = true,
   pillarSlug,
 }: JobDetailPageProps) {
   // ── Normalise ────────────────────────────────────────────────────────────
@@ -307,7 +307,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && jobPostingSchemaAllowed} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
