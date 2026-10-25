@@ -158,7 +158,36 @@ async function getPostCoreData(
       FROM posts p
       INNER JOIN recruitments r ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
-      WHERE p.slug = ${postSlug}
+      WHERE (
+          p.slug = ${postSlug}
+          OR p.id IN (
+            /*
+             * Legacy Google URLs sometimes use the old postings slug tail,
+             * whose initials were lost by the legacy slug generator. Resolve
+             * only an exact tail match under the same resolved recruitment,
+             * and only when that legacy tail identifies one canonical post.
+             * Never use a global/fuzzy post-slug fallback.
+             */
+            SELECT po.inferred_post_id
+            FROM postings po
+            WHERE po.inferred_recruitment_id = r.id
+              AND po.inferred_post_id IS NOT NULL
+              AND regexp_replace(split_part(po.slug, '/', 2), '^[-/]+', '') = ${postSlug}
+              AND (
+                SELECT COUNT(DISTINCT po2.inferred_post_id)
+                FROM postings po2
+                WHERE po2.inferred_recruitment_id = r.id
+                  AND po2.inferred_post_id IS NOT NULL
+                  AND regexp_replace(split_part(po2.slug, '/', 2), '^[-/]+', '') = ${postSlug}
+              ) = 1
+              AND EXISTS (
+                SELECT 1
+                FROM posts canonical_post
+                WHERE canonical_post.id = po.inferred_post_id
+                  AND canonical_post.recruitment_id = r.id
+              )
+          )
+        )
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
           r.slug = ${recruitmentSlug}
