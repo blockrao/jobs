@@ -4,7 +4,6 @@ import { getDb } from "@/db";
 import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
-import { UNRESOLVED_ORG_NAME, UNRESOLVED_ORG_SLUG } from "@/lib/organizations/unresolved";
 import { getAllHubs } from "@/data/hubs-metadata";
 import { QUALIFICATIONS } from "@/lib/qualifications";
 import { STATES } from "@/lib/states/states";
