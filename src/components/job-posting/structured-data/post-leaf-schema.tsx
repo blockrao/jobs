@@ -91,6 +91,8 @@ export interface PostLeafSchemaProps {
   resolvedVacancy: number | null;
   resolvedSalary: ResolvedSalary | null;
   resolvedDeadline: ResolvedDeadline;
+  /** Suppress JobPosting when the leaf is not eligible for indexing. */
+  emitJobPosting?: boolean;
 }
 
 function toIso(d: Date | null | undefined): string | undefined {
@@ -151,6 +153,7 @@ export default function PostLeafStructuredData({
   resolvedVacancy,
   resolvedSalary,
   resolvedDeadline,
+  emitJobPosting = true,
 }: PostLeafSchemaProps) {
   const leafUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.slug}`;
   const hubUrl = `${SITE_URL}/jobs/${post.recruitmentSlug}`;
@@ -200,7 +203,7 @@ export default function PostLeafStructuredData({
       publisher: { "@id": `${SITE_URL}/#org` },
     },
     breadcrumb: { "@id": `${leafUrl}#breadcrumb` },
-    mainEntity: { "@id": `${leafUrl}#jobposting` },
+    ...(emitJobPosting ? { mainEntity: { "@id": `${leafUrl}#jobposting` } } : {}),
   };
   if (datePostedIso) webPage.datePublished = datePostedIso;
   if (dateModifiedIso) webPage.dateModified = dateModifiedIso;
@@ -315,11 +318,11 @@ export default function PostLeafStructuredData({
   // requires expired postings to drop the markup (validThrough alone is not
   // enough). The page itself stays, labelled closed, with no JobPosting.
   const postingClosed = resolvedDeadline.state === "CLOSED";
-  if (postingClosed) delete webPage.mainEntity;
+  if (postingClosed || !emitJobPosting) delete webPage.mainEntity;
 
   // One @graph: site org, breadcrumb, web page, the JobPosting (open/unknown
   // deadline only), visible FAQ.
-  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed ? null : jobPosting, faqPage);
+  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed || !emitJobPosting ? null : jobPosting, faqPage);
 
   return (
     <script
