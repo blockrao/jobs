@@ -87,7 +87,7 @@ function normalizeText(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
-    .replace(/\\s+/g, " ");
+    .replace(/\s+/g, " ");
 }
 function isNoindex(html: string, xRobots: string | null): boolean {
   if (xRobots && /noindex/i.test(xRobots)) return true;
