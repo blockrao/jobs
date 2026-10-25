@@ -15,7 +15,7 @@ describe("canonical Post leaf lookup", () => {
 
   test("scopes the Post to its canonical Recruitment while preserving old-slug redirects", () => {
     const sql = source();
-    expect(sql.match(/r\.slug = \\${recruitmentSlug}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(sql.match(/r\.slug = \$\{recruitmentSlug\}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     const legacySlugPredicates = sql.match(/WHERE old_slug = \$\{recruitmentSlug\}/g) ?? [];
     expect(legacySlugPredicates.length).toBeGreaterThanOrEqual(2);
   });
