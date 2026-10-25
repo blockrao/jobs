@@ -147,12 +147,15 @@ export default function JobDetailPageProduction({
   const salaryMin = post.salary?.min ?? null;
   const salaryMax = post.salary?.max ?? null;
   const applicationDeadline = lifecycle?.deadline ?? toPlausibleRecruitmentDate(post.applicationDeadline ?? null);
-  const recruitmentClosed = lifecycle ? !lifecycle.isLive : false;
-  const isApplicationClosed = recruitmentClosed || Boolean(applicationDeadline && new Date() > applicationDeadline);
-  // Google requires expired postings to carry a past validThrough or no
-  // JobPosting markup. Without a verifiable deadline, a closed recruitment
-  // gets no JobPosting.
-  const emitJobPosting = !(recruitmentClosed && !applicationDeadline);
+  // "Live" includes upcoming recruitments, but "open" means candidates can
+  // submit an application now. Keep those states separate: an upcoming page
+  // may be visible, but must not show an Apply CTA or emit JobPosting markup.
+  const isApplicationOpen = lifecycle ? lifecycle.isOpen : !(applicationDeadline && new Date() > applicationDeadline);
+  const recruitmentClosed = lifecycle ? lifecycle.state === 'closed' || lifecycle.state === 'results' || lifecycle.state === 'archived' : false;
+  const isApplicationClosed = !isApplicationOpen;
+  // JobPosting is only for an application that is currently open. The schema
+  // builder independently omits markup for a known expired deadline.
+  const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
   const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
@@ -191,7 +194,7 @@ export default function JobDetailPageProduction({
   if (!isApplicationClosed) pushLink('Apply online', post.applyUrl);
   pushLink('Official notification', post.officialSourceUrl);
   for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
-  if (isApplicationClosed) pushLink('Application portal (closed)', post.applyUrl);
+  if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
 
   // ── Intro (stored description or one sentence of known facts) ────────────
   const introFacts: string[] = [];
@@ -200,7 +203,11 @@ export default function JobDetailPageProduction({
   const introDetail: string[] = [];
   if (vacancies > 0) introDetail.push(`${vacancies.toLocaleString('en-IN')} ${vacancies === 1 ? 'vacancy' : 'vacancies'}`);
   if (qualificationText && qualificationText.length <= 80) introDetail.push(`qualification: ${qualificationText}`);
-  if (applicationDeadline) introDetail.push(isApplicationClosed ? `applications closed on ${formatDate(applicationDeadline)}` : `last date to apply ${formatDate(applicationDeadline)}`);
+  if (applicationDeadline) {
+    if (isApplicationOpen) introDetail.push(`last date to apply ${formatDate(applicationDeadline)}`);
+    else if (lifecycle?.state === 'upcoming') introDetail.push(`applications are not open yet; last date to apply ${formatDate(applicationDeadline)}`);
+    else introDetail.push(`applications closed on ${formatDate(applicationDeadline)}`);
+  }
   const intro = post.description
     ?? `${introFacts[0]}${introDetail.length > 0 ? ` — ${introDetail.join(', ')}` : ''}.`;
 
@@ -238,7 +245,7 @@ export default function JobDetailPageProduction({
   if (faqItems.length === 0) {
     if (applicationDeadline) faqItems.push({
       q: `What is the last date to apply for ${subject}?`,
-      a: isApplicationClosed ? `Applications closed on ${formatDate(applicationDeadline)}.` : `The last date to apply is ${formatDate(applicationDeadline)}.`,
+      a: lifecycle?.state === 'upcoming' ? `Applications are not open yet. The stated last date to apply is ${formatDate(applicationDeadline)}.` : isApplicationClosed ? `Applications closed on ${formatDate(applicationDeadline)}.` : `The last date to apply is ${formatDate(applicationDeadline)}.`,
     });
     if (vacancies > 0) faqItems.push({ q: `How many vacancies are there for ${subject}?`, a: `There are ${vacancies.toLocaleString('en-IN')} vacancies for ${post.title}.` });
     if (qualificationText) faqItems.push({ q: `What is the qualification required for ${subject}?`, a: qualificationText });
@@ -284,9 +291,11 @@ export default function JobDetailPageProduction({
       : { date: null, state: 'UNKNOWN' as const },
   };
 
-  const statusText = applicationDeadline
-    ? (isApplicationClosed ? `Applications closed on ${formatDate(applicationDeadline)}` : `Applications close on ${formatDate(applicationDeadline)}`)
-    : recruitmentClosed ? 'This recruitment is closed' : null;
+  const statusText = lifecycle?.state === 'upcoming'
+    ? (applicationDeadline ? `Applications not open yet · last date ${formatDate(applicationDeadline)}` : 'Applications not open yet')
+    : applicationDeadline
+      ? (isApplicationClosed ? `Applications closed on ${formatDate(applicationDeadline)}` : `Applications close on ${formatDate(applicationDeadline)}`)
+      : recruitmentClosed ? 'This recruitment is closed' : null;
 
   const hasRelated = Boolean(
     (relatedByOrg && relatedByOrg.length > 0) || (relatedByLocation && relatedByLocation.length > 0)

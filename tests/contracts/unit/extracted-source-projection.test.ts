@@ -105,7 +105,7 @@ describe("extracted source projection", () => {
 
   test("the leaf renderer gates JobPosting on lifecycle only, never on verification status", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
-    expect(renderer).toMatch(/const emitJobPosting = !\(recruitmentClosed && !applicationDeadline\);/);
+    expect(renderer).toMatch(/const emitJobPosting = lifecycle \? lifecycle\.isOpen : !isApplicationClosed;/);
     expect(renderer).not.toMatch(/emitJobPosting[^\n]*[vV]erif/);
   });
 
