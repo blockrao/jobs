@@ -110,11 +110,11 @@ describe("sitemap", () => {
     expect(liveLeaf.priority!).toBeGreaterThan(closedLeaf.priority!);
   });
 
-  test("IDX-04g the organization query applies the same exclusions as the entity page (merged, quarantined, threshold)", async () => {
+  test("IDX-04g canonical recruitment and post URLs are not excluded by organization mapping", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
     expect(src).toMatch(/merged_into_id IS NULL/);
-    expect(src).toContain("lower(btrim(ro.name)) <>");
-    expect(src).toContain("UNRESOLVED_ORG_NAME.toLowerCase()");
+    expect(src).not.toContain("UNRESOLVED_ORG_SLUG");
+    expect(src).not.toContain("UNRESOLVED_ORG_NAME");
     expect(src).toMatch(/verification_status IS DISTINCT FROM 'QUARANTINED'/);
     expect(src).toMatch(/HAVING count\(\*\) >= \$\{ORG_INDEX_MIN_RECRUITMENTS\}/);
     expect(src).not.toMatch(/\bpostings\b/);
