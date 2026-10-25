@@ -287,7 +287,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable
+      indexable={true}
     />
   );
 }
