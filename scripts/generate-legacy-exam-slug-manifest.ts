@@ -2,9 +2,11 @@
 /**
  * Generate the bounded allowlist used to redirect legacy root-level exam URLs.
  *
- * This runs before next build. It must fail closed: a missing DATABASE_URL,
- * failed query, empty exam table, or invalid slug prevents a release build
- * rather than silently publishing a manifest that loses legacy redirects.
+ * This runs before next build. When DATABASE_URL is available, refresh the
+ * allowlist from the authoritative exams table. Production build environments
+ * should not need database credentials: without DATABASE_URL, validate and
+ * retain the committed manifest snapshot instead of failing the deployment.
+ * The snapshot is reviewed in Git and must never be replaced with an empty list.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -17,8 +19,30 @@ const output = path.join(dirname, "../src/lib/legacy-exam-slugs.generated.json")
 
 async function main() {
   const connectionString = process.env.DATABASE_URL;
+  // Vercel builds may intentionally run without production DB credentials.
+  // In that case use the reviewed, committed snapshot and validate it against
+  // the current route tree. Never silently replace it with an empty manifest.
   if (!connectionString) {
-    throw new Error("DATABASE_URL is required to generate the legacy exam slug manifest");
+    if (!fs.existsSync(output)) {
+      throw new Error("DATABASE_URL is unavailable and no committed legacy exam manifest exists");
+    }
+    const existing = JSON.parse(fs.readFileSync(output, "utf8"));
+    const appRoot = path.join(dirname, "../src/app");
+    const reservedRootPaths = new Set(["en", "hi", "_next"]);
+    function collectStaticRoutes(directory: string): void {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith("[")) continue;
+        if (entry.name.startsWith("(")) {
+          collectStaticRoutes(path.join(directory, entry.name));
+        } else {
+          reservedRootPaths.add(entry.name);
+        }
+      }
+    }
+    collectStaticRoutes(appRoot);
+    const validated = validateLegacyExamSlugs(existing, reservedRootPaths);
+    process.stdout.write(`Validated committed legacy exam manifest: ${validated.length} unique slugs (DATABASE_URL unavailable)\\n`);
+    process.exit(0);
   }
 
   const sql = postgres(connectionString, {
