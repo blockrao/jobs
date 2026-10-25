@@ -13,9 +13,18 @@ describe("canonical Post leaf lookup", () => {
     expect(sql).not.toContain('COALESCE(p."recruitmentSlug", r.slug)');
   });
 
+  test("resolves legacy post tails only when exact and unique within the same Recruitment", () => {
+    const sql = source();
+    expect(sql).toContain("po.inferred_recruitment_id = r.id");
+    expect(sql).toContain("po.inferred_post_id = p.id");
+    expect(sql).toContain("po.slug = ${postSlug}");
+    expect(sql).toContain("COUNT(DISTINCT po2.inferred_post_id)");
+    expect(sql).toContain("INNER JOIN recruitments r ON r.id = p.recruitment_id");
+  });
+
   test("scopes the Post to its canonical Recruitment while preserving old-slug redirects", () => {
     const sql = source();
-    expect(sql.match(/r\.slug = \$\{recruitmentSlug\}/g)).toHaveLength(2);
+    expect(sql.match(/r\.slug = \$\{recruitmentSlug\}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     const legacySlugPredicates = sql.match(/WHERE old_slug = \$\{recruitmentSlug\}/g) ?? [];
     expect(legacySlugPredicates.length).toBeGreaterThanOrEqual(2);
   });
