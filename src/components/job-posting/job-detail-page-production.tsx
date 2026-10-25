@@ -194,7 +194,7 @@ export default function JobDetailPageProduction({
   if (!isApplicationClosed) pushLink('Apply online', post.applyUrl);
   pushLink('Official notification', post.officialSourceUrl);
   for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
-  if (isApplicationClosed) pushLink('Application portal (closed)', post.applyUrl);
+  if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
 
   // ── Intro (stored description or one sentence of known facts) ────────────
   const introFacts: string[] = [];
@@ -245,7 +245,7 @@ export default function JobDetailPageProduction({
   if (faqItems.length === 0) {
     if (applicationDeadline) faqItems.push({
       q: `What is the last date to apply for ${subject}?`,
-      a: isApplicationClosed ? `Applications closed on ${formatDate(applicationDeadline)}.` : `The last date to apply is ${formatDate(applicationDeadline)}.`,
+      a: lifecycle?.state === 'upcoming' ? `Applications are not open yet. The stated last date to apply is ${formatDate(applicationDeadline)}.` : isApplicationClosed ? `Applications closed on ${formatDate(applicationDeadline)}.` : `The last date to apply is ${formatDate(applicationDeadline)}.`,
     });
     if (vacancies > 0) faqItems.push({ q: `How many vacancies are there for ${subject}?`, a: `There are ${vacancies.toLocaleString('en-IN')} vacancies for ${post.title}.` });
     if (qualificationText) faqItems.push({ q: `What is the qualification required for ${subject}?`, a: qualificationText });
