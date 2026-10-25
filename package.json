@@ -36,7 +36,8 @@
     "verify:urls:sample": "dotenv -e .env.local -- tsx src/scripts/verify-urls-accessibility.ts -- --sample 100",
     "verify:urls:full": "dotenv -e .env.local -- tsx src/scripts/verify-urls-accessibility.ts -- --full",
     "verify:urls:performance": "dotenv -e .env.local -- tsx src/scripts/verify-urls-accessibility.ts -- --performance",
-    "verify:all": "npm run verify:slugs:all && npm run verify:urls:sample"
+    "verify:all": "npm run verify:slugs:all && npm run verify:urls:sample",
+    "audit:urls": "dotenv -e .env.local -- tsx src/scripts/audit-url-integrity.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.38.0",
