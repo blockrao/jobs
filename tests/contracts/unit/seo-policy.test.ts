@@ -77,7 +77,13 @@ describe("sitemap", () => {
 
   test("POL-09 the sitemap refreshes without a deployment, within the 24-hour requirement (D1)", async () => {
     const mod = await import("@/app/sitemap");
-    expect(mod.revalidate).toBeGreaterThan(0);
-    expect(mod.revalidate).toBeLessThanOrEqual(86400);
+    // A request-time sitemap is fresher than the 24-hour ISR ceiling and also
+    // avoids requiring live DATABASE_URL during build-time prerendering.
+    if (mod.dynamic === "force-dynamic") {
+      expect(mod.dynamic).toBe("force-dynamic");
+    } else {
+      expect(mod.revalidate).toBeGreaterThan(0);
+      expect(mod.revalidate).toBeLessThanOrEqual(86400);
+    }
   });
 });
