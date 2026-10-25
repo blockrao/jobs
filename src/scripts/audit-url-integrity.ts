@@ -80,6 +80,15 @@ function titleFrom(html: string): string | null {
   const match = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
   return match ? decodeHtml(match[1].replace(/<[^>]+>/g, "").trim()) : null;
 }
+function normalizeText(value: string): string {
+  return decodeHtml(value)
+    .normalize("NFKD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\\s+/g, " ");
+}
 function isNoindex(html: string, xRobots: string | null): boolean {
   if (xRobots && /noindex/i.test(xRobots)) return true;
   for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
@@ -122,18 +131,14 @@ async function fetchRows(): Promise<UrlRow[]> {
   const hubs = await db.execute(sql`
     SELECT r.id, r.slug, r.name
     FROM public.recruitments r
-    JOIN public.organizations o ON o.id = r.organization_id
     WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
-      AND o.slug <> 'unclassified-government-jobs'
     ORDER BY r.id
   `);
   const leaves = await db.execute(sql`
     SELECT r.slug AS recruitment_slug, p.slug AS post_slug, p.title AS post_title
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
-    JOIN public.organizations o ON o.id = r.organization_id
     WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
-      AND o.slug <> 'unclassified-government-jobs'
     ORDER BY p.id
   `);
   const rows: UrlRow[] = [];
