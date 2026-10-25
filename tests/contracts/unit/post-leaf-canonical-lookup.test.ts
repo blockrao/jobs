@@ -19,7 +19,7 @@ describe("canonical Post leaf lookup", () => {
     expect(sql).toContain("po.inferred_post_id = p.id");
     expect(sql).toContain("regexp_replace(split_part(po.slug, '/', 2), '^[-/]+', '') = ${postSlug}");
     expect(sql).toContain("COUNT(DISTINCT po2.inferred_post_id)");
-    expect(sql).toContain("canonical_post.recruitment_id = r.id");
+    expect(sql).toContain("INNER JOIN recruitments r ON r.id = p.recruitment_id");
   });
 
   test("scopes the Post to its canonical Recruitment while preserving old-slug redirects", () => {
