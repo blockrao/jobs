@@ -89,7 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: generateAlternates(post.recruitmentSlug, post.slug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) }),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) }),
   };
 }
 
@@ -288,7 +288,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable={!isUnresolvedOrganization(post.organizationName)}
+      indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
     />
   );
 }
