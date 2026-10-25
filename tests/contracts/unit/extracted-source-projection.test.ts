@@ -91,10 +91,9 @@ describe("extracted source projection", () => {
     // No verification-based schema suppression anywhere on the leaf path.
     expect(route).not.toContain("suppressJobPostingSchema");
     expect(route).not.toContain("sourceVerificationPending");
-    // All posts emit JobPosting schema regardless of verification, in the one
-    // shared @graph (site org, breadcrumb, web page, JobPosting, visible FAQ);
-    // the only gate is lifecycle: a CLOSED deadline drops the JobPosting node.
-    expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed ? null : jobPosting, faqPage)");
+    // Verification status is not a schema gate. JobPosting requires an open
+    // lifecycle and an indexable leaf; a CLOSED deadline also drops the node.
+    expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed || !emitJobPosting ? null : jobPosting, faqPage)");
     expect(schema).toContain('const postingClosed = resolvedDeadline.state === "CLOSED";');
     expect(schema).not.toMatch(/[vV]erif/);
     // Frontend shows "reported" labels for consumer protection (verification notice banners)
