@@ -204,14 +204,14 @@ async function getPostCoreData(
           FROM postings po
           WHERE po.inferred_recruitment_id = r.id
             AND po.inferred_post_id = p.id
-            AND regexp_replace(split_part(po.slug, '/', 2), '^[-/]+', '') = ${postSlug}
+            AND po.slug = ${postSlug}
         )
         AND (
           SELECT COUNT(DISTINCT po2.inferred_post_id)
           FROM postings po2
           WHERE po2.inferred_recruitment_id = r.id
             AND po2.inferred_post_id IS NOT NULL
-            AND regexp_replace(split_part(po2.slug, '/', 2), '^[-/]+', '') = ${postSlug}
+            AND po2.slug = ${postSlug}
         ) = 1
       LIMIT 1
     `);
