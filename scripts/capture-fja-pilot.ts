@@ -128,6 +128,7 @@ async function main() {
   await assertRobotsAllowsPilot();
   const records: unknown[] = [];
   const failures: Array<{ url: string; error: string }> = [];
+  let haltedByAccessControl = false;
 
   for (const url of PILOT_URLS) {
     const parsed = new URL(url);
@@ -146,6 +147,7 @@ async function main() {
       if ([401, 403, 429].includes(response.status)) {
         const error = new Error(`HTTP ${response.status}; access denied or rate-limited, stopping the pilot immediately`);
         failures.push({ url, error: error.message });
+        haltedByAccessControl = true;
         console.error(`capture stopped: ${url} — ${error.message}`);
         break;
       }
@@ -165,6 +167,13 @@ async function main() {
     await sleep(1500);
   }
 
+  if (haltedByAccessControl) {
+    const attempted = new Set([...records.map((r) => (r as { url: string }).url), ...failures.map((r) => r.url)]);
+    for (const url of PILOT_URLS) {
+      if (!attempted.has(url)) failures.push({ url, error: "Not attempted because capture stopped after access denial/rate limit" });
+    }
+  }
+
   writeFileSync(resolvedOut, records.map((r) => JSON.stringify(r)).join("\n") + (records.length ? "\n" : ""), "utf8");
   writeFileSync(reportPath, JSON.stringify({
     generatedAt: new Date().toISOString(),
@@ -172,8 +181,8 @@ async function main() {
     captured: records.length,
     failed: failures.length,
     records: records.map((r) => {
-      const v = r as { id: string; url: string; title: string; htmlSha256: string; html: string };
-      return { id: v.id, url: v.url, title: v.title, htmlSha256: v.htmlSha256, htmlBytes: Buffer.byteLength(v.html, "utf8") };
+      const v = r as { id: string; url: string; finalUrl: string; httpStatus: number; contentType: string; title: string; fetchedAt: string; htmlSha256: string; html: string };
+      return { id: v.id, url: v.url, finalUrl: v.finalUrl, httpStatus: v.httpStatus, contentType: v.contentType, title: v.title, fetchedAt: v.fetchedAt, htmlSha256: v.htmlSha256, htmlBytes: Buffer.byteLength(v.html, "utf8") };
     }),
     failures,
     databaseWrites: 0,
