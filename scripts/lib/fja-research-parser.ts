@@ -26,6 +26,7 @@ const LABELS: Record<string, RegExp> = {
   age_limit: /^(?:age limit|age criteria|age limit as on.*)$/i,
   salary_pay: /^(?:salary|pay scale|pay level|remuneration|pay matrix|pay)$/i,
   application_start_date: /^(?:starting date|application start date|online application start date|start date|starting date for online application)$/i,
+  walk_in_date: /^(?:walk[- ]?in date|interview date|date of interview|reporting date|document verification date)$/i,
   application_end_date: /^(?:last date|last date to apply|last date to apply online|last date of application|last date of receiving application|last date of application submission|last date for submission|application end date|application last date|closing date|apply by)$/i,
   notification_date: /^(?:notification date|published date|post date|notification release date|advertisement release date)$/i,
   job_location: /^(?:job location|location|place of posting)$/i,
