@@ -249,7 +249,7 @@ async function getPostCoreData(
  */
 /**
  * Fetch enrichment detail tables for a post (vacancies, education, experience, etc.)
- * These are fetched in parallel with FJA data for Phase 1 P0 data unification
+ * These are legacy enrichment detail helpers; public leaf rendering now uses posts.enrichment JSONB.
  */
 async function getPostDetailEnrichment(postId: number | string): Promise<any> {
   const db = getDb();
@@ -452,9 +452,7 @@ export async function getPostBySlug(
     }
     console.log(`[getPostBySlug] Core data found: post id=${coreData.id}`);
 
-    const postId = coreData.id;
-
-    // ENRICHMENT: Now stored as JSONB in posts table (included in coreData)
+    // ENRICHMENT: Stored as JSONB in posts table (included in coreData)
     // Extract enrichment from posts.enrichment column
     const enrichmentJsonb = coreData.enrichment || {};
 
