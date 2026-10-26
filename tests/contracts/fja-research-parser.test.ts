@@ -41,8 +41,10 @@ describe("FJA research parser", () => {
     expect(result.facts.post_name).toBeUndefined();
     expect(result.derived_close_date).toBe("2026-11-25");
     expect(result.open_status).toBe("OPEN_AS_OF_CUTOFF");
-    expect(result.official_links).toHaveLength(1);
-    expect(result.official_links[0].host).toBe("upsssc.gov.in");
+    expect(result.official_link_candidates).toHaveLength(1);
+    expect(result.official_link_candidates[0].host).toBe("upsssc.gov.in");
+    expect(result.post_table_candidates.length).toBeGreaterThan(0);
+    expect(result.post_table_candidates.some((table) => table.rows.some((row) => Object.values(row.values).includes("Technical Assistant")))).toBe(true);
   });
 
   it("never treats a walk-in/interview date as an application deadline", () => {
