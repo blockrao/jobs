@@ -30,6 +30,7 @@ describe("FJA research parser", () => {
         <tr><td>Junior Engineer</td><td>Diploma in Engineering</td></tr>
       </table>
       <a href="https://upsssc.gov.in/OnlineApplication.aspx">Apply Online</a>
+      <a href="https://play.google.com/store/apps/details?id=com.freejobalert">Download Mobile APP</a>
       <a href="https://www.freejobalert.com/latest-notifications/">Latest Notifications</a>
       </main>`;
     const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/example-1234", "2026-10-12");
