@@ -8,6 +8,7 @@ import * as cheerio from "cheerio";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parseFjaResearchDetail } from "./lib/fja-research-parser";
 
 const BASE = "https://www.freejobalert.com";
 const START_DATE = process.env.START_DATE || "2026-10-02";
@@ -69,39 +70,6 @@ function parseListing(html:string, pageUrl:string): Listing[] {
   });
   return found;
 }
-function extractDetail(html:string, url:string) {
-  const $=cheerio.load(html);
-  const title=norm($("h1").first().text()||$("meta[property='og:title']").attr("content")||$("title").text());
-  const text=norm($("main").text()||$("article").text()||$("body").text()).slice(0,50000);
-  const facts:Record<string,string|null>={};
-  const patterns:Record<string,RegExp>={
-    organization:/^(recruiting body|organization|organisation|department|company name)$/i,
-    post_name:/^(name of post|post name|name of posts?)$/i,
-    vacancies:/^(total vacancies|no\.? of vacancies|number of vacancies|vacancies)$/i,
-    qualification:/^(qualification|educational qualification|eligibility|education qualification)$/i,
-    age_limit:/^(age limit|age criteria|age limit as on.*)$/i,
-    salary_pay:/^(salary|pay scale|pay level|remuneration|pay matrix)$/i,
-    application_start_date:/^(starting date|application start date|start date|online application start date)$/i,
-    application_end_date:/^(last date|last date to apply|closing date|application end date|last date for submission|last date to apply online)$/i,
-    notification_date:/^(notification date|published date|post date)$/i,
-    job_location:/^(job location|location|place of posting)$/i,
-    advertisement_number:/^(advertisement no\.?|advt\.? no\.?|notification no\.?|reference no\.?|advertisement number)$/i
-  };
-  $("table tr").each((_,tr)=>{
-    const cells=$(tr).find("th,td").toArray().map(el=>norm($(el).text()));
-    if(cells.length<2) return;
-    for(const [key,re] of Object.entries(patterns)) if(re.test(cells[0])&&!facts[key]) facts[key]=cells.slice(1).join(" | ");
-  });
-  const links=$("a[href]").toArray().map(a=>({text:norm($(a).text()),url:abs($(a).attr("href"),url)})).filter(x=>x.url);
-  const official_links=links.filter(x=>/official website|official notification|notification|advertisement|apply online|apply now|download.*pdf/i.test(x.text));
-  const dateStrings=[...text.matchAll(/(?:last date(?: to apply| for submission)?|closing date|walk[- ]?in(?: interview)? date|date of interview)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/ig)].map(m=>({label:m[0].split(/[:\-]/)[0].trim(),date:isoDate(m[1])})).filter(x=>x.date);
-  const appDate=facts.application_end_date ? isoDate(facts.application_end_date) : null;
-  const walkinDate=dateStrings.find(x=>/walk/i.test(x.label))?.date || null;
-  let open_status="REVIEW_DATE_UNCLEAR"; const close_date=appDate||walkinDate;
-  if(close_date) open_status=close_date>=AS_OF_DATE ? "OPEN_AS_OF_CUTOFF" : "CLOSED_BY_CUTOFF";
-  else if(/walk[- ]?in/i.test(title+" "+text)) open_status="REVIEW_WALKIN_DATE_UNCLEAR";
-  return {page_title:title||null,page_sha256:sha(html),detail_text:text,facts,official_links,date_candidates:dateStrings,derived_close_date:close_date,open_status};
-}
 async function main(){
   await mkdir(path.join(OUT,"raw"),{recursive:true});
   await robotsCheck();
@@ -128,10 +96,10 @@ async function main(){
     const l=unique[i];
     try{
       const {body,url:finalUrl}=await get(l.listing_url);
-      const d=extractDetail(body,finalUrl);
+      const d=parseFjaResearchDetail(body,finalUrl,AS_OF_DATE);
       const rawName=`${String(i+1).padStart(4,"0")}-${sha(finalUrl).slice(0,14)}.html`;
       await writeFile(path.join(OUT,"raw",rawName),body);
-      records.push({...l,detail_url:finalUrl,retrieved_at:new Date().toISOString(),raw_html_file:`raw/${rawName}`,...d});
+      records.push({...l,detail_url:finalUrl,retrieved_at:new Date().toISOString(),page_sha256:sha(body),raw_html_file:`raw/${rawName}`,...d});
     }catch(e){errors.push({listing_url:l.listing_url,title:l.title,stage:"detail_fetch",error:String(e)});records.push({...l,extraction_status:"ERROR",error:String(e),open_status:"REVIEW_FETCH_ERROR"});}
     if((i+1)%20===0) console.log(`Detail pages ${i+1}/${unique.length}`);
     await sleep(DELAY_MS);
