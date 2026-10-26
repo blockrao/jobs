@@ -2,10 +2,12 @@
 /**
  * Generate the bounded allowlist used to redirect legacy root-level exam URLs.
  *
- * This runs before next build. When DATABASE_URL is available, refresh the
- * allowlist from the authoritative exams table. Production build environments
- * should not need database credentials: without DATABASE_URL, validate and
- * retain the committed manifest snapshot instead of failing the deployment.
+ * This runs before next build. Builds use the reviewed, committed manifest
+ * snapshot by default and do not need production database connectivity.
+ * To intentionally refresh the snapshot during a controlled build, set
+ * BUILD_DATABASE_URL. Runtime DATABASE_URL is deliberately ignored here so a
+ * configured application database cannot make deployments depend on build-time
+ * network access.
  * The snapshot is reviewed in Git and must never be replaced with an empty list.
  */
 import fs from "node:fs";
@@ -18,13 +20,12 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 const output = path.join(dirname, "../src/lib/legacy-exam-slugs.generated.json");
 
 async function main() {
-  const connectionString = process.env.DATABASE_URL;
-  // Vercel builds may intentionally run without production DB credentials.
-  // In that case use the reviewed, committed snapshot and validate it against
-  // the current route tree. Never silently replace it with an empty manifest.
+  const connectionString = process.env.BUILD_DATABASE_URL;
+  // Build-time DB access is opt-in. Production builds should normally validate
+  // and retain the committed snapshot without requiring database connectivity.
   if (!connectionString) {
     if (!fs.existsSync(output)) {
-      throw new Error("DATABASE_URL is unavailable and no committed legacy exam manifest exists");
+      throw new Error("BUILD_DATABASE_URL is unavailable and no committed legacy exam manifest exists");
     }
     const existing = JSON.parse(fs.readFileSync(output, "utf8"));
     const appRoot = path.join(dirname, "../src/app");
@@ -41,7 +42,7 @@ async function main() {
     }
     collectStaticRoutes(appRoot);
     const validated = validateLegacyExamSlugs(existing, reservedRootPaths);
-    process.stdout.write(`Validated committed legacy exam manifest: ${validated.length} unique slugs (DATABASE_URL unavailable)\n`);
+    process.stdout.write(`Validated committed legacy exam manifest: ${validated.length} unique slugs (BUILD_DATABASE_URL unavailable)\n`);
     return;
   }
 
