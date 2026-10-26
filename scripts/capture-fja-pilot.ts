@@ -35,7 +35,7 @@ function arg(name: string): string | undefined {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
 
-function recordFromHtml(url: string, html: string, fetchedAt: string) {
+function recordFromHtml(url: string, html: string, fetchedAt: string, responseMeta: { status: number; finalUrl: string; contentType: string }) {
   const $ = cheerio.load(html);
   const match = new URL(url).pathname.match(/\/articles\/[a-z0-9-]+-(\d{4,})\/?$/i);
   if (!match) throw new Error("URL does not contain a stable FJA numeric article ID");
@@ -59,11 +59,60 @@ function recordFromHtml(url: string, html: string, fetchedAt: string) {
     }
   });
   return {
-    id, url, listTitle: title, title, fetchedAt,
+    id, url, finalUrl: responseMeta.finalUrl, httpStatus: responseMeta.status, contentType: responseMeta.contentType, listTitle: title, title, fetchedAt,
     metaDescription: collapse($('meta[name="description"]').attr("content") ?? ""),
     rows, links, html,
     htmlSha256: createHash("sha256").update(html).digest("hex"),
   };
+}
+
+async function assertRobotsAllowsPilot() {
+  const robotsUrl = "https://www.freejobalert.com/robots.txt";
+  const response = await fetch(robotsUrl, {
+    headers: {
+      "user-agent": "JobOyeResearchPilot/1.0 (bounded public-source capture; no database writes)",
+      accept: "text/plain,*/*",
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) throw new Error(`Cannot verify robots.txt (HTTP ${response.status}); refusing to crawl`);
+  const body = await response.text();
+  const groups: Array<{ agents: string[]; disallow: string[] }> = [];
+  let agents: string[] = [];
+  let disallow: string[] = [];
+  const flush = () => {
+    if (agents.length) groups.push({ agents, disallow });
+    agents = [];
+    disallow = [];
+  };
+  for (const raw of body.split(/\\r?\\n/)) {
+    const line = raw.split("#")[0].trim();
+    if (!line) continue;
+    const colon = line.indexOf(":");
+    if (colon < 0) continue;
+    const key = line.slice(0, colon).trim().toLowerCase();
+    const value = line.slice(colon + 1).trim();
+    if (key === "user-agent") {
+      if (disallow.length) flush();
+      agents.push(value.toLowerCase());
+    } else if (key === "disallow" && value) {
+      disallow.push(value);
+    } else if (key !== "allow" && key !== "crawl-delay" && agents.length === 0) {
+      // Ignore directives outside a user-agent group.
+    }
+  }
+  flush();
+  const relevant = groups.filter((g) => g.agents.includes("*") || g.agents.some((a) => a === "joboyeresearchpilot"));
+  const paths = PILOT_URLS.map((url) => new URL(url).pathname);
+  for (const group of relevant) {
+    for (const rule of group.disallow) {
+      // Conservative prefix check. If a wildcard rule is present, honor its fixed prefix.
+      const prefix = rule.split("*")[0].replace(/\\$/, "");
+      if (prefix && paths.some((p) => p.startsWith(prefix))) {
+        throw new Error(`robots.txt disallows pilot article path via rule "${rule}"; refusing to crawl`);
+      }
+    }
+  }
 }
 
 async function main() {
@@ -71,7 +120,7 @@ async function main() {
   if (!out) throw new Error("--out is required; choose a local scratch path");
   const resolvedOut = path.resolve(out);
   mkdirSync(path.dirname(resolvedOut), { recursive: true });
-  const reportPath = `${resolvedOut}.report.json`;
+  const reportPath = `${resolvedOut}.report.json`;\n  await assertRobotsAllowsPilot();
   const records: unknown[] = [];
   const failures: Array<{ url: string; error: string }> = [];
 
@@ -84,18 +133,18 @@ async function main() {
     try {
       const response = await fetch(url, {
         headers: {
-          "user-agent": "JobOyeResearchPilot/1.0 (controlled source-evidence capture; contact: site administrator)",
+          "user-agent": "JobOyeResearchPilot/1.0 (bounded public-source capture; no database writes)",
           accept: "text/html,application/xhtml+xml",
         },
         signal: AbortSignal.timeout(20000),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if ([401, 403, 429].includes(response.status)) {\n        const error = new Error(`HTTP ${response.status}; access denied or rate-limited, stopping the pilot immediately`);\n        failures.push({ url, error: error.message });\n        console.error(`capture stopped: ${url} — ${error.message}`);\n        break;\n      }\n      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const type = response.headers.get("content-type") ?? "";
       if (!/text\/html|application\/xhtml\+xml/i.test(type)) throw new Error(`Unexpected content-type: ${type}`);
       const html = await response.text();
       if (!html || html.length < 1000) throw new Error("Response body was empty or unexpectedly small");
       const fetchedAt = new Date().toISOString();
-      const record = recordFromHtml(url, html, fetchedAt);
+      const record = recordFromHtml(url, html, fetchedAt, { status: response.status, finalUrl: response.url || url, contentType: type });
       records.push(record);
       console.log(`captured ${record.id} — ${record.title}`);
     } catch (error) {
