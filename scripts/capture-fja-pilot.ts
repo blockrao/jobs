@@ -79,7 +79,7 @@ async function assertRobotsAllowsPilot() {
   const body = await response.text();
   const groups: Array<{ agents: string[]; disallow: string[] }> = [];
   let agents: string[] = [];
-  let disallow: string[] = [];
+  let disallow: string[] = [];\n  let hasDirective = false;
   const flush = () => {
     if (agents.length) groups.push({ agents, disallow });
     agents = [];
@@ -93,7 +93,7 @@ async function assertRobotsAllowsPilot() {
     const key = line.slice(0, colon).trim().toLowerCase();
     const value = line.slice(colon + 1).trim();
     if (key === "user-agent") {
-      if (disallow.length) flush();
+      if (hasDirective) flush();
       agents.push(value.toLowerCase());
     } else if (key === "disallow" && value) {
       disallow.push(value);
