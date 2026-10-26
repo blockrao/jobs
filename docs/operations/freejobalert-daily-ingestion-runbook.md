@@ -112,3 +112,8 @@ Manual official-source verification remains PENDING until a reviewer confirms it
 - Official notification, official application and FJA article URLs are not conflated.
 - A second scratch run produces zero additional inserts for unchanged source content.
 - Production canonical table counts and public pages remain unchanged throughout the pilot.
+
+## Scheduling status discovered in the pilot
+
+- The current main-branch vercel.json contains an empty crons array. Therefore, despite the comment in src/app/api/ingest/route.ts describing a daily 2 AM UTC schedule, this repository configuration does not currently declare a Vercel Cron schedule for it.
+- Do not add a production cron as part of this feasibility run. First implement and validate the complete discovery → capture → extraction → reconciliation → dry-run report path in scratch. Scheduling should be a separate approved step, and the scheduled job must not publish unverified candidates.
