@@ -23,6 +23,7 @@ describe("FJA research parser", () => {
       <table>
         <tr><th>Department / Organization</th><th>Post Name</th><th>Vacancies</th></tr>
         <tr><td>Ground Water Department</td><td>Technical Assistant</td><td>3</td></tr>
+        <tr><td>Total Vacancies</td><td></td><td>3</td></tr>
       </table>
       <table>
         <tr><th>Post Name</th><th>Educational Qualification Information</th></tr>
@@ -45,6 +46,7 @@ describe("FJA research parser", () => {
     expect(result.official_link_candidates[0].host).toBe("upsssc.gov.in");
     expect(result.post_table_candidates.length).toBeGreaterThan(0);
     expect(result.post_table_candidates.some((table) => table.rows.some((row) => Object.values(row.values).includes("Technical Assistant")))).toBe(true);
+    expect(result.post_table_candidates.find((table) => table.headers.includes("Department / Organization"))?.rows).toHaveLength(1);
   });
 
   it("never treats a walk-in/interview date as an application deadline", () => {
@@ -59,6 +61,22 @@ describe("FJA research parser", () => {
     expect(result.derived_close_date).toBeNull();
     expect(result.open_status).toBe("REVIEW_WALKIN_DATE_UNCLEAR");
     expect(result.review_reasons).toContain("Walk-in/interview dates are not equivalent to an application closing date.");
+  });
+
+  it("rejects non-date application modes and nonnumeric vacancy descriptions", () => {
+    const html = '<main><h1>Kerala University Recruitment</h1>' +
+      '<table><tr><th>Particulars</th><th>Details</th></tr>' +
+      '<tr><td>Organisation</td><td>Kerala University</td></tr>' +
+      '<tr><td>Vacancies</td><td>Vacancies to be occurred / Panel preparation</td></tr>' +
+      '<tr><td>Apply By</td><td>Email or Post</td></tr></table>' +
+      '<table><tr><th>Event</th><th>Date</th></tr>' +
+      '<tr><td>Application Last Date</td><td>05-11-2026</td></tr></table></main>';
+    const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/example-1234", "2026-10-12");
+    expect(result.facts.application_end_date).toBe("05-11-2026");
+    expect(result.facts.vacancies).toBeUndefined();
+    expect(result.derived_close_date).toBe("2026-11-05");
+    expect(result.open_status).toBe("OPEN_AS_OF_CUTOFF");
+    expect(result.review_reasons.some((reason) => reason.includes("no numeric count"))).toBe(true);
   });
 
   it("holds records with no application deadline for review", () => {
