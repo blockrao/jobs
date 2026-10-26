@@ -75,7 +75,7 @@ async function assertRobotsAllowsPilot() {
     },
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error(\`Cannot verify robots.txt (HTTP \${response.status}); refusing to crawl\`);
+  if (!response.ok) throw new Error(`Cannot verify robots.txt (HTTP ${response.status}); refusing to crawl`);
   const body = await response.text();
   const groups: Array<{ agents: string[]; disallow: string[] }> = [];
   let agents: string[] = [];
@@ -114,7 +114,7 @@ async function assertRobotsAllowsPilot() {
       // Conservative prefix check. If a wildcard rule is present, honor its fixed prefix.
       const prefix = rule.split("*")[0].replace(/\$$/, "");
       if (prefix && paths.some((p) => p.startsWith(prefix))) {
-        throw new Error(\`robots.txt disallows pilot article path via rule "\${rule}"; refusing to crawl\`);
+        throw new Error(`robots.txt disallows pilot article path via rule "${rule}"; refusing to crawl`);
       }
     }
   }
@@ -124,7 +124,8 @@ async function main() {
   if (!out) throw new Error("--out is required; choose a local scratch path");
   const resolvedOut = path.resolve(out);
   mkdirSync(path.dirname(resolvedOut), { recursive: true });
-  const reportPath = `${resolvedOut}.report.json`;\n  await assertRobotsAllowsPilot();
+  const reportPath = `${resolvedOut}.report.json`;
+  await assertRobotsAllowsPilot();
   const records: unknown[] = [];
   const failures: Array<{ url: string; error: string }> = [];
 
@@ -142,7 +143,13 @@ async function main() {
         },
         signal: AbortSignal.timeout(20000),
       });
-      if ([401, 403, 429].includes(response.status)) {\n        const error = new Error(`HTTP ${response.status}; access denied or rate-limited, stopping the pilot immediately`);\n        failures.push({ url, error: error.message });\n        console.error(`capture stopped: ${url} — ${error.message}`);\n        break;\n      }\n      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if ([401, 403, 429].includes(response.status)) {
+        const error = new Error(`HTTP ${response.status}; access denied or rate-limited, stopping the pilot immediately`);
+        failures.push({ url, error: error.message });
+        console.error(`capture stopped: ${url} — ${error.message}`);
+        break;
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const type = response.headers.get("content-type") ?? "";
       if (!/text\/html|application\/xhtml\+xml/i.test(type)) throw new Error(`Unexpected content-type: ${type}`);
       const html = await response.text();
