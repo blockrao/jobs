@@ -113,7 +113,23 @@ async function main(){
   await writeFile(path.join(OUT,"open-as-of-cutoff.csv"),csv+"\n");
   await writeFile(path.join(OUT,"crawl-errors.json"),JSON.stringify(errors,null,2));
   await writeFile(path.join(OUT,"listing-page-evidence.json"),JSON.stringify(pageHashes,null,2));
-  await writeFile(path.join(OUT,"summary.json"),JSON.stringify({source:BASE,start_date:START_DATE,as_of_date:AS_OF_DATE,listing_pages_fetched:pageHashes.length,in_window_unique_listings:unique.length,detail_records:records.length,open_as_of_cutoff:eligible.length,closed_by_cutoff:records.filter(r=>r.open_status==="CLOSED_BY_CUTOFF").length,review_date_unclear:records.filter(r=>String(r.open_status).startsWith("REVIEW")).length,fetch_or_parse_errors:errors.length,important_note:"FreeJobAlert facts are secondary discovery data. Verify facts and closing dates against official notifications before JobOye use. No production writes."},null,2));
+  const reviewRecords=records.filter(r=>Array.isArray(r.review_reasons)&&r.review_reasons.length>0);
+  const summary={
+    source:BASE,start_date:START_DATE,as_of_date:AS_OF_DATE,
+    listing_pages_fetched:pageHashes.length,in_window_unique_listings:unique.length,detail_records:records.length,
+    open_as_of_cutoff:eligible.length,closed_by_cutoff:records.filter(r=>r.open_status==="CLOSED_BY_CUTOFF").length,
+    review_date_unclear:records.filter(r=>String(r.open_status).startsWith("REVIEW")).length,
+    records_with_organization:records.filter(r=>Boolean(r.facts?.organization)).length,
+    records_with_numeric_vacancy_fact:records.filter(r=>Boolean(r.facts?.vacancies)&&/\d/.test(String(r.facts?.vacancies))).length,
+    records_with_post_table_candidates:records.filter(r=>Array.isArray(r.post_table_candidates)&&r.post_table_candidates.length>0).length,
+    records_with_official_link_candidates:records.filter(r=>Array.isArray(r.official_link_candidates)&&r.official_link_candidates.length>0).length,
+    records_with_page_hash:records.filter(r=>typeof r.page_sha256==="string"&&r.page_sha256.length===64).length,
+    records_with_review_reasons:reviewRecords.length,
+    review_reason_count:reviewRecords.reduce((n,r)=>n+(r.review_reasons as unknown[]).length,0),
+    fetch_or_parse_errors:errors.length,
+    important_note:"FreeJobAlert facts are secondary discovery data. Verify facts and closing dates against official notifications before JobOye use. No production writes."
+  };
+  await writeFile(path.join(OUT,"summary.json"),JSON.stringify(summary,null,2));
   console.log(`DONE: ${unique.length} in-window listings; ${eligible.length} open; ${errors.length} errors`);
 }
 main().catch(e=>{console.error(e);process.exit(1)});

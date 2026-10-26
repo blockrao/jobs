@@ -27,6 +27,7 @@ on:
     branches: [main]
     paths:
       - "scripts/extract-freejobalert-open-updates.ts"
+      - "scripts/lib/fja-research-parser.ts"
       - ".github/workflows/freejobalert-research-extraction.yml"
 
 permissions:
