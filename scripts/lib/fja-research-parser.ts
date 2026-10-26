@@ -86,12 +86,12 @@ function absoluteSourceLink(href: string, baseUrl: string): FjaResearchLink | nu
     const url = new URL(href, baseUrl);
     if (url.protocol !== "https:" || !url.hostname) return null;
     const host = url.hostname.toLowerCase();
-    if (!(host === "freejobalert.com" || host.endsWith(".freejobalert.com"))) return null;
+    const isFja = host === "freejobalert.com" || host.endsWith(".freejobalert.com");
     return {
       text: "",
       url: url.toString(),
       host,
-      source_class: host === "freejobalert.com" || host.endsWith(".freejobalert.com") ? "freejobalert" : "external_candidate",
+      source_class: isFja ? "freejobalert" : "external_candidate",
     };
   } catch {
     return null;
