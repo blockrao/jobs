@@ -418,13 +418,10 @@ export async function getRecruitmentWithPosts(slug: string) {
       };
     });
 
-    const [enrichmentResult, vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
-      db.execute(sql`
-        SELECT *
-        FROM post_enrichments
-        WHERE post_id IN (${sql.join(postIds.map((id) => sql`${id}`), sql`,`)})
-        ORDER BY post_id
-      `),
+    // The hub renderer does not consume the legacy postEnrichment payload.
+    // Do not query post_enrichments here: public post enrichment is canonical in
+    // posts.enrichment JSONB, and this unused join added a round trip per hub.
+    const [vacancyDetailResult, eligibilityQualificationResult] = await Promise.all([
       db.execute(sql`
         SELECT v.*, to_jsonb(l) AS location_record
         FROM vacancies v
@@ -440,14 +437,6 @@ export async function getRecruitmentWithPosts(slug: string) {
         ORDER BY e.post_id, e.id
       `)
     ]);
-    const enrichmentRows = (
-      (enrichmentResult as unknown as { rows?: unknown[] }).rows ?? enrichmentResult
-    ) as Array<Record<string, unknown>>;
-    const enrichmentByPostId = new Map<number, Record<string, unknown>>();
-    for (const item of enrichmentRows) {
-      const postId = Number(item.post_id);
-      if (Number.isFinite(postId)) enrichmentByPostId.set(postId, item);
-    }
     const vacancyDetailRows = rowsOf(vacancyDetailResult);
     const vacancyDetailsByPostId = new Map<number, Array<Record<string, unknown>>>();
     for (const row of vacancyDetailRows) {
@@ -467,7 +456,6 @@ export async function getRecruitmentWithPosts(slug: string) {
       vacancies: postsVacanciesByPostId.get(post.id) ?? vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
       eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
       ageRules: ageRulesByPostId.get(post.id) ?? [],
-      postEnrichment: enrichmentByPostId.get(post.id) ?? null,
     }));
 
     return {
