@@ -75,17 +75,19 @@ async function assertRobotsAllowsPilot() {
     },
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error(`Cannot verify robots.txt (HTTP ${response.status}); refusing to crawl`);
+  if (!response.ok) throw new Error(\`Cannot verify robots.txt (HTTP \${response.status}); refusing to crawl\`);
   const body = await response.text();
   const groups: Array<{ agents: string[]; disallow: string[] }> = [];
   let agents: string[] = [];
-  let disallow: string[] = [];\n  let hasDirective = false;
+  let disallow: string[] = [];
+  let hasDirective = false;
   const flush = () => {
     if (agents.length) groups.push({ agents, disallow });
     agents = [];
     disallow = [];
+    hasDirective = false;
   };
-  for (const raw of body.split(/\\r?\\n/)) {
+  for (const raw of body.split(/\r?\n/)) {
     const line = raw.split("#")[0].trim();
     if (!line) continue;
     const colon = line.indexOf(":");
@@ -97,7 +99,10 @@ async function assertRobotsAllowsPilot() {
       agents.push(value.toLowerCase());
     } else if (key === "disallow" && value) {
       disallow.push(value);
-    } else if (key !== "allow" && key !== "crawl-delay" && agents.length === 0) {
+      hasDirective = true;
+    } else if (key === "allow" || key === "crawl-delay") {
+      hasDirective = true;
+    } else if (agents.length === 0) {
       // Ignore directives outside a user-agent group.
     }
   }
@@ -107,14 +112,13 @@ async function assertRobotsAllowsPilot() {
   for (const group of relevant) {
     for (const rule of group.disallow) {
       // Conservative prefix check. If a wildcard rule is present, honor its fixed prefix.
-      const prefix = rule.split("*")[0].replace(/\\$/, "");
+      const prefix = rule.split("*")[0].replace(/\$$/, "");
       if (prefix && paths.some((p) => p.startsWith(prefix))) {
-        throw new Error(`robots.txt disallows pilot article path via rule "${rule}"; refusing to crawl`);
+        throw new Error(\`robots.txt disallows pilot article path via rule "\${rule}"; refusing to crawl\`);
       }
     }
   }
 }
-
 async function main() {
   const out = arg("out");
   if (!out) throw new Error("--out is required; choose a local scratch path");
