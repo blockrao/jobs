@@ -186,6 +186,7 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
     if (!parsed) return;
     const text = collapse($(a).text());
     if (!text || /^(?:notifications|latest notifications|home|read more|click here|here)$/i.test(text)) return;
+    if (/mobile app|follow us|whatsapp|telegram|facebook|instagram|share|copy link/i.test(text)) return;
     // The captured page is FJA, so these are source-side candidate links only.
     // A link is not labelled official solely because its anchor says "official".
     if (/official|notification|advertisement|application form|apply online|download/i.test(text) && !/freejobalert\.com/i.test(parsed.url)) {
