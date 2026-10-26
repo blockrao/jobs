@@ -28,7 +28,7 @@ const LABELS: Record<string, RegExp> = {
   salary_pay: /^(?:salary|pay scale|pay level|remuneration|pay matrix|pay)$/i,
   application_start_date: /^(?:starting date|application start date|online application start date|start date|starting date for online application)$/i,
   walk_in_date: /^(?:walk[- ]?in date|interview date|date of interview|reporting date|document verification date)$/i,
-  application_end_date: /^(?:last date|last date to apply|last date to apply online|last date of application|last date of receiving application|last date of application submission|last date for submission|application end date|application last date|closing date|apply by)$/i,
+  application_end_date: /^(?:last date|last date to apply|last date to apply online|last date of application|last date of receiving application|last date of application submission|last date for submission|application end date|application last date|closing date)$/i,
   notification_date: /^(?:notification date|published date|post date|notification release date|advertisement release date)$/i,
   job_location: /^(?:job location|location|place of posting)$/i,
   advertisement_number: /^(?:advertisement no.?|advt.? no.?|notification no.?|reference no.?|advertisement number)$/i,
@@ -113,6 +113,8 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   const facts: FjaResearchFacts = {};
   const candidates: FjaResearchParse["date_candidates"] = [];
   const postTableCandidates: FjaResearchParse["post_table_candidates"] = [];
+  const unparsedDateValues: Array<{ label: string; value: string }> = [];
+  const unparsedVacancyValues: Array<{ label: string; value: string }> = [];
 
   root.find("table").each((tableIndex, table) => {
     const rows = $(table).find("tr").toArray().map((tr) =>
@@ -122,11 +124,11 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
     const first = rows[0].map((v) => cleanLabel(v).toLowerCase());
     const headerLooksLikeBreakdown = first.some((v) => /^(?:post|post name|department|organization|organisation|category|subject|resource|link description|s.? no.?)$/.test(v))
       && first.some((v) => /vacanc|qualification|pay|scale|link|details|marks|total/.test(v));
-    const hasPostColumn = first.some((v) => /^(?:post|post name|post names|name of post|name of the post|post name \/ department)$/i.test(v));
+    const hasPostColumn = first.some((v) => /^(?:posts?|post name(?:s|\(s\))?|name of (?:the )?posts?(?:\(s\))?|post name \/ department)$/i.test(v));
     const hasPostFacts = first.some((v) => /vacanc|no.? of posts|qualification|pay|salary|age limit|department|organization|organisation/i.test(v));
     if (hasPostColumn && hasPostFacts && !first.some((v) => /^(?:resource|link|link description)$/i.test(v))) {
       const candidateRows = rows.slice(1).flatMap((cells, rowOffset) => {
-        if (cells.length < 2 || /^(?:total|grand total)$/i.test(collapse(cells[0]))) return [];
+        if (cells.length < 2 || /^(?:total|grand total)\b/i.test(collapse(cells[0]))) return [];
         const values: Record<string, string> = {};
         first.forEach((header, colIndex) => {
           if (header && cells[colIndex]) values[header] = cells[colIndex];
@@ -146,14 +148,23 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
       const headerLikeValue = /^(?:post(?: name)?|post name\(s\)|vacancies|qualification|educational qualification information|pay|details|organization|organisation|department)(?:\s*[|/]\s*(?:post(?: name)?|vacancies|qualification|details|total))?$/i.test(value);
       if (!label || !value || headerLikeValue) continue;
       for (const [field, re] of Object.entries(LABELS)) {
-        if (re.test(label) && !facts[field]) {
-          facts[field] = value;
-          if (field.endsWith("_date") || field === "notification_date") {
-            const date = parseFjaDate(value);
-            if (date) candidates.push({ label, date, kind: dateKind(label) });
-          }
-          break;
+        if (!re.test(label) || facts[field]) continue;
+        if (field === "vacancies" && !/\d/.test(value)) {
+          unparsedVacancyValues.push({ label, value });
+          continue;
         }
+        if (field.endsWith("_date") || field === "notification_date") {
+          const date = parseFjaDate(value);
+          if (!date) {
+            unparsedDateValues.push({ label, value });
+            continue;
+          }
+          facts[field] = value;
+          candidates.push({ label, date, kind: dateKind(label) });
+        } else {
+          facts[field] = value;
+        }
+        break;
       }
     }
   });
@@ -199,6 +210,8 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   if (!facts.post_name) reviewReasons.push("A recruitment-level post name was not extracted; inspect post-wise tables and official notice.");
   if (!facts.vacancies) reviewReasons.push("Total recruitment vacancies were not extracted from a recognized key/value row.");
   if (!uniqueLinks.length) reviewReasons.push("No candidate official-source links were identified; inspect the source page manually.");
+  for (const item of unparsedDateValues) reviewReasons.push("Date field “" + item.label + "” had a non-date value and was not accepted: “" + item.value + "”.");
+  for (const item of unparsedVacancyValues) reviewReasons.push("Vacancy field “" + item.label + "” had no numeric count and was not accepted: “" + item.value + "”.");
   if (!postTableCandidates.length) reviewReasons.push("No structured post-wise table was detected; leaf-level post data requires manual/official-source review.");
 
   return {
