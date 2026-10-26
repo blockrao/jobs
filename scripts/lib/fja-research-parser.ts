@@ -12,7 +12,8 @@ export interface FjaResearchParse {
   detail_text: string;
   facts: FjaResearchFacts;
   date_candidates: Array<{ label: string; date: string; kind: "application_end" | "application_start" | "walk_in" | "notification" | "other" }>;
-  official_links: FjaResearchLink[];
+  official_link_candidates: FjaResearchLink[];
+  post_table_candidates: Array<{ table_index: number; headers: string[]; rows: Array<{ row_index: number; values: Record<string, string> }> }>;
   open_status: "OPEN_AS_OF_CUTOFF" | "CLOSED_BY_CUTOFF" | "REVIEW_DATE_UNCLEAR" | "REVIEW_WALKIN_DATE_UNCLEAR";
   derived_close_date: string | null;
   review_reasons: string[];
@@ -111,8 +112,9 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   const detailText = collapse(root.text()).slice(0, 50000);
   const facts: FjaResearchFacts = {};
   const candidates: FjaResearchParse["date_candidates"] = [];
+  const postTableCandidates: FjaResearchParse["post_table_candidates"] = [];
 
-  root.find("table").each((_, table) => {
+  root.find("table").each((tableIndex, table) => {
     const rows = $(table).find("tr").toArray().map((tr) =>
       $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())).filter(Boolean),
     ).filter((row) => row.length >= 2);
@@ -120,6 +122,19 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
     const first = rows[0].map((v) => cleanLabel(v).toLowerCase());
     const headerLooksLikeBreakdown = first.some((v) => /^(?:post|post name|department|organization|organisation|category|subject|resource|link description|s.? no.?)$/.test(v))
       && first.some((v) => /vacanc|qualification|pay|scale|link|details|marks|total/.test(v));
+    const hasPostColumn = first.some((v) => /^(?:post|post name|post names|name of post|name of the post|post name \/ department)$/i.test(v));
+    const hasPostFacts = first.some((v) => /vacanc|no.? of posts|qualification|pay|salary|age limit|department|organization|organisation/i.test(v));
+    if (hasPostColumn && hasPostFacts && !first.some((v) => /^(?:resource|link|link description)$/i.test(v))) {
+      const candidateRows = rows.slice(1).flatMap((cells, rowOffset) => {
+        if (cells.length < 2 || /^(?:total|grand total)$/i.test(collapse(cells[0]))) return [];
+        const values: Record<string, string> = {};
+        first.forEach((header, colIndex) => {
+          if (header && cells[colIndex]) values[header] = cells[colIndex];
+        });
+        return Object.keys(values).length ? [{ row_index: rowOffset + 1, values }] : [];
+      });
+      if (candidateRows.length) postTableCandidates.push({ table_index: tableIndex, headers: rows[0], rows: candidateRows });
+    }
     for (let i = 0; i < rows.length; i++) {
       const cells = rows[i];
       if (i === 0 && /^(?:particulars|event|key|field|label|resource|link description)$/i.test(cells[0])) continue;
@@ -184,13 +199,15 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   if (!facts.post_name) reviewReasons.push("A recruitment-level post name was not extracted; inspect post-wise tables and official notice.");
   if (!facts.vacancies) reviewReasons.push("Total recruitment vacancies were not extracted from a recognized key/value row.");
   if (!uniqueLinks.length) reviewReasons.push("No candidate official-source links were identified; inspect the source page manually.");
+  if (!postTableCandidates.length) reviewReasons.push("No structured post-wise table was detected; leaf-level post data requires manual/official-source review.");
 
   return {
     page_title: title || null,
     detail_text: detailText,
     facts,
     date_candidates: candidates,
-    official_links: uniqueLinks,
+    official_link_candidates: uniqueLinks,
+    post_table_candidates: postTableCandidates,
     open_status: openStatus,
     derived_close_date: closeDate,
     review_reasons: reviewReasons,
