@@ -20,7 +20,7 @@ export interface FjaResearchParse {
 
 const LABELS: Record<string, RegExp> = {
   organization: /^(?:recruiting body|recruiting organization|recruiting organisation|organization|organisation|company name|recruiting authority)$/i,
-  post_name: /^(?:name of post|name of posts|post name|post names|post(s)|post(s) name)$/i,
+  post_name: /^(?:name of posts?|post names?|post name\(s\)|name of post\(s\))$/i,
   vacancies: /^(?:total vacancies|total vacancy|total posts|total no.? of posts|total no.? of vacancies|number of vacancies|number of posts|no.? of posts|no.? of vacancies|vacancies)$/i,
   qualification: /^(?:qualification|educational qualification|eligibility|education qualification|essential qualification)$/i,
   age_limit: /^(?:age limit|age criteria|age limit as on.*)$/i,
@@ -128,7 +128,8 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
       if (cells.length !== 2) continue;
       const label = cleanLabel(cells[0]);
       const value = collapse(cells[1]);
-      if (!label || !value || Object.values(LABELS).some((re) => re.test(label) && /^(?:organization|organisation|department|company name)$/i.test(label) && /^(?:post name|vacancies|qualification|details)$/i.test(value))) continue;
+      const headerLikeValue = /^(?:post(?: name)?|post name\(s\)|vacancies|qualification|educational qualification information|pay|details|organization|organisation|department)(?:\s*[|/]\s*(?:post(?: name)?|vacancies|qualification|details|total))?$/i.test(value);
+      if (!label || !value || headerLikeValue) continue;
       for (const [field, re] of Object.entries(LABELS)) {
         if (re.test(label) && !facts[field]) {
           facts[field] = value;
