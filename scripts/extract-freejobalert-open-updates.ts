@@ -99,7 +99,7 @@ async function main(){
       const d=parseFjaResearchDetail(body,finalUrl,AS_OF_DATE);
       const rawName=`${String(i+1).padStart(4,"0")}-${sha(finalUrl).slice(0,14)}.html`;
       await writeFile(path.join(OUT,"raw",rawName),body);
-      records.push({...l,detail_url:finalUrl,retrieved_at:new Date().toISOString(),raw_html_file:`raw/${rawName}`,...d});
+      records.push({...l,detail_url:finalUrl,retrieved_at:new Date().toISOString(),page_sha256:sha(body),raw_html_file:`raw/${rawName}`,...d});
     }catch(e){errors.push({listing_url:l.listing_url,title:l.title,stage:"detail_fetch",error:String(e)});records.push({...l,extraction_status:"ERROR",error:String(e),open_status:"REVIEW_FETCH_ERROR"});}
     if((i+1)%20===0) console.log(`Detail pages ${i+1}/${unique.length}`);
     await sleep(DELAY_MS);
