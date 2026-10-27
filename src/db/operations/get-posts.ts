@@ -159,7 +159,15 @@ async function getPostCoreData(
       FROM posts p
       INNER JOIN recruitments r ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
-      WHERE p.slug = ${postSlug}
+      WHERE (
+          p.slug = ${postSlug}
+          OR p.slug IN (
+            SELECT sr.new_slug
+            FROM slug_redirects sr
+            WHERE sr.old_slug = ${postSlug}
+              AND sr.slug_type = 'post'
+          )
+        )
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
           r.slug = ${recruitmentSlug}
