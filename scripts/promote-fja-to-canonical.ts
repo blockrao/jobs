@@ -74,6 +74,22 @@ function parseSalary(raw: string | undefined): { min?: number; max?: number } {
   return { min: Math.min(...nums), max: Math.max(...nums) };
 }
 
+// Parse source dates from known captured formats without guessing ambiguous dates.
+function parseSourceDate(raw: string): Date | undefined {
+  const value = raw.trim();
+  let m = value.match(/^(\\d{1,2})[-/.](\\d{1,2})[-/.](20\\d{2})$/);
+  if (m && Number(m[1]) <= 31 && Number(m[2]) <= 12) {
+    const d = new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  m = value.match(/^(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s*,?\\s*(20\\d{2})$/i);
+  if (m) {
+    const d = new Date(`${m[1]} ${m[2]} ${m[3]} UTC`);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+  }
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Parse an age string from FJA tableFields into an integer (years).
 // Handles "18 Years\n18 Years", "18 years", "18", etc. — takes the first number.
@@ -123,6 +139,26 @@ function extractApplyUrl(allLinks: Array<{ url?: string; label?: string }> | und
   return undefined;
 }
 
+function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): string | undefined {
+  const officialHost = (url: string) => {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      return /\\.(gov\\.in|nic\\.in|ac\\.in|edu\\.in|res\\.in|mil\\.in)$/.test(host)
+        || /(^|\\.)(hmtindia\\.com|sbi\\.co\\.in|ibps\\.in)$/.test(host);
+    } catch { return false; }
+  };
+  const candidates = links.filter((link) => typeof link.url === "string" && officialHost(link.url as string));
+  const scored = candidates.map((link) => {
+    const url = String(link.url);
+    const label = String(link.text ?? link.label ?? "");
+    const score = (/\\.pdf(?:[?#]|$)/i.test(url) ? 3 : 0)
+      + (/(notification|advertisement|advt|official notice|see the notice|click here)/i.test(label) ? 2 : 0)
+      + (/(recruit|vacan|job|career|advt|notice|advertisement)/i.test(url) ? 1 : 0);
+    return { url, score };
+  }).filter((item) => item.score >= 3).sort((a, b) => b.score - a.score);
+  return scored[0]?.url;
+}
+
 // ---------------------------------------------------------------------------
 // Build a postTable from details.tables: find the table whose heading contains
 // "vacanc" or whose rows have name + vacancy columns. Returns undefined if none found.
@@ -170,30 +206,29 @@ function extractPostTable(
 // Map one FJA inventory row to NormalizedPosting
 // ---------------------------------------------------------------------------
 function toNormalized(row: FjaJobRow): NormalizedPosting {
-  const details = row.details ?? {};
-
-  // --- Apply URL: scan allLinks for an "Apply Online"-type label ---
-  const allLinks = details.allLinks as Array<{ url?: string; label?: string }> | undefined;
+  // Reconciliation stores { listing, detail, reconciliation }; facts/links are nested under detail.
+  const wrapper = (row.details ?? {}) as Record<string, any>;
+  const detail = (wrapper.detail ?? wrapper) as Record<string, any>;
+  const facts = (detail.facts ?? (row.other_info_raw as Record<string, any> | null)?.facts ?? {}) as Record<string, any>;
+  const rawLinks = (detail.all_links ?? detail.allLinks ?? facts.all_links ?? facts.allLinks ?? []) as Array<Record<string, unknown>>;
+  const allLinks = rawLinks.map((link) => ({
+    url: typeof link.url === "string" ? link.url : undefined,
+    label: typeof link.text === "string" ? link.text : typeof link.label === "string" ? link.label : undefined,
+  }));
   const applyUrl = extractApplyUrl(allLinks);
-
-  // --- Salary: parse the raw salary text string ---
-  const salaryRaw = (details.salary as string | undefined) ?? undefined;
+  const officialNotificationUrl = row.official_notification_url ?? extractOfficialNotificationUrl(rawLinks);
+  const salaryRaw = (facts.salary_pay ?? facts.salary ?? detail.salary) as string | undefined;
   const { min: salaryMin, max: salaryMax } = parseSalary(salaryRaw);
-
-  // --- Location: stored as details.location ---
-  const locationText = (details.location as string | undefined) ?? undefined;
-
-  // --- Post table: extract from details.tables ---
-  const tables = details.tables as Array<{
+  const locationText = (facts.location ?? detail.location) as string | undefined;
+  const tables = (detail.tables ?? facts.tables) as Array<{
     heading?: string;
     rows: Array<{ cells: string[]; rowIndex: number }>;
   }> | undefined;
   const postTable = extractPostTable(tables);
-
-  // --- Post names: stored as details.postNames (string or array) ---
-  const rawPostNames = details.postNames;
+  // post_name is an extracted fact, not the article headline.
+  const rawPostNames = facts.post_names ?? facts.postNames ?? facts.post_name ?? detail.postNames;
   const postNames: string[] | undefined = rawPostNames
-    ? (Array.isArray(rawPostNames) ? rawPostNames : [String(rawPostNames)])
+    ? (Array.isArray(rawPostNames) ? rawPostNames.map(String) : [String(rawPostNames)])
     : undefined;
 
   // --- Stage: category hint first, then date logic ---
@@ -216,6 +251,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   // details.tableFields["qualification"] which FJA sometimes stores separately.
   const tableFields = details.tableFields as Record<string, string> | undefined;
   const eligibility = row.qualification
+    ?? (facts.qualification as string | undefined)
     ?? tableFields?.["qualification"]
     ?? undefined;
 
@@ -238,13 +274,13 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     organizationFromLabel: true,
     description: row.title,          // title only — qualification goes to eligibility
     eligibility,                     // objective fact from source
-    totalVacancies: row.vacancy_count ?? undefined,
-    officialNotificationUrl: row.official_notification_url ?? undefined,
+    totalVacancies: row.vacancy_count ?? (facts.vacancies ? Number(String(facts.vacancies).replace(/,/g, "")) || undefined : undefined),
+    officialNotificationUrl,
     applyUrl,
     advertisementNumber: row.advertisement_number ?? undefined,
-    datePosted: row.published_date ? new Date(row.published_date) : undefined,
-    applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : undefined,
-    validThrough: row.application_end_date ? new Date(row.application_end_date) : undefined,
+    datePosted: row.published_date ? new Date(row.published_date) : facts.notification_date ? parseSourceDate(String(facts.notification_date)) : undefined,
+    applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) : undefined,
+    validThrough: row.application_end_date ? new Date(row.application_end_date) : facts.application_end_date ? parseSourceDate(String(facts.application_end_date)) : undefined,
     postTable,
     postNames,
     salaryMin,
