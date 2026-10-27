@@ -17,7 +17,7 @@ export function normalizeIdentityUrl(value: string | null | undefined): string |
       if (/^(utm_[a-z0-9_]+|fbclid|gclid|mc_cid|mc_eid)$/i.test(key)) url.searchParams.delete(key);
     }
     url.searchParams.sort();
-    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\\/+$/, "");
+    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/+$/, "");
     return url.toString();
   } catch {
     return null;
@@ -28,7 +28,7 @@ export function normalizeIdentityTitle(value: string | null | undefined): string
   return (value ?? "")
     .normalize("NFKC")
     .toLocaleLowerCase("en-IN")
-    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
-    .replace(/\\s+/g, " ");
+    .replace(/\s+/g, " ");
 }
