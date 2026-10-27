@@ -274,7 +274,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     organizationFromLabel: true,
     description: row.title,          // title only — qualification goes to eligibility
     eligibility,                     // objective fact from source
-    totalVacancies: row.vacancy_count ?? (facts.vacancies ? Number(String(facts.vacancies).replace(/,/g, "")) || undefined : undefined),
+    totalVacancies: row.vacancy_count ?? (facts.vacancies ? parseInt(String(facts.vacancies).replace(/,/g, ""), 10) || undefined : undefined),
     officialNotificationUrl,
     applyUrl,
     advertisementNumber: row.advertisement_number ?? undefined,
