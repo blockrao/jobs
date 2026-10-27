@@ -8,6 +8,7 @@ on:
       - main
     paths:
       - scripts/capture-fja-pilot.ts
+      - scripts/lib/fja-research-parser.ts
       - .github/workflows/fja-two-record-capture.yml
 
 permissions:
