@@ -15,17 +15,7 @@ import * as cheerio from "cheerio";
 
 const PILOT_URLS = [
   "https://www.freejobalert.com/articles/nlc-india-apprentice-recruitment-2026-1067-posts-3075682",
-  "https://www.freejobalert.com/articles/ksrtc-swift-recruitment-2026-apply-online-for-5-front-office-manager-housekeeping-staff-and-more-posts-3075672",
-  "https://www.freejobalert.com/articles/army-public-school-happy-valley-driver-cum-mts-recruitment-2026-apply-offline-3075670",
-  "https://www.freejobalert.com/articles/usac-recruitment-2026-walkin-for-5-junior-project-fellow-field-assistant-posts-3075668",
-  "https://www.freejobalert.com/articles/ircon-manager-recruitment-2026-walkin-for-37-posts-3075665",
-  "https://www.freejobalert.com/articles/aiims-kalyani-senior-resident-recruitment-2026-apply-online-for-12-posts-3075663",
-  "https://www.freejobalert.com/articles/wb-police-driver-recruitment-2026-3075661",
-  "https://www.freejobalert.com/articles/asmc-bahraich-non-pg-junior-resident-recruitment-2026-walkin-3075659",
-  "https://www.freejobalert.com/articles/burari-hospital-senior-resident-recruitment-2026-walkin-for-16-posts-3075657",
-  "https://www.freejobalert.com/articles/epi-consultant-expert-recruitment-2026-apply-offline-3075655",
-  "https://www.freejobalert.com/articles/tiss-recruitment-2026-apply-online-for-senior-research-officer-senior-documentation-and-communication-officer-posts-3075653",
-  "https://www.freejobalert.com/articles/isro-ursc-to-recruit-61-technician-b-driver-posts-3075553",
+  "https://www.freejobalert.com/articles/ksrtc-swift-recruitment-2026-apply-online-for-5-front-office-manager-housekeeping-staff-and-more-posts-3075672"
 ] as const;
 
 function arg(name: string): string | undefined {
@@ -108,13 +98,18 @@ async function assertRobotsAllowsPilot() {
   }
   flush();
   const relevant = groups.filter((g) => g.agents.includes("*") || g.agents.some((a) => a === "joboyeresearchpilot"));
-  const paths = PILOT_URLS.map((url) => new URL(url).pathname);
+  const targets = PILOT_URLS.map((url) => {
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}`;
+  });
   for (const group of relevant) {
     for (const rule of group.disallow) {
-      // Conservative prefix check. If a wildcard rule is present, honor its fixed prefix.
-      const prefix = rule.split("*")[0].replace(/\$$/, "");
-      if (prefix && paths.some((p) => p.startsWith(prefix))) {
-        throw new Error(`robots.txt disallows pilot article path via rule "${rule}"; refusing to crawl`);
+      // Query-specific rules must be evaluated against path + query. A rule
+      // containing '?' cannot match a URL with no query string.
+      if (rule.includes("?") && !targets.some((target) => target.includes("?"))) continue;
+      const prefix = rule.split("*")[0].replace(/\$/, "");
+      if (prefix && targets.some((target) => target.startsWith(prefix))) {
+        throw new Error(`robots.txt disallows pilot article URL via rule "${rule}"; refusing to crawl`);
       }
     }
   }
