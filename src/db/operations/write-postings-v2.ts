@@ -177,6 +177,41 @@ function iso(d: Date | undefined | null): string | null {
   return d ? d.toISOString() : null;
 }
 
+/**
+ * Conservative cross-source identity key for duplicate detection.
+ * Only known tracking parameters are removed; meaningful query parameters
+ * and URL paths are retained. This is not a general URL equivalence engine.
+ */
+function normalizeIdentityUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    url.hash = "";
+    url.hostname = url.hostname.toLowerCase();
+    if ((url.protocol === "https:" && url.port === "443") || (url.protocol === "http:" && url.port === "80")) {
+      url.port = "";
+    }
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_[a-z0-9_]+|fbclid|gclid|mc_cid|mc_eid)$/i.test(key)) url.searchParams.delete(key);
+    }
+    url.searchParams.sort();
+    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\\/+$/, "");
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function normalizeIdentityTitle(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-IN")
+    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\\s+/g, " ");
+}
+
 async function recordObservation(
   db: ReturnType<typeof getDb>,
   norm: NormalizedPosting,
@@ -379,6 +414,36 @@ export async function writePostingsToDB(
         continue;
       }
       const clean = hygiene.clean;
+
+      // Cross-source duplicate guard: exact source/externalId is handled above.
+      // If that key is new, the same organization + normalized title + exact
+      // official notification URL is a strong duplicate signal. Hold/skip it
+      // rather than creating a second canonical posting. The URL alone is not
+      // sufficient because one notice may legitimately cover multiple posts.
+      const incomingNoticeKey = normalizeIdentityUrl(clean.officialNotificationUrl);
+      const incomingTitleKey = normalizeIdentityTitle(clean.title);
+      if (!existingPosting && incomingNoticeKey && incomingTitleKey) {
+        const sameOrganization = await db
+          .select({
+            id: postings.id,
+            title: postings.title,
+            officialNotificationUrl: postings.officialNotificationUrl,
+          })
+          .from(postings)
+          .where(eq(postings.organizationId, org.id));
+        const duplicate = sameOrganization.find((row) =>
+          normalizeIdentityTitle(row.title) === incomingTitleKey &&
+          normalizeIdentityUrl(row.officialNotificationUrl) === incomingNoticeKey
+        );
+        if (duplicate) {
+          result.action = "skipped";
+          result.reason = "DUPLICATE_EXISTING_ORGANIZATION_TITLE_NOTIFICATION_URL";
+          result.postingId = duplicate.id;
+          out.skipped++;
+          await setObservationOutcome(db, obs.id, "SKIPPED", result.reason, duplicate.id);
+          continue;
+        }
+      }
 
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
