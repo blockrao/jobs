@@ -1370,3 +1370,23 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 **Change.** `20261014050000_life_002a` adds `CLOSED` to the enum (additive). `20261014050100_life_002b` changes only the mapping: computed `CLOSED`, `ADMIT_CARD` and `EXAM` now store `CLOSED`; the rest of the function is byte-identical to A-071 (md5 checked). Coarse public lifecycle: UPCOMING → ACTIVE (applications open) → CLOSED (window passed; exam/admit card may be pending) → RESULTS → ARCHIVED; the finer stage stays in `calculated_status`. Read paths need no change: live predicates use `IN ('ACTIVE','UPCOMING')`, the Hub already treats `closed` as closed, badge code already has a CLOSED branch or a neutral default. Contract test `tests/contracts/unit/lifecycle-closed-status.test.ts`.
 
 **Verification (production, 2026-10-14 03:34 UTC).** Migrations applied through the recorded path; `refresh_recruitment_lifecycle()` run once. Status before → after: ACTIVE 1,832 → 1,360; UPCOMING 372 → 374; RESULTS 27 → 27; CLOSED 0 → 469 (441 with `calculated_status = CLOSED`, 28 `ADMIT_CARD`/`EXAM`); ARCHIVED 0 → 1 (existing 180-day rule, first row to qualify). After: recruitments `ACTIVE` with `application_end_date` before today: 0; `CLOSED` with a future end date: 0. Public effect without a deploy: 469 recruitments and their Posts leave the live lists, sitemap `isLive` and "open" counts; their Hub pages render the closed state. The code change (enum declaration, TS union) is type-only and ships with the next push.
+
+
+## URL-001 — Descriptive canonical recruitment slugs for new records
+
+| Field | Value |
+| --- | --- |
+| Change ID | URL-001 |
+| Date | 2026-10-27 |
+| Status | Implementation PR; production migration not yet applied |
+| Scope | New recruitment slug generation and the recruitment slug format constraint |
+
+**Objective.** New recruitment hubs should have readable, stable URLs that describe the recruitment, while existing org-ID/year/sequence URLs remain untouched.
+
+**Change.** New canonical recruitment creation uses a normalized descriptive slug derived from the recruitment title. Common aggregator call-to-action suffixes such as “Apply Online for 1067 Posts” are removed. The database constraint accepts lowercase hyphenated slugs; the existing database trigger still generates the legacy format only when an insert omits its slug. Collision handling appends the organization ID and, if necessary, a numeric suffix. No existing recruitment slug is updated and no redirect is added by this change.
+
+**SEO impact.** Newly created recruitment records can use descriptive self-canonical hub URLs. Existing canonical URLs are not migrated. The two requested pilot records still require verified source data, ingestion, deployment and live HTTP/canonical verification before their URLs may be shared as working.
+
+**Tests.** tests/contracts/unit/descriptive-recruitment-slug.test.ts covers the two requested descriptive slugs, punctuation normalization and invalid titles.
+
+**Validation.** Not yet run in CI. Production migration not applied.
