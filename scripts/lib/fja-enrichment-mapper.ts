@@ -111,6 +111,9 @@ export function buildFjaEnrichmentCandidate(
       ?? line.match(/(?:job|posting) location(?: is|:)\s*([^.;\n]+)/i)?.[1])
     .find(Boolean);
   const postingLocation = parsed.facts.job_location ?? locationSentence ?? null;
+  if (postingLocation) {
+    for (const row of breakdown) row.location ??= postingLocation;
+  }
 
   const selectionSections = parsed.content_sections
     .filter((section) => /selection process|method of selection|selection procedure/i.test(section.heading))
