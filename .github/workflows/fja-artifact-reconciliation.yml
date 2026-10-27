@@ -1,0 +1,65 @@
+name: Reconcile and privately import FJA extraction artifact
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/reconcile-fja-artifact.ts"
+      - ".github/workflows/fja-artifact-reconciliation.yml"
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Successful FreeJobAlert extraction workflow run ID"
+        required: true
+        type: string
+        default: "40513389060"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: fja-artifact-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Reconcile source inventory; write only private FJA tables
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Download completed extraction artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id || '40513389060' }}
+        run: |
+          mkdir -p artifacts/fja-download
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "freejobalert-extraction-$SOURCE_RUN_ID" \
+            --dir artifacts/fja-download
+          INPUT_DIR="$(find artifacts/fja-download -type f -name all-in-window-listings.json -print -quit | xargs -r dirname)"
+          test -n "$INPUT_DIR" || { echo "Listing inventory missing from source artifact"; exit 1; }
+          test -f "$INPUT_DIR/detail-records.json" || { echo "Detail records missing from source artifact"; exit 1; }
+          echo "FJA_ARTIFACT_DIR=$INPUT_DIR" >> "$GITHUB_ENV"
+      - name: Reconcile canonical records and import source evidence privately
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FJA_SOURCE_RUN_ID: ${{ inputs.source_run_id || '40513389060' }}
+          FJA_RECONCILIATION_OUT: artifacts/fja-reconciliation
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing GitHub Actions secret DATABASE_URL; no import attempted."; exit 1; }
+          npx tsx scripts/reconcile-fja-artifact.ts
+      - name: Upload reconciliation report and import verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-reconciliation-${{ inputs.source_run_id || '40513389060' }}-${{ github.run_id }}
+          path: artifacts/fja-reconciliation/
+          if-no-files-found: warn
+          retention-days: 30
