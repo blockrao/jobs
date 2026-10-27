@@ -101,7 +101,7 @@ describe("FJA research parser", () => {
     expect(result.capture_quality.detail_text_chars).toBeGreaterThan(0);
     expect(result.capture_quality.source_table_count).toBe(1);
     expect(result.capture_quality.list_item_count).toBe(2);
-    expect(result.capture_quality.status).toBe("CAPTURED_NEEDS_REVIEW");
+    expect(result.capture_quality.status).toBe("CAPTURE_REVIEW");
   });
 
   it("preserves blank table cells so post-wise columns do not shift", () => {
@@ -112,7 +112,7 @@ describe("FJA research parser", () => {
     const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/example-1234", "2026-10-12");
     expect(result.source_tables[0].rows).toContainEqual(["Clerk", "", "12th pass"]);
     expect(result.post_table_candidates[0].rows.some((row) => row.values["qualification"] === "12th pass")).toBe(true);
-    expect(result.capture_quality.status).toBe("CAPTURED_NEEDS_REVIEW");
+    expect(result.capture_quality.status).toBe("CAPTURE_REVIEW");
   });
 
 
