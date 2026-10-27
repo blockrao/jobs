@@ -21,7 +21,6 @@
 
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 import { pageSeo } from "@/lib/seo";
 import { generateAlternates } from "@/lib/hreflang";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
@@ -29,10 +28,11 @@ import RecruitmentHubStructuredData from "@/components/recruitment/structured-da
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 
-// ISR: each recruitment page is rendered on its first visit, served from cache,
-// and regenerated at most once an hour (or on demand via /api/revalidate).
-// A database error throws (500, never cached) instead of rendering a cached 404.
-export const revalidate = 3600;
+// Recruitment hubs need request-time rendering while resolving database-backed
+// canonical entities. Calling noStore() conditionally for individual slugs inside
+// an ISR route triggers DYNAMIC_SERVER_USAGE during production rendering.
+// Keep this route dynamic until per-path cache invalidation is implemented safely.
+export const dynamic = "force-dynamic";
 export async function generateStaticParams() {
   return [];
 }
@@ -41,9 +41,6 @@ type Props = { params: Promise<{ "recruitment-slug": string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "recruitment-slug": slug } = await params;
-  // These two records were inserted after an earlier 404 may have been cached.
-  // Bypass route/output caching for them until the live URL is verified.
-  if (slug === "nlc-india-apprentice-recruitment-2026" || slug === "ksrtc-swift-recruitment-2026") noStore();
   const data = await getRecruitmentWithPostsCached(slug);
   if (!data) {
     return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
@@ -68,9 +65,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function RecruitmentHubPage({ params }: Props) {
   const { "recruitment-slug": slug } = await params;
-  // Ensure these newly inserted canonical records are fetched from the live DB,
-  // not served from a previously cached notFound() response.
-  if (slug === "nlc-india-apprentice-recruitment-2026" || slug === "ksrtc-swift-recruitment-2026") noStore();
   const data = await getRecruitmentWithPostsCached(slug);
   if (!data) notFound();
 
