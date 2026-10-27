@@ -19,10 +19,10 @@ on:
         type: string
         default: "120"
       max_records:
-        description: "Maximum detail articles to extract; complete listing inventory is saved separately"
+        description: "Maximum detail articles to fetch; set high enough to capture the full listing inventory"
         required: true
         type: string
-        default: "200"
+        default: "1500"
   push:
     branches: [main]
     paths:
@@ -55,7 +55,7 @@ jobs:
           START_DATE: ${{ inputs.start_date || '2026-10-01' }}
           AS_OF_DATE: ${{ inputs.as_of_date || '2026-10-27' }}
           MAX_LIST_PAGES: ${{ inputs.max_list_pages || '120' }}
-          MAX_RECORDS: ${{ inputs.max_records || '200' }}
+          MAX_RECORDS: ${{ inputs.max_records || '1500' }}
           DELAY_MS: "1200"
           OUT_DIR: "artifacts/freejobalert-${{ inputs.start_date || '2026-10-01' }}-to-${{ inputs.as_of_date || '2026-10-27' }}"
         run: npx tsx scripts/extract-freejobalert-open-updates.ts
