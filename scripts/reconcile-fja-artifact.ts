@@ -30,7 +30,7 @@ async function main(){
  const byUrl=new Map(details.map((d:any)=>[d.listing_url,d]));
  const [recs,posts]=await Promise.all([
   db`select r.id,r.name,r.slug,r.advertisement_number,r.source_url,r.notification_url,r.official_notification_url,r.application_end_date::text as application_end_date,r.total_vacancies,o.name as org from public.recruitments r left join public.organizations o on o.id=r.organization_id`,
-  db`select p.id,coalesce(p.name,p.title) as name,p.slug,p.officialSourceUrl as source_url,p.original_recruitment_url as original_url,o.name as org,p.vacancy_total as total_vacancies from public.posts p left join public.recruitments r on r.id=p.recruitment_id left join public.organizations o on o.id=coalesce(p.employing_organization_id,p."organizationId",r.organization_id)`
+  db`select p.id,coalesce(p.name,p.title) as name,p.slug,p."officialSourceUrl" as source_url,p.original_recruitment_url as original_url,o.name as org,p.vacancy_total as total_vacancies from public.posts p left join public.recruitments r on r.id=p.recruitment_id left join public.organizations o on o.id=coalesce(p.employing_organization_id,p."organizationId",r.organization_id)`
  ]);
  const rows=listings.map((l:any)=>{
   const d:any=byUrl.get(l.listing_url), facts=d?.facts??{}, title=String(facts.post_name||d?.enrichment_candidate?.core?.job_title||l.title), org=String(facts.organization||d?.enrichment_candidate?.core?.organization||""), ad=String(facts.advertisement_number||"");
