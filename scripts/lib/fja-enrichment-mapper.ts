@@ -32,6 +32,9 @@ export interface FjaEnrichmentCandidate {
   };
   reference: {
     fja_url: string;
+    official_url?: string;
+    notification_link?: string;
+    application_url_candidate?: string;
     official_link_candidates: Array<{ text: string; url: string; host: string }>;
   };
   source_capture: {
@@ -88,6 +91,27 @@ export function buildFjaEnrichmentCandidate(
     }
   }
 
+  const sectionText = (pattern: RegExp) => parsed.content_sections
+    .filter((section) => pattern.test(section.heading))
+    .flatMap((section) => section.blocks.flatMap((block) => block.type === "list" && block.items?.length ? block.items : [block.text]))
+    .filter(Boolean);
+
+  const stipendLines = sectionText(/stipend|salary|pay and tenure|remuneration/i)
+    .filter((line) => /monthly pay|monthly stipend|stipend|salary/i.test(line) || /Rs\\.?\\s*[\\d,]+/i.test(line));
+  const salaryRaw = parsed.facts.salary_pay ?? (stipendLines.length ? [...new Set(stipendLines)].join("\\n") : null);
+
+  const ageLines = sectionText(/age limit|age criteria|who can apply/i);
+  const ageText = parsed.facts.age_limit ?? ageLines.find((line) =>
+    /minimum age|age limit|years old|years as on|years of age/i.test(line),
+  ) ?? null;
+
+  const locationLines = sectionText(/training duration|training location|job location|posting location|pay and tenure/i);
+  const locationSentence = locationLines
+    .map((line) => line.match(/(?:notified )?training locations? are\\s+([^.;\\n]+)/i)?.[1]
+      ?? line.match(/(?:job|posting) location(?: is|:)\\s*([^.;\\n]+)/i)?.[1])
+    .find(Boolean);
+  const postingLocation = parsed.facts.job_location ?? locationSentence ?? null;
+
   const selectionSections = parsed.content_sections
     .filter((section) => /selection process|method of selection|selection procedure/i.test(section.heading))
     .map((section) => ({
@@ -106,6 +130,9 @@ export function buildFjaEnrichmentCandidate(
     url: link.url,
     host: link.host,
   }));
+  const notificationLink = officialLinkCandidates.find((link) => /notification|advertisement|pdf/i.test(link.text));
+  const applicationLink = officialLinkCandidates.find((link) => /apply online|application portal/i.test(link.text));
+  const officialWebsite = officialLinkCandidates.find((link) => link !== notificationLink && link !== applicationLink);
 
   const missing = parsed.capture_quality.missing_core_fields;
   const reasons = [
@@ -126,12 +153,12 @@ export function buildFjaEnrichmentCandidate(
       job_title: parsed.facts.post_name ?? parsed.page_title,
       organization: parsed.facts.organization ?? null,
       total_vacancies: firstInteger(parsed.facts.vacancies),
-      posting_location: parsed.facts.job_location ?? null,
+      posting_location: postingLocation,
     },
-    salary: parsed.facts.salary_pay ? { raw: parsed.facts.salary_pay } : null,
+    salary: salaryRaw ? { raw: salaryRaw } : null,
     vacancies_breakdown: breakdown,
     eligibility: {
-      ...(parsed.facts.age_limit ? { age_limit: { text: parsed.facts.age_limit } } : {}),
+      ...(ageText ? { age_limit: { text: ageText } } : {}),
       ...(parsed.facts.qualification ? { education: [{ degree: parsed.facts.qualification }], raw_qualification: parsed.facts.qualification } : {}),
     },
     application: {
@@ -141,9 +168,15 @@ export function buildFjaEnrichmentCandidate(
     selection_process: selectionSections,
     job_terms: {
       ...(tenure ? { tenure } : {}),
-      ...(parsed.facts.job_location ? { posting_location: parsed.facts.job_location } : {}),
+      ...(postingLocation ? { posting_location: postingLocation } : {}),
     },
-    reference: { fja_url: sourceUrl, official_link_candidates: officialLinkCandidates },
+    reference: {
+      fja_url: sourceUrl,
+      ...(officialWebsite ? { official_url: officialWebsite.url } : {}),
+      ...(notificationLink ? { notification_link: notificationLink.url } : {}),
+      ...(applicationLink ? { application_url_candidate: applicationLink.url } : {}),
+      official_link_candidates: officialLinkCandidates,
+    },
     source_capture: {
       page_title: parsed.page_title,
       detail_text: parsed.detail_text,
