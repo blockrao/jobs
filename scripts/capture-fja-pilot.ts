@@ -13,6 +13,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as cheerio from "cheerio";
 import { parseFjaResearchDetail } from "./lib/fja-research-parser";
+import { buildFjaEnrichmentCandidate } from "./lib/fja-enrichment-mapper";
 
 const PILOT_URLS = [
   "https://www.freejobalert.com/articles/nlc-india-apprentice-recruitment-2026-1067-posts-3075682",
@@ -50,11 +51,13 @@ function recordFromHtml(url: string, html: string, fetchedAt: string, responseMe
     }
   });
   const parsed = parseFjaResearchDetail(html, responseMeta.finalUrl, fetchedAt.slice(0, 10));
+  const htmlSha256 = createHash("sha256").update(html).digest("hex");
+  const enrichmentCandidate = buildFjaEnrichmentCandidate(parsed, responseMeta.finalUrl, fetchedAt, htmlSha256);
   return {
     id, url, finalUrl: responseMeta.finalUrl, httpStatus: responseMeta.status, contentType: responseMeta.contentType, listTitle: title, title, fetchedAt,
     metaDescription: collapse($('meta[name="description"]').attr("content") ?? ""),
-    rows, links, html, parsed,
-    htmlSha256: createHash("sha256").update(html).digest("hex"),
+    rows, links, html, parsed, enrichmentCandidate,
+    htmlSha256,
   };
 }
 
@@ -178,7 +181,7 @@ async function main() {
     captured: records.length,
     failed: failures.length,
     records: records.map((r) => {
-      const v = r as { id: string; url: string; finalUrl: string; httpStatus: number; contentType: string; title: string; fetchedAt: string; htmlSha256: string; html: string; parsed: ReturnType<typeof parseFjaResearchDetail> };
+      const v = r as { id: string; url: string; finalUrl: string; httpStatus: number; contentType: string; title: string; fetchedAt: string; htmlSha256: string; html: string; parsed: ReturnType<typeof parseFjaResearchDetail>; enrichmentCandidate: ReturnType<typeof buildFjaEnrichmentCandidate> };
       return {
         id: v.id, url: v.url, finalUrl: v.finalUrl, httpStatus: v.httpStatus, contentType: v.contentType,
         title: v.title, fetchedAt: v.fetchedAt, htmlSha256: v.htmlSha256, htmlBytes: Buffer.byteLength(v.html, "utf8"),
@@ -186,6 +189,8 @@ async function main() {
         reviewReasons: v.parsed.review_reasons,
         extractedFacts: v.parsed.facts,
         postTableCount: v.parsed.post_table_candidates.length,
+        vacancyBreakdownCandidateCount: v.enrichmentCandidate.vacancies_breakdown.length,
+        publicationGate: v.enrichmentCandidate.publication_gate,
       };
     }),
     failures,
