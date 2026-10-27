@@ -11,6 +11,29 @@ import { recruitments } from "../db/schema";
 
 type Db = ReturnType<typeof getDb>;
 
+/**
+ * Build a stable, readable URL slug from a recruitment headline. Strip common
+ * aggregator call-to-action suffixes so SEO headlines do not become canonical
+ * URLs (for example, "Apply Online for 1067 Posts").
+ */
+export function buildDescriptiveRecruitmentSlug(title: string): string {
+  const base = title
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+(?:apply online|apply now|online application|online form|how to apply)\b.*$/i, "")
+    .replace(/\s+(?:for\s+)?\d[\d,]*\s+(?:posts?|vacancies|openings)\b.*$/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-")
+    .slice(0, 140)
+    .replace(/-+$/g, "");
+  if (!base || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(base)) {
+    throw new Error("Unable to build a descriptive recruitment slug from the supplied title");
+  }
+  return base;
+}
+
 export const RECRUITMENT_SLUG_RE = /^org(\d+)-(\d{4})-(\d{4})$/;
 
 export function buildRecruitmentSlug(organizationId: number, year: number, sequence: number): string {
