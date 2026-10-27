@@ -200,7 +200,7 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
 
   root.find("table").each((tableIndex, table) => {
     const rows = $(table).find("tr").toArray().map((tr) =>
-      $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())).filter(Boolean),
+      $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())),
     ).filter((row) => row.length >= 2 && row.some(Boolean));
     if (!rows.length) return;
     const first = rows[0].map((v) => cleanLabel(v).toLowerCase());
