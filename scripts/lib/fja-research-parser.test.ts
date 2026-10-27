@@ -73,7 +73,8 @@ describe("FreeJobAlert research parser", () => {
       </main>`;
     const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/test-12348", "2026-10-27");
     expect(result.vacancy_count_candidate).toBeNull();
-    expect(result.review_reasons.some((reason) => reason.includes("no defensible numeric total"))).toBe(true);
+    expect(result.facts.vacancies).toBeUndefined();
+    expect(result.review_reasons.some((reason) => reason.includes("Total recruitment vacancies were not extracted") || reason.includes("Vacancy field"))).toBe(true);
   });
 
   it("does not mistake a later correction-window date for the application deadline", () => {
