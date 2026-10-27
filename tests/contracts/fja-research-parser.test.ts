@@ -116,4 +116,21 @@ describe("FJA research parser", () => {
   });
 
 
+  it("recognizes apprenticeship training-slot totals and trade/discipline tables", () => {
+    const html = '<main><h1>NLC India Apprentice Recruitment</h1>' +
+      '<table><tr><th>Particulars</th><th>Details</th></tr>' +
+      '<tr><td>Organization</td><td>NLC India Limited</td></tr>' +
+      '<tr><td>Total Training Slots</td><td>1,067 (ITI: 700; Graduate: 367)</td></tr></table>' +
+      '<table><tr><th>S. No.</th><th>Trade Name</th><th>No. of Slots</th></tr>' +
+      '<tr><td>1</td><td>Fitter</td><td>125</td></tr><tr><td>Total</td><td></td><td>700</td></tr></table>' +
+      '<table><tr><th>S. No.</th><th>Discipline</th><th>Qualification</th><th>No. of Slots</th></tr>' +
+      '<tr><td>1</td><td>Commerce</td><td>B.Com</td><td>70</td></tr></table></main>';
+    const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/example-1234", "2026-10-12");
+    expect(result.facts.vacancies).toBe("1,067 (ITI: 700; Graduate: 367)");
+    expect(result.post_table_candidates).toHaveLength(2);
+    expect(result.post_table_candidates.some((table) => table.rows.some((row) => row.values["trade name"] === "Fitter"))).toBe(true);
+    expect(result.post_table_candidates.some((table) => table.rows.some((row) => row.values["discipline"] === "Commerce"))).toBe(true);
+  });
+
+
 });
