@@ -34,11 +34,11 @@ async function main(){
  ]);
  const rows=listings.map((l:any)=>{
   const d:any=byUrl.get(l.listing_url), facts=d?.facts??{}, title=String(facts.post_name||d?.enrichment_candidate?.core?.job_title||l.title), org=String(facts.organization||d?.enrichment_candidate?.core?.organization||""), ad=String(facts.advertisement_number||"");
-  const nonRecruitment=/\\b(result|admit card|answer key|syllabus|cut.?off|merit list|exam date|exam city|hall ticket|score card|objection window)\\b/i.test(l.title)&&! /\\b(recruitment|vacanc(?:y|ies)|apply online|application form|hiring|jobs?|apprentice|career)\\b/i.test(l.title); const cs:any[]=[];
+  const nonRecruitment=/\b(result|admit card|answer key|syllabus|cut.?off|merit list|exam date|exam city|hall ticket|score card|objection window)\b/i.test(l.title)&&! /\b(recruitment|vacanc(?:y|ies)|apply online|application form|hiring|jobs?|apprentice|career)\b/i.test(l.title); const cs:any[]=[];
   for(const r of recs){const urlHit=[r.source_url,r.notification_url,r.official_notification_url].some((u:any)=>u&&(u===l.listing_url||u.includes(extId(l.listing_url))));const ts=Math.max(sim(l.title,r.name),sim(title,r.name)), os=org?sim(org,r.org||""):0, adHit=!!ad&&norm(ad)===norm(r.advertisement_number||"");const score=urlHit?1:adHit?Math.max(.97,ts):ts*(org?.65+.35*os:.8);if(urlHit||adHit||(ts>=.42&&(!org||os>=.25||ts>=.82)))cs.push({entity:"recruitment",id:r.id,name:r.name,slug:r.slug,org:r.org,score,why:urlHit?"source URL/ID":adHit?"advertisement number":"title/organization similarity",r});}
   for(const p of posts){const ts=Math.max(sim(l.title,p.name||""),sim(title,p.name||"")),os=org?sim(org,p.org||""):0;if(ts>=.62&&(!org||os>=.25||ts>=.86))cs.push({entity:"post",id:p.id,name:p.name,slug:p.slug,org:p.org,score:ts*(org?.65+.35*os:.8),why:"post title/organization similarity",r:p});}
   cs.sort((a,b)=>b.score-a.score);const top=cs[0],second=cs[1];let bucket="ambiguous";
-  if(!top)bucket="missing_from_joboye";
+  else if(!top)bucket="missing_from_joboye";
   else if(top.score>=.94&&(!second||top.score-second.score>=.08)){const r=top.r;const dv=d&&facts.vacancies&&vacancy(facts.vacancies)!==null&&r.total_vacancies!==null&&r.total_vacancies!==undefined&&vacancy(facts.vacancies)!==Number(r.total_vacancies);const fd=isoDate(facts.application_end_date), rd=r.application_end_date?String(r.application_end_date).slice(0,10):null;bucket=dv||(fd&&rd&&fd!==rd)?"material_delta":"existing_match";}
   else if(top.score>=.72&&(!second||top.score-second.score>=.06))bucket="likely_duplicate_alias";
   return {listing:l,detail:d,bucket,candidates:cs.slice(0,5).map(c=>({entity:c.entity,id:c.id,name:c.name,slug:c.slug,organization:c.org,score:+c.score.toFixed(3),reason:c.why})),facts,top};
