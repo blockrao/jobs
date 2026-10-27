@@ -1224,6 +1224,9 @@ export const recruitments = pgTable(
 
     // Enriched data extracted from FJA pages (At a Glance, Important Dates, Selection Process, etc.)
     enrichmentData: jsonb("enrichment_data").$type<Record<string, unknown>>(),
+    // Existing live DB provenance metadata; mapped here so source-verification
+    // states written by controlled pilots can be honored by public renderers.
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
