@@ -21,6 +21,7 @@
 
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import { pageSeo } from "@/lib/seo";
 import { generateAlternates } from "@/lib/hreflang";
 import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitment/recruitment-hub";
@@ -40,6 +41,9 @@ type Props = { params: Promise<{ "recruitment-slug": string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { "recruitment-slug": slug } = await params;
+  // These two records were inserted after an earlier 404 may have been cached.
+  // Bypass route/output caching for them until the live URL is verified.
+  if (slug === "nlc-india-apprentice-recruitment-2026" || slug === "ksrtc-swift-recruitment-2026") noStore();
   const data = await getRecruitmentWithPostsCached(slug);
   if (!data) {
     return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
@@ -64,6 +68,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function RecruitmentHubPage({ params }: Props) {
   const { "recruitment-slug": slug } = await params;
+  // Ensure these newly inserted canonical records are fetched from the live DB,
+  // not served from a previously cached notFound() response.
+  if (slug === "nlc-india-apprentice-recruitment-2026" || slug === "ksrtc-swift-recruitment-2026") noStore();
   const data = await getRecruitmentWithPostsCached(slug);
   if (!data) notFound();
 
