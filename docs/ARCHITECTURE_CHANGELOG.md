@@ -1378,15 +1378,15 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 | --- | --- |
 | Change ID | URL-001 |
 | Date | 2026-10-27 |
-| Status | Implementation PR; production migration not yet applied |
+| Status | Migration applied to production; code PR open |
 | Scope | New recruitment slug generation and the recruitment slug format constraint |
 
 **Objective.** New recruitment hubs should have readable, stable URLs that describe the recruitment, while existing org-ID/year/sequence URLs remain untouched.
 
-**Change.** New canonical recruitment creation uses a normalized descriptive slug derived from the recruitment title. Common aggregator call-to-action suffixes such as “Apply Online for 1067 Posts” are removed. The database constraint accepts lowercase hyphenated slugs; the existing database trigger still generates the legacy format only when an insert omits its slug. Collision handling appends the organization ID and, if necessary, a numeric suffix. No existing recruitment slug is updated and no redirect is added by this change.
+**Change.** New canonical recruitment creation uses a normalized descriptive slug derived from the recruitment title. Common aggregator call-to-action suffixes such as “Apply Online for 1067 Posts” are removed. The database constraint accepts lowercase hyphenated slugs; the existing database trigger still generates the legacy format only when an insert omits its slug. The unique slug constraint is the collision guard; a conflicting URL fails closed and structured identity recovery never treats a slug as entity identity. No existing recruitment slug is updated and no redirect is added by this change.
 
 **SEO impact.** Newly created recruitment records can use descriptive self-canonical hub URLs. Existing canonical URLs are not migrated. The two requested pilot records still require verified source data, ingestion, deployment and live HTTP/canonical verification before their URLs may be shared as working.
 
 **Tests.** tests/contracts/unit/descriptive-recruitment-slug.test.ts covers the two requested descriptive slugs, punctuation normalization and invalid titles.
 
-**Validation.** Not yet run in CI. Production migration not applied.
+**Validation.** Production migration version `20261027061751` is recorded and the live constraint was checked read-only after application. Full CI must pass before the application code is merged.
