@@ -40,4 +40,5 @@ jobs:
           FJA_PROMOTE_LIMIT: ${{ inputs.limit || '0' }}
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; promotion stopped."; exit 1; }
+          echo "Running FJA canonical promotion with nested-artifact extraction support"
           npx tsx scripts/promote-fja-to-canonical.ts
