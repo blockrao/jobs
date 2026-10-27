@@ -28,6 +28,7 @@ on:
     paths:
       - "scripts/extract-freejobalert-open-updates.ts"
       - "scripts/lib/fja-research-parser.ts"
+      - "scripts/lib/fja-enrichment-mapper.ts"
       - ".github/workflows/freejobalert-research-extraction.yml"
 
 permissions:
