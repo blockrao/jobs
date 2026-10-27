@@ -29,6 +29,7 @@ describe("FreeJobAlert research parser", () => {
     expect(result.facts.organization).toBeUndefined();
     expect(result.facts.post_name).toBeUndefined();
     expect(result.facts.vacancies).toBe("1156 Posts");
+    expect(result.vacancy_count_candidate).toBe(1156);
     expect(result.derived_close_date).toBe("2026-11-25");
     expect(result.open_status).toBe("OPEN_AS_OF_CUTOFF");
     expect(result.official_link_candidates.some((link) => link.host === "upsssc.gov.in")).toBe(true);
@@ -60,4 +61,38 @@ describe("FreeJobAlert research parser", () => {
     expect(result.post_table_candidates[0].rows).toHaveLength(2);
     expect(result.facts.vacancies).toBeUndefined();
   });
+  it("does not convert explanatory vacancy prose into a numeric count", () => {
+    const html = `
+      <main>
+        <h1>Kannur University Registrar Recruitment 2026</h1>
+        <table>
+          <tr><td>Organization</td><td>Kannur University</td></tr>
+          <tr><td>Vacancies</td><td>1 (the notice does not print a number)</td></tr>
+          <tr><td>Last Date to Apply</td><td>24 November 2026</td></tr>
+        </table>
+      </main>`;
+    const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/test-12348", "2026-10-27");
+    expect(result.vacancy_count_candidate).toBeNull();
+    expect(result.review_reasons.some((reason) => reason.includes("no defensible numeric total"))).toBe(true);
+  });
+
+  it("does not mistake a later correction-window date for the application deadline", () => {
+    const html = `
+      <main>
+        <h1>RRB Station Master Recruitment 2026</h1>
+        <table>
+          <tr><td>Organization</td><td>Railway Recruitment Boards</td></tr>
+          <tr><td>Post Name</td><td>Station Master</td></tr>
+          <tr><td>Vacancies</td><td>1,215</td></tr>
+          <tr><td>Application Last Date</td><td>25 November 2026</td></tr>
+        </table>
+        <p>Last Date 7 December 2026 Modification Fee Rs 250</p>
+      </main>`;
+    const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/test-12349", "2026-10-27");
+    expect(result.derived_close_date).toBe("2026-11-25");
+    expect(result.open_status).toBe("OPEN_AS_OF_CUTOFF");
+    expect(result.vacancy_count_candidate).toBe(1215);
+    expect(result.date_candidates.some((candidate) => candidate.date === "2026-12-07" && candidate.kind === "other")).toBe(true);
+  });
+
 });
