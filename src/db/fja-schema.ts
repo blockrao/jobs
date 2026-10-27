@@ -44,7 +44,7 @@ export const fjaJobInventory = pgTable("fja_job_inventory", {
 
 export const fjaPostInventory = pgTable("fja_post_inventory", {
   id: bigint("id", { mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
-  recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "bigint" }).notNull(),
+  recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "bigint" }).notNull().references(() => fjaJobInventory.id, { onDelete: "cascade" }),
   sourceSlug: text("source_slug").notNull().default("freejobalert"),
   externalId: text("external_id").notNull(),
   sourcePostKey: text("source_post_key").notNull(),
@@ -101,7 +101,7 @@ export const fjaPostInventory = pgTable("fja_post_inventory", {
 
 export const fjaSourceCaptures = pgTable("fja_source_captures", {
   id: bigint("id", { mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
-  recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "bigint" }).notNull(),
+  recruitmentInventoryId: bigint("recruitment_inventory_id", { mode: "bigint" }).notNull().references(() => fjaJobInventory.id, { onDelete: "restrict" }),
   sourceSlug: text("source_slug").notNull().default("freejobalert"),
   externalId: text("external_id").notNull(),
   sourceUrl: text("source_url").notNull(),
