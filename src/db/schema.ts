@@ -1967,3 +1967,7 @@ export const jobsRelations = relations(jobs, ({ one }) => ({
   post: one(posts, { fields: [jobs.postId], references: [posts.id] }),
   organization: one(organizations, { fields: [jobs.organizationId], references: [organizations.id] }),
 }));
+
+
+// Private FJA source inventory tables; these are not canonical page entities.
+export * from "./fja-schema";
