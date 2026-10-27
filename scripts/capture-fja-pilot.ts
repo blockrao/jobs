@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as cheerio from "cheerio";
+import { parseFjaResearchDetail } from "./lib/fja-research-parser";
 
 const PILOT_URLS = [
   "https://www.freejobalert.com/articles/nlc-india-apprentice-recruitment-2026-1067-posts-3075682",
@@ -48,10 +49,11 @@ function recordFromHtml(url: string, html: string, fetchedAt: string, responseMe
       // Keep only parseable HTTP(S) links.
     }
   });
+  const parsed = parseFjaResearchDetail(html, responseMeta.finalUrl, fetchedAt.slice(0, 10));
   return {
     id, url, finalUrl: responseMeta.finalUrl, httpStatus: responseMeta.status, contentType: responseMeta.contentType, listTitle: title, title, fetchedAt,
     metaDescription: collapse($('meta[name="description"]').attr("content") ?? ""),
-    rows, links, html,
+    rows, links, html, parsed,
     htmlSha256: createHash("sha256").update(html).digest("hex"),
   };
 }
@@ -176,8 +178,15 @@ async function main() {
     captured: records.length,
     failed: failures.length,
     records: records.map((r) => {
-      const v = r as { id: string; url: string; finalUrl: string; httpStatus: number; contentType: string; title: string; fetchedAt: string; htmlSha256: string; html: string };
-      return { id: v.id, url: v.url, finalUrl: v.finalUrl, httpStatus: v.httpStatus, contentType: v.contentType, title: v.title, fetchedAt: v.fetchedAt, htmlSha256: v.htmlSha256, htmlBytes: Buffer.byteLength(v.html, "utf8") };
+      const v = r as { id: string; url: string; finalUrl: string; httpStatus: number; contentType: string; title: string; fetchedAt: string; htmlSha256: string; html: string; parsed: ReturnType<typeof parseFjaResearchDetail> };
+      return {
+        id: v.id, url: v.url, finalUrl: v.finalUrl, httpStatus: v.httpStatus, contentType: v.contentType,
+        title: v.title, fetchedAt: v.fetchedAt, htmlSha256: v.htmlSha256, htmlBytes: Buffer.byteLength(v.html, "utf8"),
+        captureQuality: v.parsed.capture_quality,
+        reviewReasons: v.parsed.review_reasons,
+        extractedFacts: v.parsed.facts,
+        postTableCount: v.parsed.post_table_candidates.length,
+      };
     }),
     failures,
     databaseWrites: 0,
