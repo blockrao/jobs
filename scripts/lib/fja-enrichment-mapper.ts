@@ -15,7 +15,7 @@ export interface FjaEnrichmentCandidate {
     posting_location: string | null;
   };
   salary: { raw: string } | null;
-  vacancies_breakdown: Array<{ category: string; count: number; location?: string }>;
+  vacancies_breakdown: Array<{ category: string; count: number; location?: string; source_table_index: number; source_row_index: number; source_values: Record<string, string> }>;
   eligibility: {
     age_limit?: { text: string };
     education?: Array<{ degree: string }>;
@@ -83,10 +83,14 @@ export function buildFjaEnrichmentCandidate(
       const countRaw = rowValue(row.values, /vacanc|slots?|no\.? of posts/i);
       const count = firstInteger(countRaw);
       if (!role || count === null || /^total\b/i.test(role)) continue;
+      const rowLocation = rowValue(row.values, /^(?:location|job location|posting location|training location)$/i);
       breakdown.push({
         category: role,
         count,
-        ...(parsed.facts.job_location ? { location: parsed.facts.job_location } : {}),
+        ...(rowLocation ? { location: rowLocation } : {}),
+        source_table_index: table.table_index,
+        source_row_index: row.row_index,
+        source_values: { ...row.values },
       });
     }
   }
@@ -111,10 +115,6 @@ export function buildFjaEnrichmentCandidate(
       ?? line.match(/(?:job|posting) location(?: is|:)\s*([^.;\n]+)/i)?.[1])
     .find(Boolean);
   const postingLocation = parsed.facts.job_location ?? locationSentence ?? null;
-  if (postingLocation) {
-    for (const row of breakdown) row.location ??= postingLocation;
-  }
-
   const selectionSections = parsed.content_sections
     .filter((section) => /selection process|method of selection|selection procedure/i.test(section.heading))
     .map((section) => ({
