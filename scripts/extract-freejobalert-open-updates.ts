@@ -53,7 +53,7 @@ async function robotsCheck() {
     if(rules.includes("/")) throw new Error("robots.txt disallows all crawling; stopping");
   }
 }
-type FjaRecord = Record<string,unknown> & {facts?: Record<string,string|null>};
+type FjaRecord = Record<string,unknown> & {facts?: Record<string,string|null>; capture_quality?: {status:string; detail_text_chars:number; section_count:number; source_table_count:number; link_count:number; list_item_count:number; recognized_fact_count:number; missing_core_fields:string[]}};
 type Listing = {update_date:string; title:string; listing_url:string; update_page:string; listing_row_text:string};
 function parseListing(html:string, pageUrl:string): Listing[] {
   const $=cheerio.load(html); const found:Listing[]=[];
@@ -124,6 +124,16 @@ async function main(){
     records_with_post_table_candidates:records.filter(r=>Array.isArray(r.post_table_candidates)&&r.post_table_candidates.length>0).length,
     records_with_official_link_candidates:records.filter(r=>Array.isArray(r.official_link_candidates)&&r.official_link_candidates.length>0).length,
     records_with_page_hash:records.filter(r=>typeof r.page_sha256==="string"&&r.page_sha256.length===64).length,
+    records_with_structured_capture:records.filter(r=>Boolean(r.capture_quality) && Number(r.capture_quality?.detail_text_chars ?? 0) >= 500).length,
+    records_with_capture_review:records.filter(r=>r.capture_quality?.status==="CAPTURE_REVIEW").length,
+    records_with_core_fields_complete:records.filter(r=>r.capture_quality?.status==="STRUCTURE_CAPTURED").length,
+    total_source_tables_captured:records.reduce((n,r)=>n+Number(r.capture_quality?.source_table_count ?? 0),0),
+    total_content_sections_captured:records.reduce((n,r)=>n+Number(r.capture_quality?.section_count ?? 0),0),
+    total_list_items_captured:records.reduce((n,r)=>n+Number(r.capture_quality?.list_item_count ?? 0),0),
+    missing_core_field_counts:records.reduce((counts,r)=>{
+      for(const field of r.capture_quality?.missing_core_fields ?? []) counts[field]=(counts[field] ?? 0)+1;
+      return counts;
+    },{} as Record<string,number>),
     records_with_review_reasons:reviewRecords.length,
     review_reason_count:reviewRecords.reduce((n,r)=>n+(r.review_reasons as unknown[]).length,0),
     fetch_or_parse_errors:errors.length,

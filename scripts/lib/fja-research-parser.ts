@@ -37,6 +37,16 @@ export interface FjaResearchParse {
   open_status: "OPEN_AS_OF_CUTOFF" | "CLOSED_BY_CUTOFF" | "REVIEW_DATE_UNCLEAR" | "REVIEW_WALKIN_DATE_UNCLEAR";
   derived_close_date: string | null;
   review_reasons: string[];
+  capture_quality: {
+    status: "STRUCTURE_CAPTURED" | "CAPTURED_NEEDS_REVIEW" | "CAPTURE_REVIEW";
+    detail_text_chars: number;
+    section_count: number;
+    source_table_count: number;
+    link_count: number;
+    list_item_count: number;
+    recognized_fact_count: number;
+    missing_core_fields: string[];
+  };
 }
 
 const LABELS: Record<string, RegExp> = {
@@ -190,8 +200,8 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
 
   root.find("table").each((tableIndex, table) => {
     const rows = $(table).find("tr").toArray().map((tr) =>
-      $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())).filter(Boolean),
-    ).filter((row) => row.length >= 2);
+      $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())),
+    ).filter((row) => row.length >= 2 && row.some(Boolean));
     if (!rows.length) return;
     const first = rows[0].map((v) => cleanLabel(v).toLowerCase());
     const headerLooksLikeBreakdown = first.some((v) => /^(?:post|post name|department|organization|organisation|category|subject|resource|link description|s.? no.?)$/.test(v))
@@ -287,6 +297,16 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   for (const item of unparsedVacancyValues) reviewReasons.push("Vacancy field “" + item.label + "” had no numeric count and was not accepted: “" + item.value + "”.");
   if (!postTableCandidates.length) reviewReasons.push("No structured post-wise table was detected; leaf-level post data requires manual/official-source review.");
 
+  const missingCoreFields = ["organization", "post_name", "vacancies", "application_end_date"].filter((field) => !facts[field]);
+  const listItemCount = contentSections.reduce((count, section) =>
+    count + section.blocks.reduce((sectionCount, block) => sectionCount + (block.type === "list" ? (block.items?.length ?? 0) : 0), 0), 0);
+  const hasStructuredContent = contentSections.some((section) => section.blocks.length > 0) || sourceTables.length > 0;
+  const captureStatus: FjaResearchParse["capture_quality"]["status"] = detailText.length < 500 || !hasStructuredContent
+    ? "CAPTURE_REVIEW"
+    : missingCoreFields.length === 0
+      ? "STRUCTURE_CAPTURED"
+      : "CAPTURED_NEEDS_REVIEW";
+
   return {
     page_title: title || null,
     detail_text: detailText,
@@ -300,5 +320,15 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
     open_status: openStatus,
     derived_close_date: closeDate,
     review_reasons: reviewReasons,
+    capture_quality: {
+      status: captureStatus,
+      detail_text_chars: detailText.length,
+      section_count: contentSections.length,
+      source_table_count: sourceTables.length,
+      link_count: uniqueAllLinks.length,
+      list_item_count: listItemCount,
+      recognized_fact_count: Object.keys(facts).length,
+      missing_core_fields: missingCoreFields,
+    },
   };
 }
