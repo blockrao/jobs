@@ -275,7 +275,11 @@ export async function getRecruitmentWithPosts(slug: string) {
       })
       .from(posts)
       .innerJoin(positions, eq(posts.positionId, positions.id))
-      .where(eq(posts.recruitmentId, recruitmentId));
+      .where(and(
+        eq(posts.recruitmentId, recruitmentId),
+        // Duplicate legacy aggregator rows are retained for URL redirects/audit but must not render in canonical hub listings.
+        sql`posts.posting_status IS DISTINCT FROM 'DUPLICATE'`,
+      ));
 
     console.log(`[getRecruitmentWithPosts] Got ${postsResult.length} posts`);
 
