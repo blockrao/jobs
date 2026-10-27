@@ -7,7 +7,7 @@ on:
         description: "Include listing update dates on/after this date (YYYY-MM-DD)"
         required: true
         type: string
-        default: "2026-10-17"
+        default: "2026-10-01"
       as_of_date:
         description: "Evaluate open/closed status as of this date (YYYY-MM-DD)"
         required: true
@@ -19,10 +19,10 @@ on:
         type: string
         default: "120"
       max_records:
-        description: "Maximum detail articles to extract (10 for sample; raise explicitly for larger batch)"
+        description: "Maximum detail articles to extract (200-record coverage batch; research only)"
         required: true
         type: string
-        default: "10"
+        default: "200"
   push:
     branches: [main]
     paths:
@@ -52,10 +52,10 @@ jobs:
       - run: npm ci
       - name: Run bounded public-source extraction
         env:
-          START_DATE: ${{ inputs.start_date || '2026-10-17' }}
+          START_DATE: ${{ inputs.start_date || '2026-10-01' }}
           AS_OF_DATE: ${{ inputs.as_of_date || '2026-10-27' }}
           MAX_LIST_PAGES: ${{ inputs.max_list_pages || '120' }}
-          MAX_RECORDS: ${{ inputs.max_records || '10' }}
+          MAX_RECORDS: ${{ inputs.max_records || '200' }}
           DELAY_MS: "1200"
           OUT_DIR: "artifacts/freejobalert-${{ inputs.start_date || '2026-10-17' }}-to-${{ inputs.as_of_date || '2026-10-27' }}"
         run: npx tsx scripts/extract-freejobalert-open-updates.ts
