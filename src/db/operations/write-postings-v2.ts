@@ -19,7 +19,7 @@
  */
 
 import { getDb } from "../index";
-import { postings, sources, sourceDocuments, sourceObservations } from "../schema";
+import { postings, recruitments, sources, sourceDocuments, sourceObservations } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, isNonRecruitmentContent } from "../../ingest/normalize";
@@ -31,6 +31,7 @@ import crypto from "crypto";
 import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
 import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution } from "../../ingest/organization-resolution";
+import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -176,6 +177,7 @@ function stableStringify(value: unknown): string {
 function iso(d: Date | undefined | null): string | null {
   return d ? d.toISOString() : null;
 }
+
 
 async function recordObservation(
   db: ReturnType<typeof getDb>,
@@ -379,6 +381,46 @@ export async function writePostingsToDB(
         continue;
       }
       const clean = hygiene.clean;
+
+      // Cross-source duplicate guard: exact source/externalId is handled above.
+      // If that key is new, the same organization + normalized title + exact
+      // official notification URL is a strong duplicate signal. Hold/skip it
+      // rather than creating a second canonical posting. The URL alone is not
+      // sufficient because one notice may legitimately cover multiple posts.
+      const incomingNoticeKey = normalizeIdentityUrl(clean.officialNotificationUrl);
+      const incomingAdKey = normalizeAdvertisementNumber(norm.advertisementNumber);
+      const incomingTitleKey = normalizeIdentityTitle(clean.title);
+      if (!existingPosting && incomingTitleKey && (incomingNoticeKey || incomingAdKey)) {
+        const sameOrganization = await db
+          .select({
+            id: postings.id,
+            title: postings.title,
+            officialNotificationUrl: postings.officialNotificationUrl,
+            officialNotificationNumber: recruitments.officialNotificationNumber,
+          })
+          .from(postings)
+          .leftJoin(recruitments, eq(postings.inferredRecruitmentId, recruitments.id))
+          .where(eq(postings.organizationId, org.id));
+        const duplicate = sameOrganization.find((row) => {
+          if (normalizeIdentityTitle(row.title) !== incomingTitleKey) return false;
+          const sameOfficialUrl = !!incomingNoticeKey &&
+            normalizeIdentityUrl(row.officialNotificationUrl) === incomingNoticeKey;
+          const sameAdvertisement = !!incomingAdKey &&
+            normalizeAdvertisementNumber(row.officialNotificationNumber) === incomingAdKey;
+          return sameOfficialUrl || sameAdvertisement;
+        });
+        if (duplicate) {
+          result.action = "skipped";
+          result.reason = incomingNoticeKey &&
+            normalizeIdentityUrl(duplicate.officialNotificationUrl) === incomingNoticeKey
+            ? "DUPLICATE_EXISTING_ORGANIZATION_TITLE_NOTIFICATION_URL"
+            : "DUPLICATE_EXISTING_ORGANIZATION_TITLE_ADVERTISEMENT_NUMBER";
+          result.postingId = duplicate.id;
+          out.skipped++;
+          await setObservationOutcome(db, obs.id, "SKIPPED", result.reason, duplicate.id);
+          continue;
+        }
+      }
 
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
