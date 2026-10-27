@@ -97,8 +97,8 @@ export function buildFjaEnrichmentCandidate(
     .filter(Boolean);
 
   const stipendLines = sectionText(/stipend|salary|pay and tenure|remuneration/i)
-    .filter((line) => /monthly pay|monthly stipend|stipend|salary/i.test(line) || /Rs\\.?\\s*[\\d,]+/i.test(line));
-  const salaryRaw = parsed.facts.salary_pay ?? (stipendLines.length ? [...new Set(stipendLines)].join("\\n") : null);
+    .filter((line) => /monthly pay|monthly stipend|stipend|salary/i.test(line) || /Rs\.?\s*[\d,]+/i.test(line));
+  const salaryRaw = parsed.facts.salary_pay ?? (stipendLines.length ? [...new Set(stipendLines)].join("\n") : null);
 
   const ageLines = sectionText(/age limit|age criteria|who can apply/i);
   const ageText = parsed.facts.age_limit ?? ageLines.find((line) =>
@@ -107,8 +107,8 @@ export function buildFjaEnrichmentCandidate(
 
   const locationLines = sectionText(/training duration|training location|job location|posting location|pay and tenure/i);
   const locationSentence = locationLines
-    .map((line) => line.match(/(?:notified )?training locations? are\\s+([^.;\\n]+)/i)?.[1]
-      ?? line.match(/(?:job|posting) location(?: is|:)\\s*([^.;\\n]+)/i)?.[1])
+    .map((line) => line.match(/(?:notified )?training locations? are\s+([^.;\n]+)/i)?.[1]
+      ?? line.match(/(?:job|posting) location(?: is|:)\s*([^.;\n]+)/i)?.[1])
     .find(Boolean);
   const postingLocation = parsed.facts.job_location ?? locationSentence ?? null;
 
