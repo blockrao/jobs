@@ -19,7 +19,7 @@
  */
 
 import { getDb } from "../index";
-import { postings, sources, sourceDocuments, sourceObservations } from "../schema";
+import { postings, recruitments, sources, sourceDocuments, sourceObservations } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, isNonRecruitmentContent } from "../../ingest/normalize";
@@ -388,23 +388,33 @@ export async function writePostingsToDB(
       // rather than creating a second canonical posting. The URL alone is not
       // sufficient because one notice may legitimately cover multiple posts.
       const incomingNoticeKey = normalizeIdentityUrl(clean.officialNotificationUrl);
+      const incomingAdKey = normalizeAdvertisementNumber(norm.advertisementNumber);
       const incomingTitleKey = normalizeIdentityTitle(clean.title);
-      if (!existingPosting && incomingNoticeKey && incomingTitleKey) {
+      if (!existingPosting && incomingTitleKey && (incomingNoticeKey || incomingAdKey)) {
         const sameOrganization = await db
           .select({
             id: postings.id,
             title: postings.title,
             officialNotificationUrl: postings.officialNotificationUrl,
+            officialNotificationNumber: recruitments.officialNotificationNumber,
           })
           .from(postings)
+          .leftJoin(recruitments, eq(postings.inferredRecruitmentId, recruitments.id))
           .where(eq(postings.organizationId, org.id));
-        const duplicate = sameOrganization.find((row) =>
-          normalizeIdentityTitle(row.title) === incomingTitleKey &&
-          normalizeIdentityUrl(row.officialNotificationUrl) === incomingNoticeKey
-        );
+        const duplicate = sameOrganization.find((row) => {
+          if (normalizeIdentityTitle(row.title) !== incomingTitleKey) return false;
+          const sameOfficialUrl = !!incomingNoticeKey &&
+            normalizeIdentityUrl(row.officialNotificationUrl) === incomingNoticeKey;
+          const sameAdvertisement = !!incomingAdKey &&
+            normalizeAdvertisementNumber(row.officialNotificationNumber) === incomingAdKey;
+          return sameOfficialUrl || sameAdvertisement;
+        });
         if (duplicate) {
           result.action = "skipped";
-          result.reason = "DUPLICATE_EXISTING_ORGANIZATION_TITLE_NOTIFICATION_URL";
+          result.reason = incomingNoticeKey &&
+            normalizeIdentityUrl(duplicate.officialNotificationUrl) === incomingNoticeKey
+            ? "DUPLICATE_EXISTING_ORGANIZATION_TITLE_NOTIFICATION_URL"
+            : "DUPLICATE_EXISTING_ORGANIZATION_TITLE_ADVERTISEMENT_NUMBER";
           result.postingId = duplicate.id;
           out.skipped++;
           await setObservationOutcome(db, obs.id, "SKIPPED", result.reason, duplicate.id);
