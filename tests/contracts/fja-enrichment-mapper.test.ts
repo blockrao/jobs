@@ -23,8 +23,20 @@ describe("FJA enrichment candidate mapping", () => {
     expect(candidate.core.organization).toBe("Sample Authority");
     expect(candidate.core.total_vacancies).toBe(5);
     expect(candidate.vacancies_breakdown).toEqual([
-      { category: "Assistant", count: 3 },
-      { category: "Technician", count: 2 },
+      {
+        category: "Assistant",
+        count: 3,
+        source_table_index: 1,
+        source_row_index: 1,
+        source_values: { post: "Assistant", vacancies: "3", pay: "Rs. 20,000" },
+      },
+      {
+        category: "Technician",
+        count: 2,
+        source_table_index: 1,
+        source_row_index: 2,
+        source_values: { post: "Technician", vacancies: "2", pay: "Rs. 25,000" },
+      },
     ]);
     expect(candidate.eligibility.age_limit?.text).toBe("18 to 30 years");
     expect(candidate.application.deadline).toBe("30 October 2026");
