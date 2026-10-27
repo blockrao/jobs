@@ -46,6 +46,7 @@ import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
 import { stateFromIsoCode } from '@/lib/india-states';
 import { getQualification } from '@/lib/qualifications';
 import { publicLink } from '@/lib/aggregators';
+import { isPreliminaryUnverifiedSourceMetadata } from '@/lib/source-verification';
 import { SITE_URL } from '@/lib/site';
 import {
   composeRecruitmentDescription,
@@ -240,7 +241,7 @@ export function buildHubData(
     str(recruitment.organization?.website_url) ?? str(recruitment.organization?.websiteUrl),
   );
 
-  const sourceFactsUnverified = Boolean(
+  const sourceFactsUnverified = isPreliminaryUnverifiedSourceMetadata(recruitment.metadata) || Boolean(
     recruitment.sourceExtract &&
     recruitment.sourceVerificationStatus !== 'VERIFIED'
   );
