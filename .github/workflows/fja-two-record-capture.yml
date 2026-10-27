@@ -1,0 +1,39 @@
+name: Bounded FreeJobAlert Two-Record Capture
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ci/fja-two-record-pilot
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fja-two-record-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: Capture exactly two reviewed FJA pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Capture the fixed two-record allowlist
+        run: npx tsx scripts/capture-fja-pilot.ts --out /tmp/fja-pilot.jsonl
+      - name: Preserve capture evidence even if capture fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-two-record-capture
+          path: |
+            /tmp/fja-pilot.jsonl
+            /tmp/fja-pilot.jsonl.report.json
+          if-no-files-found: warn
+          retention-days: 7
