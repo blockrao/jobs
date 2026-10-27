@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - ci/fja-two-record-pilot
+      - main
+    paths:
+      - scripts/capture-fja-pilot.ts
+      - .github/workflows/fja-two-record-capture.yml
 
 permissions:
   contents: read
