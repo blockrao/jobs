@@ -51,7 +51,7 @@ export interface FjaResearchParse {
 
 const LABELS: Record<string, RegExp> = {
   organization: /^(?:recruiting body|recruiting organization|recruiting organisation|organization|organisation|company name|recruiting authority)$/i,
-  post_name: /^(?:name of posts?|post names?|post name\(s\)|name of post\(s\))$/i,
+  post_name: /^(?:name of posts?|post names?|post name\(s\)|name of post\(s\)|training categories)$/i,
   vacancies: /^(?:total vacancies|total vacancy|total posts|total no.? of posts|total no.? of vacancies|number of vacancies|number of posts|no.? of posts|no.? of vacancies|vacancies|total training slots|total no.? of training slots|training slots|total slots|number of slots|no.? of slots)$/i,
   qualification: /^(?:qualification|educational qualification|eligibility|education qualification|essential qualification)$/i,
   age_limit: /^(?:age limit|age criteria|age limit as on.*)$/i,
