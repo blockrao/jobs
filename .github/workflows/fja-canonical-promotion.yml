@@ -1,0 +1,43 @@
+name: Promote new open FreeJobAlert records
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/promote-fja-to-canonical.ts"
+      - ".github/workflows/fja-canonical-promotion.yml"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Maximum eligible new records to process (0 = all)"
+        required: true
+        type: string
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fja-canonical-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Deduplicate and ingest new open FJA records
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Promote eligible new records through canonical writer
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FJA_PROMOTE_DRY_RUN: "0"
+          FJA_PROMOTE_LIMIT: ${{ inputs.limit || '0' }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; promotion stopped."; exit 1; }
+          npx tsx scripts/promote-fja-to-canonical.ts
