@@ -52,7 +52,7 @@ export interface FjaResearchParse {
 const LABELS: Record<string, RegExp> = {
   organization: /^(?:recruiting body|recruiting organization|recruiting organisation|organization|organisation|company name|recruiting authority)$/i,
   post_name: /^(?:name of posts?|post names?|post name\(s\)|name of post\(s\))$/i,
-  vacancies: /^(?:total vacancies|total vacancy|total posts|total no.? of posts|total no.? of vacancies|number of vacancies|number of posts|no.? of posts|no.? of vacancies|vacancies)$/i,
+  vacancies: /^(?:total vacancies|total vacancy|total posts|total no.? of posts|total no.? of vacancies|number of vacancies|number of posts|no.? of posts|no.? of vacancies|vacancies|total training slots|total no.? of training slots|training slots|total slots|number of slots|no.? of slots)$/i,
   qualification: /^(?:qualification|educational qualification|eligibility|education qualification|essential qualification)$/i,
   age_limit: /^(?:age limit|age criteria|age limit as on.*)$/i,
   salary_pay: /^(?:salary|pay scale|pay level|remuneration|pay matrix|pay)$/i,
@@ -206,8 +206,8 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
     const first = rows[0].map((v) => cleanLabel(v).toLowerCase());
     const headerLooksLikeBreakdown = first.some((v) => /^(?:post|post name|department|organization|organisation|category|subject|resource|link description|s.? no.?)$/.test(v))
       && first.some((v) => /vacanc|qualification|pay|scale|link|details|marks|total/.test(v));
-    const hasPostColumn = first.some((v) => /^(?:posts?|post name(?:s|\(s\))?|name of (?:the )?posts?(?:\(s\))?|post name \/ department)$/i.test(v));
-    const hasPostFacts = first.some((v) => /vacanc|no.? of posts|qualification|pay|salary|age limit|department|organization|organisation/i.test(v));
+    const hasPostColumn = first.some((v) => /^(?:posts?|post name(?:s|\(s\))?|name of (?:the )?posts?(?:\(s\))?|post name \/ department|trade name|discipline|designation|position)$/i.test(v));
+    const hasPostFacts = first.some((v) => /vacanc|slots?|no.? of posts|qualification|pay|salary|age limit|department|organization|organisation/i.test(v));
     if (hasPostColumn && hasPostFacts && !first.some((v) => /^(?:resource|link|link description)$/i.test(v))) {
       const candidateRows = rows.slice(1).flatMap((cells, rowOffset) => {
         if (cells.length < 2 || /^(?:total|grand total)\b/i.test(collapse(cells[0]))) return [];
