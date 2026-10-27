@@ -178,13 +178,10 @@ export async function resolveRecruitment(
   // New canonical URLs are descriptive. Existing legacy slugs are never
   // rewritten; this path runs only when creating a genuinely new recruitment.
   const finalYear = identity.year ?? new Date().getFullYear();
-  const baseSlug = buildDescriptiveRecruitmentSlug(identity.title);
-  let finalSlug = baseSlug;
-  let suffix = 1;
-  while (await db.query.recruitments.findFirst({ where: eq(recruitments.slug, finalSlug) })) {
-    suffix += 1;
-    finalSlug = `${baseSlug}-${identity.organizationId}${suffix > 2 ? `-${suffix - 1}` : ""}`;
-  }
+  // The unique constraint is the collision guard. If a concurrent or unrelated
+  // record already owns this URL, the insert fails closed; entity recovery below
+  // uses the structured recruitment identity, never the slug.
+  const finalSlug = buildDescriptiveRecruitmentSlug(identity.title);
 
   if (!finalSlug) {
     throw new Error(
