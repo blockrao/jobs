@@ -34,4 +34,19 @@ describe("FJA enrichment candidate mapping", () => {
     expect(candidate.publication_gate.reasons[0]).toContain("not the issuing authority");
     expect(candidate.source_capture.source_tables.length).toBe(2);
   });
+
+  it("recovers stipend, age and training location from named article sections", () => {
+    const html = '<main><h1>Apprenticeship Recruitment</h1>' +
+      '<h2>Apprentice Stipend</h2><p>Selected apprentices receive a monthly stipend of Rs. 12,000 during training.</p>' +
+      '<h2>Age Limit</h2><p>The minimum age is 18 years as on 31 October 2026.</p>' +
+      '<h2>Training Duration</h2><p>The notified training locations are Neyveli and Regional Office, Chennai.</p></main>';
+    const sourceUrl = "https://www.freejobalert.com/articles/sample-apprentice-1234";
+    const parsed = parseFjaResearchDetail(html, sourceUrl, "2026-10-27");
+    const candidate = buildFjaEnrichmentCandidate(parsed, sourceUrl, "2026-10-27T00:00:00.000Z");
+
+    expect(candidate.salary?.raw).toContain("Rs. 12,000");
+    expect(candidate.eligibility.age_limit?.text).toContain("minimum age is 18 years");
+    expect(candidate.core.posting_location).toBe("Neyveli and Regional Office, Chennai");
+  });
+
 });
