@@ -98,13 +98,18 @@ async function assertRobotsAllowsPilot() {
   }
   flush();
   const relevant = groups.filter((g) => g.agents.includes("*") || g.agents.some((a) => a === "joboyeresearchpilot"));
-  const paths = PILOT_URLS.map((url) => new URL(url).pathname);
+  const targets = PILOT_URLS.map((url) => {
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}`;
+  });
   for (const group of relevant) {
     for (const rule of group.disallow) {
-      // Conservative prefix check. If a wildcard rule is present, honor its fixed prefix.
-      const prefix = rule.split("*")[0].replace(/\$$/, "");
-      if (prefix && paths.some((p) => p.startsWith(prefix))) {
-        throw new Error(`robots.txt disallows pilot article path via rule "${rule}"; refusing to crawl`);
+      // Query-specific rules must be evaluated against path + query. A rule
+      // containing '?' cannot match a URL with no query string.
+      if (rule.includes("?") && !targets.some((target) => target.includes("?"))) continue;
+      const prefix = rule.split("*")[0].replace(/\$/, "");
+      if (prefix && targets.some((target) => target.startsWith(prefix))) {
+        throw new Error(`robots.txt disallows pilot article URL via rule "${rule}"; refusing to crawl`);
       }
     }
   }
