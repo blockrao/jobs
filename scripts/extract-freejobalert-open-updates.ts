@@ -9,6 +9,7 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseFjaResearchDetail } from "./lib/fja-research-parser";
+import { buildFjaEnrichmentCandidate } from "./lib/fja-enrichment-mapper";
 
 const BASE = "https://www.freejobalert.com";
 const START_DATE = process.env.START_DATE || "2026-10-02";
@@ -97,9 +98,12 @@ async function main(){
     try{
       const {body,url:finalUrl}=await get(l.listing_url);
       const d=parseFjaResearchDetail(body,finalUrl,AS_OF_DATE);
+      const retrievedAt=new Date().toISOString();
+      const pageSha=sha(body);
       const rawName=`${String(i+1).padStart(4,"0")}-${sha(finalUrl).slice(0,14)}.html`;
       await writeFile(path.join(OUT,"raw",rawName),body);
-      records.push({...l,detail_url:finalUrl,retrieved_at:new Date().toISOString(),page_sha256:sha(body),raw_html_file:`raw/${rawName}`,...d});
+      const enrichmentCandidate=buildFjaEnrichmentCandidate(d,finalUrl,retrievedAt,pageSha);
+      records.push({...l,detail_url:finalUrl,retrieved_at:retrievedAt,page_sha256:pageSha,raw_html_file:`raw/${rawName}`,...d,enrichment_candidate:enrichmentCandidate});
     }catch(e){errors.push({listing_url:l.listing_url,title:l.title,stage:"detail_fetch",error:String(e)});records.push({...l,extraction_status:"ERROR",error:String(e),open_status:"REVIEW_FETCH_ERROR"});}
     if((i+1)%20===0) console.log(`Detail pages ${i+1}/${unique.length}`);
     await sleep(DELAY_MS);
@@ -126,6 +130,9 @@ async function main(){
     records_with_page_hash:records.filter(r=>typeof r.page_sha256==="string"&&r.page_sha256.length===64).length,
     records_with_structured_capture:records.filter(r=>Boolean(r.capture_quality) && Number(r.capture_quality?.detail_text_chars ?? 0) >= 500).length,
     records_with_capture_review:records.filter(r=>r.capture_quality?.status==="CAPTURE_REVIEW").length,
+    records_with_enrichment_candidate:records.filter(r=>Boolean(r.enrichment_candidate)).length,
+    records_blocked_from_publication:records.filter(r=>(r.enrichment_candidate as {publication_gate?:{status?:string}}|undefined)?.publication_gate?.status==="REVIEW_REQUIRED").length,
+    records_with_vacancy_breakdown_candidates:records.filter(r=>Array.isArray((r.enrichment_candidate as {vacancies_breakdown?:unknown[]}|undefined)?.vacancies_breakdown) && ((r.enrichment_candidate as {vacancies_breakdown?:unknown[]}).vacancies_breakdown?.length ?? 0)>0).length,
     records_with_core_fields_complete:records.filter(r=>r.capture_quality?.status==="STRUCTURE_CAPTURED").length,
     total_source_tables_captured:records.reduce((n,r)=>n+Number(r.capture_quality?.source_table_count ?? 0),0),
     total_content_sections_captured:records.reduce((n,r)=>n+Number(r.capture_quality?.section_count ?? 0),0),
