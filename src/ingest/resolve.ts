@@ -17,7 +17,7 @@ import { eq, and, isNull, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
-import { generateSequentialSlug } from "./slug-generator";
+import { buildDescriptiveRecruitmentSlug } from "./slug-generator";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -175,10 +175,16 @@ export async function resolveRecruitment(
   // No confident match — create a new recruitment rather than attaching to
   // the nearest existing one.
   //
-  // Slug in the live DB format org{id}-{year}-{nnnn} (same rule as the
-  // recruitment_slug_auto_gen trigger; see src/ingest/slug-generator.ts).
+  // New canonical URLs are descriptive. Existing legacy slugs are never
+  // rewritten; this path runs only when creating a genuinely new recruitment.
   const finalYear = identity.year ?? new Date().getFullYear();
-  const finalSlug = await generateSequentialSlug(db, identity.organizationId, finalYear);
+  const baseSlug = buildDescriptiveRecruitmentSlug(identity.title);
+  let finalSlug = baseSlug;
+  let suffix = 1;
+  while (await db.query.recruitments.findFirst({ where: eq(recruitments.slug, finalSlug) })) {
+    suffix += 1;
+    finalSlug = `${baseSlug}-${identity.organizationId}${suffix > 2 ? `-${suffix - 1}` : ""}`;
+  }
 
   if (!finalSlug) {
     throw new Error(
