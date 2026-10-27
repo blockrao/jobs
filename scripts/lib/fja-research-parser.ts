@@ -7,9 +7,29 @@ export interface FjaResearchLink {
   host: string;
   source_class: "freejobalert" | "external_candidate";
 }
+export interface FjaContentBlock {
+  type: "paragraph" | "list" | "table" | "image" | "other";
+  text: string;
+  items?: string[];
+  table_index?: number;
+}
+export interface FjaContentSection {
+  heading: string;
+  level: number;
+  blocks: FjaContentBlock[];
+}
+export interface FjaSourceTable {
+  table_index: number;
+  caption: string | null;
+  headers: string[];
+  rows: string[][];
+}
 export interface FjaResearchParse {
   page_title: string | null;
   detail_text: string;
+  content_sections: FjaContentSection[];
+  source_tables: FjaSourceTable[];
+  all_links: FjaResearchLink[];
   facts: FjaResearchFacts;
   date_candidates: Array<{ label: string; date: string; kind: "application_end" | "application_start" | "walk_in" | "notification" | "other" }>;
   official_link_candidates: FjaResearchLink[];
@@ -109,7 +129,59 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   const $ = cheerio.load(html);
   const title = collapse($("h1").first().text() || $("meta[property='og:title']").attr("content") || $("title").text());
   const root = $("main").length ? $("main").first() : $("article").length ? $("article").first() : $("body");
-  const detailText = collapse(root.text()).slice(0, 50000);
+  // Keep a full normalized text transcript for search/review. Structured blocks
+  // below preserve the article's headings, lists, and tables instead of flattening
+  // them into prose that loses row/section relationships.
+  const detailText = collapse(root.text());
+  const sourceTables: FjaSourceTable[] = [];
+  root.find("table").each((tableIndex, table) => {
+    const rows = $(table).find("tr").toArray().map((tr) =>
+      $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())),
+    ).filter((row) => row.some(Boolean));
+    if (!rows.length) return;
+    const caption = collapse($(table).children("caption").text()) || null;
+    sourceTables.push({ table_index: tableIndex, caption, headers: rows[0], rows: rows.slice(1) });
+  });
+
+  const contentSections: FjaContentSection[] = [];
+  let currentSection: FjaContentSection = { heading: "Introduction", level: 0, blocks: [] };
+  const flushSection = () => {
+    if (currentSection.blocks.length || currentSection.heading !== "Introduction") contentSections.push(currentSection);
+  };
+  root.find("h2,h3,h4,h5,h6,p,ul,ol,table").each((_, element) => {
+    const node = $(element);
+    const tag = element.tagName?.toLowerCase() ?? "";
+    if (/^h[2-6]$/.test(tag)) {
+      flushSection();
+      currentSection = { heading: collapse(node.text()), level: Number(tag.slice(1)), blocks: [] };
+      return;
+    }
+    if (tag === "table") {
+      const index = sourceTables.find((t) => t.table_index === root.find("table").toArray().indexOf(element))?.table_index;
+      const tableText = node.find("tr").toArray().map((tr) =>
+        $(tr).children("th,td").toArray().map((cell) => collapse($(cell).text())).filter(Boolean).join(" | "),
+      ).filter(Boolean).join("\\n");
+      currentSection.blocks.push({ type: "table", text: tableText, ...(index === undefined ? {} : { table_index: index }) });
+    } else if (tag === "ul" || tag === "ol") {
+      const items = node.children("li").toArray().map((li) => collapse($(li).text())).filter(Boolean);
+      currentSection.blocks.push({ type: "list", text: items.join("\\n"), items });
+    } else if (tag === "p") {
+      const text = collapse(node.text());
+      if (text) currentSection.blocks.push({ type: "paragraph", text });
+    }
+  });
+  flushSection();
+
+  const allLinks: FjaResearchLink[] = [];
+  root.find("a[href]").each((_, a) => {
+    const parsed = absoluteSourceLink($(a).attr("href") || "", url);
+    if (!parsed) return;
+    const text = collapse($(a).text());
+    if (!text) return;
+    allLinks.push({ ...parsed, text });
+  });
+  const uniqueAllLinks = [...new Map(allLinks.map((link) => [link.url, link])).values()];
+
   const facts: FjaResearchFacts = {};
   const candidates: FjaResearchParse["date_candidates"] = [];
   const postTableCandidates: FjaResearchParse["post_table_candidates"] = [];
@@ -218,6 +290,9 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   return {
     page_title: title || null,
     detail_text: detailText,
+    content_sections: contentSections,
+    source_tables: sourceTables,
+    all_links: uniqueAllLinks,
     facts,
     date_candidates: candidates,
     official_link_candidates: uniqueLinks,

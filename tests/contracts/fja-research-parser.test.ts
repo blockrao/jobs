@@ -85,4 +85,19 @@ describe("FJA research parser", () => {
     expect(result.open_status).toBe("REVIEW_DATE_UNCLEAR");
     expect(result.review_reasons).toContain("No unambiguous application closing date was extracted.");
   });
+
+  it("preserves article sections, list items, tables, and all links", () => {
+    const html = '<main><h1>Example Recruitment</h1><h2>Eligibility Criteria</h2>' +
+      '<p>Applicants must hold a relevant degree.</p><ul><li>Minimum age 18 years</li><li>Full-time degree</li></ul>' +
+      '<h2>Vacancy Details</h2><table><caption>Role-wise vacancies</caption>' +
+      '<tr><th>Post</th><th>Vacancies</th></tr><tr><td>Analyst</td><td>2</td></tr></table>' +
+      '<a href="https://example.gov.in/apply">Apply Online</a></main>';
+    const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/example-1234", "2026-10-12");
+    expect(result.content_sections.some((section) => section.heading === "Eligibility Criteria")).toBe(true);
+    expect(result.content_sections.some((section) => section.blocks.some((block) => block.type === "list" && block.items?.length === 2))).toBe(true);
+    expect(result.source_tables[0].caption).toBe("Role-wise vacancies");
+    expect(result.source_tables[0].rows).toContainEqual(["Analyst", "2"]);
+    expect(result.all_links.some((link) => link.text === "Apply Online")).toBe(true);
+  });
+
 });
