@@ -236,8 +236,8 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   // A future end_date is sufficient to conclude applications are open.
   const cat = (row.listing_category ?? "").toLowerCase();
   const now = new Date();
-  const endDate = row.application_end_date ? new Date(row.application_end_date) : null;
-  const startDate = row.application_start_date ? new Date(row.application_start_date) : null;
+  const endDate = row.application_end_date ? new Date(row.application_end_date) : facts.application_end_date ? parseSourceDate(String(facts.application_end_date)) ?? null : null;
+  const startDate = row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) ?? null : null;
   const stage =
     cat.includes("result") ? "RESULT_OUT" :
     cat.includes("admit") ? "ADMIT_CARD_RELEASED" :
@@ -249,7 +249,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
 
   // --- Eligibility: row.qualification is the primary source; fall back to
   // details.tableFields["qualification"] which FJA sometimes stores separately.
-  const tableFields = details.tableFields as Record<string, string> | undefined;
+  const tableFields = (facts.table_fields ?? facts.tableFields ?? detail.tableFields) as Record<string, string> | undefined;
   const eligibility = row.qualification
     ?? (facts.qualification as string | undefined)
     ?? tableFields?.["qualification"]
@@ -293,7 +293,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     applicationFeeReserved,
     stage: stage as NormalizedPosting["stage"],
     locationRegion: locationText,
-    observationFacts: details as Record<string, unknown>,
+    observationFacts: wrapper as Record<string, unknown>,
     // FJA Extractor has parsed the full article page — confidence is high enough to pass the write gate (>= 40).
     confidence: 80,
     // Deterministic slug: same fja + externalId always yields the same URL.
