@@ -22,7 +22,7 @@ import { getDb } from "../index";
 import { postings, recruitments, sources, sourceDocuments, sourceObservations, organizations } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
-import { inferStage, isNonRecruitmentContent } from "../../ingest/normalize";
+import { inferStage } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
 import { resolveRecruitment, resolvePostLines, truncateForColumn, normalizeAdvertisementNumber, refreshRecruitmentDates } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
