@@ -354,8 +354,6 @@ async function main() {
   // Build query: only new, fully extracted FJA rows with an open application window.
   // Compare normalized source URLs against both canonical entity tables to prevent re-imports.
   let whereClause = `source_slug = 'freejobalert'
-    AND detail_status = 'EXTRACTED'
-    AND source_status = 'OPEN'
     -- Deadline may be stored in application_end_date or only in captured detail facts.
     -- Apply the normalized-date eligibility filter after reading both fields in TypeScript.
     AND NOT EXISTS (
@@ -408,38 +406,20 @@ async function main() {
     (r) => !r.other_info_raw || !(r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
   );
 
-  // Apply deadline eligibility using the same normalizer used for the canonical write.
-  // This accepts deadlines in the top-level column or in captured detail facts.
-  const todayUtc = new Date();
-  todayUtc.setUTCHours(0, 0, 0, 0);
+  // Deadline is optional metadata, not an ingestion eligibility gate.
   let missingDeadline = 0;
-  let expiredDeadline = 0;
-  const dateEligible: FjaJobRow[] = [];
-  for (const row of unmapped) {
+  const dateEligible = unmapped.filter((row) => {
     const normalized = toNormalized(row);
-    const deadline = normalized.validThrough;
-    if (!deadline || Number.isNaN(deadline.getTime())) {
-      // Missing deadlines are not proof that a source-open notice is closed.
-      // Allow ingestion into the canonical writer as PENDING + DRAFT; the
-      // separate publication gate still prevents incomplete records going live.
-      missingDeadline++;
-      dateEligible.push(row);
-      continue;
-    }
-    const deadlineUtc = new Date(Date.UTC(deadline.getUTCFullYear(), deadline.getUTCMonth(), deadline.getUTCDate()));
-    if (deadlineUtc < todayUtc) {
-      expiredDeadline++;
-      continue;
-    }
-    dateEligible.push(row);
-  }
+    if (!normalized.validThrough || Number.isNaN(normalized.validThrough.getTime())) missingDeadline++;
+    return true;
+  });
 
   if (liveMapped.length > 0) {
     console.log(`Already live-mapped (skipped): ${liveMapped.length}`);
   }
-  console.log(`Deadline missing/unparseable (included for draft ingestion only): ${missingDeadline}`);
-  console.log(`Deadline expired (held): ${expiredDeadline}`);
-  console.log(`Eligible after excluding expired deadlines: ${dateEligible.length}`);
+  console.log(`Deadline missing/unparseable (does not block ingestion): ${missingDeadline}`);
+  console.log("Deadline status does not block ingestion.");
+  console.log(`Eligible after dedup checks: ${dateEligible.length}`);
 
   const toProcess = LIMIT > 0 ? dateEligible.slice(0, LIMIT) : dateEligible;
   console.log(`\nWill process: ${toProcess.length} rows (limit=${LIMIT || "all"})\n`);
