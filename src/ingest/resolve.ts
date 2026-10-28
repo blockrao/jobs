@@ -379,7 +379,7 @@ async function getOrCreatePositionId(db: Db, category: PostIdentity["positionCat
  * Do not embed the recruitment slug, source hash, classifier version, or "-jobs"
  * suffix. The database's unique (recruitment_id, slug) index scopes uniqueness.
  */
-function postLineSlug(name: string, existing: Array<{ id: number; name: string; slug: string | null }>): string {
+export function postLineSlug(name: string, existing: Array<{ id: number; name: string; slug: string | null }> = []): string {
   const stem = name
     .toLowerCase()
     .normalize("NFKD")
@@ -398,7 +398,6 @@ function postLineSlug(name: string, existing: Array<{ id: number; name: string; 
 export async function resolvePostLines(
   db: Db,
   recruitmentId: number,
-  recruitmentSlug: string,
   lines: PostLineInput[],
   opts: { countOptional?: boolean } = {},
 ): Promise<PostLinesResult> {
@@ -434,7 +433,7 @@ export async function resolvePostLines(
     positionId ??= await resolvePositionId(db, name, "OTHER");
     const [row] = await db
       .insert(posts)
-       .values({ recruitmentId, positionId, name, slug: postLineSlug(name, existing), vacancyTotal: count })
+      .values({ recruitmentId, positionId, name, slug: postLineSlug(name, existing), vacancyTotal: count })
       .onConflictDoNothing()
       .returning({ id: posts.id });
     if (!row) {
