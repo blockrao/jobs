@@ -1,0 +1,36 @@
+name: FJA full-coverage inventory audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fja-full-coverage-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Audit every FJA inventory row (read-only)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
+          npx tsx scripts/audit-fja-full-coverage.ts
+      - name: Upload full-coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-full-coverage-audit-${{ github.run_id }}
+          path: artifacts/fja-full-coverage/
+          if-no-files-found: error
+          retention-days: 14
