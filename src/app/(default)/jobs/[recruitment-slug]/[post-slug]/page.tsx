@@ -19,7 +19,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
 import { generateAlternates } from "@/lib/hreflang";
-import { getPostBySlugCached } from "@/db/operations/get-posts";
+import { getDuplicatePostRecruitmentSlug, getPostBySlugCached } from "@/db/operations/get-posts";
 import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
 import { formatDate, formatCurrency } from "@/lib/formatting";
@@ -99,6 +99,13 @@ export default async function JobDetailPage({ params }: Props) {
   const post = await getPostBySlugCached(recruitmentSlug, postSlug);
 
   if (!post) {
+    // Retired aggregate duplicates (for example, a legacy page combining
+    // several distinct roles) must resolve to the recruitment hub, not 404
+    // and not arbitrarily redirect to one of the individual role leaves.
+    const duplicateHubSlug = await getDuplicatePostRecruitmentSlug(recruitmentSlug, postSlug);
+    if (duplicateHubSlug) {
+      permanentRedirect(`/jobs/${duplicateHubSlug}`);
+    }
     notFound();
   }
 
