@@ -19,7 +19,7 @@
  */
 
 import { getDb } from "../index";
-import { postings, recruitments, sources, sourceDocuments, sourceObservations } from "../schema";
+import { postings, recruitments, sources, sourceDocuments, sourceObservations, organizations } from "../schema";
 import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage, isNonRecruitmentContent } from "../../ingest/normalize";
@@ -32,6 +32,7 @@ import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
 import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution } from "../../ingest/organization-resolution";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
+import { slugify } from "../../ingest/normalize";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -315,14 +316,9 @@ export async function writePostingsToDB(
         continue;
       }
 
-      if (isNonRecruitmentContent(norm.title)) {
-        // Result/admit-card/marksheet/syllabus content, not a job opening.
-        result.action = "rejected";
-        result.reason = "NON_RECRUITMENT_CONTENT";
-        out.rejected++;
-        await setObservationOutcome(db, obs.id, "REJECTED", result.reason);
-        continue;
-      }
+      // FJA promotion eligibility is deliberately limited to an official notification URL
+      // plus deduplication. Result/admit-card/etc. records are retained as observations
+      // and can resolve to a recruitment hub; do not silently drop them here.
 
       const existingPosting = await db.query.postings.findFirst({
         where: and(eq(postings.source, sourcePortal), eq(postings.externalId, norm.externalId)),
@@ -333,43 +329,43 @@ export async function writePostingsToDB(
       const resolution = resolveOrganization(orgIndex, norm.organizationName);
       result.orgResolution = resolution.kind;
 
-      if (resolution.kind === "NONE") {
-        result.action = "rejected";
-        result.reason = resolution.reason;
-        out.rejected++;
-        await setObservationOutcome(db, obs.id, "REJECTED", result.reason, existingPosting?.id);
-        continue;
-      }
-
-      if (resolution.kind === "CANDIDATE") {
-        const candidateId = await upsertCandidate(db, {
-          rawName: norm.organizationName,
-          normalizedName: resolution.normalizedName,
-          source: sourcePortal,
-          sourceUrl: null, // not stored (provenance policy)
-          evidence: {
-            title: norm.title,
-            fromLabel: norm.organizationFromLabel ?? false,
-            advertisementNumber: norm.advertisementNumber ?? null,
+      // Official-notice + dedup is the only ingestion gate. Do not hold records
+      // merely because the organization is not in our clean canonical index.
+      // Preserve the source organization label and mark unverified entities UNKNOWN.
+      let org: typeof organizations.$inferSelect;
+      if (resolution.kind === "ALIAS" || resolution.kind === "EXISTING") {
+        org = resolution.organization;
+        result.orgMatchedOn = resolution.matchedOn;
+        if (resolution.kind === "EXISTING") result.orgAmbiguous = resolution.ambiguous;
+      } else {
+        const rawOrgName = (norm.organizationName || "").trim();
+        const orgName = rawOrgName && rawOrgName.toLowerCase() !== "unknown"
+          ? rawOrgName.slice(0, 200)
+          : `Organization not identified — ${norm.title}`.slice(0, 200);
+        const baseSlug = slugify(orgName).slice(0, 150) || `unidentified-${norm.externalId}`;
+        let orgSlug = baseSlug;
+        const slugMatch = await db.query.organizations.findFirst({ where: eq(organizations.slug, orgSlug) });
+        if (slugMatch && slugMatch.name.toLowerCase() !== orgName.toLowerCase()) {
+          orgSlug = `${baseSlug.slice(0, 135)}-${crypto.createHash("sha1").update(norm.externalId).digest("hex").slice(0, 8)}`;
+        }
+        const existingBySlug = await db.query.organizations.findFirst({ where: eq(organizations.slug, orgSlug) });
+        if (existingBySlug) {
+          org = existingBySlug;
+        } else {
+          const [createdOrg] = await db.insert(organizations).values({
+            name: orgName,
+            slug: orgSlug,
+            sector: "UNKNOWN",
             websiteUrl: norm.websiteUrl ?? null,
-            notificationUrl: norm.officialNotificationUrl ?? null,
-          },
-          reason: resolution.reason,
-          confidence: Math.round(deduped.primary.confidence ?? 0),
-          proposedOrganizationId: resolution.proposedOrganizationId,
-        });
-        result.action = "held_candidate";
-        result.reason = `ORGANIZATION_${resolution.reason}`;
-        result.candidateReason = resolution.reason;
-        result.candidateId = candidateId;
-        out.heldCandidates++;
-        await setObservationOutcome(db, obs.id, "HELD_CANDIDATE", result.reason, existingPosting?.id, candidateId);
-        continue;
+            description: "Organization entity created from an official recruitment notification; classification has not yet been verified.",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).returning();
+          org = createdOrg;
+        }
+        result.orgResolution = "CANDIDATE";
+        result.candidateReason = resolution.kind === "CANDIDATE" ? resolution.reason : "NO_ORGANIZATION_NAME";
       }
-
-      const org = resolution.organization;
-      result.orgMatchedOn = resolution.matchedOn;
-      if (resolution.kind === "EXISTING") result.orgAmbiguous = resolution.ambiguous;
 
       // Aggregator hygiene on everything stored: links and text are cleaned here whatever the adapter sent.
       const hygiene = sanitizeForStorage(norm);
