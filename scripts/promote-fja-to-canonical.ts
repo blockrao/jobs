@@ -77,12 +77,12 @@ function parseSalary(raw: string | undefined): { min?: number; max?: number } {
 // Parse source dates from known captured formats without guessing ambiguous dates.
 function parseSourceDate(raw: string): Date | undefined {
   const value = raw.trim();
-  let m = value.match(/^(\\d{1,2})[-/.](\\d{1,2})[-/.](20\\d{2})$/);
+  let m = value.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})$/);
   if (m && Number(m[1]) <= 31 && Number(m[2]) <= 12) {
     const d = new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
     return Number.isNaN(d.getTime()) ? undefined : d;
   }
-  m = value.match(/^(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s*,?\\s*(20\\d{2})$/i);
+  m = value.match(/^(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s*,?\s*(20\d{2})$/i);
   if (m) {
     const d = new Date(`${m[1]} ${m[2]} ${m[3]} UTC`);
     return Number.isNaN(d.getTime()) ? undefined : d;
