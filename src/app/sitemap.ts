@@ -118,6 +118,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND ro.slug <> ${UNRESOLVED_ORG_SLUG}
           AND lower(btrim(ro.name)) <> ${UNRESOLVED_ORG_NAME.toLowerCase()}
+          AND p.posting_status IS DISTINCT FROM 'DUPLICATE'
+          AND p.slug IS NOT NULL
+          AND btrim(p.slug) <> ''
         ORDER BY p.updated_at DESC NULLS LAST, p.id DESC
       `),
       db.execute(sql`
