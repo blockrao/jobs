@@ -64,7 +64,9 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
   if (deadline) bits.push(closed ? `applications closed on ${formatDate(deadline)}` : `last date ${formatDate(deadline)}`);
-  const description = post.description ?? `${bits.join(", ")}. Eligibility, age limit, fee, selection process and official apply link.`;
+  const storedDescription = typeof post.description === "string" ? post.description.trim() : "";
+  const fallbackDescription = `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
+  const description = storedDescription || fallbackDescription;
 
   return { title, description };
 }
