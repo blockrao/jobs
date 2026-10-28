@@ -335,7 +335,7 @@ async function main() {
 
   // Build query: only new, fully extracted FJA rows with an open application window.
   // Compare normalized source URLs against both canonical entity tables to prevent re-imports.
-  let whereClause = \`source_slug = 'freejobalert'
+  let whereClause = `source_slug = 'freejobalert'
     AND detail_status = 'EXTRACTED'
     AND source_status = 'OPEN'
     AND application_end_date >= CURRENT_DATE
@@ -354,12 +354,12 @@ async function main() {
     AND NOT EXISTS (
       SELECT 1 FROM postings p
       WHERE p.external_id = fja_job_inventory.external_id
-    )\`;
+    )`;
   if (PILOT_IDS && PILOT_IDS.length > 0) {
-    const idList = PILOT_IDS.map((id) => \`'\${id.replace(/'/g, "''")}'\`).join(",");
-    whereClause += \` AND external_id = ANY(ARRAY[\${idList}])\`;
+    const idList = PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",");
+    whereClause += ` AND external_id = ANY(ARRAY[${idList}])`;
   }
-  const limitClause = LIMIT > 0 ? \`LIMIT \${LIMIT}\` : "";
+  const limitClause = LIMIT > 0 ? `LIMIT ${LIMIT}` : "";
 
   const rawRows = await db.execute(
     sql.raw(`
@@ -449,7 +449,7 @@ async function main() {
     // Do not promote a record unless an official notification destination was identified.
     if (!normalized.officialNotificationUrl) {
       heldMissingOfficialLink++;
-      console.log(\`  HELD     \${row.external_id} — missing official notification URL; remains in FJA review inventory\`);
+      console.log(`  HELD     ${row.external_id} — missing official notification URL; remains in FJA review inventory`);
       continue;
     }
     try {
