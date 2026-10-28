@@ -170,7 +170,9 @@ function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): 
     .filter((item) => item.notificationLabel || (item.isPdf && item.careerPath))
     .sort((a, b) => b.score - a.score);
   return candidates[0]?.url;
-}// ---------------------------------------------------------------------------
+}
+
+// ---------------------------------------------------------------------------
 // Build a postTable from details.tables: find the table whose heading contains
 // "vacanc" or whose rows have name + vacancy columns. Returns undefined if none found.
 // Only objective facts — name of post and number of vacancies.
