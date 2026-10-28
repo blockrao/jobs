@@ -496,6 +496,36 @@ async function getPostDetailEnrichment(postId: number | string): Promise<any> {
 }
 
 /**
+ * Resolve retired duplicate aggregate post URLs to their recruitment hub.
+ * This is intentionally limited to rows explicitly marked DUPLICATE; it does
+ * not guess a destination for normal missing or ambiguous post slugs.
+ */
+export async function getDuplicatePostRecruitmentSlug(
+  recruitmentSlug: string,
+  postSlug: string
+): Promise<string | null> {
+  const db = getDb();
+  const result = await db.execute<any>(sql`
+    SELECT r.slug AS "recruitmentSlug"
+    FROM posts p
+    INNER JOIN recruitments r ON r.id = p.recruitment_id
+    WHERE p.slug = ${postSlug}
+      AND p.posting_status = 'DUPLICATE'
+      AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+      AND (
+        r.slug = ${recruitmentSlug}
+        OR r.id IN (
+          SELECT recruitment_id
+          FROM recruitment_slug_redirects
+          WHERE old_slug = ${recruitmentSlug}
+        )
+      )
+    LIMIT 1
+  `);
+  return result?.length ? String(result[0].recruitmentSlug) : null;
+}
+
+/**
  * Fetch a single post by recruitment and post slugs with enrichment data
  * PERF-004: Optimized for ISR caching - core post query <500ms,
  * enrichment/FJA extracted lazily
