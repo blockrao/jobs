@@ -48,10 +48,10 @@ jobs:
       - run: npm ci
       - name: Validate inputs
         env:
-          BASE_URL: \${{ inputs.base_url }}
-          SCOPE: \${{ inputs.scope }}
-          LIMIT: \${{ inputs.limit }}
-          CONCURRENCY: \${{ inputs.concurrency }}
+          BASE_URL: ${{ inputs.base_url }}
+          SCOPE: ${{ inputs.scope }}
+          LIMIT: ${{ inputs.limit }}
+          CONCURRENCY: ${{ inputs.concurrency }}
         run: |
           node - <<'NODE'
           const base = process.env.BASE_URL;
@@ -65,12 +65,12 @@ jobs:
           NODE
       - name: Run read-only URL integrity audit
         env:
-          DATABASE_URL: \${{ secrets.DATABASE_URL }}
-          NEXT_PUBLIC_BASE_URL: \${{ inputs.base_url }}
-          BASE_URL: \${{ inputs.base_url }}
-          SCOPE: \${{ inputs.scope }}
-          LIMIT: \${{ inputs.limit }}
-          CONCURRENCY: \${{ inputs.concurrency }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_BASE_URL: ${{ inputs.base_url }}
+          BASE_URL: ${{ inputs.base_url }}
+          SCOPE: ${{ inputs.scope }}
+          LIMIT: ${{ inputs.limit }}
+          CONCURRENCY: ${{ inputs.concurrency }}
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
           mkdir -p artifacts
@@ -79,7 +79,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: joboye-url-integrity-\${{ github.run_id }}
+          name: joboye-url-integrity-${{ github.run_id }}
           path: artifacts/url-integrity-*.json
           if-no-files-found: warn
           retention-days: 14
