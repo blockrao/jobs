@@ -55,6 +55,16 @@ describe("PQ-004 title and description", () => {
   });
 });
 
+describe("Job leaf SEO description fallback", () => {
+  test("blank stored descriptions fall back to factual metadata instead of an empty meta description", async () => {
+    const { readSource } = await import("../helpers/source");
+    const src = readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx");
+    expect(src).toMatch(/post\.description\.trim\(\)/);
+    expect(src).toMatch(/const description = storedDescription \|\| fallbackDescription/);
+    expect(src).toMatch(/See the official notification for eligibility, age limit, fee, selection process and how to apply/);
+  });
+});
+
 describe("PQ-004 structured data", () => {
   test("D-3a: directApply only for links on this site", () => {
     expect(isOnSiteUrl("https://upsconline.nic.in")).toBe(false);
