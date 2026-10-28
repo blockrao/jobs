@@ -34,7 +34,7 @@ async function main(){
   const d:any=byUrl.get(l.listing_url), facts=d?.facts??{}, title=String(facts.post_name||d?.enrichment_candidate?.core?.job_title||l.title), org=String(facts.organization||d?.enrichment_candidate?.core?.organization||""), ad=String(facts.advertisement_number||"");
   const nonRecruitment=/\b(result|admit card|answer key|syllabus|cut.?off|merit list|exam date|exam city|hall ticket|score card|objection window)\b/i.test(l.title)&&! /\b(vacanc(?:y|ies)|apply online|application form|hiring|jobs?|apprentice|career)\b/i.test(l.title); const cs:any[]=[];
   const sourceId=extId(l.listing_url);
-  const sameFjaSource=(u:any)=>{if(!u)return false;try{const a=new URL(String(u)),b=new URL(String(l.listing_url));return a.hostname.toLowerCase().endsWith("freejobalert.com")&&b.hostname.toLowerCase().endsWith("freejobalert.com")&&extId(a.href)===sourceId;}catch{return false;}};
+  const sameFjaSource=(u:any)=>{if(!u)return false;try{const a=new URL(String(u)),b=new URL(String(l.listing_url));return a.hostname.toLowerCase().replace(/^www\\./,"")==="freejobalert.com"&&b.hostname.toLowerCase().replace(/^www\\./,"")==="freejobalert.com"&&extId(a.href)===sourceId;}catch{return false;}};
   const exactSource=(u:any)=>{if(!u)return false;try{const a=new URL(String(u)),b=new URL(String(l.listing_url));return a.hostname.toLowerCase().replace(/^www\\./,"")===b.hostname.toLowerCase().replace(/^www\\./,"")&&a.pathname.replace(/\\/$/,"")===b.pathname.replace(/\\/$/,"");}catch{return String(u)===String(l.listing_url);}};
   for(const r of recs){
    const urlHit=exactSource(r.source_url)||sameFjaSource(r.source_url);
