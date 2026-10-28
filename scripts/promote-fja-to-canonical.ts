@@ -332,8 +332,294 @@ async function main() {
     )
     AND NOT EXISTS (
       SELECT 1 FROM postings p
-      WHERE lower(regexp_replace(trim(p.source_url), '/+$', '')) =
-            lower(regexp_replace(trim(fja_job_inventory.source_url), '/+$', ''))
+      WHERE lower(regexp_replace(trim(p.source_url), '/+`;
+  if (PILOT_IDS && PILOT_IDS.length > 0) {
+    const idList = PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",");
+    whereClause += ` AND external_id = ANY(ARRAY[${idList}])`;
+  }
+  const limitClause = LIMIT > 0 ? `LIMIT ${LIMIT}` : "";
+
+  const rawRows = await db.execute(
+    sql.raw(`
+      SELECT id, external_id, source_url, title, organization_name,
+             listing_category, published_date, application_start_date,
+             application_end_date, advertisement_number, qualification,
+             vacancy_count, details, official_notification_url, other_info_raw
+      FROM fja_job_inventory
+      WHERE ${whereClause}
+      ORDER BY first_seen_at DESC
+      ${limitClause}
+    `)
+  );
+  // drizzle returns the array directly (not { rows: [...] })
+  const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as { rows?: unknown[] }).rows ?? []) as FjaJobRow[];
+  console.log(`Fetched ${inventory.length} FJA inventory rows`);
+
+  if (inventory.length === 0) {
+    console.log("Nothing to promote. Exiting.");
+    return;
+  }
+
+  // Flag rows that are already live-mapped (other_info_raw has canonical_recruitment_id)
+  const liveMapped = inventory.filter(
+    (r) => r.other_info_raw && (r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
+  );
+  if (liveMapped.length > 0) {
+    console.log(`\n⚠️  ${liveMapped.length} rows already live-mapped — skipping:`);
+    liveMapped.forEach((r) => console.log(`   ${r.external_id} — ${r.title}`));
+  }
+  const toProcess = inventory.filter(
+    (r) => !r.other_info_raw || !(r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
+  );
+  console.log(`\nWill process: ${toProcess.length} rows\n`);
+
+  // Pre-resolve orgs for the dry-run report
+  const orgIndex = await loadOrgIndex(db);
+  const orgStats: Record<string, number> = { ALIAS: 0, EXISTING: 0, CANDIDATE: 0, NONE: 0 };
+  const candidateOrgs: Array<{ externalId: string; orgName: string; reason: string }> = [];
+
+  for (const row of toProcess) {
+    const resolution = resolveOrganization(orgIndex, row.organization_name);
+    orgStats[resolution.kind]++;
+    if (resolution.kind === "CANDIDATE" || resolution.kind === "NONE") {
+      candidateOrgs.push({
+        externalId: row.external_id,
+        orgName: row.organization_name ?? "(none)",
+        reason: resolution.kind === "CANDIDATE" ? resolution.reason : "NO_ORG_NAME",
+      });
+    }
+  }
+
+  console.log(`Org resolution preview:`);
+  console.log(`  ALIAS    : ${orgStats.ALIAS}`);
+  console.log(`  EXISTING : ${orgStats.EXISTING}`);
+  console.log(`  CANDIDATE: ${orgStats.CANDIDATE}  ← held, not published`);
+  console.log(`  NONE     : ${orgStats.NONE}        ← skipped`);
+  console.log();
+
+  if (candidateOrgs.length > 0) {
+    console.log(`Unresolved orgs (will become candidates):`);
+    // Show unique org names
+    const seen = new Set<string>();
+    for (const c of candidateOrgs) {
+      if (!seen.has(c.orgName)) {
+        seen.add(c.orgName);
+        console.log(`   [${c.reason}] ${c.orgName}`);
+      }
+    }
+    console.log();
+  }
+
+  if (DRY_RUN) {
+    console.log("DRY RUN — no rows written. Set FJA_PROMOTE_DRY_RUN=0 to write.");
+    return;
+  }
+
+  // Live run: feed each row through writePostingsToDB
+  let succeeded = 0;
+  let held = 0;
+  let failed = 0;
+  const errors: Array<{ externalId: string; error: string }> = [];
+
+  for (const row of toProcess) {
+    const normalized = toNormalized(row);
+    try {
+      const deduped: DedupedPosting = {
+        title: normalized.title,
+        organizationName: normalized.organizationName,
+        locationCity: normalized.locationRegion ?? "",
+        deadline: normalized.validThrough ?? null,
+        primary: normalized,
+        sources: [{ portal: "fja", externalId: normalized.externalId, score: 1 }],
+      };
+      const writeResult = await writePostingsToDB([deduped], [normalized]);
+      const rec = writeResult.results[0];
+      const action = rec?.action ?? "unknown";
+      if (action === "inserted" || action === "updated" || action === "unchanged" || action === "flagged") {
+        succeeded++;
+        console.log(`  OK(${action.padEnd(9)}) ${row.external_id} — ${row.title.slice(0, 60)}`);
+      } else if (action === "held_candidate") {
+        held++;
+        console.log(`  HELD     ${row.external_id} — ${row.organization_name} (reason: ${rec?.reason ?? "unknown"})`);
+      } else {
+        // skipped / rejected / unknown — count as failed so caller sees the truth
+        failed++;
+        errors.push({ externalId: row.external_id, error: `action=${action} reason=${rec?.reason ?? "none"}` });
+        console.error(`  SKIP/REJ ${row.external_id} — action=${action} reason=${rec?.reason ?? "none"}`);
+      }
+    } catch (err) {
+      failed++;
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ externalId: row.external_id, error: msg });
+      console.error(`  ERROR    ${row.external_id} — ${msg}`);
+    }
+  }
+
+  console.log(`\n=== Result ===`);
+  console.log(`  Succeeded : ${succeeded}`);
+  console.log(`  Held (org candidate) : ${held}`);
+  console.log(`  Failed    : ${failed}`);
+  if (errors.length > 0) {
+    console.log(`\nErrors:`);
+    errors.forEach((e) => console.log(`  ${e.externalId}: ${e.error}`));
+  }
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+, '')) =
+            lower(regexp_replace(trim(fja_job_inventory.source_url), '/+`;
+  if (PILOT_IDS && PILOT_IDS.length > 0) {
+    const idList = PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",");
+    whereClause += ` AND external_id = ANY(ARRAY[${idList}])`;
+  }
+  const limitClause = LIMIT > 0 ? `LIMIT ${LIMIT}` : "";
+
+  const rawRows = await db.execute(
+    sql.raw(`
+      SELECT id, external_id, source_url, title, organization_name,
+             listing_category, published_date, application_start_date,
+             application_end_date, advertisement_number, qualification,
+             vacancy_count, details, official_notification_url, other_info_raw
+      FROM fja_job_inventory
+      WHERE ${whereClause}
+      ORDER BY first_seen_at DESC
+      ${limitClause}
+    `)
+  );
+  // drizzle returns the array directly (not { rows: [...] })
+  const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as { rows?: unknown[] }).rows ?? []) as FjaJobRow[];
+  console.log(`Fetched ${inventory.length} FJA inventory rows`);
+
+  if (inventory.length === 0) {
+    console.log("Nothing to promote. Exiting.");
+    return;
+  }
+
+  // Flag rows that are already live-mapped (other_info_raw has canonical_recruitment_id)
+  const liveMapped = inventory.filter(
+    (r) => r.other_info_raw && (r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
+  );
+  if (liveMapped.length > 0) {
+    console.log(`\n⚠️  ${liveMapped.length} rows already live-mapped — skipping:`);
+    liveMapped.forEach((r) => console.log(`   ${r.external_id} — ${r.title}`));
+  }
+  const toProcess = inventory.filter(
+    (r) => !r.other_info_raw || !(r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
+  );
+  console.log(`\nWill process: ${toProcess.length} rows\n`);
+
+  // Pre-resolve orgs for the dry-run report
+  const orgIndex = await loadOrgIndex(db);
+  const orgStats: Record<string, number> = { ALIAS: 0, EXISTING: 0, CANDIDATE: 0, NONE: 0 };
+  const candidateOrgs: Array<{ externalId: string; orgName: string; reason: string }> = [];
+
+  for (const row of toProcess) {
+    const resolution = resolveOrganization(orgIndex, row.organization_name);
+    orgStats[resolution.kind]++;
+    if (resolution.kind === "CANDIDATE" || resolution.kind === "NONE") {
+      candidateOrgs.push({
+        externalId: row.external_id,
+        orgName: row.organization_name ?? "(none)",
+        reason: resolution.kind === "CANDIDATE" ? resolution.reason : "NO_ORG_NAME",
+      });
+    }
+  }
+
+  console.log(`Org resolution preview:`);
+  console.log(`  ALIAS    : ${orgStats.ALIAS}`);
+  console.log(`  EXISTING : ${orgStats.EXISTING}`);
+  console.log(`  CANDIDATE: ${orgStats.CANDIDATE}  ← held, not published`);
+  console.log(`  NONE     : ${orgStats.NONE}        ← skipped`);
+  console.log();
+
+  if (candidateOrgs.length > 0) {
+    console.log(`Unresolved orgs (will become candidates):`);
+    // Show unique org names
+    const seen = new Set<string>();
+    for (const c of candidateOrgs) {
+      if (!seen.has(c.orgName)) {
+        seen.add(c.orgName);
+        console.log(`   [${c.reason}] ${c.orgName}`);
+      }
+    }
+    console.log();
+  }
+
+  if (DRY_RUN) {
+    console.log("DRY RUN — no rows written. Set FJA_PROMOTE_DRY_RUN=0 to write.");
+    return;
+  }
+
+  // Live run: feed each row through writePostingsToDB
+  let succeeded = 0;
+  let held = 0;
+  let failed = 0;
+  const errors: Array<{ externalId: string; error: string }> = [];
+
+  for (const row of toProcess) {
+    const normalized = toNormalized(row);
+    try {
+      const deduped: DedupedPosting = {
+        title: normalized.title,
+        organizationName: normalized.organizationName,
+        locationCity: normalized.locationRegion ?? "",
+        deadline: normalized.validThrough ?? null,
+        primary: normalized,
+        sources: [{ portal: "fja", externalId: normalized.externalId, score: 1 }],
+      };
+      const writeResult = await writePostingsToDB([deduped], [normalized]);
+      const rec = writeResult.results[0];
+      const action = rec?.action ?? "unknown";
+      if (action === "inserted" || action === "updated" || action === "unchanged" || action === "flagged") {
+        succeeded++;
+        console.log(`  OK(${action.padEnd(9)}) ${row.external_id} — ${row.title.slice(0, 60)}`);
+      } else if (action === "held_candidate") {
+        held++;
+        console.log(`  HELD     ${row.external_id} — ${row.organization_name} (reason: ${rec?.reason ?? "unknown"})`);
+      } else {
+        // skipped / rejected / unknown — count as failed so caller sees the truth
+        failed++;
+        errors.push({ externalId: row.external_id, error: `action=${action} reason=${rec?.reason ?? "none"}` });
+        console.error(`  SKIP/REJ ${row.external_id} — action=${action} reason=${rec?.reason ?? "none"}`);
+      }
+    } catch (err) {
+      failed++;
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ externalId: row.external_id, error: msg });
+      console.error(`  ERROR    ${row.external_id} — ${msg}`);
+    }
+  }
+
+  console.log(`\n=== Result ===`);
+  console.log(`  Succeeded : ${succeeded}`);
+  console.log(`  Held (org candidate) : ${held}`);
+  console.log(`  Failed    : ${failed}`);
+  if (errors.length > 0) {
+    console.log(`\nErrors:`);
+    errors.forEach((e) => console.log(`  ${e.externalId}: ${e.error}`));
+  }
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+, ''))
+    )
+    -- FJA article IDs are stable source identities. Source URLs may be NULL on
+    -- older promoted rows, so URL-only checks can reprocess the same article
+    -- and create duplicate canonical records. Treat an existing external_id as
+    -- already covered regardless of the legacy source label.
+    AND NOT EXISTS (
+      SELECT 1 FROM postings p
+      WHERE p.external_id = fja_job_inventory.external_id
     )`;
   if (PILOT_IDS && PILOT_IDS.length > 0) {
     const idList = PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",");
