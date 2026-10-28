@@ -314,7 +314,8 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) : undefined,
     validThrough: row.application_end_date ? new Date(row.application_end_date) : facts.application_end_date ? parseSourceDate(String(facts.application_end_date)) : undefined,
     postTable,
-    postNames,
+    // Always create at least one post leaf; use the source title when no role line was extracted.
+    postNames: postNames?.length ? postNames : [row.title],
     salaryMin,
     salaryMax,
     salaryCurrency: salaryMin !== undefined ? "INR" : undefined,
