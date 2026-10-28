@@ -24,9 +24,9 @@ import type { DedupedPosting } from "../../ingest/deduplicate";
 import type { NormalizedPosting } from "../../ingest/normalize";
 import { inferStage } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
-import { resolveRecruitment, resolvePostLines, truncateForColumn, normalizeAdvertisementNumber, refreshRecruitmentDates } from "../../ingest/resolve";
+import { resolveRecruitment, resolvePostLines, resolvePost, postLineSlug, truncateForColumn, normalizeAdvertisementNumber, refreshRecruitmentDates } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
@@ -463,6 +463,37 @@ export async function writePostingsToDB(
         result.postLines = lineResult;
         if (!postId && lineResult.singlePostId) postId = lineResult.singlePostId;
       }
+
+      // JobOye URL contract: every accepted notice must have a leaf URL.
+      // If the classifier cannot recognize a role line, use the captured source
+      // title as the explicit fallback rather than leaving the recruitment hub orphaned.
+      if (!postId) {
+        const fallbackName = (norm.postNames?.[0] || norm.title || "").trim();
+        if (!fallbackName) throw new Error("CANONICAL_LEAF_REQUIRED_BUT_NO_TITLE");
+        const fallbackPost = await resolvePost(
+          db,
+          { recruitmentId: recruitment.id, name: fallbackName, positionCategory: "OTHER" },
+          postLineSlug(fallbackName),
+        );
+        postId = fallbackPost.id;
+      }
+
+      // Propagate the issuer notification URL to the canonical hub and leaf.
+      // Preserve any existing official URL; only fill gaps from the accepted source.
+      if (clean.officialNotificationUrl) {
+        await db.execute(sql`UPDATE public.recruitments
+          SET official_notification_url = ${clean.officialNotificationUrl},
+              official_link_source = COALESCE(NULLIF(official_link_source, ''), 'official_link_extracted'),
+              updated_at = now()
+          WHERE id = ${recruitment.id}
+            AND NULLIF(official_notification_url, '') IS NULL`);
+        await db.execute(sql`UPDATE public.posts
+          SET "officialSourceUrl" = COALESCE(NULLIF("officialSourceUrl", ''), ${clean.officialNotificationUrl}),
+              "officialNotificationUrl" = COALESCE(NULLIF("officialNotificationUrl", ''), ${clean.officialNotificationUrl}),
+              updated_at = now()
+          WHERE id = ${postId}`);
+      }
+
       if (recruitment.created || postId) out.resolved++;
 
       // Does the recruitment this posting hangs off carry a different organization?
