@@ -1,0 +1,1 @@
+ALTER TYPE public.org_sector ADD VALUE IF NOT EXISTS 'UNKNOWN';
