@@ -438,11 +438,20 @@ async function main() {
   // Live run: feed each row through writePostingsToDB
   let succeeded = 0;
   let held = 0;
+  let heldMissingOfficialLink = 0;
   let failed = 0;
   const errors: Array<{ externalId: string; error: string }> = [];
 
   for (const row of toProcess) {
     const normalized = toNormalized(row);
+    // A candidate without an official notification destination must stay in
+    // the source inventory/review queue rather than become a canonical record
+    // that could later be shown without the authoritative notice link.
+    if (!normalized.officialNotificationUrl) {
+      heldMissingOfficialLink++;
+      console.log(`  HELD     ${row.external_id} — missing official notification URL; remains in FJA review inventory`);
+      continue;
+    }
     try {
       const deduped: DedupedPosting = {
         title: normalized.title,
@@ -478,6 +487,7 @@ async function main() {
   console.log(`\n=== Result ===`);
   console.log(`  Succeeded : ${succeeded}`);
   console.log(`  Held (org candidate) : ${held}`);
+  console.log(`  Held (missing official notification URL) : ${heldMissingOfficialLink}`);
   console.log(`  Failed    : ${failed}`);
   if (errors.length > 0) {
     console.log(`\nErrors:`);
