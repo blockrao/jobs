@@ -139,24 +139,33 @@ function extractApplyUrl(allLinks: Array<{ url?: string; label?: string }> | und
   return undefined;
 }
 
+function isOfficialAuthorityHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/\.$/, "");
+    // Government/education/research domains plus known public-sector recruiting domains.
+    return /(^|\.)(gov\.in|nic\.in|ac\.in|edu\.in|res\.in|mil\.in)$/.test(host)
+      || /(^|\.)(hmtindia\.com|sbi\.co\.in|ibps\.in|ongcindia\.com|ntpc\.co\.in|iocl\.com|bharatpetroleum\.in|hindustanpetroleum\.com|gailonline\.com|bel-india\.in|bhel\.com|sail\.co\.in|coalindia\.in|powergrid\.in|ecil\.co\.in|rites\.com|ircon\.org|mazagondock\.in|grse\.in|nclcil\.in|nlcindia\.in)$/.test(host);
+  } catch {
+    return false;
+  }
+}
+
 function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): string | undefined {
-  const officialHost = (url: string) => {
-    try {
-      const host = new URL(url).hostname.toLowerCase();
-      return /\\.(gov\\.in|nic\\.in|ac\\.in|edu\\.in|res\\.in|mil\\.in)$/.test(host)
-        || /(^|\\.)(hmtindia\\.com|sbi\\.co\\.in|ibps\\.in)$/.test(host);
-    } catch { return false; }
-  };
-  const candidates = links.filter((link) => typeof link.url === "string" && officialHost(link.url as string));
-  const scored = candidates.map((link) => {
-    const url = String(link.url);
-    const label = String(link.text ?? link.label ?? "");
-    const score = (/\\.pdf(?:[?#]|$)/i.test(url) ? 3 : 0)
-      + (/(notification|advertisement|advt|official notice|see the notice|click here)/i.test(label) ? 2 : 0)
-      + (/(recruit|vacan|job|career|advt|notice|advertisement)/i.test(url) ? 1 : 0);
-    return { url, score };
-  }).filter((item) => item.score >= 3).sort((a, b) => b.score - a.score);
-  return scored[0]?.url;
+  const candidates = links
+    .filter((link) => typeof link.url === "string" && isOfficialAuthorityHost(link.url as string))
+    .map((link) => {
+      const url = String(link.url);
+      const label = String(link.text ?? link.label ?? "").toLowerCase();
+      const isPdf = /\.pdf(?:[?#]|$)/i.test(url);
+      const notificationLabel = /(notification|advertisement|advt|official notice|recruitment notice|detailed notice|notification pdf|download notice)/i.test(label);
+      const careerPath = /(recruit|vacan|career|job|advt|notice|advertisement|notification)/i.test(url);
+      // Prefer explicitly labelled notices; a bare PDF is a candidate only when its path is recruitment-related.
+      const score = (notificationLabel ? 5 : 0) + (isPdf ? 3 : 0) + (careerPath ? 2 : 0);
+      return { url, score, isPdf, notificationLabel, careerPath };
+    })
+    .filter((item) => item.notificationLabel || (item.isPdf && item.careerPath))
+    .sort((a, b) => b.score - a.score);
+  return candidates[0]?.url;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +225,12 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     label: typeof link.text === "string" ? link.text : typeof link.label === "string" ? link.label : undefined,
   }));
   const applyUrl = extractApplyUrl(allLinks);
-  const officialNotificationUrl = row.official_notification_url ?? extractOfficialNotificationUrl(rawLinks);
+  // A stored value is eligible only if it points to a recognized authority host.
+  const storedOfficialNotificationUrl = row.official_notification_url
+    && isOfficialAuthorityHost(row.official_notification_url)
+    ? row.official_notification_url
+    : undefined;
+  const officialNotificationUrl = storedOfficialNotificationUrl ?? extractOfficialNotificationUrl(rawLinks);
   const salaryRaw = (facts.salary_pay ?? facts.salary ?? detail.salary) as string | undefined;
   const { min: salaryMin, max: salaryMax } = parseSalary(salaryRaw);
   const locationText = (facts.location ?? detail.location) as string | undefined;
@@ -334,6 +348,12 @@ async function main() {
       SELECT 1 FROM postings p
       WHERE lower(regexp_replace(trim(p.source_url), '/+$', '')) =
             lower(regexp_replace(trim(fja_job_inventory.source_url), '/+$', ''))
+    )
+    -- FJA article IDs are stable source identities; URL-only checks miss rows
+    -- whose source_url is NULL or normalized differently.
+    AND NOT EXISTS (
+      SELECT 1 FROM postings p
+      WHERE p.external_id = fja_job_inventory.external_id
     )`;
   if (PILOT_IDS && PILOT_IDS.length > 0) {
     const idList = PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",");
@@ -420,11 +440,18 @@ async function main() {
   // Live run: feed each row through writePostingsToDB
   let succeeded = 0;
   let held = 0;
+  let heldMissingOfficialLink = 0;
   let failed = 0;
   const errors: Array<{ externalId: string; error: string }> = [];
 
   for (const row of toProcess) {
     const normalized = toNormalized(row);
+    // Do not promote a record unless an official notification destination was identified.
+    if (!normalized.officialNotificationUrl) {
+      heldMissingOfficialLink++;
+      console.log(`  HELD     ${row.external_id} — missing official notification URL; remains in FJA review inventory`);
+      continue;
+    }
     try {
       const deduped: DedupedPosting = {
         title: normalized.title,
@@ -460,6 +487,7 @@ async function main() {
   console.log(`\n=== Result ===`);
   console.log(`  Succeeded : ${succeeded}`);
   console.log(`  Held (org candidate) : ${held}`);
+  console.log(`  Held (missing official notification URL) : ${heldMissingOfficialLink}`);
   console.log(`  Failed    : ${failed}`);
   if (errors.length > 0) {
     console.log(`\nErrors:`);
