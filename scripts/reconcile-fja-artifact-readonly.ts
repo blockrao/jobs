@@ -20,6 +20,20 @@ const isoDate = (v:unknown):string|null => {
  m=v.trim().match(/^(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})$/); return m&&+m[1]<=31&&+m[2]<=12?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:null;
 };
 const cell=(v:unknown)=>'"'+String(v??"").replace(/"/g,'""')+'"';
+const officialNotificationUrl=(d:any,f:any):string=>{
+ const direct=[f?.official_notification_url,f?.notification_url,d?.official_notification_url,d?.notification_url,d?.enrichment_candidate?.core?.official_notification_url,d?.enrichment_candidate?.core?.notification_url];
+ for(const v of direct){if(typeof v==="string"&&v.trim())return v.trim();}
+ // The extraction stores labelled outbound links separately from normalized facts.
+ // Prefer links explicitly labelled as official notification/advertisement, never the FJA source URL.
+ const links=Array.isArray(d?.official_link_candidates)?d.official_link_candidates:[];
+ const preferred=links.filter((x:any)=>/official\\s*(notification|advertisement)|notification\\s*(pdf|download)|advertisement\\s*(pdf|download)|download\\s*(official\\s*)?(notification|advertisement)/i.test(String(x?.text??"")));
+ for(const x of preferred){
+  const value=String(x?.url??"").trim();
+  try{const u=new URL(value);const host=u.hostname.toLowerCase().replace(/^www\\./,"");if(/^https?:$/.test(u.protocol)&&host!=="freejobalert.com")return u.href;}catch{}
+ }
+ return "";
+};
+
 
 async function main(){
  const listings=JSON.parse(await readFile(path.join(input,"all-in-window-listings.json"),"utf8"));
@@ -58,9 +72,9 @@ async function main(){
  });
  const counts=rows.reduce((a:any,r:any)=>(a[r.bucket]=(a[r.bucket]||0)+1,a),{});
  await mkdir(output,{recursive:true});
- await writeFile(path.join(output,"fja-reconciliation.json"),JSON.stringify({run_id:runId,window:{start:"2026-10-01",end:"2026-10-27"},source_listing_count:listings.length,detail_count:details.length,canonical_recruitments:recs.length,canonical_posts:posts.length,counts,records:rows.map((x:any)=>{const d=x.detail??{},f=x.facts??{};const officialUrl=String(f.official_notification_url||f.notification_url||d.official_notification_url||d.notification_url||d.enrichment_candidate?.core?.official_notification_url||d.enrichment_candidate?.core?.notification_url||"");let officialUrlStatus="missing";if(officialUrl){try{const u=new URL(officialUrl);officialUrlStatus=!/^https?:$/.test(u.protocol)?"invalid_scheme":(["freejobalert.com","www.freejobalert.com"].includes(u.hostname.toLowerCase()))?"source_not_official":"candidate_needs_manual_verification";}catch{officialUrlStatus="invalid_url";}}return {update_date:x.listing.update_date,title:x.listing.title,listing_url:x.listing.listing_url,external_id:extId(x.listing.listing_url),detail_captured:!!x.detail,source_status:d.open_status??"NOT_CAPTURED",official_notification_url:officialUrl||null,official_notification_url_status:officialUrlStatus,facts:x.facts,bucket:x.bucket,candidates:x.candidates};})},null,2));
+ await writeFile(path.join(output,"fja-reconciliation.json"),JSON.stringify({run_id:runId,window:{start:"2026-10-01",end:"2026-10-27"},source_listing_count:listings.length,detail_count:details.length,canonical_recruitments:recs.length,canonical_posts:posts.length,counts,records:rows.map((x:any)=>{const d=x.detail??{},f=x.facts??{};const officialUrl=officialNotificationUrl(d,f);let officialUrlStatus="missing";if(officialUrl){try{const u=new URL(officialUrl);officialUrlStatus=!/^https?:$/.test(u.protocol)?"invalid_scheme":(["freejobalert.com","www.freejobalert.com"].includes(u.hostname.toLowerCase()))?"source_not_official":"candidate_needs_manual_verification";}catch{officialUrlStatus="invalid_url";}}return {update_date:x.listing.update_date,title:x.listing.title,listing_url:x.listing.listing_url,external_id:extId(x.listing.listing_url),detail_captured:!!x.detail,source_status:d.open_status??"NOT_CAPTURED",official_notification_url:officialUrl||null,official_notification_url_status:officialUrlStatus,facts:x.facts,bucket:x.bucket,candidates:x.candidates};})},null,2));
  const headers=["bucket","update_date","title","external_id","listing_url","detail_captured","source_status","official_notification_url","official_notification_url_status","candidate_entity","candidate_id","candidate_name","candidate_slug","candidate_organization","match_score","match_reason","alternatives_json"];
- await writeFile(path.join(output,"fja-reconciliation.csv"),[headers.join(","),...rows.map((x:any)=>{const c=x.candidates[0]??{},d=x.detail??{},f=x.facts??{};const officialUrl=String(f.official_notification_url||f.notification_url||d.official_notification_url||d.notification_url||d.enrichment_candidate?.core?.official_notification_url||d.enrichment_candidate?.core?.notification_url||"");let officialUrlStatus="missing";if(officialUrl){try{const u=new URL(officialUrl);officialUrlStatus=!/^https?:$/.test(u.protocol)?"invalid_scheme":(["freejobalert.com","www.freejobalert.com"].includes(u.hostname.toLowerCase()))?"source_not_official":"candidate_needs_manual_verification";}catch{officialUrlStatus="invalid_url";}}return [x.bucket,x.listing.update_date,x.listing.title,extId(x.listing.listing_url),x.listing.listing_url,!!x.detail,d.open_status??"NOT_CAPTURED",officialUrl,officialUrlStatus,c.entity,c.id,c.name,c.slug,c.organization,c.score,c.reason,JSON.stringify(x.candidates)].map(cell).join(",")})].join("\n")+"\n");
+ await writeFile(path.join(output,"fja-reconciliation.csv"),[headers.join(","),...rows.map((x:any)=>{const c=x.candidates[0]??{},d=x.detail??{},f=x.facts??{};const officialUrl=officialNotificationUrl(d,f);let officialUrlStatus="missing";if(officialUrl){try{const u=new URL(officialUrl);officialUrlStatus=!/^https?:$/.test(u.protocol)?"invalid_scheme":(["freejobalert.com","www.freejobalert.com"].includes(u.hostname.toLowerCase()))?"source_not_official":"candidate_needs_manual_verification";}catch{officialUrlStatus="invalid_url";}}return [x.bucket,x.listing.update_date,x.listing.title,extId(x.listing.listing_url),x.listing.listing_url,!!x.detail,d.open_status??"NOT_CAPTURED",officialUrl,officialUrlStatus,c.entity,c.id,c.name,c.slug,c.organization,c.score,c.reason,JSON.stringify(x.candidates)].map(cell).join(",")})].join("\n")+"\n");
  // Read-only reconciliation ends here: canonical and inventory tables are never modified.
  console.log(JSON.stringify({mode:"read-only",run_id:runId,source_listings:listings.length,details:details.length,canonical_recruitments:recs.length,canonical_posts:posts.length,counts,output},null,2));
  await db.end();
