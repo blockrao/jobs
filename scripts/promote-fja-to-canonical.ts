@@ -338,7 +338,8 @@ async function main() {
   let whereClause = `source_slug = 'freejobalert'
     AND detail_status = 'EXTRACTED'
     AND source_status = 'OPEN'
-    AND application_end_date >= CURRENT_DATE
+    -- Deadline may be stored in application_end_date or only in captured detail facts.
+    -- Apply the normalized-date eligibility filter after reading both fields in TypeScript.
     AND NOT EXISTS (
       SELECT 1 FROM recruitments r
       WHERE lower(regexp_replace(trim(r.source_url), '/+$', '')) =
@@ -359,8 +360,8 @@ async function main() {
     const idList = PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",");
     whereClause += ` AND external_id = ANY(ARRAY[${idList}])`;
   }
-  const limitClause = LIMIT > 0 ? `LIMIT ${LIMIT}` : "";
-
+  // Do not LIMIT in SQL: records with a date only in nested captured facts must
+  // remain eligible, and expired/missing-deadline rows must not consume the batch limit.
   const rawRows = await db.execute(
     sql.raw(`
       SELECT id, external_id, source_url, title, organization_name,
@@ -370,37 +371,68 @@ async function main() {
       FROM fja_job_inventory
       WHERE ${whereClause}
       ORDER BY first_seen_at DESC
-      ${limitClause}
     `)
   );
   // drizzle returns the array directly (not { rows: [...] })
   const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as { rows?: unknown[] }).rows ?? []) as FjaJobRow[];
-  console.log(`Fetched ${inventory.length} FJA inventory rows`);
+  console.log(`Fetched ${inventory.length} FJA inventory rows matching extracted/open/unduplicated source criteria`);
 
   if (inventory.length === 0) {
     console.log("Nothing to promote. Exiting.");
     return;
   }
 
-  // Flag rows that are already live-mapped (other_info_raw has canonical_recruitment_id)
+  // Preserve stable source records that were already mapped by an earlier workflow.
   const liveMapped = inventory.filter(
     (r) => r.other_info_raw && (r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
   );
-  if (liveMapped.length > 0) {
-    console.log(`\n⚠️  ${liveMapped.length} rows already live-mapped — skipping:`);
-    liveMapped.forEach((r) => console.log(`   ${r.external_id} — ${r.title}`));
-  }
-  const toProcess = inventory.filter(
+  const unmapped = inventory.filter(
     (r) => !r.other_info_raw || !(r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
   );
-  console.log(`\nWill process: ${toProcess.length} rows\n`);
+
+  // Apply deadline eligibility using the same normalizer used for the canonical write.
+  // This accepts deadlines in the top-level column or in captured detail facts.
+  const todayUtc = new Date();
+  todayUtc.setUTCHours(0, 0, 0, 0);
+  let missingDeadline = 0;
+  let expiredDeadline = 0;
+  const dateEligible: FjaJobRow[] = [];
+  for (const row of unmapped) {
+    const normalized = toNormalized(row);
+    const deadline = normalized.validThrough;
+    if (!deadline || Number.isNaN(deadline.getTime())) {
+      missingDeadline++;
+      continue;
+    }
+    const deadlineUtc = new Date(Date.UTC(deadline.getUTCFullYear(), deadline.getUTCMonth(), deadline.getUTCDate()));
+    if (deadlineUtc < todayUtc) {
+      expiredDeadline++;
+      continue;
+    }
+    dateEligible.push(row);
+  }
+
+  if (liveMapped.length > 0) {
+    console.log(`Already live-mapped (skipped): ${liveMapped.length}`);
+  }
+  console.log(`Deadline missing/unparseable (held): ${missingDeadline}`);
+  console.log(`Deadline expired (held): ${expiredDeadline}`);
+  console.log(`With valid current/future deadline: ${dateEligible.length}`);
+
+  const toProcess = LIMIT > 0 ? dateEligible.slice(0, LIMIT) : dateEligible;
+  console.log(`\nWill process: ${toProcess.length} rows (limit=${LIMIT || "all"})\n`);
 
   // Pre-resolve orgs for the dry-run report
   const orgIndex = await loadOrgIndex(db);
   const orgStats: Record<string, number> = { ALIAS: 0, EXISTING: 0, CANDIDATE: 0, NONE: 0 };
   const candidateOrgs: Array<{ externalId: string; orgName: string; reason: string }> = [];
 
+  let officialUrlCount = 0;
+  let missingOfficialUrlCount = 0;
   for (const row of toProcess) {
+    const normalized = toNormalized(row);
+    if (normalized.officialNotificationUrl) officialUrlCount++;
+    else missingOfficialUrlCount++;
     const resolution = resolveOrganization(orgIndex, row.organization_name);
     orgStats[resolution.kind]++;
     if (resolution.kind === "CANDIDATE" || resolution.kind === "NONE") {
@@ -417,6 +449,8 @@ async function main() {
   console.log(`  EXISTING : ${orgStats.EXISTING}`);
   console.log(`  CANDIDATE: ${orgStats.CANDIDATE}  ← held, not published`);
   console.log(`  NONE     : ${orgStats.NONE}        ← skipped`);
+  console.log(`Official notification URL recognized: ${officialUrlCount}`);
+  console.log(`Missing recognized official notification URL: ${missingOfficialUrlCount}`);
   console.log();
 
   if (candidateOrgs.length > 0) {
