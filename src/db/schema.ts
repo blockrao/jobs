@@ -28,6 +28,7 @@ export const orgSectorEnum = pgEnum("org_sector", [
   "DEFENCE",
   "RAILWAY",
   "PRIVATE",
+  "UNKNOWN",
 ]);
 
 export const postingKindEnum = pgEnum("posting_kind", [
