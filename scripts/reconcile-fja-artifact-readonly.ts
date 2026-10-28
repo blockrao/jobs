@@ -26,10 +26,10 @@ const officialNotificationUrl=(d:any,f:any):string=>{
  // The extraction stores labelled outbound links separately from normalized facts.
  // Prefer links explicitly labelled as official notification/advertisement, never the FJA source URL.
  const links=Array.isArray(d?.official_link_candidates)?d.official_link_candidates:[];
- const preferred=links.filter((x:any)=>/official\\s*(notification|advertisement)|notification\\s*(pdf|download)|advertisement\\s*(pdf|download)|download\\s*(official\\s*)?(notification|advertisement)/i.test(String(x?.text??"")));
+ const preferred=links.filter((x:any)=>/official\s*(notification|advertisement)|notification\s*(pdf|download)|advertisement\s*(pdf|download)|download\s*(official\s*)?(notification|advertisement)/i.test(String(x?.text??"")));
  for(const x of preferred){
   const value=String(x?.url??"").trim();
-  try{const u=new URL(value);const host=u.hostname.toLowerCase().replace(/^www\\./,"");if(/^https?:$/.test(u.protocol)&&host!=="freejobalert.com")return u.href;}catch{}
+  try{const u=new URL(value);const host=u.hostname.toLowerCase().replace(/^www\./,"");if(/^https?:$/.test(u.protocol)&&host!=="freejobalert.com")return u.href;}catch{}
  }
  return "";
 };
