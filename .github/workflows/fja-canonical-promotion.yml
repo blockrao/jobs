@@ -1,18 +1,24 @@
 name: Promote new open FreeJobAlert records
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/promote-fja-to-canonical.ts"
-      - ".github/workflows/fja-canonical-promotion.yml"
+  # Intentionally manual-only: merging code must never trigger production writes.
   workflow_dispatch:
     inputs:
       limit:
-        description: "Maximum eligible new records to process (0 = all)"
+        description: "Maximum eligible records to process (50 is a safe pilot; 0 = all)"
         required: true
         type: string
-        default: "0"
+        default: "50"
+      dry_run:
+        description: "Dry run only; no database writes"
+        required: true
+        type: boolean
+        default: true
+      confirm_live_write:
+        description: "Explicitly authorize production database writes when dry_run is false"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -33,12 +39,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Validate execution mode
+        env:
+          FJA_PROMOTE_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          CONFIRM_LIVE_WRITE: ${{ inputs.confirm_live_write }}
+        run: |
+          if [ "$FJA_PROMOTE_DRY_RUN" != "1" ] && [ "$CONFIRM_LIVE_WRITE" != "true" ]; then
+            echo "Refusing live promotion: set confirm_live_write=true explicitly."
+            exit 1
+          fi
       - name: Promote eligible new records through canonical writer
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          FJA_PROMOTE_DRY_RUN: "0"
-          FJA_PROMOTE_LIMIT: ${{ inputs.limit || '0' }}
+          FJA_PROMOTE_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          FJA_PROMOTE_LIMIT: ${{ inputs.limit || '50' }}
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; promotion stopped."; exit 1; }
-          echo "Running FJA canonical promotion with nested-artifact extraction support"
+          echo "Running FJA canonical promotion; dry_run=$FJA_PROMOTE_DRY_RUN limit=$FJA_PROMOTE_LIMIT"
           npx tsx scripts/promote-fja-to-canonical.ts
