@@ -1,0 +1,60 @@
+name: Reconcile FreeJobAlert artifact (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Successful FreeJobAlert Research Extraction run ID"
+        required: true
+        type: string
+        default: "40633760895"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: fja-readonly-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Match FJA listings against JobOye canonical records
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Download source extraction artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: freejobalert-extraction-${{ inputs.source_run_id }}
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts/source
+      - name: Verify artifact files
+        run: |
+          test -s artifacts/source/freejobalert-2026-10-01-to-2026-10-27/all-in-window-listings.json
+          test -s artifacts/source/freejobalert-2026-10-01-to-2026-10-27/detail-records.json
+          find artifacts/source -maxdepth 2 -type f | head -20
+      - name: Run read-only reconciliation
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FJA_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          FJA_ARTIFACT_DIR: artifacts/source/freejobalert-2026-10-01-to-2026-10-27
+          FJA_RECONCILIATION_OUT: artifacts/fja-reconciliation-run-${{ inputs.source_run_id }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; reconciliation stopped."; exit 1; }
+          npx tsx scripts/reconcile-fja-artifact-readonly.ts
+      - name: Upload reconciliation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-reconciliation-${{ inputs.source_run_id }}
+          path: artifacts/fja-reconciliation-run-${{ inputs.source_run_id }}/
+          if-no-files-found: warn
+          retention-days: 14
