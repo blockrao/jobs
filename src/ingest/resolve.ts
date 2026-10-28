@@ -13,6 +13,7 @@
  * and stays where it is in the writer.
  */
 
+import { createHash } from "node:crypto";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
@@ -373,16 +374,25 @@ async function getOrCreatePositionId(db: Db, category: PostIdentity["positionCat
   return createdPosition.id;
 }
 
-function postLineSlug(recruitmentSlug: string, name: string): string {
+/**
+ * Canonical post-leaf slug: role title only, scoped by recruitment in the URL.
+ * Do not embed the recruitment slug, source hash, classifier version, or "-jobs"
+ * suffix. The database's unique (recruitment_id, slug) index scopes uniqueness.
+ */
+function postLineSlug(name: string, existing: Array<{ id: number; name: string; slug: string | null }>): string {
   const stem = name
     .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\\u0300-\\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 50);  // Reduced to make room for "-jobs" suffix
-  // Append "-jobs" to make post title explicit in URLs (e.g., "/junior-engineer-jobs")
-  const stemWithJobs = `${stem}-jobs`;
-  // "-pl1-" marks Posts written by the post-line classifier, so they can be found and reversed.
-  return `${recruitmentSlug.slice(0, 100)}-${POST_LINE_CLASSIFIER_VERSION}-${stemWithJobs}`.slice(0, 200);
+    .slice(0, 80) || "post";
+  const collision = existing.some((post) =>
+    post.slug === stem && post.name.toLowerCase() !== name.toLowerCase()
+  );
+  if (!collision) return stem;
+  const suffix = createHash("sha1").update(name.toLowerCase().trim()).digest("hex").slice(0, 6);
+  return `${stem.slice(0, 73)}-${suffix}`;
 }
 
 export async function resolvePostLines(
@@ -396,6 +406,7 @@ export async function resolvePostLines(
   let existing = (await db.query.posts.findMany({ where: eq(posts.recruitmentId, recruitmentId) })).map((p) => ({
     id: p.id,
     name: p.name,
+    slug: p.slug,
     vacancyTotal: p.vacancyTotal,
   }));
   let positionId: number | null = null;
@@ -423,7 +434,7 @@ export async function resolvePostLines(
     positionId ??= await resolvePositionId(db, name, "OTHER");
     const [row] = await db
       .insert(posts)
-      .values({ recruitmentId, positionId, name, slug: postLineSlug(recruitmentSlug, name), vacancyTotal: count })
+       .values({ recruitmentId, positionId, name, slug: postLineSlug(name, existing), vacancyTotal: count })
       .onConflictDoNothing()
       .returning({ id: posts.id });
     if (!row) {
@@ -433,7 +444,7 @@ export async function resolvePostLines(
       continue;
     }
     result.created++;
-    existing = [...existing, { id: row.id, name, vacancyTotal: count }];
+    existing = [...existing, { id: row.id, name, slug: postLineSlug(name, existing), vacancyTotal: count }];
     result.lines.push({ name, verdict, action: "created", postId: row.id });
   }
   if (lines.length === 1 && result.lines[0].postId != null) result.singlePostId = result.lines[0].postId;
