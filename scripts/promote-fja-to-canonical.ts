@@ -228,7 +228,13 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     label: typeof link.text === "string" ? link.text : typeof link.label === "string" ? link.label : undefined,
   }));
   const applyUrl = extractApplyUrl(allLinks);
-  const officialNotificationUrl = row.official_notification_url ?? extractOfficialNotificationUrl(rawLinks);
+  // Do not let a stale/misclassified FJA or third-party URL override the
+  // official-authority candidate extracted from the captured detail links.
+  const storedOfficialNotificationUrl = row.official_notification_url
+    && isOfficialAuthorityHost(row.official_notification_url)
+    ? row.official_notification_url
+    : undefined;
+  const officialNotificationUrl = storedOfficialNotificationUrl ?? extractOfficialNotificationUrl(rawLinks);
   const salaryRaw = (facts.salary_pay ?? facts.salary ?? detail.salary) as string | undefined;
   const { min: salaryMin, max: salaryMax } = parseSalary(salaryRaw);
   const locationText = (facts.location ?? detail.location) as string | undefined;
