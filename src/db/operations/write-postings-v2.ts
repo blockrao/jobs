@@ -26,7 +26,7 @@ import { inferStage } from "../../ingest/normalize";
 import { loadExamSlugs } from "../../ingest/exam-linker";
 import { resolveRecruitment, resolvePostLines, resolvePost, postLineSlug, truncateForColumn, normalizeAdvertisementNumber, refreshRecruitmentDates } from "../../ingest/resolve";
 import { evaluateContentQuality } from "../../lib/content-quality/gate";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
