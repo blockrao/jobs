@@ -383,7 +383,7 @@ export function postLineSlug(name: string, existing: Array<{ id: number; name: s
   const stem = name
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "post";
