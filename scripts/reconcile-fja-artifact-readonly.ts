@@ -1,5 +1,4 @@
 import postgres from "postgres";
-import { createHash } from "node:crypto";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -9,7 +8,6 @@ const input = process.env.FJA_ARTIFACT_DIR ?? "artifacts/fja-artifact";
 const output = process.env.FJA_RECONCILIATION_OUT ?? "artifacts/fja-reconciliation";
 const runId = process.env.FJA_SOURCE_RUN_ID ?? "40513389060";
 const db = postgres(dbUrl, { max: 3, connect_timeout: 15, prepare: false });
-const hash = (s:string) => createHash("sha256").update(s).digest("hex");
 const norm = (v:unknown) => String(v??"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
   .replace(/&/g," and ").replace(/\b(recruitment|recruitments|notification|online form|offline form|apply online|application form|20\d{2})\b/g," ")
   .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");
