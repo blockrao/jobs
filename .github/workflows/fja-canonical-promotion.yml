@@ -31,7 +31,9 @@ jobs:
   promote:
     name: Deduplicate and ingest new open FJA records
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The canonical writer processes records sequentially; 30 minutes truncates
+    # full-inventory runs. GitHub-hosted jobs support up to 6 hours.
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
