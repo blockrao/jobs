@@ -141,13 +141,13 @@ function extractApplyUrl(allLinks: Array<{ url?: string; label?: string }> | und
 
 function isOfficialAuthorityHost(url: string): boolean {
   try {
-    const host = new URL(url).hostname.toLowerCase().replace(/\\.$/, "");
+    const host = new URL(url).hostname.toLowerCase().replace(/\.$/, "");
     // Government/education/research domains plus a small set of established
     // public-sector recruiting domains. FJA and generic third-party hosts are
     // never eligible to become the official notification destination.
-    return /\\.(gov\\.in|nic\\.in|ac\\.in|edu\\.in|res\\.in|mil\\.in)$/.test(host)
-      || /(^|\\.)(gov\\.in|nic\\.in|ac\\.in|edu\\.in|res\\.in|mil\\.in)$/.test(host)
-      || /(^|\\.)(hmtindia\\.com|sbi\\.co\\.in|ibps\\.in|ongcindia\\.com|ntpc\\.co\\.in|iocl\\.com|bharatpetroleum\\.in|hindustanpetroleum\\.com|gailonline\\.com|bel-india\\.in|bhel\\.com|sail\\.co\\.in|coalindia\\.in|powergrid\\.in|ecil\\.co\\.in|rites\\.com|ircon\\.org|mazagondock\\.in|grse\\.in|nclcil\\.in|nlcindia\\.in)$/.test(host);
+    return /\.(gov\.in|nic\.in|ac\.in|edu\.in|res\.in|mil\.in)$/.test(host)
+      || /(^|\.)(gov\.in|nic\.in|ac\.in|edu\.in|res\.in|mil\.in)$/.test(host)
+      || /(^|\.)(hmtindia\.com|sbi\.co\.in|ibps\.in|ongcindia\.com|ntpc\.co\.in|iocl\.com|bharatpetroleum\.in|hindustanpetroleum\.com|gailonline\.com|bel-india\.in|bhel\.com|sail\.co\.in|coalindia\.in|powergrid\.in|ecil\.co\.in|rites\.com|ircon\.org|mazagondock\.in|grse\.in|nclcil\.in|nlcindia\.in)$/.test(host);
   } catch {
     return false;
   }
@@ -159,7 +159,7 @@ function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): 
     .map((link) => {
       const url = String(link.url);
       const label = String(link.text ?? link.label ?? "").toLowerCase();
-      const isPdf = /\\.pdf(?:[?#]|$)/i.test(url);
+      const isPdf = /\.pdf(?:[?#]|$)/i.test(url);
       const notificationLabel = /(notification|advertisement|advt|official notice|recruitment notice|detailed notice|notification pdf|download notice)/i.test(label);
       const careerPath = /(recruit|vacan|career|job|advt|notice|advertisement|notification)/i.test(url);
       // Prefer explicit notification/advertisement labels. A PDF by itself is
@@ -170,8 +170,7 @@ function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): 
     .filter((item) => item.notificationLabel || (item.isPdf && item.careerPath))
     .sort((a, b) => b.score - a.score);
   return candidates[0]?.url;
-}
-// ---------------------------------------------------------------------------
+}// ---------------------------------------------------------------------------
 // Build a postTable from details.tables: find the table whose heading contains
 // "vacanc" or whose rows have name + vacancy columns. Returns undefined if none found.
 // Only objective facts — name of post and number of vacancies.
