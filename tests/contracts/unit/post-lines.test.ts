@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classifyPostLine, decidePostIdentity, normalizePostName, postNameSimilarity } from "@/ingest/post-lines";
+import { postLineSlug } from "@/ingest/resolve";
 
 const ev = (f: string) =>
   readFileSync(join(process.cwd(), "docs/architecture/evidence", f), "utf8")
@@ -87,5 +88,20 @@ describe("PV-U post identity against existing Posts", () => {
       { id: 8, name: "Assistant Engineer Civils", vacancyTotal: 2 },
     ];
     expect(decidePostIdentity({ name: "Assistant Engineer Civil Eng", count: 2 }, two).kind).toBe("UNRESOLVED");
+  });
+});
+
+
+describe("canonical post-leaf URL slug contract", () => {
+  test("role slug contains the role only, not recruitment, source hash, classifier version, or jobs suffix", () => {
+    expect(postLineSlug("Academic Associate - Public Policy Area")).toBe("academic-associate-public-policy-area");
+    expect(postLineSlug("Project Technical Support-I")).toBe("project-technical-support-i");
+    expect(postLineSlug("Research Associate (RA)")).toBe("research-associate-ra");
+  });
+
+  test("slug collisions within a recruitment get a stable short suffix", () => {
+    const existing = [{ id: 1, name: "Class III", slug: "class-iii" }];
+    expect(postLineSlug("Class-III", existing)).toMatch(/^class-iii-[a-f0-9]{6}$/);
+    expect(postLineSlug("Site Engineer", existing)).toBe("site-engineer");
   });
 });
