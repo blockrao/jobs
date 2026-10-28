@@ -110,6 +110,13 @@ describe("sitemap", () => {
     expect(liveLeaf.priority!).toBeGreaterThan(closedLeaf.priority!);
   });
 
+  test("IDX-04h duplicate and malformed post leaves are excluded from the sitemap query", async () => {
+    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
+    expect(src).toMatch(/p\.posting_status IS DISTINCT FROM 'DUPLICATE'/);
+    expect(src).toMatch(/p\.slug IS NOT NULL/);
+    expect(src).toMatch(/btrim\(p\.slug\) <> ''/);
+  });
+
   test("IDX-04g the organization query applies the same exclusions as the entity page (merged, quarantined, threshold)", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
     expect(src).toMatch(/merged_into_id IS NULL/);
