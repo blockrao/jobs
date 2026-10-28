@@ -1,0 +1,85 @@
+name: JobOye URL integrity audit (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Public site base URL to check"
+        required: true
+        type: string
+        default: "https://www.joboye.com"
+      scope:
+        description: "canonical checks hubs and leaves; all also checks known recruitment aliases"
+        required: true
+        type: choice
+        options:
+          - canonical
+          - all
+        default: canonical
+      limit:
+        description: "Maximum URLs to check (0 = full inventory)"
+        required: true
+        type: string
+        default: "0"
+      concurrency:
+        description: "Bounded request concurrency (1-12)"
+        required: true
+        type: string
+        default: "6"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: joboye-read-only-url-integrity
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Check canonical URLs against public site
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate inputs
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          SCOPE: ${{ inputs.scope }}
+          LIMIT: ${{ inputs.limit }}
+          CONCURRENCY: ${{ inputs.concurrency }}
+        run: |
+          node - <<'NODE'
+          const base = process.env.BASE_URL;
+          let url;
+          try { url = new URL(base); } catch { throw new Error('base_url must be an absolute URL'); }
+          if (!['https:', 'http:'].includes(url.protocol)) throw new Error('base_url must use HTTP or HTTPS');
+          if (!['canonical', 'all'].includes(process.env.SCOPE)) throw new Error('invalid scope');
+          if (!/^\\d+$/.test(process.env.LIMIT)) throw new Error('limit must be a non-negative integer');
+          const c = Number(process.env.CONCURRENCY);
+          if (!Number.isInteger(c) || c < 1 || c > 12) throw new Error('concurrency must be between 1 and 12');
+          NODE
+      - name: Run read-only URL integrity audit
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_BASE_URL: ${{ inputs.base_url }}
+          BASE_URL: ${{ inputs.base_url }}
+          SCOPE: ${{ inputs.scope }}
+          LIMIT: ${{ inputs.limit }}
+          CONCURRENCY: ${{ inputs.concurrency }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
+          mkdir -p artifacts
+          npx tsx src/scripts/audit-url-integrity.ts --base "$BASE_URL" --scope "$SCOPE" --limit "$LIMIT" --concurrency "$CONCURRENCY"
+      - name: Upload audit report even when checks fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: joboye-url-integrity-${{ github.run_id }}
+          path: artifacts/url-integrity-*.json
+          if-no-files-found: warn
+          retention-days: 14
