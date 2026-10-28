@@ -30,7 +30,7 @@ import { eq, and, desc } from "drizzle-orm";
 import crypto from "crypto";
 import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
-import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution } from "../../ingest/organization-resolution";
+import { loadOrgIndex, resolveOrganization, upsertCandidate, createUnverifiedOrganization, type OrgResolution } from "../../ingest/organization-resolution";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
 
@@ -352,16 +352,11 @@ export async function writePostingsToDB(
         if (existingBySlug) {
           org = existingBySlug;
         } else {
-          const [createdOrg] = await db.insert(organizations).values({
+          org = await createUnverifiedOrganization(db, {
             name: orgName,
             slug: orgSlug,
-            sector: "UNKNOWN",
             websiteUrl: norm.websiteUrl ?? null,
-            description: "Organization entity created from an official recruitment notification; classification has not yet been verified.",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }).returning();
-          org = createdOrg;
+          });
         }
         result.orgResolution = "CANDIDATE";
         result.candidateReason = resolution.kind === "CANDIDATE" ? resolution.reason : "NO_ORGANIZATION_NAME";
