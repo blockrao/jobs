@@ -5,11 +5,16 @@
 const normalize = (value: unknown): string => String(value ?? "")
   .normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
   .replace(/&/g, " and ")
-  .replace(/\bindian institute of information technology\b/g, " iiit ")
-  .replace(/\bindian institute of technology\b/g, " iit ")
-  .replace(/\ball india institute of medical sciences\b/g, " aiims ")
-  .replace(/\bcentral marine fisheries research institute\b/g, " cmfri ")
-  .replace(/\bsree chitra tirunal institute for medical sciences and technology\b/g, " sctimst ")
+  .replace(/\bindian institute of information technology\b/g, " iiit information technology ")
+  .replace(/\biiit\b/g, " iiit information technology ")
+  .replace(/\bindian institute of technology\b/g, " iit technology ")
+  .replace(/\biit\b/g, " iit technology ")
+  .replace(/\ball india institute of medical sciences\b/g, " aiims medical sciences ")
+  .replace(/\baiims\b/g, " aiims medical sciences ")
+  .replace(/\bcentral marine fisheries research institute\b/g, " cmfri marine fisheries ")
+  .replace(/\bcmfri\b/g, " cmfri marine fisheries ")
+  .replace(/\bsree chitra tirunal institute for medical sciences and technology\b/g, " sctimst medical sciences technology ")
+  .replace(/\bsctimst\b/g, " sctimst medical sciences technology ")
   .replace(/\b(recruitment|recruitments|notification|online form|offline form|apply online|application form|20\d{2})\b/g, " ")
   .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
 
@@ -34,16 +39,13 @@ const ROLE_NOISE = new Set([
 export function organizationCompatible(source: unknown, candidate: unknown): boolean {
   const a = normalize(source), b = normalize(candidate);
   if (!a || !b) return false;
-  if (a === b) return true;
+  // Exact normalized identity or exact distinctive-token identity only. No fuzzy employer matching.
+  if (a === b) return tokens(a).size >= 2;
   const x = new Set([...tokens(a)].filter(t => !ORGANIZATION_NOISE.has(t)));
   const y = new Set([...tokens(b)].filter(t => !ORGANIZATION_NOISE.has(t)));
-  // A bare acronym or a generic institutional label is not enough to identify a campus.
-  if (x.size < 2 || y.size < 2) return false;
-  const overlap = [...x].filter(t => y.has(t)).length;
-  const dice = (2 * overlap) / (x.size + y.size);
-  return dice >= 0.8 && overlap >= 2;
+  if (x.size < 2 || y.size < 2 || x.size !== y.size) return false;
+  return [...x].every(token => y.has(token));
 }
-
 export function roleSimilarity(a: unknown, b: unknown): number {
   const x = new Set([...tokens(a)].filter(t => !ROLE_NOISE.has(t) && !/^20\d{2}$/.test(t)));
   const y = new Set([...tokens(b)].filter(t => !ROLE_NOISE.has(t) && !/^20\d{2}$/.test(t)));
