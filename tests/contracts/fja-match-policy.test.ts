@@ -11,7 +11,7 @@ describe("FJA conservative entity matching policy", () => {
 
   it("supports common long-name/acronym forms when campus identity agrees", () => {
     expect(organizationCompatible("IIIT Delhi", "Indian Institute of Information Technology Delhi")).toBe(true);
-    expect(organizationCompatible("CMFRI", "Central Marine Fisheries Research Institute")).toBe(false);
+    expect(organizationCompatible("CMFRI", "Central Marine Fisheries Research Institute")).toBe(true);
   });
 
   it("rejects research grade mismatches", () => {
