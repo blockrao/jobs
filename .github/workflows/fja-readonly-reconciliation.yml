@@ -1,5 +1,7 @@
 name: Reconcile FreeJobAlert artifact (read-only)
 
+# Temporary branch-push trigger: regenerate the read-only report after matching-policy changes.
+
 on:
   push:
     branches:
