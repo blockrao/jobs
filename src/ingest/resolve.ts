@@ -226,9 +226,44 @@ export async function resolveRecruitment(
   const existingByIdentity = await db.query.recruitments.findFirst({ where: collisionIdentity });
   if (existingByIdentity) return { id: existingByIdentity.id, created: false };
 
-  // Insert raced and lost, but no row with the same structured identity is
-  // visible. Surface the conflict rather than returning a bogus entity ID.
-  throw new Error("resolveRecruitment: generated slug conflicted without a matching identity row: " + finalSlug);
+  // A descriptive title can legitimately repeat across organizations or
+  // separate notices. If the plain title slug belongs to another identity,
+  // retry once with a stable identity suffix rather than rejecting the job.
+  // This preserves readable URLs and never attaches the incoming job to the
+  // unrelated row that owns the unsuffixed slug.
+  const collisionSuffix = createHash("sha1")
+    .update([
+      identity.organizationId,
+      finalYear,
+      identity.examId ?? "",
+      identity.officialNotificationNumber ?? "",
+      identity.title.trim().toLowerCase(),
+    ].join("|"))
+    .digest("hex")
+    .slice(0, 8);
+  const fallbackSlug = `${finalSlug.slice(0, 125).replace(/-+$/g, "")}-${identity.organizationId}-${collisionSuffix}`;
+  const [retried] = await db
+    .insert(recruitments)
+    .values({
+      organizationId: identity.organizationId,
+      examId: identity.examId,
+      year: finalYear,
+      name: truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH),
+      slug: fallbackSlug,
+      officialNotificationNumber: identity.officialNotificationNumber,
+      applicationStartDate: identity.applicationStartDate ?? null,
+      applicationEndDate: identity.applicationEndDate ?? null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: recruitments.id });
+  if (retried) return { id: retried.id, created: true };
+
+  // Re-check identity after the retry in case a concurrent writer won.
+  const afterRetry = await db.query.recruitments.findFirst({ where: collisionIdentity });
+  if (afterRetry) return { id: afterRetry.id, created: false };
+
+  // Do not guess if both the base and deterministic fallback slug are taken.
+  throw new Error(`resolveRecruitment: slug conflicts without a matching identity row: ${finalSlug} / ${fallbackSlug}`);
 }
 
 export interface PostIdentity {

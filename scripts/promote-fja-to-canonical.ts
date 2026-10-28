@@ -219,18 +219,36 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   const wrapper = (row.details ?? {}) as Record<string, any>;
   const detail = (wrapper.detail ?? wrapper) as Record<string, any>;
   const facts = (detail.facts ?? (row.other_info_raw as Record<string, any> | null)?.facts ?? {}) as Record<string, any>;
-  const rawLinks = (detail.all_links ?? detail.allLinks ?? facts.all_links ?? facts.allLinks ?? []) as Array<Record<string, unknown>>;
+  // The inventory has several historical capture shapes. Merge them instead of
+  // choosing the first present key: an empty all_links array must not mask links
+  // captured under links/href or the wrapper/listing object.
+  const linkArrays = [
+    detail.all_links, detail.allLinks, detail.links,
+    facts.all_links, facts.allLinks, facts.links,
+    wrapper.all_links, wrapper.allLinks, wrapper.links,
+    (row.other_info_raw as Record<string, any> | null)?.all_links,
+    (row.other_info_raw as Record<string, any> | null)?.allLinks,
+    (row.other_info_raw as Record<string, any> | null)?.links,
+  ].filter(Array.isArray) as Array<Array<Record<string, unknown>>>;
+  const rawLinks = linkArrays.flat();
   const allLinks = rawLinks.map((link) => ({
-    url: typeof link.url === "string" ? link.url : undefined,
-    label: typeof link.text === "string" ? link.text : typeof link.label === "string" ? link.label : undefined,
-  }));
+    url: typeof link.url === "string" ? link.url : typeof link.href === "string" ? link.href : undefined,
+    label: typeof link.text === "string" ? link.text : typeof link.label === "string" ? link.label : typeof link.title === "string" ? link.title : undefined,
+  })).filter((link, index, list) => link.url && list.findIndex((other) => other.url === link.url) === index);
   const applyUrl = extractApplyUrl(allLinks);
   // A stored value is eligible only if it points to a recognized authority host.
   const storedOfficialNotificationUrl = row.official_notification_url
     && isOfficialAuthorityHost(row.official_notification_url)
     ? row.official_notification_url
     : undefined;
-  const officialNotificationUrl = storedOfficialNotificationUrl ?? extractOfficialNotificationUrl(rawLinks);
+  const capturedOfficialUrl = [
+    facts.official_notification_url, facts.officialNotificationUrl,
+    detail.official_notification_url, detail.officialNotificationUrl,
+    wrapper.official_notification_url, wrapper.officialNotificationUrl,
+    (row.other_info_raw as Record<string, any> | null)?.official_notification_url,
+    (row.other_info_raw as Record<string, any> | null)?.officialNotificationUrl,
+  ].find((value) => typeof value === "string" && isOfficialAuthorityHost(value)) as string | undefined;
+  const officialNotificationUrl = storedOfficialNotificationUrl ?? capturedOfficialUrl ?? extractOfficialNotificationUrl(allLinks as Array<Record<string, unknown>>);
   const salaryRaw = (facts.salary_pay ?? facts.salary ?? detail.salary) as string | undefined;
   const { min: salaryMin, max: salaryMax } = parseSalary(salaryRaw);
   const locationText = (facts.location ?? detail.location) as string | undefined;
@@ -401,7 +419,11 @@ async function main() {
     const normalized = toNormalized(row);
     const deadline = normalized.validThrough;
     if (!deadline || Number.isNaN(deadline.getTime())) {
+      // Missing deadlines are not proof that a source-open notice is closed.
+      // Allow ingestion into the canonical writer as PENDING + DRAFT; the
+      // separate publication gate still prevents incomplete records going live.
       missingDeadline++;
+      dateEligible.push(row);
       continue;
     }
     const deadlineUtc = new Date(Date.UTC(deadline.getUTCFullYear(), deadline.getUTCMonth(), deadline.getUTCDate()));
@@ -415,9 +437,9 @@ async function main() {
   if (liveMapped.length > 0) {
     console.log(`Already live-mapped (skipped): ${liveMapped.length}`);
   }
-  console.log(`Deadline missing/unparseable (held): ${missingDeadline}`);
+  console.log(`Deadline missing/unparseable (included for draft ingestion only): ${missingDeadline}`);
   console.log(`Deadline expired (held): ${expiredDeadline}`);
-  console.log(`With valid current/future deadline: ${dateEligible.length}`);
+  console.log(`Eligible after excluding expired deadlines: ${dateEligible.length}`);
 
   const toProcess = LIMIT > 0 ? dateEligible.slice(0, LIMIT) : dateEligible;
   console.log(`\nWill process: ${toProcess.length} rows (limit=${LIMIT || "all"})\n`);
