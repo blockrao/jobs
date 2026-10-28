@@ -43,18 +43,18 @@ async function main(){
    // A shared advertisement number is not an entity key. Require meaningful agreement on both employer and role.
    const orgConflict=!!org&&os<.25;
    const score=urlHit?1:adHit?Math.min(.985,.92+.06*os):ts*(org?.65+.35*os:.8);
-   if(urlHit||adHit||(!orgConflict&&ts>=.42&&(org?os>=.25:ts>=.70)))cs.push({entity:"recruitment",id:r.id,name:r.name,slug:r.slug,org:r.org,score,why:urlHit?"exact FJA source URL/article ID":adHit?"advertisement number + organization + title":"title/organization similarity",r});
+   if(urlHit||adHit||(!orgConflict&&ts>=.42&&(org?os>=.25:ts>=.70)))cs.push({entity:"recruitment",id:r.id,name:r.name,slug:r.slug,org:r.org,officialUrl:r.official_notification_url||r.notification_url||null,score,why:urlHit?"exact FJA source URL/article ID":adHit?"advertisement number + organization + title":"title/organization similarity",r});
   }
   for(const p of posts){
    const ts=Math.max(sim(l.title,p.name||""),sim(title,p.name||"")),os=org?sim(org,p.org||""):0;
-   if(ts>=.62&&(!org||os>=.25))cs.push({entity:"post",id:p.id,name:p.name,slug:p.slug,org:p.org,score:ts*(org?.65+.35*os:.8),why:"post title/organization similarity",r:p});
+   if(ts>=.62&&(!org||os>=.25))cs.push({entity:"post",id:p.id,name:p.name,slug:p.slug,org:p.org,officialUrl:p.source_url||null,score:ts*(org?.65+.35*os:.8),why:"post title/organization similarity",r:p});
   }
   cs.sort((a,b)=>b.score-a.score);const top=cs[0],second=cs[1];let bucket="ambiguous";
   if(nonRecruitment)bucket="non_recruitment_update";
   else if(!top)bucket="missing_from_joboye";
   else if(top.score>=.94&&(!second||top.score-second.score>=.08)){const r=top.r;const dv=d&&facts.vacancies&&vacancy(facts.vacancies)!==null&&r.total_vacancies!==null&&r.total_vacancies!==undefined&&vacancy(facts.vacancies)!==Number(r.total_vacancies);const fd=isoDate(facts.application_end_date), rd=r.application_end_date?String(r.application_end_date).slice(0,10):null;bucket=dv||(fd&&rd&&fd!==rd)?"material_delta":"existing_match";}
   else if(top.score>=.72&&(!second||top.score-second.score>=.06))bucket="likely_duplicate_alias";
-  return {listing:l,detail:d,bucket,candidates:cs.slice(0,5).map(c=>({entity:c.entity,id:c.id,name:c.name,slug:c.slug,organization:c.org,score:+c.score.toFixed(3),reason:c.why})),facts,top};
+  return {listing:l,detail:d,bucket,candidates:cs.slice(0,5).map(c=>({entity:c.entity,id:c.id,name:c.name,slug:c.slug,organization:c.org,official_notification_url:c.officialUrl||null,score:+c.score.toFixed(3),reason:c.why})),facts,top};
  });
  const counts=rows.reduce((a:any,r:any)=>(a[r.bucket]=(a[r.bucket]||0)+1,a),{});
  await mkdir(output,{recursive:true});
