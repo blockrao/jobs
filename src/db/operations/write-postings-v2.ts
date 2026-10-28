@@ -465,7 +465,6 @@ export async function writePostingsToDB(
         const lineResult = await resolvePostLines(
           db,
           recruitment.id,
-          norm.slug,
           tableLines,
           { countOptional: !norm.postTable },
         );
