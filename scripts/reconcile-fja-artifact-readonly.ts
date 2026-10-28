@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { organizationCompatible, safeEntityMatch } from "./fja-match-policy";
 
 const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) throw new Error("DATABASE_URL missing; refusing to run.");
@@ -53,15 +54,17 @@ async function main(){
   for(const r of recs){
    const urlHit=exactSource(r.source_url)||sameFjaSource(r.source_url);
    const ts=Math.max(sim(l.title,r.name),sim(title,r.name)), os=org?sim(org,r.org||""):0;
-   const adHit=!!ad&&norm(ad)===norm(r.advertisement_number||"")&&!!org&&os>=.65&&ts>=.30;
-   // A shared advertisement number is not an entity key. Require meaningful agreement on both employer and role.
-   const orgConflict=!!org&&os<.25;
+   const orgSafe=!!org&&organizationCompatible(org,r.org||"");
+   const identity=safeEntityMatch({sourceOrganization:org,candidateOrganization:r.org,sourceTitle:title,candidateTitle:r.name,minimumRoleSimilarity:.58});
+   const adHit=!!ad&&norm(ad)===norm(r.advertisement_number||"")&&identity.safe;
+   // A URL identity is the only permitted bypass. Otherwise employer and role must independently agree.
    const score=urlHit?1:adHit?Math.min(.985,.92+.06*os):ts*(org?.65+.35*os:.8);
-   if(urlHit||adHit||(!orgConflict&&ts>=.42&&(org?os>=.25:ts>=.70)))cs.push({entity:"recruitment",id:r.id,name:r.name,slug:r.slug,org:r.org,officialUrl:r.official_notification_url||r.notification_url||null,score,why:urlHit?"exact FJA source URL/article ID":adHit?"advertisement number + organization + title":"title/organization similarity",r});
+   if(urlHit||adHit||(orgSafe&&identity.safe))cs.push({entity:"recruitment",id:r.id,name:r.name,slug:r.slug,org:r.org,officialUrl:r.official_notification_url||r.notification_url||null,score,why:urlHit?"exact FJA source URL/article ID":adHit?"advertisement number + verified organization + role":identity.reason,r});
   }
   for(const p of posts){
    const ts=Math.max(sim(l.title,p.name||""),sim(title,p.name||"")),os=org?sim(org,p.org||""):0;
-   if(ts>=.62&&(!org||os>=.25))cs.push({entity:"post",id:p.id,name:p.name,slug:p.slug,org:p.org,officialUrl:p.source_url||null,score:ts*(org?.65+.35*os:.8),why:"post title/organization similarity",r:p});
+   const identity=safeEntityMatch({sourceOrganization:org,candidateOrganization:p.org,sourceTitle:title,candidateTitle:p.name,minimumRoleSimilarity:.65});
+   if(identity.safe)cs.push({entity:"post",id:p.id,name:p.name,slug:p.slug,org:p.org,officialUrl:p.source_url||null,score:ts*(org?.65+.35*os:.8),why:identity.reason,r:p});
   }
   cs.sort((a,b)=>b.score-a.score);const top=cs[0],second=cs[1];let bucket="ambiguous";
   if(nonRecruitment)bucket="non_recruitment_update";
