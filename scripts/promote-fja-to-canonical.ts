@@ -248,7 +248,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     (row.other_info_raw as Record<string, any> | null)?.official_notification_url,
     (row.other_info_raw as Record<string, any> | null)?.officialNotificationUrl,
   ].find((value) => typeof value === "string" && isOfficialAuthorityHost(value)) as string | undefined;
-  const officialNotificationUrl = storedOfficialNotificationUrl ?? capturedOfficialUrl ?? extractOfficialNotificationUrl(rawLinks);
+  const officialNotificationUrl = storedOfficialNotificationUrl ?? capturedOfficialUrl ?? extractOfficialNotificationUrl(allLinks as Array<Record<string, unknown>>);
   const salaryRaw = (facts.salary_pay ?? facts.salary ?? detail.salary) as string | undefined;
   const { min: salaryMin, max: salaryMax } = parseSalary(salaryRaw);
   const locationText = (facts.location ?? detail.location) as string | undefined;
