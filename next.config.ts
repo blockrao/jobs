@@ -19,9 +19,6 @@ const nextConfig: NextConfig = {
     { source: "/jobs/jobs/hindustan-aeronautics-limited-2026-01", destination: "/jobs/org1684-2026-0001", permanent: true },
     { source: "/jobs/jobs/visva-bharati-2026-01", destination: "/jobs/org1575-2026-0001", permanent: true },
     { source: "/jobs/jobs/navsari-agricultural-university-2026-01", destination: "/jobs/org1467-2026-0001", permanent: true },
-    { source: "/jobs/jobs/one-stop-centre-sivasagar-2026-02651", destination: "/jobs/org87-2026-0008", permanent: true },
-    { source: "/jobs/jobs/tata-institute-of-social-sciences-2026-02", destination: "/jobs/org1554-2026-0007", permanent: true },
-    { source: "/jobs/jobs/kalsi-forest-division-2026-01", destination: "/jobs/org1386-2026-0001", permanent: true },
 
     // Additional exact GSC examples discovered during full-export reconciliation.
     // The bare /jobs/jobs path is a duplicate of the canonical jobs index.
