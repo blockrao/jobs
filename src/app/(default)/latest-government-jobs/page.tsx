@@ -92,10 +92,10 @@ export default async function LatestGovernmentJobsPage() {
         AND COALESCE(r.notification_date, r.created_at) >= now() - interval '30 days'
         AND p.slug IS NOT NULL
         AND btrim(p.slug) <> ''
-        -- Legacy organisation-ID slugs are not valid canonical recruitment hubs.
-        -- The report must only link to the agreed /jobs/{recruitment-slug} contract.
+        -- Exclude known legacy organisation-ID slugs from canonical recruitment URLs.
         AND r.slug !~* '^org[0-9]+-'
-        AND r.slug ~ '^[a-z0-9]+(-[a-z0-9]+)*
+        AND r.slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
+        AND p.slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
       ORDER BY COALESCE(r.notification_date, r.created_at) DESC, p.updated_at DESC, r.id DESC
       LIMIT 50
     `);
