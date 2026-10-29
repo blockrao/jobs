@@ -76,7 +76,6 @@ async function main(){
   FROM public.fja_job_inventory f
   WHERE f.source_slug='freejobalert'
     AND f.detail_status='EXTRACTED'
-    AND lower(coalesce(f.listing_category,'')) NOT LIKE '%expired%'
   ORDER BY f.first_seen_at DESC
  `)) as unknown as Row[];
  const inventory=Array.isArray(raw)?raw:(raw as unknown as {rows?:Row[]}).rows??[];
