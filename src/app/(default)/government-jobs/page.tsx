@@ -5,7 +5,7 @@ import { pageSeo } from "@/lib/seo";
 import { listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
 import { safeQuery } from "@/lib/safe-query";
 import { SECTORS, sectorHref } from "@/lib/sectors";
-import { parsePage, pageHref } from "@/lib/pagination";
+import { parsePage } from "@/lib/pagination";
 import { formatDate } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import { recruitmentHref } from "@/lib/recruitment-href";
