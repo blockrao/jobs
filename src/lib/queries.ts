@@ -475,7 +475,8 @@ export async function getHomeStats(): Promise<HomeStats> {
 
 const livePostCondition = sql`
   ${recruitments.status} IN ('ACTIVE', 'UPCOMING')
-  AND (${recruitments.applicationEndDate} IS NULL OR ${recruitments.applicationEndDate} > NOW())
+  -- The closing date remains valid through that UTC calendar day; do not compare a date-only value to the current timestamp.
+  AND (${recruitments.applicationEndDate} IS NULL OR ${recruitments.applicationEndDate} >= now()::date)
   AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
 `;
 
