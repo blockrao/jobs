@@ -23,6 +23,13 @@ const nextConfig: NextConfig = {
     { source: "/jobs/jobs/tata-institute-of-social-sciences-2026-02", destination: "/jobs/org1554-2026-0007", permanent: true },
     { source: "/jobs/jobs/kalsi-forest-division-2026-01", destination: "/jobs/org1386-2026-0001", permanent: true },
 
+    // Additional exact GSC examples discovered during full-export reconciliation.
+    // The bare /jobs/jobs path is a duplicate of the canonical jobs index.
+    { source: "/jobs/jobs", destination: "/jobs", permanent: true },
+    { source: "/jobs/jobs/csc-e-governance-services-india-supervisor-operator-2026", destination: "/jobs/org2319-2026-0001", permanent: true },
+    { source: "/jobs/jobs/warehousing-development-and-regulatory-authority-2026-01", destination: "/jobs/org1577-2026-0001", permanent: true },
+    { source: "/jobs/jobs/law-justice-dept-ut-ladakh-2026-01", destination: "/jobs/org1682-2026-0001", permanent: true },
+
     // CRITICAL FIX (2026-10-24): Removed the regex redirect rule that was stripping
     // trailing numbers from new slugs. New slugs like 'org1121-2026-0004' were being
     // treated as 'org1121-2026' + id '0004', causing 308 redirect chains that showed
