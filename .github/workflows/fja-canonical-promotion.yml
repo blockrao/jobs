@@ -1,19 +1,27 @@
-name: Promote new open FreeJobAlert records
+name: Promote eligible FreeJobAlert inventory to canonical pages
 
 on:
   # Intentionally manual-only: merging code must never trigger production writes.
   workflow_dispatch:
     inputs:
-      external_ids:
-        description: "Comma-separated FJA external IDs for a tightly scoped pilot"
+      scope:
+        description: "pilot = explicit external IDs; eligible_inventory = all EXTRACTED + OPEN records after canonical dedup checks"
         required: true
+        type: choice
+        options:
+          - pilot
+          - eligible_inventory
+        default: pilot
+      external_ids:
+        description: "Comma-separated FJA external IDs (required for pilot; leave empty for eligible_inventory)"
+        required: false
         type: string
-        default: "3074743,3075235"
+        default: ""
       limit:
         description: "Maximum eligible records to process"
         required: true
         type: string
-        default: "50"
+        default: "1000"
       dry_run:
         description: "Dry run only; no database writes"
         required: true
@@ -24,8 +32,13 @@ on:
         required: true
         type: boolean
         default: false
+      confirm_full_inventory:
+        description: "Explicitly authorize a live run over all eligible inventory (only when scope=eligible_inventory)"
+        required: true
+        type: boolean
+        default: false
       publish_after_ingest:
-        description: "Publish only these newly inserted pilot rows if they pass the promotion gate, then verify public hub and leaf URLs"
+        description: "Publish newly inserted rows only if they pass the publication gate, then verify public hub and leaf URLs"
         required: true
         type: boolean
         default: false
@@ -55,27 +68,41 @@ jobs:
         env:
           FJA_PROMOTE_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
           FJA_PROMOTE_EXTERNAL_IDS: ${{ inputs.external_ids }}
+          FJA_PROMOTE_SCOPE: ${{ inputs.scope }}
           CONFIRM_LIVE_WRITE: ${{ inputs.confirm_live_write }}
+          CONFIRM_FULL_INVENTORY: ${{ inputs.confirm_full_inventory }}
         run: |
           if [ "$FJA_PROMOTE_DRY_RUN" != "1" ] && [ "$CONFIRM_LIVE_WRITE" != "true" ]; then
             echo "Refusing live promotion: set confirm_live_write=true explicitly."
             exit 1
           fi
-          if [ "$FJA_PROMOTE_DRY_RUN" != "1" ] && [ -z "${FJA_PROMOTE_EXTERNAL_IDS//[ ,]/}" ]; then
-            echo "Refusing unscoped live promotion: provide specific external_ids."
+          if [ "$FJA_PROMOTE_DRY_RUN" != "1" ] && [ "$FJA_PROMOTE_SCOPE" = "pilot" ] && [ -z "${FJA_PROMOTE_EXTERNAL_IDS//[ ,]/}" ]; then
+            echo "Refusing pilot promotion without specific external_ids."
+            exit 1
+          fi
+          if [ "$FJA_PROMOTE_DRY_RUN" != "1" ] && [ "$FJA_PROMOTE_SCOPE" = "eligible_inventory" ] && [ "$CONFIRM_FULL_INVENTORY" != "true" ]; then
+            echo "Refusing full eligible-inventory live promotion without confirm_full_inventory=true."
+            exit 1
+          fi
+          if [ "$FJA_PROMOTE_SCOPE" = "eligible_inventory" ] && [ -n "${FJA_PROMOTE_EXTERNAL_IDS//[ ,]/}" ]; then
+            echo "For eligible_inventory scope, clear external_ids so the run is not accidentally scoped as a pilot."
             exit 1
           fi
       - name: Promote eligible new records through canonical writer
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           FJA_PROMOTE_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
-          FJA_PROMOTE_EXTERNAL_IDS: ${{ inputs.external_ids }}
+          FJA_PROMOTE_EXTERNAL_IDS: ${{ inputs.scope == 'pilot' && inputs.external_ids || '' }}
+          FJA_PROMOTE_FULL_INVENTORY: ${{ inputs.scope == 'eligible_inventory' && '1' || '0' }}
+          FJA_PROMOTE_CONFIRM_FULL_INVENTORY: ${{ inputs.confirm_full_inventory && '1' || '0' }}
           FJA_PROMOTE_PUBLISH_AFTER_INGEST: ${{ inputs.publish_after_ingest && '1' || '0' }}
           FJA_PROMOTE_LIMIT: ${{ inputs.limit || '50' }}
           JOBOYE_BASE_URL: https://www.joboye.com
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; promotion stopped."; exit 1; }
-          echo "Running scoped FJA canonical pilot; dry_run=$FJA_PROMOTE_DRY_RUN limit=$FJA_PROMOTE_LIMIT publish=$FJA_PROMOTE_PUBLISH_AFTER_INGEST"
-          echo "External ID allowlist supplied: ${FJA_PROMOTE_EXTERNAL_IDS:+yes}"
-          test -n "$FJA_PROMOTE_EXTERNAL_IDS" || { echo "Missing external_ids allowlist; promotion stopped."; exit 1; }
+          echo "Running FJA canonical promotion; scope=${{ inputs.scope }} dry_run=$FJA_PROMOTE_DRY_RUN limit=$FJA_PROMOTE_LIMIT publish=$FJA_PROMOTE_PUBLISH_AFTER_INGEST"
+          if [ "${{ inputs.scope }}" = "pilot" ]; then
+            echo "External ID allowlist supplied: ${FJA_PROMOTE_EXTERNAL_IDS:+yes}"
+            test -n "$FJA_PROMOTE_EXTERNAL_IDS" || { echo "Missing external_ids allowlist; promotion stopped."; exit 1; }
+          fi
           npx tsx scripts/promote-fja-to-canonical.ts
