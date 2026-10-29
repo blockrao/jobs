@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
     { source: "/jobs/jobs/warehousing-development-and-regulatory-authority-2026-01", destination: "/jobs/org1577-2026-0001", permanent: true },
     { source: "/jobs/jobs/law-justice-dept-ut-ladakh-2026-01", destination: "/jobs/org1682-2026-0001", permanent: true },
 
+    // Legacy /posts/{slug} URL: DB audit found this slug maps to exactly one
+    // canonical post and recruitment, so a direct leaf redirect is unambiguous.
+    { source: "/posts/private-secretary", destination: "/jobs/org1335-2026-0004/private-secretary", permanent: true },
+
     // CRITICAL FIX (2026-10-24): Removed the regex redirect rule that was stripping
     // trailing numbers from new slugs. New slugs like 'org1121-2026-0004' were being
     // treated as 'org1121-2026' + id '0004', causing 308 redirect chains that showed
