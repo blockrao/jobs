@@ -537,8 +537,18 @@ export async function listLivePostsBySector(
 // the visible list, its counts, and ItemList schema describe publishable entities.
 const publicLivePostCondition = and(
   livePostCondition,
-  sql`${posts.postingStatus} IS DISTINCT FROM 'DUPLICATE'`,
-  sql`${recruitments.verificationStatus} IS DISTINCT FROM 'QUARANTINED'`,
+  // Moderation/provenance columns live on legacy/source postings, not canonical
+  // posts or recruitments. Exclude a canonical post when its linked source
+  // posting is explicitly rejected or quarantined; never query undeclared columns.
+  sql`NOT EXISTS (
+    SELECT 1
+    FROM ${postings}
+    WHERE ${postings.inferredPostId} = ${posts.id}
+      AND (
+        ${postings.reviewStatus} = 'REJECTED'
+        OR ${postings.verificationStatus} = 'QUARANTINED'
+      )
+  )`,
   sql`${organizations.slug} <> ${UNRESOLVED_ORG_SLUG}`,
   sql`lower(btrim(${organizations.name})) <> ${UNRESOLVED_ORG_NAME.toLowerCase()}`,
   sql`btrim(${posts.slug}) <> ''`,
