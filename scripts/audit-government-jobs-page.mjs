@@ -205,7 +205,7 @@ async function main() {
     { name: "Page title exists", pass: Boolean(title), actual: title },
     { name: "Title does not duplicate JobOye brand", pass: (title?.match(/JobOye/g) || []).length <= 1, actual: title },
     { name: "Canonical exists", pass: Boolean(canonicalUrl), actual: canonicalUrl },
-    { name: "Canonical matches final page URL", pass: Boolean(canonicalUrl && canonicalUrl.replace(/\\/$/, "") === response.url.replace(/\\/$/, "")), actual: { canonicalUrl, finalUrl: response.url } },
+    { name: "Canonical matches final page URL", pass: Boolean(canonicalUrl && canonicalUrl.replace(/\/$/, "") === response.url.replace(/\/$/, "")), actual: { canonicalUrl, finalUrl: response.url } },
     { name: "Open Graph URL matches canonical", pass: Boolean(canonicalUrl && ogUrl === canonicalUrl), actual: { canonicalUrl, ogUrl } },
     { name: "Page-specific Open Graph title exists", pass: Boolean(ogTitle && /government jobs/i.test(ogTitle)), actual: ogTitle },
     { name: "Page-specific Twitter title exists", pass: Boolean(twitterTitle && /government jobs/i.test(twitterTitle)), actual: twitterTitle },
