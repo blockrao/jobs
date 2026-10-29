@@ -163,7 +163,7 @@ function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): 
       const score = (notificationLabel ? 5 : 0) + (isPdf ? 3 : 0) + (careerPath ? 2 : 0);
       return { url, score, isPdf, notificationLabel, careerPath };
     })
-    .filter((item) => item.notificationLabel || (item.isPdf && item.careerPath))
+    .filter((item) => item.notificationLabel || item.isPdf)
     .sort((a, b) => b.score - a.score);
   return candidates[0]?.url;
 }
