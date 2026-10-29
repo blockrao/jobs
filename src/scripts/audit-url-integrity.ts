@@ -132,7 +132,15 @@ async function fetchRows(): Promise<UrlRow[]> {
   const hubs = await db.execute(sql`
     SELECT r.id, r.slug, r.name
     FROM public.recruitments r
-    WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.postings source_posting
+      WHERE source_posting.inferred_recruitment_id = r.id
+        AND (
+          source_posting.review_status = 'REJECTED'
+          OR source_posting.verification_status = 'QUARANTINED'
+        )
+    )
     ORDER BY r.id
   `);
   console.log("INVENTORY_DONE hubs query");
@@ -140,7 +148,15 @@ async function fetchRows(): Promise<UrlRow[]> {
     SELECT r.slug AS recruitment_slug, p.slug AS post_slug, p.title AS post_title
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.postings source_posting
+      WHERE source_posting.inferred_post_id = p.id
+        AND (
+          source_posting.review_status = 'REJECTED'
+          OR source_posting.verification_status = 'QUARANTINED'
+        )
+    )
     ORDER BY p.id
   `);
   console.log("INVENTORY_DONE leaves query");
@@ -162,7 +178,15 @@ async function fetchRows(): Promise<UrlRow[]> {
       FROM public.recruitment_slug_redirects d
       JOIN public.recruitments r ON r.id = d.recruitment_id
       WHERE d.old_slug <> d.new_slug
-        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.postings source_posting
+          WHERE source_posting.inferred_recruitment_id = r.id
+            AND (
+              source_posting.review_status = 'REJECTED'
+              OR source_posting.verification_status = 'QUARANTINED'
+            )
+        )
       ORDER BY d.id
     `);
     console.log("INVENTORY_DONE aliases query");
