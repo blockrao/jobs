@@ -128,12 +128,14 @@ async function requestWithChain(startUrl: string): Promise<{
 }
 async function fetchRows(): Promise<UrlRow[]> {
   const db = getDb();
+  console.log("INVENTORY_START hubs query");
   const hubs = await db.execute(sql`
     SELECT r.id, r.slug, r.name
     FROM public.recruitments r
     WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
     ORDER BY r.id
   `);
+  console.log("INVENTORY_DONE hubs query");
   const leaves = await db.execute(sql`
     SELECT r.slug AS recruitment_slug, p.slug AS post_slug, p.title AS post_title
     FROM public.posts p
@@ -141,6 +143,7 @@ async function fetchRows(): Promise<UrlRow[]> {
     WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
     ORDER BY p.id
   `);
+  console.log("INVENTORY_DONE leaves query");
   const rows: UrlRow[] = [];
   const hubRows = (hubs as { rows?: Array<{ slug: string; name: string }> }).rows ?? hubs as unknown as Array<{ slug: string; name: string }>;
   for (const row of hubRows) {
@@ -153,6 +156,7 @@ async function fetchRows(): Promise<UrlRow[]> {
     rows.push({ kind: "leaf", expectedUrl: url, expectedCanonical: url, expectedSlug: row.post_slug, expectedEntityName: row.post_title ?? "" });
   }
   if (scope === "all") {
+    console.log("INVENTORY_START aliases query");
     const aliases = await db.execute(sql`
       SELECT d.old_slug, d.new_slug, r.name
       FROM public.recruitment_slug_redirects d
@@ -161,6 +165,7 @@ async function fetchRows(): Promise<UrlRow[]> {
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY d.id
     `);
+    console.log("INVENTORY_DONE aliases query");
     const aliasRows = (aliases as { rows?: Array<{ old_slug: string; new_slug: string; name: string }> }).rows ?? aliases as unknown as Array<{ old_slug: string; new_slug: string; name: string }>;
     for (const row of aliasRows) {
       const url = `${base}/jobs/${row.old_slug}`;
@@ -231,7 +236,15 @@ function selectLimitedInventory(inventory: UrlRow[], requestedLimit: number): Ur
 async function main() {
   if (!/^https?:\/\//i.test(base)) throw new Error("--base must be an absolute HTTP(S) URL");
   if (!["canonical", "all"].includes(scope)) throw new Error("--scope must be canonical or all");
+  console.log("AUDIT_BOOT base=" + base + " scope=" + scope + " limit=" + limit);
+  // Inventory reads happen before per-URL progress; fail closed if the DB stalls here.
+  const inventoryWatchdog = setTimeout(() => {
+    console.error("FATAL inventory load exceeded 90 seconds; terminating instead of leaving a silent/stuck audit.");
+    process.exit(2);
+  }, 90_000);
   const inventory = await fetchRows();
+  clearTimeout(inventoryWatchdog);
+  console.log(`INVENTORY_READY ${inventory.length} URLs`);
   const selected = limit > 0 ? selectLimitedInventory(inventory, limit) : inventory;
   console.log(`JobOye URL integrity audit: ${selected.length}/${inventory.length} URLs; scope=${scope}; base=${base}; concurrency=${concurrency}`);
   const results: Result[] = new Array(selected.length);
