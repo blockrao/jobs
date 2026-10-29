@@ -26,6 +26,8 @@ interface Row {
   details: unknown;
   official_notification_url: string | null;
   other_info_raw: unknown;
+  detail_status: string;
+  source_status: string;
   duplicate_recruitment_source_url: boolean;
   duplicate_posting_source_url: boolean;
   duplicate_posting_external_id: boolean;
@@ -146,6 +148,7 @@ async function main() {
            f.listing_category, f.published_date, f.application_start_date,
            f.application_end_date, f.advertisement_number, f.details,
            f.official_notification_url, f.other_info_raw,
+           f.detail_status, f.source_status,
            EXISTS (
              SELECT 1 FROM recruitments r
              WHERE lower(regexp_replace(trim(r.source_url), '/+$', '')) =
@@ -162,19 +165,6 @@ async function main() {
            f.other_info_raw->>'canonical_recruitment_id' AS canonical_recruitment_id
     FROM public.fja_job_inventory f
     WHERE f.source_slug = 'freejobalert'
-      AND NOT EXISTS (
-        SELECT 1 FROM recruitments r
-        WHERE lower(regexp_replace(trim(r.source_url), '/+$', '')) =
-              lower(regexp_replace(trim(f.source_url), '/+$', ''))
-      )
-      AND NOT EXISTS (
-        SELECT 1 FROM postings p
-        WHERE lower(regexp_replace(trim(p.source_url), '/+$', '')) =
-              lower(regexp_replace(trim(f.source_url), '/+$', ''))
-      )
-      AND NOT EXISTS (
-        SELECT 1 FROM postings p WHERE p.external_id = f.external_id
-      )
     ORDER BY f.first_seen_at DESC
   `)) as unknown as Row[];
   const inventory = Array.isArray(raw) ? raw : (raw as unknown as { rows?: Row[] }).rows ?? [];
@@ -200,6 +190,9 @@ async function main() {
       official_notification_url: official?.url ?? "",
       official_url_extraction_method: official?.method ?? "not_found",
       official_url_host_recognized: official ? isOfficialAuthorityHost(official.url) : false,
+      detail_status: row.detail_status,
+      source_status: row.source_status,
+      is_promotion_status_eligible: row.detail_status === "EXTRACTED" && row.source_status === "OPEN",
       duplicate_status: duplicateFound ? "DUPLICATE_FOUND" : "NO_DUPLICATE_FOUND",
       duplicate_checks: duplicateChecks,
       already_canonical_mapped: canonicalMapped,
@@ -219,8 +212,11 @@ async function main() {
   const selected = (LIMIT > 0 ? rows.slice(0, LIMIT) : rows).map((row) => ({
     ...row,
     ingest_recommendation: row.already_canonical_mapped ? "HOLD_ALREADY_CANONICAL_MAPPED"
-      : !row.official_notification_url ? "HOLD_MISSING_OFFICIAL_URL"
+      : !row.is_promotion_status_eligible ? "HOLD_STATUS_NOT_EXTRACTED_OPEN"
       : row.duplicate_status === "DUPLICATE_FOUND" ? "HOLD_DUPLICATE"
+      : !row.official_notification_url ? "HOLD_MISSING_OFFICIAL_URL"
+      : row.organization_resolution === "NONE" ? "HOLD_MISSING_ORGANIZATION"
+      : row.organization_resolution === "CANDIDATE" ? "HOLD_ORGANIZATION_REVIEW"
       : "REVIEW_OFFICIAL_URL_BEFORE_INGEST",
   }));
 
@@ -229,18 +225,20 @@ async function main() {
   const csvPath = path.join(OUT_DIR, `fja-candidate-audit-${stamp}.csv`);
   const jsonPath = path.join(OUT_DIR, `fja-candidate-audit-${stamp}.json`);
   const counts = {
-    promotion_candidate_rows: rows.length,
-    rows_reported: selected.length,
+    inventory_rows_reported: selected.length,
+    extracted_open_rows: selected.filter((row) => row.detail_status === "EXTRACTED" && row.source_status === "OPEN").length,
+    promotion_status_ineligible_rows: selected.filter((row) => !(row.detail_status === "EXTRACTED" && row.source_status === "OPEN")).length,
     official_url_found: selected.filter((row) => row.official_notification_url).length,
     official_url_missing: selected.filter((row) => !row.official_notification_url).length,
     duplicate_found: selected.filter((row) => row.duplicate_status === "DUPLICATE_FOUND").length,
     already_canonical_mapped: selected.filter((row) => row.already_canonical_mapped).length,
+    organization_review_required: selected.filter((row) => ["CANDIDATE", "NONE"].includes(row.organization_resolution)).length,
   };
   fs.writeFileSync(jsonPath, JSON.stringify({
     generated_at: new Date().toISOString(),
     mode: "READ_ONLY_AUDIT",
     writes_performed: 0,
-    candidate_selection: "Same source URL and external ID anti-joins as canonical promotion; row-level duplicate flags included",
+    candidate_selection: "All FreeJobAlert inventory rows; promotion eligibility, duplicate matches, canonical mapping, official URL and organization resolution are reported independently",
     counts,
     rows: selected,
   }, null, 2), "utf8");
