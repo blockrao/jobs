@@ -37,6 +37,7 @@ type Result = UrlRow & {
   title: string | null;
   noindex: boolean;
   checks: string[];
+  warnings: string[];
   error?: string;
 };
 
@@ -46,11 +47,12 @@ const arg = (name: string, fallback: string) => {
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 };
 const base = arg("--base", process.env.NEXT_PUBLIC_BASE_URL || "https://joboye.com").replace(/\/$/, "");
+const canonicalBase = arg("--canonical-base", process.env.CANONICAL_BASE_URL || "https://joboye.com").replace(/\/$/, "");
 const scope = arg("--scope", "canonical");
 const limit = Math.max(0, Number.parseInt(arg("--limit", "500"), 10) || 0);
 const offset = Math.max(0, Number.parseInt(arg("--offset", "0"), 10) || 0);
 const concurrency = Math.min(12, Math.max(1, Number.parseInt(arg("--concurrency", "6"), 10) || 6));
-const timeoutMs = Math.max(3000, Number.parseInt(arg("--timeout-ms", "15000"), 10) || 15000);
+const timeoutMs = Math.max(3000, Number.parseInt(arg("--timeout-ms", "8000"), 10) || 15000);
 const maxRedirects = 8;
 
 function decodeHtml(value: string): string {
@@ -149,12 +151,12 @@ async function fetchRows(): Promise<UrlRow[]> {
   const hubRows = (hubs as { rows?: Array<{ slug: string; name: string }> }).rows ?? hubs as unknown as Array<{ slug: string; name: string }>;
   for (const row of hubRows) {
     const url = `${base}/jobs/${row.slug}`;
-    rows.push({ kind: "hub", expectedUrl: url, expectedCanonical: url, expectedSlug: row.slug, expectedEntityName: row.name ?? "" });
+    rows.push({ kind: "hub", expectedUrl: url, expectedCanonical: `${canonicalBase}/jobs/${row.slug}`, expectedSlug: row.slug, expectedEntityName: row.name ?? "" });
   }
   const leafRows = (leaves as { rows?: Array<{ recruitment_slug: string; post_slug: string; post_title: string }> }).rows ?? leaves as unknown as Array<{ recruitment_slug: string; post_slug: string; post_title: string }>;
   for (const row of leafRows) {
     const url = `${base}/jobs/${row.recruitment_slug}/${row.post_slug}`;
-    rows.push({ kind: "leaf", expectedUrl: url, expectedCanonical: url, expectedSlug: row.post_slug, expectedEntityName: row.post_title ?? "" });
+    rows.push({ kind: "leaf", expectedUrl: url, expectedCanonical: `${canonicalBase}/jobs/${row.recruitment_slug}/${row.post_slug}`, expectedSlug: row.post_slug, expectedEntityName: row.post_title ?? "" });
   }
   if (scope === "all") {
     console.log("INVENTORY_START aliases query");
@@ -171,7 +173,7 @@ async function fetchRows(): Promise<UrlRow[]> {
     for (const row of aliasRows) {
       const url = `${base}/jobs/${row.old_slug}`;
       const target = `${base}/jobs/${row.new_slug}`;
-      rows.push({ kind: "alias", expectedUrl: url, expectedCanonical: target, expectedTargetUrl: target, expectedSlug: row.old_slug, expectedEntityName: row.name ?? "" });
+      rows.push({ kind: "alias", expectedUrl: url, expectedCanonical: `${canonicalBase}/jobs/${row.new_slug}`, expectedTargetUrl: `${canonicalBase}/jobs/${row.new_slug}`, expectedSlug: row.old_slug, expectedEntityName: row.name ?? "" });
     }
   }
   return rows;
@@ -196,7 +198,7 @@ async function requestWithRetry(startUrl: string): ReturnType<typeof requestWith
 async function check(row: UrlRow): Promise<Result> {
   const result: Result = {
     ...row, requestedUrl: row.expectedUrl, status: null, finalUrl: null, redirectChain: [],
-    elapsedMs: 0, canonical: null, title: null, noindex: false, checks: [],
+    elapsedMs: 0, canonical: null, title: null, noindex: false, checks: [], warnings: [],
   };
   try {
     const response = await requestWithRetry(row.expectedUrl);
@@ -208,6 +210,9 @@ async function check(row: UrlRow): Promise<Result> {
     result.canonical = canonicalFrom(response.body);
     result.noindex = isNoindex(response.body, response.xRobots);
     if (response.status !== 200) result.checks.push(`final HTTP ${response.status}, expected 200`);
+    if (row.kind !== "alias" && response.status === 200 && response.chain.length === 1 && new URL(row.expectedUrl).hostname !== new URL(row.expectedCanonical).hostname) {
+      result.checks.push(`non-canonical host serves a duplicate 200 page instead of redirecting to ${new URL(row.expectedCanonical).origin}`);
+    }
     if (row.kind === "alias") {
       if (response.chain.length < 2) result.checks.push("alias did not redirect");
       const first = response.chain[0];
@@ -217,7 +222,15 @@ async function check(row: UrlRow): Promise<Result> {
       if (response.chain.length !== 1) result.checks.push(`canonical URL unexpectedly redirects to ${response.finalUrl}`);
       if (result.canonical) {
         const actualCanonical = new URL(result.canonical, response.finalUrl).toString();
-        if (normalizeUrl(actualCanonical) !== normalizeUrl(row.expectedCanonical)) result.checks.push(`canonical mismatch: ${result.canonical}`);
+        if (normalizeUrl(actualCanonical) !== normalizeUrl(row.expectedCanonical)) {
+          const actual = new URL(actualCanonical);
+          const expected = new URL(row.expectedCanonical);
+          if (actual.pathname === expected.pathname && actual.search === expected.search && actual.hostname !== expected.hostname) {
+            result.checks.push(`canonical host mismatch: actual ${actual.origin}; expected ${expected.origin}`);
+          } else {
+            result.checks.push(`canonical URL mismatch: actual ${actualCanonical}; expected ${row.expectedCanonical}`);
+          }
+        }
       } else {
         result.checks.push("missing canonical tag");
       }
@@ -227,7 +240,7 @@ async function check(row: UrlRow): Promise<Result> {
     if (row.expectedEntityName && response.body) {
       const expected = normalizeText(row.expectedEntityName);
       const htmlText = normalizeText(response.body.replace(/<[^>]+>/g, " "));
-      if (expected.length > 8 && !htmlText.includes(expected)) result.checks.push("expected entity name not found verbatim in rendered HTML (review; may be text-encoding/formatting difference)");
+      if (expected.length > 8 && !htmlText.includes(expected)) result.warnings.push("expected entity name not found verbatim in HTML text; manual review recommended (possible formatting/encoding difference)");
     }
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error);
@@ -253,9 +266,10 @@ function selectLimitedInventory(inventory: UrlRow[], requestedLimit: number, req
 
 async function main() {
   if (!/^https?:\/\//i.test(base)) throw new Error("--base must be an absolute HTTP(S) URL");
+  if (!/^https?:\/\//i.test(canonicalBase)) throw new Error("--canonical-base must be an absolute HTTP(S) URL");
   if (!["canonical", "all"].includes(scope)) throw new Error("--scope must be canonical or all");
   if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("--offset must be a non-negative integer");
-  console.log("AUDIT_BOOT base=" + base + " scope=" + scope + " limit=" + limit + " offset=" + offset);
+  console.log("AUDIT_BOOT base=" + base + " canonicalBase=" + canonicalBase + " scope=" + scope + " limit=" + limit + " offset=" + offset);
   // Inventory reads happen before per-URL progress; fail closed if the DB stalls here.
   const inventoryWatchdog = setTimeout(() => {
     console.error("FATAL inventory load exceeded 90 seconds; terminating instead of leaving a silent/stuck audit.");
@@ -265,7 +279,7 @@ async function main() {
   clearTimeout(inventoryWatchdog);
   console.log(`INVENTORY_READY ${inventory.length} URLs`);
   const selected = selectLimitedInventory(inventory, limit, offset);
-  console.log(`JobOye URL integrity audit: ${selected.length}/${inventory.length} URLs; scope=${scope}; base=${base}; offset=${offset}; concurrency=${concurrency}`);
+  console.log(`JobOye URL integrity audit: ${selected.length}/${inventory.length} URLs; scope=${scope}; base=${base}; canonicalBase=${canonicalBase}; offset=${offset}; concurrency=${concurrency}`);
   const results: Result[] = new Array(selected.length);
   const reportDir = join(process.cwd(), "artifacts");
   await mkdir(reportDir, { recursive: true });
@@ -277,7 +291,7 @@ async function main() {
     saveChain = saveChain.then(async () => {
       const done = results.filter((r): r is Result => Boolean(r));
       const failures = done.filter((r) => r.checks.length > 0);
-      const summary = { generatedAt: new Date().toISOString(), base, scope, offset, requestedLimit: limit, inventoryCount: inventory.length, selectedCount: selected.length, checkedCount: done.length, passCount: done.length - failures.length, failCount: failures.length };
+      const summary = { generatedAt: new Date().toISOString(), base, canonicalBase, scope, offset, requestedLimit: limit, inventoryCount: inventory.length, selectedCount: selected.length, checkedCount: done.length, passCount: done.length - failures.length, failCount: failures.length, warningCount: done.reduce((n, r) => n + r.warnings.length, 0) };
       await writeFile(reportPath, JSON.stringify({ summary, failures, results: done }, null, 2));
     });
     return saveChain;
@@ -292,7 +306,7 @@ async function main() {
       results[index] = await check(row);
       completed++;
       const result = results[index];
-      console.log(`DONE ${index + 1}/${selected.length} ${row.kind} status=${result.status ?? "ERR"} elapsed=${result.elapsedMs}ms ${result.checks.length ? "FAIL " + result.checks.join("; ") : "PASS"}`);
+      console.log(`DONE ${index + 1}/${selected.length} ${row.kind} status=${result.status ?? "ERR"} elapsed=${result.elapsedMs}ms ${result.checks.length ? "FAIL " + result.checks.join("; ") : "PASS"}${result.warnings.length ? " WARN " + result.warnings.join("; ") : ""}`);
       if (completed % 5 === 0 || completed === selected.length) await saveProgress();
     }
   }
@@ -300,9 +314,9 @@ async function main() {
   await saveProgress();
   const failures = results.filter((r) => r.checks.length > 0);
   const summary = {
-    generatedAt: new Date().toISOString(), base, scope, offset, requestedLimit: limit, inventoryCount: inventory.length, selectedCount: selected.length,
+    generatedAt: new Date().toISOString(), base, canonicalBase, scope, offset, requestedLimit: limit, inventoryCount: inventory.length, selectedCount: selected.length,
     checkedCount: results.length, passCount: results.length - failures.length,
-    failCount: failures.length, statusCounts: results.reduce((acc, r) => {
+    failCount: failures.length, warningCount: results.reduce((n, r) => n + r.warnings.length, 0), statusCounts: results.reduce((acc, r) => {
       const key = r.status === null ? "REQUEST_ERROR" : String(r.status);
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
