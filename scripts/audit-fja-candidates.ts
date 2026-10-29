@@ -58,15 +58,19 @@ function extractOfficialUrl(row: Row): {url:string;method:string;label:string}|n
     other.official_notification_url, other.officialNotificationUrl,
   ].find((value) => typeof value === "string" && officialHost(value));
   if (typeof explicit === "string") return {url:explicit,method:"captured_official_notification_field",label:""};
-  const allLinks = [...collectLinks(details),...collectLinks(other)].filter((link,index,all)=>all.findIndex((candidate)=>candidate.url===link.url)===index);
-  const eligible = allLinks.filter((link)=>officialHost(link.url) && (
-    /(notification|advertisement|advt|official notice|recruitment notice|detailed notice|notification pdf|download notice)/i.test(link.label)
-    || /\.pdf(?:[?#]|$)/i.test(link.url)
-  )).map((link)=>({...link,score:
-    (/(notification|advertisement|advt|official notice|recruitment notice|detailed notice|notification pdf|download notice)/i.test(link.label)?5:0)
-    + (/\.pdf(?:[?#]|$)/i.test(link.url)?3:0)
-    + (/(recruit|vacan|career|job|advt|notice|advertisement|notification)/i.test(link.url)?2:0)
-  })).sort((a,b)=>b.score-a.score);
+  const links = [...collectLinks(details), ...collectLinks(other)]
+    .filter((link,index,all)=>all.findIndex(candidate=>candidate.url===link.url)===index);
+  const notificationLabel = /(notification|advertisement|official notice|\badvt\b)/i;
+  const otherDocument = /(corrigendum|addendum|extension|syllabus|result|admit card|answer key|application form|format)/i;
+  const isPdf = (url:string) => /\.pdf(?:[?#]|$)/i.test(url);
+  const fjaHost = (url:string) => { try { return new URL(url).hostname.toLowerCase().replace(/^www\./,"").includes("freejobalert"); } catch { return true; } };
+  const eligible = links.filter(link => officialHost(link.url) && !fjaHost(link.url) && !otherDocument.test(link.label) &&
+    (notificationLabel.test(link.label) || isPdf(link.url)))
+    .map(link=>({...link,score:
+      (notificationLabel.test(link.label)?5:0)
+      +(isPdf(link.url)?3:0)
+      +(/(recruit|vacan|career|advt|notice|advertisement|notification)/i.test(link.url)?2:0)
+    })).sort((a,b)=>b.score-a.score);
   return eligible[0] ? {url:eligible[0].url,method:"official_host_link_heuristic",label:eligible[0].label} : null;
 }
 function csvCell(value: unknown): string {
