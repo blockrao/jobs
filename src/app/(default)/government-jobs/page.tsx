@@ -23,9 +23,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const suffix = page > 1 ? ` — Page ${page}` : "";
   const path = page > 1 ? `/government-jobs?page=${page}` : "/government-jobs";
   return {
-    title: `All Government Jobs 2026 — Latest Vacancies & Last Dates${suffix} | JobOye`,
+    title: `All Government Jobs in India 2026 — Latest Govt Vacancies${suffix} | JobOye`,
     description:
-      "Browse open central and state government vacancies across India, including railway, banking, defence, PSU and public-sector recruitment. Check posts, vacancy counts, deadlines and official application links.",
+      "Find the latest government jobs in India across central and state departments, railways, banks, defence and PSUs. Compare vacancies, qualifications, application deadlines and official notification links.",
     ...pageSeo(path),
   };
 }
@@ -111,10 +111,10 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">India-wide recruitment directory</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">All Government Jobs in India 2026</h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-neutral-600">
-          Find open central and state government vacancies, railway recruitment, bank jobs, defence opportunities and PSU careers in one place. Compare post names, vacancy counts and application deadlines, then follow the official notification and apply link before submitting an application.
+          Explore current central and state government vacancies, railway recruitment, bank jobs, defence opportunities and PSU careers in one place. Compare post names, vacancy counts and application deadlines, then use the official notification and application links on each listing before applying.
         </p>
         <p className="mt-3 text-sm text-neutral-600">
-          {total.toLocaleString("en-IN")} listed open posts · Updated as recruitment records refresh · Always confirm details in the official notification.
+          {total.toLocaleString("en-IN")} listed posts · Page data refreshes hourly · Always confirm eligibility and dates in the official notification.
         </p>
       </header>
 
@@ -127,6 +127,33 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
           </Link>
         ))}
       </nav>
+
+      <section aria-labelledby="browse-more-government-jobs" className="mt-8 rounded-xl border border-black/10 bg-neutral-50 p-5">
+        <h2 id="browse-more-government-jobs" className="text-lg font-bold tracking-tight">Find government jobs that fit you</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-600">
+          Start with your education level or location, or prioritise vacancies with approaching deadlines. These browse pages help narrow the national list without replacing the official recruitment notice.
+        </p>
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {[
+            { href: "/qualifications", label: "Jobs by qualification" },
+            { href: "/states", label: "State-wise government jobs" },
+            { href: "/categories/central-government", label: "Central government jobs" },
+            { href: "/categories/state-government", label: "State government jobs" },
+            { href: "/categories/railway", label: "Railway jobs" },
+            { href: "/categories/banking", label: "Bank jobs" },
+            { href: "/categories/defence", label: "Defence jobs" },
+            { href: "/categories/psu", label: "PSU jobs" },
+            { href: "/closing-soon", label: "Jobs closing soon" },
+            { href: "/jobs", label: "Browse all job listings" },
+          ].map((item) => (
+            <li key={item.href}>
+              <Link href={item.href} className="inline-flex rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-neutral-700 hover:border-brand-500 hover:text-brand-700">
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="mt-8" aria-labelledby="all-open-jobs">
         <div className="flex flex-wrap items-end justify-between gap-3">

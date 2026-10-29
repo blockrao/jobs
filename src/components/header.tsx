@@ -8,11 +8,13 @@ import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
 
 // Primary navigation mirrors the homepage's information architecture
-// (HOMEPAGE_DESIGN_STRATEGY_2026_10_14): urgency first, then the browse axes
-// that are actually populated. Exams/News/Guides stay reachable from the footer.
+// (HOMEPAGE_DESIGN_STRATEGY_2026_10_14): urgency first, then the core browse
+// paths. The all-government-jobs pillar is a first-class destination, not
+// discoverable only through category tiles or footer links.
 const NAV_LINKS: { href: string; label: Record<Locale, string>; accent?: boolean }[] = [
   { href: "/closing-soon", label: { en: "Closing soon", hi: "जल्द बंद" }, accent: true },
   { href: "/jobs", label: { en: "All jobs", hi: "सभी नौकरियां" } },
+  { href: "/government-jobs", label: { en: "All Govt Jobs", hi: "सभी सरकारी नौकरियां" } },
   { href: "/qualifications", label: { en: "By qualification", hi: "योग्यता अनुसार" } },
   { href: "/categories", label: { en: "Categories", hi: "श्रेणियां" } },
   { href: "/organizations", label: { en: "Organisations", hi: "संगठन" } },
@@ -60,7 +62,7 @@ export function Header() {
           </span>
           {SITE_NAME}
         </Link>
-        <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <nav aria-label="Primary navigation" className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
