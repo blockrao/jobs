@@ -6,7 +6,7 @@
  * redirect chain, final destination, canonical metadata and basic entity hints.
  *
  * Usage:
- *   npm run audit:urls -- --base https://joboye.com --scope canonical
+ *   npm run audit:urls -- --base https://www.joboye.com --scope canonical
  *   npm run audit:urls -- --base https://joboye.com --scope all
  *   npm run audit:urls -- --base https://joboye.com --scope all --limit 100
  *
@@ -255,7 +255,7 @@ async function main() {
   if (!/^https?:\/\//i.test(base)) throw new Error("--base must be an absolute HTTP(S) URL");
   if (!["canonical", "all"].includes(scope)) throw new Error("--scope must be canonical or all");
   if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("--offset must be a non-negative integer");
-  console.log("AUDIT_BOOT base=" + base + " scope=" + scope + " limit=" + limit);
+  console.log("AUDIT_BOOT base=" + base + " scope=" + scope + " limit=" + limit + " offset=" + offset);
   // Inventory reads happen before per-URL progress; fail closed if the DB stalls here.
   const inventoryWatchdog = setTimeout(() => {
     console.error("FATAL inventory load exceeded 90 seconds; terminating instead of leaving a silent/stuck audit.");
