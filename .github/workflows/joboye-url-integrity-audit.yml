@@ -7,7 +7,7 @@ on:
         description: "Public site base URL to check"
         required: true
         type: string
-        default: "https://joboye.com"
+        default: "https://www.joboye.com"
       scope:
         description: "canonical checks hubs and leaves; all also checks known recruitment aliases"
         required: true
@@ -21,11 +21,16 @@ on:
         required: true
         type: string
         default: "0"
-      concurrency:
-        description: "Bounded request concurrency (1-12)"
+      offset:
+        description: "Starting position in the balanced canonical inventory (0-based)"
         required: true
         type: string
-        default: "6"
+        default: "0"
+      concurrency:
+        description: "Bounded request concurrency (1-12; use 4 for public-site audits)"
+        required: true
+        type: string
+        default: "4"
 
 permissions:
   contents: read
@@ -51,6 +56,7 @@ jobs:
           BASE_URL: ${{ inputs.base_url }}
           SCOPE: ${{ inputs.scope }}
           LIMIT: ${{ inputs.limit }}
+          OFFSET: ${{ inputs.offset }}
           CONCURRENCY: ${{ inputs.concurrency }}
         run: |
           node - <<'NODE'
@@ -71,11 +77,12 @@ jobs:
           BASE_URL: ${{ inputs.base_url }}
           SCOPE: ${{ inputs.scope }}
           LIMIT: ${{ inputs.limit }}
+          OFFSET: ${{ inputs.offset }}
           CONCURRENCY: ${{ inputs.concurrency }}
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
           mkdir -p artifacts
-          npx tsx src/scripts/audit-url-integrity.ts --base "$BASE_URL" --scope "$SCOPE" --limit "$LIMIT" --concurrency "$CONCURRENCY"
+          npx tsx src/scripts/audit-url-integrity.ts --base "$BASE_URL" --scope "$SCOPE" --limit "$LIMIT" --offset "$OFFSET" --concurrency "$CONCURRENCY"
       - name: Upload audit report even when checks fail
         if: always()
         uses: actions/upload-artifact@v4
