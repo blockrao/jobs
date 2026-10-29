@@ -153,7 +153,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                   <p className="mt-1 text-sm text-neutral-600">
                     <Link href={`/organizations/${post.orgSlug}`} className="hover:underline">{post.orgName}</Link>
                     {" · "}
-                    <Link href={recruitmentHref({ slug: post.recruitmentSlug, name: post.recruitmentName } as never)} className="hover:underline">{post.recruitmentName}</Link>
+                    <Link href={recruitmentHref({ slug: post.recruitmentSlug })} className="hover:underline">{post.recruitmentName}</Link>
                   </p>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     {post.vacancyTotal != null && <span className="text-neutral-700">{post.vacancyTotal.toLocaleString("en-IN")} vacancies</span>}
@@ -169,8 +169,8 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
         )}
 
         <nav aria-label="Pagination" className="mt-8 flex items-center justify-between border-t border-black/10 pt-5">
-          {page > 1 ? <Link href={pageHref("/government-jobs", page - 1)} rel="prev" className="font-semibold hover:underline">← Previous page</Link> : <span />}
-          {hasNext && <Link href={pageHref("/government-jobs", page + 1)} rel="next" className="font-semibold hover:underline">Next page →</Link>}
+          {page > 1 ? <Link href={`/government-jobs?page=${page - 1}`} rel="prev" className="font-semibold hover:underline">← Previous page</Link> : <span />}
+          {hasNext && <Link href={`/government-jobs?page=${page + 1}`} rel="next" className="font-semibold hover:underline">Next page →</Link>}
         </nav>
       </section>
 
