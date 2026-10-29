@@ -47,6 +47,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Syntax-check government jobs production audit
+        run: node --check scripts/audit-government-jobs-page.mjs
       - run: npm run test:contracts -- --reporter=dot
 
   contract-typecheck:
