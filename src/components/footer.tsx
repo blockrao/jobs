@@ -63,6 +63,9 @@ export function Footer() {
           <Link href="/jobs" className="hover:underline">
             {t.allJobs}
           </Link>
+          <Link href="/latest-government-jobs" className="hover:underline">
+            {locale === "hi" ? "नवीनतम सरकारी नौकरियां" : "Latest Government Jobs"}
+          </Link>
           <Link href="/states" className="hover:underline">
             {t.states}
           </Link>
