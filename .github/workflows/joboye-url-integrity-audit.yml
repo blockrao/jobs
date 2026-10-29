@@ -1,8 +1,14 @@
 name: JobOye URL integrity audit (read-only)
 
 on:
-  # Run four bounded batches per day so the inventory is checked progressively
-  # without requiring a person to start each run.
+  # Kick off an initial bounded audit when the workflow/audit implementation changes.
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/joboye-url-integrity-audit.yml"
+      - "src/scripts/audit-url-integrity.ts"
+  # Rotate through the known inventory in bounded batches.
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
@@ -21,7 +27,7 @@ on:
           - all
         default: canonical
       limit:
-        description: "Maximum URLs to check per batch (use 100 for safe resumable batches; 0 = all remaining URLs)"
+        description: "Maximum URLs to check per batch (use 100 for manual targeted checks; 0 = all remaining URLs)"
         required: true
         type: string
         default: "100"
@@ -68,13 +74,13 @@ jobs:
         run: |
           echo "base_url=${INPUT_BASE_URL:-https://joboye.com}" >> "$GITHUB_OUTPUT"
           echo "scope=${INPUT_SCOPE:-canonical}" >> "$GITHUB_OUTPUT"
-          echo "limit=${INPUT_LIMIT:-100}" >> "$GITHUB_OUTPUT"
           echo "concurrency=${INPUT_CONCURRENCY:-4}" >> "$GITHUB_OUTPUT"
           if [ "$EVENT_NAME" = "schedule" ]; then
-            # Inventory was approximately 12.2k URLs at the last audit.
-            # Rotate in 100-URL batches; four scheduled runs per day.
-            offset=$(( (RUN_NUMBER * 100) % 12200 ))
+            # At 500 URLs x four runs/day, cover ~12.2k URLs in about six days.
+            echo "limit=500" >> "$GITHUB_OUTPUT"
+            offset=$(( (RUN_NUMBER * 500) % 12200 ))
           else
+            echo "limit=${INPUT_LIMIT:-100}" >> "$GITHUB_OUTPUT"
             offset="${INPUT_OFFSET:-0}"
           fi
           echo "offset=$offset" >> "$GITHUB_OUTPUT"
