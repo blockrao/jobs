@@ -1,0 +1,53 @@
+name: Government jobs production smoke audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production or preview origin to audit"
+        required: true
+        type: string
+        default: "https://www.joboye.com"
+      page_path:
+        description: "Path to audit"
+        required: true
+        type: string
+        default: "/government-jobs"
+      asset_limit:
+        description: "Maximum referenced JS/CSS assets to probe (1-250)"
+        required: true
+        type: string
+        default: "80"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: government-jobs-smoke-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Measure HTML, metadata, and JS/CSS delivery
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run read-only production audit
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          PAGE_PATH: ${{ inputs.page_path }}
+          ASSET_LIMIT: ${{ inputs.asset_limit }}
+          ARTIFACT_DIR: artifacts
+        run: node scripts/audit-government-jobs-page.mjs
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: government-jobs-audit-${{ github.run_id }}
+          path: artifacts/government-jobs-audit-*.json
+          if-no-files-found: warn
+          retention-days: 14
