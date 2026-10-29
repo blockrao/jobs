@@ -17,10 +17,10 @@ on:
           - all
         default: canonical
       limit:
-        description: "Maximum URLs to check (0 = full inventory)"
+        description: "Maximum URLs to check per batch (0 = all remaining URLs)"
         required: true
         type: string
-        default: "0"
+        default: "500"
       offset:
         description: "Starting position in the balanced canonical inventory (0-based)"
         required: true
