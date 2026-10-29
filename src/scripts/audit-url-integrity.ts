@@ -47,7 +47,8 @@ const arg = (name: string, fallback: string) => {
 };
 const base = arg("--base", process.env.NEXT_PUBLIC_BASE_URL || "https://joboye.com").replace(/\/$/, "");
 const scope = arg("--scope", "canonical");
-const limit = Math.max(0, Number.parseInt(arg("--limit", "0"), 10) || 0);
+const limit = Math.max(0, Number.parseInt(arg("--limit", "500"), 10) || 0);
+const offset = Math.max(0, Number.parseInt(arg("--offset", "0"), 10) || 0);
 const concurrency = Math.min(12, Math.max(1, Number.parseInt(arg("--concurrency", "6"), 10) || 6));
 const timeoutMs = Math.max(3000, Number.parseInt(arg("--timeout-ms", "15000"), 10) || 15000);
 const maxRedirects = 8;
@@ -175,16 +176,30 @@ async function fetchRows(): Promise<UrlRow[]> {
   }
   return rows;
 }
+async function requestWithRetry(startUrl: string): ReturnType<typeof requestWithChain> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await requestWithChain(startUrl);
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) {
+        const delayMs = attempt * 750;
+        console.warn(`RETRY attempt=${attempt + 1}/3 url=${startUrl} delayMs=${delayMs} reason=${error instanceof Error ? error.message : String(error)}`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 async function check(row: UrlRow): Promise<Result> {
   const result: Result = {
     ...row, requestedUrl: row.expectedUrl, status: null, finalUrl: null, redirectChain: [],
     elapsedMs: 0, canonical: null, title: null, noindex: false, checks: [],
   };
   try {
-    const response = await Promise.race([
-      requestWithChain(row.expectedUrl),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`hard timeout after ${timeoutMs}ms`)), timeoutMs + 1000)),
-    ]);
+    const response = await requestWithRetry(row.expectedUrl);
     result.status = response.status;
     result.finalUrl = response.finalUrl;
     result.redirectChain = response.chain;
@@ -220,22 +235,26 @@ async function check(row: UrlRow): Promise<Result> {
   }
   return result;
 }
-function selectLimitedInventory(inventory: UrlRow[], requestedLimit: number): UrlRow[] {
+function selectLimitedInventory(inventory: UrlRow[], requestedLimit: number, requestedOffset: number): UrlRow[] {
   const groups = ["hub", "leaf", "alias"].map((kind) => inventory.filter((row) => row.kind === kind));
-  const selected: UrlRow[] = [];
-  for (let index = 0; selected.length < requestedLimit; index++) {
+  const interleaved: UrlRow[] = [];
+  for (let index = 0; ; index++) {
     let added = false;
     for (const group of groups) {
-      if (index < group.length && selected.length < requestedLimit) { selected.push(group[index]); added = true; }
+      if (index < group.length) { interleaved.push(group[index]); added = true; }
     }
     if (!added) break;
   }
-  return selected;
+  const start = Math.min(requestedOffset, interleaved.length);
+  return requestedLimit > 0
+    ? interleaved.slice(start, start + requestedLimit)
+    : interleaved.slice(start);
 }
 
 async function main() {
   if (!/^https?:\/\//i.test(base)) throw new Error("--base must be an absolute HTTP(S) URL");
   if (!["canonical", "all"].includes(scope)) throw new Error("--scope must be canonical or all");
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("--offset must be a non-negative integer");
   console.log("AUDIT_BOOT base=" + base + " scope=" + scope + " limit=" + limit);
   // Inventory reads happen before per-URL progress; fail closed if the DB stalls here.
   const inventoryWatchdog = setTimeout(() => {
@@ -245,8 +264,8 @@ async function main() {
   const inventory = await fetchRows();
   clearTimeout(inventoryWatchdog);
   console.log(`INVENTORY_READY ${inventory.length} URLs`);
-  const selected = limit > 0 ? selectLimitedInventory(inventory, limit) : inventory;
-  console.log(`JobOye URL integrity audit: ${selected.length}/${inventory.length} URLs; scope=${scope}; base=${base}; concurrency=${concurrency}`);
+  const selected = selectLimitedInventory(inventory, limit, offset);
+  console.log(`JobOye URL integrity audit: ${selected.length}/${inventory.length} URLs; scope=${scope}; base=${base}; offset=${offset}; concurrency=${concurrency}`);
   const results: Result[] = new Array(selected.length);
   const reportDir = join(process.cwd(), "artifacts");
   await mkdir(reportDir, { recursive: true });
@@ -258,7 +277,7 @@ async function main() {
     saveChain = saveChain.then(async () => {
       const done = results.filter((r): r is Result => Boolean(r));
       const failures = done.filter((r) => r.checks.length > 0);
-      const summary = { generatedAt: new Date().toISOString(), base, scope, inventoryCount: inventory.length, checkedCount: done.length, passCount: done.length - failures.length, failCount: failures.length };
+      const summary = { generatedAt: new Date().toISOString(), base, scope, offset, requestedLimit: limit, inventoryCount: inventory.length, selectedCount: selected.length, checkedCount: done.length, passCount: done.length - failures.length, failCount: failures.length };
       await writeFile(reportPath, JSON.stringify({ summary, failures, results: done }, null, 2));
     });
     return saveChain;
@@ -281,7 +300,7 @@ async function main() {
   await saveProgress();
   const failures = results.filter((r) => r.checks.length > 0);
   const summary = {
-    generatedAt: new Date().toISOString(), base, scope, inventoryCount: inventory.length,
+    generatedAt: new Date().toISOString(), base, scope, offset, requestedLimit: limit, inventoryCount: inventory.length, selectedCount: selected.length,
     checkedCount: results.length, passCount: results.length - failures.length,
     failCount: failures.length, statusCounts: results.reduce((acc, r) => {
       const key = r.status === null ? "REQUEST_ERROR" : String(r.status);
