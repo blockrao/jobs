@@ -210,6 +210,9 @@ async function check(row: UrlRow): Promise<Result> {
     result.canonical = canonicalFrom(response.body);
     result.noindex = isNoindex(response.body, response.xRobots);
     if (response.status !== 200) result.checks.push(`final HTTP ${response.status}, expected 200`);
+    if (row.kind !== "alias" && response.status === 200 && response.chain.length === 1 && new URL(row.expectedUrl).hostname !== new URL(row.expectedCanonical).hostname) {
+      result.checks.push(`non-canonical host serves a duplicate 200 page instead of redirecting to ${new URL(row.expectedCanonical).origin}`);
+    }
     if (row.kind === "alias") {
       if (response.chain.length < 2) result.checks.push("alias did not redirect");
       const first = response.chain[0];
