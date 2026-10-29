@@ -5,7 +5,7 @@
  * required, and source/verification state stays on the row.
  */
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { getDb } from "../db";
 import { postings, sourceObservations } from "../db/schema";
 import { findAggregatorViolations } from "../lib/approval-guard";
@@ -82,12 +82,21 @@ export interface PromotionReport {
  * is written. With apply=true eligible rows become APPROVED +
  * AUTOMATED_VALIDATION_PASS, which is what the lifecycle job and search expect.
  */
-export async function promotePending(db: Db, opts: { apply?: boolean; now?: Date } = {}): Promise<PromotionReport> {
+export async function promotePending(db: Db, opts: { apply?: boolean; now?: Date; postingIds?: number[] } = {}): Promise<PromotionReport> {
   const now = opts.now ?? new Date();
+  // When a caller supplies a posting ID allowlist, never broaden the scope.
+  // An empty allowlist means "publish nothing", not "all pending rows".
+  if (opts.postingIds && opts.postingIds.length === 0) return report;
   const rows = await db
     .select()
     .from(postings)
-    .where(and(eq(postings.reviewStatus, "PENDING"), eq(postings.publishingStatus, "DRAFT")));
+    .where(opts.postingIds
+      ? and(
+          eq(postings.reviewStatus, "PENDING"),
+          eq(postings.publishingStatus, "DRAFT"),
+          inArray(postings.id, opts.postingIds),
+        )
+      : and(eq(postings.reviewStatus, "PENDING"), eq(postings.publishingStatus, "DRAFT")));
   const report: PromotionReport = { considered: rows.length, eligible: 0, promoted: 0, failedReasons: {}, eligibleIds: [] };
   for (const row of rows) {
     const latest = await db.query.sourceObservations.findFirst({
