@@ -52,7 +52,7 @@ const scope = arg("--scope", "canonical");
 const limit = Math.max(0, Number.parseInt(arg("--limit", "500"), 10) || 0);
 const offset = Math.max(0, Number.parseInt(arg("--offset", "0"), 10) || 0);
 const concurrency = Math.min(12, Math.max(1, Number.parseInt(arg("--concurrency", "6"), 10) || 6));
-const timeoutMs = Math.max(3000, Number.parseInt(arg("--timeout-ms", "15000"), 10) || 15000);
+const timeoutMs = Math.max(3000, Number.parseInt(arg("--timeout-ms", "8000"), 10) || 15000);
 const maxRedirects = 8;
 
 function decodeHtml(value: string): string {
