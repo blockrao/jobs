@@ -58,27 +58,22 @@ function cell(v:unknown):string{const s=v==null?"":typeof v==="string"?v:JSON.st
 
 async function main(){
  const db=getDb();
-  // Inventory may be absent in current environments after legacy cleanup.
-  // Fail with a targeted message and no writes instead of an opaque SQL error.
-  const exists = await db.execute(sql.raw("SELECT to_regclass('public.fja_job_inventory') AS table_name"));
-  const existsRows = Array.isArray(exists) ? exists as Array<{table_name:string|null}> : (exists as unknown as {rows?:Array<{table_name:string|null}>}).rows ?? [];
-  if (!existsRows[0]?.table_name) {
-    throw new Error("fja_job_inventory table is not present in the connected database. The legacy inventory has been removed; audit must be rebuilt from source_observations before proceeding.");
-  }
- // recruitment source URLs are not a top-level column in the canonical schema.
- // URL dedupe here follows the verified postings.source_url and external_id
- // checks used by the current promotion SQL; canonical mappings are separately flagged.
+ // The canonical promotion job uses legacy fja_job_inventory; current main
+ // schema no longer declares it. Check table existence first, then query it.
+ const tableCheck=await db.execute(sql.raw("SELECT to_regclass('public.fja_job_inventory') AS table_name"));
+ const checkRows=Array.isArray(tableCheck)?tableCheck as Array<{table_name:string|null}>:(tableCheck as unknown as {rows?:Array<{table_name:string|null}>}).rows??[];
+ if(!checkRows[0]?.table_name) throw new Error("fja_job_inventory is absent; rebuild this audit from source_observations before attempting any promotion.");
  const raw=await db.execute(sql.raw(`
   SELECT f.id,f.external_id,f.source_url,f.title,f.organization_name,f.listing_category,
    f.published_date,f.application_start_date,f.application_end_date,f.advertisement_number,
    f.details,f.official_notification_url,f.other_info_raw,
    EXISTS(SELECT 1 FROM postings p WHERE lower(regexp_replace(trim(p.source_url), '/+$',''))=lower(regexp_replace(trim(f.source_url), '/+$',''))) AS duplicate_posting_source_url,
-   EXISTS(SELECT 1 FROM postings p WHERE p.external_id=f.external_id) AS duplicate_posting_external_id,
+   EXISTS(SELECT 1 FROM postings p WHERE p.source=f.source_slug AND p.external_id=f.external_id) AS duplicate_posting_external_id,
    f.other_info_raw->>'canonical_recruitment_id' AS canonical_recruitment_id
   FROM fja_job_inventory f
   WHERE f.source_slug='freejobalert'
    AND NOT EXISTS(SELECT 1 FROM postings p WHERE lower(regexp_replace(trim(p.source_url), '/+$',''))=lower(regexp_replace(trim(f.source_url), '/+$','')))
-   AND NOT EXISTS(SELECT 1 FROM postings p WHERE p.external_id=f.external_id)
+   AND NOT EXISTS(SELECT 1 FROM postings p WHERE p.source=f.source_slug AND p.external_id=f.external_id)
   ORDER BY f.first_seen_at DESC
  `)) as unknown as Row[];
  const inventory=Array.isArray(raw)?raw:(raw as unknown as {rows?:Row[]}).rows??[];
