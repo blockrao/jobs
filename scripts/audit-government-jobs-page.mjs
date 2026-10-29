@@ -174,6 +174,23 @@ async function main() {
     }
   }
   // Use the final host after redirects so root-relative assets are tested on the canonical origin.
+  const visibleLeafPaths = [...html.matchAll(/href=["']([^"']+)["']/gi)]
+    .map((match) => {
+      try { return new URL(match[1].replaceAll("&amp;", "&"), pageUrl).pathname; } catch { return null; }
+    })
+    .filter((path) => typeof path === "string" && /^\/jobs\/[^/]+\/[^/]+\/?$/.test(path))
+    .map((path) => path.replace(/\/$/, ""));
+  const schemaLeafPaths = itemLists.flatMap((list) => (list.itemListElement || [])
+    .map((item) => {
+      try { return new URL(item.url, pageUrl).pathname.replace(/\/$/, ""); } catch { return null; }
+    })
+    .filter(Boolean));
+  const uniqueVisibleLeafPaths = [...new Set(visibleLeafPaths)];
+  const uniqueSchemaLeafPaths = [...new Set(schemaLeafPaths)];
+  const visibleSchemaParity = uniqueVisibleLeafPaths.length === visibleLeafPaths.length
+    && uniqueSchemaLeafPaths.length === schemaLeafPaths.length
+    && uniqueVisibleLeafPaths.length === uniqueSchemaLeafPaths.length
+    && uniqueVisibleLeafPaths.every((path) => uniqueSchemaLeafPaths.includes(path));
   const assets = extractAssets(html, new URL(response.url));
   const assetResults = await mapLimit(assets, CONCURRENCY, async (url) => ({ url, ...(await fetchWithTimeout(url)) }));
   const brokenAssets = assetResults.filter((x) => x.error || x.status < 200 || x.status >= 400);
@@ -190,6 +207,7 @@ async function main() {
     { name: "No unsupported 'India's Best' application-name claim", pass: !/india.?s best/i.test(appName || ""), actual: appName },
     { name: "ItemList JSON-LD parses", pass: jsonLdErrors.length === 0, actual: jsonLdErrors },
     { name: "ItemList item count matches declared count", pass: itemLists.length > 0 && itemLists.every((x) => x.numberOfItems === (x.itemListElement || []).length), actual: itemLists.map((x) => ({ numberOfItems: x.numberOfItems, actualItems: x.itemListElement?.length })) },
+    { name: "Visible job links match ItemList URLs", pass: visibleSchemaParity, actual: { visibleLinks: visibleLeafPaths.length, uniqueVisibleLinks: uniqueVisibleLeafPaths.length, schemaLinks: schemaLeafPaths.length, uniqueSchemaLinks: uniqueSchemaLeafPaths.length, missingFromSchema: uniqueVisibleLeafPaths.filter((path) => !uniqueSchemaLeafPaths.includes(path)).slice(0, 20), missingFromVisible: uniqueSchemaLeafPaths.filter((path) => !uniqueVisibleLeafPaths.includes(path)).slice(0, 20) } },
     { name: "Referenced JS/CSS assets respond successfully", pass: brokenAssets.length === 0, actual: brokenAssets.map((x) => ({ url: x.url, status: x.status, error: x.error })) },
   ];
 
