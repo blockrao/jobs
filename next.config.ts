@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
   },
   redirects: async () => [
+    // GSC 404 remediation (2026-10-29): historical URLs were emitted as
+    // /jobs/jobs/{legacy-recruitment-slug}. Remove only the duplicated "jobs"
+    // segment. The canonical jobs route then resolves the old slug through
+    // recruitment_slug_redirects and issues the second 301 to the true hub.
+    // The 11 examples in the supplied GSC export all have DB redirect mappings.
+    {
+      source: "/jobs/jobs/:slug",
+      destination: "/jobs/:slug",
+      permanent: true,
+    },
+
     // CRITICAL FIX (2026-10-24): Removed the regex redirect rule that was stripping
     // trailing numbers from new slugs. New slugs like 'org1121-2026-0004' were being
     // treated as 'org1121-2026' + id '0004', causing 308 redirect chains that showed
