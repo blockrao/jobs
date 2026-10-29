@@ -2,12 +2,9 @@
 /**
  * Read-only FJA candidate audit report.
  *
- * Emits a row-level CSV and JSON report of extracted/open FJA inventory rows
- * that are not already mapped by source URL or external ID. It never invokes
- * the canonical writer and performs no database mutations.
- *
- * Required: DATABASE_URL
- * Optional: FJA_AUDIT_LIMIT (0 = all; default 0), FJA_AUDIT_OUT_DIR (default ./artifacts)
+ * Generates row-level CSV/JSON for the same unpromoted FJA candidates that the
+ * canonical promotion script selects. It never invokes the writer or performs
+ * database mutations.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -29,6 +26,10 @@ interface Row {
   details: unknown;
   official_notification_url: string | null;
   other_info_raw: unknown;
+  duplicate_recruitment_source_url: boolean;
+  duplicate_posting_source_url: boolean;
+  duplicate_posting_external_id: boolean;
+  canonical_recruitment_id: number | null;
 }
 
 const LIMIT = Math.max(0, Number.parseInt(process.env.FJA_AUDIT_LIMIT ?? "0", 10) || 0);
@@ -40,7 +41,7 @@ function record(value: unknown): Record<string, unknown> {
     try {
       const parsed: unknown = JSON.parse(value);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
-    } catch { /* malformed capture data is reported as missing */ }
+    } catch { /* malformed source capture is reported as missing */ }
   }
   return {};
 }
@@ -104,6 +105,9 @@ function csvCell(value: unknown): string {
 
 async function main() {
   const db = getDb();
+  // Mirror the promotion selection's URL-level filters and exact anti-joins.
+  // The source inventory is queried read-only; rows with prior canonical mapping
+  // in other_info_raw are separately labelled and held from promotion.
   const result = await db.execute(sql.raw(`
     SELECT f.id, f.external_id, f.source_url, f.title, f.organization_name,
            f.listing_category, f.published_date, f.application_start_date,
@@ -122,14 +126,22 @@ async function main() {
            EXISTS (
              SELECT 1 FROM postings p WHERE p.external_id = f.external_id
            ) AS duplicate_posting_external_id,
-           EXISTS (
-             SELECT 1 FROM recruitments r
-             WHERE r.external_id = f.external_id
-           ) AS duplicate_recruitment_external_id
+           (f.other_info_raw->>'canonical_recruitment_id') AS canonical_recruitment_id
     FROM fja_job_inventory f
     WHERE f.source_slug = 'freejobalert'
-      AND f.detail_status = 'EXTRACTED'
-      AND lower(coalesce(f.listing_category, '')) NOT LIKE '%expired%'
+      AND NOT EXISTS (
+        SELECT 1 FROM recruitments r
+        WHERE lower(regexp_replace(trim(r.source_url), '/+$', '')) =
+              lower(regexp_replace(trim(f.source_url), '/+$', ''))
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM postings p
+        WHERE lower(regexp_replace(trim(p.source_url), '/+$', '')) =
+              lower(regexp_replace(trim(f.source_url), '/+$', ''))
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM postings p WHERE p.external_id = f.external_id
+      )
     ORDER BY f.first_seen_at DESC
   `)) as unknown as Row[];
 
@@ -138,13 +150,13 @@ async function main() {
   const rows = inventory.map((r) => {
     const official = extractOfficialUrl(r);
     const duplicateFlags = {
-      recruitment_source_url: Boolean((r as any).duplicate_recruitment_source_url),
-      posting_source_url: Boolean((r as any).duplicate_posting_source_url),
-      posting_external_id: Boolean((r as any).duplicate_posting_external_id),
-      recruitment_external_id: Boolean((r as any).duplicate_recruitment_external_id),
+      recruitment_source_url: Boolean(r.duplicate_recruitment_source_url),
+      posting_source_url: Boolean(r.duplicate_posting_source_url),
+      posting_external_id: Boolean(r.duplicate_posting_external_id),
     };
     const duplicate = Object.values(duplicateFlags).some(Boolean);
     const org = resolveOrganization(orgIndex, r.organization_name);
+    const mapped = r.canonical_recruitment_id != null;
     return {
       inventory_id: r.id,
       external_id: r.external_id,
@@ -156,8 +168,10 @@ async function main() {
       official_url_extraction_method: official?.method ?? "not_found",
       official_url_link_label: official?.label ?? "",
       official_url_host_recognized: official ? officialHost(official.url) : false,
-      duplicate_status: duplicate ? "DUPLICATE_FOUND" : "NO_DUPLICATE_FOUND",
+      duplicate_status: duplicate ? "DUPLICATE_FOUND" : "NO_DUPLICATE_FOUND_BY_SOURCE_KEYS",
       duplicate_checks: duplicateFlags,
+      already_canonical_mapped: mapped,
+      canonical_recruitment_id: r.canonical_recruitment_id ?? "",
       organization_resolution: org.kind,
       organization_resolution_reason: org.kind === "CANDIDATE" ? org.reason : org.kind === "NONE" ? org.reason : org.kind === "ALIAS" ? "alias_match" : org.ambiguous ? "multiple_existing_matches" : "existing_name_match",
       published_date: r.published_date,
@@ -168,25 +182,27 @@ async function main() {
   });
   const selected = (LIMIT > 0 ? rows.slice(0, LIMIT) : rows).map((r) => ({
     ...r,
-    ingest_recommendation: r.official_notification_url && r.duplicate_status === "NO_DUPLICATE_FOUND" ? "REVIEW_OFFICIAL_URL_BEFORE_INGEST" : r.official_notification_url ? "HOLD_DUPLICATE" : "HOLD_MISSING_OFFICIAL_URL",
+    ingest_recommendation: r.already_canonical_mapped ? "HOLD_ALREADY_CANONICAL_MAPPED" : !r.official_notification_url ? "HOLD_MISSING_OFFICIAL_URL" : r.duplicate_status === "DUPLICATE_FOUND" ? "HOLD_DUPLICATE" : "REVIEW_OFFICIAL_URL_BEFORE_INGEST",
   }));
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const jsonPath = path.join(OUT_DIR, `fja-candidate-audit-${stamp}.json`);
   const csvPath = path.join(OUT_DIR, `fja-candidate-audit-${stamp}.csv`);
+  const counts = {
+    official_url_found: selected.filter(r => r.official_notification_url).length,
+    official_url_missing: selected.filter(r => !r.official_notification_url).length,
+    duplicate_found: selected.filter(r => r.duplicate_status === "DUPLICATE_FOUND").length,
+    no_source_key_duplicate_found: selected.filter(r => r.duplicate_status === "NO_DUPLICATE_FOUND_BY_SOURCE_KEYS").length,
+    already_canonical_mapped: selected.filter(r => r.already_canonical_mapped).length,
+  };
   fs.writeFileSync(jsonPath, JSON.stringify({
     generated_at: new Date().toISOString(),
     read_only: true,
-    selection: "freejobalert inventory with detail_status=EXTRACTED; duplicate flags checked independently",
+    selection: "freejobalert source records that pass the canonical promotion source-URL/external-ID anti-joins",
     inventory_rows_scanned: rows.length,
     rows_reported: selected.length,
-    counts: {
-      official_url_found: selected.filter(r => r.official_notification_url).length,
-      official_url_missing: selected.filter(r => !r.official_notification_url).length,
-      duplicate_found: selected.filter(r => r.duplicate_status === "DUPLICATE_FOUND").length,
-      no_duplicate_found: selected.filter(r => r.duplicate_status === "NO_DUPLICATE_FOUND").length,
-    },
+    counts,
     rows: selected,
   }, null, 2), "utf8");
   const columns = Object.keys(selected[0] ?? { inventory_id: "" }).filter(k => k !== "duplicate_checks");
@@ -197,10 +213,7 @@ async function main() {
     writes_performed: 0,
     inventory_rows_scanned: rows.length,
     rows_reported: selected.length,
-    official_url_found: selected.filter(r => r.official_notification_url).length,
-    official_url_missing: selected.filter(r => !r.official_notification_url).length,
-    duplicate_found: selected.filter(r => r.duplicate_status === "DUPLICATE_FOUND").length,
-    no_duplicate_found: selected.filter(r => r.duplicate_status === "NO_DUPLICATE_FOUND").length,
+    counts,
     csv_report: csvPath,
     json_report: jsonPath,
   }, null, 2));
