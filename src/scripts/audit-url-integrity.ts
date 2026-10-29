@@ -6,9 +6,9 @@
  * redirect chain, final destination, canonical metadata and basic entity hints.
  *
  * Usage:
- *   npm run audit:urls -- --base https://www.joboye.com --scope canonical
- *   npm run audit:urls -- --base https://www.joboye.com --scope all
- *   npm run audit:urls -- --base https://www.joboye.com --scope all --limit 100
+ *   npm run audit:urls -- --base https://joboye.com --scope canonical
+ *   npm run audit:urls -- --base https://joboye.com --scope all
+ *   npm run audit:urls -- --base https://joboye.com --scope all --limit 100
  *
  * "canonical" checks canonical hubs + post leaves. "all" additionally checks
  * every recruitment_slug_redirects alias. No database writes are performed.
@@ -45,7 +45,7 @@ const arg = (name: string, fallback: string) => {
   const index = args.indexOf(name);
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 };
-const base = arg("--base", process.env.NEXT_PUBLIC_BASE_URL || "https://www.joboye.com").replace(/\/$/, "");
+const base = arg("--base", process.env.NEXT_PUBLIC_BASE_URL || "https://joboye.com").replace(/\/$/, "");
 const scope = arg("--scope", "canonical");
 const limit = Math.max(0, Number.parseInt(arg("--limit", "0"), 10) || 0);
 const concurrency = Math.min(12, Math.max(1, Number.parseInt(arg("--concurrency", "6"), 10) || 6));
@@ -176,7 +176,10 @@ async function check(row: UrlRow): Promise<Result> {
     elapsedMs: 0, canonical: null, title: null, noindex: false, checks: [],
   };
   try {
-    const response = await requestWithChain(row.expectedUrl);
+    const response = await Promise.race([
+      requestWithChain(row.expectedUrl),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`hard timeout after ${timeoutMs}ms`)), timeoutMs + 1000)),
+    ]);
     result.status = response.status;
     result.finalUrl = response.finalUrl;
     result.redirectChain = response.chain;
@@ -212,23 +215,57 @@ async function check(row: UrlRow): Promise<Result> {
   }
   return result;
 }
+function selectLimitedInventory(inventory: UrlRow[], requestedLimit: number): UrlRow[] {
+  const groups = ["hub", "leaf", "alias"].map((kind) => inventory.filter((row) => row.kind === kind));
+  const selected: UrlRow[] = [];
+  for (let index = 0; selected.length < requestedLimit; index++) {
+    let added = false;
+    for (const group of groups) {
+      if (index < group.length && selected.length < requestedLimit) { selected.push(group[index]); added = true; }
+    }
+    if (!added) break;
+  }
+  return selected;
+}
+
 async function main() {
   if (!/^https?:\/\//i.test(base)) throw new Error("--base must be an absolute HTTP(S) URL");
   if (!["canonical", "all"].includes(scope)) throw new Error("--scope must be canonical or all");
   const inventory = await fetchRows();
-  const selected = limit > 0 ? inventory.slice(0, limit) : inventory;
+  const selected = limit > 0 ? selectLimitedInventory(inventory, limit) : inventory;
   console.log(`JobOye URL integrity audit: ${selected.length}/${inventory.length} URLs; scope=${scope}; base=${base}; concurrency=${concurrency}`);
   const results: Result[] = new Array(selected.length);
+  const reportDir = join(process.cwd(), "artifacts");
+  await mkdir(reportDir, { recursive: true });
+  const reportPath = join(reportDir, `url-integrity-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   let next = 0;
+  let completed = 0;
+  let saveChain: Promise<void> = Promise.resolve();
+  const saveProgress = () => {
+    saveChain = saveChain.then(async () => {
+      const done = results.filter((r): r is Result => Boolean(r));
+      const failures = done.filter((r) => r.checks.length > 0);
+      const summary = { generatedAt: new Date().toISOString(), base, scope, inventoryCount: inventory.length, checkedCount: done.length, passCount: done.length - failures.length, failCount: failures.length };
+      await writeFile(reportPath, JSON.stringify({ summary, failures, results: done }, null, 2));
+    });
+    return saveChain;
+  };
+  await saveProgress();
   async function worker() {
     while (true) {
       const index = next++;
       if (index >= selected.length) return;
-      results[index] = await check(selected[index]);
-      if ((index + 1) % 100 === 0) console.error(`Checked ${index + 1}/${selected.length}`);
+      const row = selected[index];
+      console.log(`START ${index + 1}/${selected.length} ${row.kind} ${row.expectedUrl}`);
+      results[index] = await check(row);
+      completed++;
+      const result = results[index];
+      console.log(`DONE ${index + 1}/${selected.length} ${row.kind} status=${result.status ?? "ERR"} elapsed=${result.elapsedMs}ms ${result.checks.length ? "FAIL " + result.checks.join("; ") : "PASS"}`);
+      if (completed % 5 === 0 || completed === selected.length) await saveProgress();
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, selected.length) }, worker));
+  await saveProgress();
   const failures = results.filter((r) => r.checks.length > 0);
   const summary = {
     generatedAt: new Date().toISOString(), base, scope, inventoryCount: inventory.length,
@@ -239,8 +276,6 @@ async function main() {
       return acc;
     }, {} as Record<string, number>),
   };
-  await mkdir(join(process.cwd(), "artifacts"), { recursive: true });
-  const reportPath = join(process.cwd(), "artifacts", `url-integrity-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   await writeFile(reportPath, JSON.stringify({ summary, failures, results }, null, 2));
   console.log(JSON.stringify({ ...summary, reportPath }, null, 2));
   for (const failure of failures.slice(0, 200)) {
