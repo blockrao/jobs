@@ -156,7 +156,7 @@ async function fetchRows(): Promise<UrlRow[]> {
   const leafRows = (leaves as { rows?: Array<{ recruitment_slug: string; post_slug: string; post_title: string }> }).rows ?? leaves as unknown as Array<{ recruitment_slug: string; post_slug: string; post_title: string }>;
   for (const row of leafRows) {
     const url = `${base}/jobs/${row.recruitment_slug}/${row.post_slug}`;
-    rows.push({ kind: "leaf", expectedUrl: url, expectedCanonical: url, expectedSlug: row.post_slug, expectedEntityName: row.post_title ?? "" });
+    rows.push({ kind: "leaf", expectedUrl: url, expectedCanonical: `${canonicalBase}/jobs/${row.recruitment_slug}/${row.post_slug}`, expectedSlug: row.post_slug, expectedEntityName: row.post_title ?? "" });
   }
   if (scope === "all") {
     console.log("INVENTORY_START aliases query");
@@ -173,7 +173,7 @@ async function fetchRows(): Promise<UrlRow[]> {
     for (const row of aliasRows) {
       const url = `${base}/jobs/${row.old_slug}`;
       const target = `${base}/jobs/${row.new_slug}`;
-      rows.push({ kind: "alias", expectedUrl: url, expectedCanonical: target, expectedTargetUrl: target, expectedSlug: row.old_slug, expectedEntityName: row.name ?? "" });
+      rows.push({ kind: "alias", expectedUrl: url, expectedCanonical: `${canonicalBase}/jobs/${row.new_slug}`, expectedTargetUrl: `${canonicalBase}/jobs/${row.new_slug}`, expectedSlug: row.old_slug, expectedEntityName: row.name ?? "" });
     }
   }
   return rows;
