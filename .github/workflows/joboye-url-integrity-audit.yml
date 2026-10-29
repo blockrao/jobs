@@ -66,6 +66,7 @@ jobs:
           if (!['https:', 'http:'].includes(url.protocol)) throw new Error('base_url must use HTTP or HTTPS');
           if (!['canonical', 'all'].includes(process.env.SCOPE)) throw new Error('invalid scope');
           if (!/^\d+$/.test(process.env.LIMIT)) throw new Error('limit must be a non-negative integer');
+          if (!/^\\d+$/.test(process.env.OFFSET)) throw new Error('offset must be a non-negative integer');
           const c = Number(process.env.CONCURRENCY);
           if (!Number.isInteger(c) || c < 1 || c > 12) throw new Error('concurrency must be between 1 and 12');
           NODE
