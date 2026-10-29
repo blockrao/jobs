@@ -1,6 +1,10 @@
 name: JobOye URL integrity audit (read-only)
 
 on:
+  # Run four bounded batches per day so the inventory is checked progressively
+  # without requiring a person to start each run.
+  schedule:
+    - cron: "0 */6 * * *"
   workflow_dispatch:
     inputs:
       base_url:
@@ -37,7 +41,7 @@ permissions:
 
 concurrency:
   group: joboye-read-only-url-integrity
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   audit:
@@ -51,14 +55,38 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Select safe audit batch
+        id: audit_params
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BASE_URL: ${{ github.event.inputs.base_url }}
+          INPUT_SCOPE: ${{ github.event.inputs.scope }}
+          INPUT_LIMIT: ${{ github.event.inputs.limit }}
+          INPUT_OFFSET: ${{ github.event.inputs.offset }}
+          INPUT_CONCURRENCY: ${{ github.event.inputs.concurrency }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          echo "base_url=${INPUT_BASE_URL:-https://joboye.com}" >> "$GITHUB_OUTPUT"
+          echo "scope=${INPUT_SCOPE:-canonical}" >> "$GITHUB_OUTPUT"
+          echo "limit=${INPUT_LIMIT:-100}" >> "$GITHUB_OUTPUT"
+          echo "concurrency=${INPUT_CONCURRENCY:-4}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            # Inventory was approximately 12.2k URLs at the last audit.
+            # Rotate in 100-URL batches; four scheduled runs per day.
+            offset=$(( (RUN_NUMBER * 100) % 12200 ))
+          else
+            offset="${INPUT_OFFSET:-0}"
+          fi
+          echo "offset=$offset" >> "$GITHUB_OUTPUT"
+          echo "Selected ${INPUT_SCOPE:-canonical} audit batch at offset $offset"
       - name: Validate inputs
         env:
-          BASE_URL: ${{ inputs.base_url }}
+          BASE_URL: ${{ steps.audit_params.outputs.base_url }}
           CANONICAL_BASE_URL: "https://joboye.com"
-          SCOPE: ${{ inputs.scope }}
-          LIMIT: ${{ inputs.limit }}
-          OFFSET: ${{ inputs.offset }}
-          CONCURRENCY: ${{ inputs.concurrency }}
+          SCOPE: ${{ steps.audit_params.outputs.scope }}
+          LIMIT: ${{ steps.audit_params.outputs.limit }}
+          OFFSET: ${{ steps.audit_params.outputs.offset }}
+          CONCURRENCY: ${{ steps.audit_params.outputs.concurrency }}
         run: |
           node - <<'NODE'
           const base = process.env.BASE_URL;
@@ -66,8 +94,8 @@ jobs:
           try { url = new URL(base); } catch { throw new Error('base_url must be an absolute URL'); }
           if (!['https:', 'http:'].includes(url.protocol)) throw new Error('base_url must use HTTP or HTTPS');
           if (!['canonical', 'all'].includes(process.env.SCOPE)) throw new Error('invalid scope');
-          if (!/^\d+$/.test(process.env.LIMIT)) throw new Error('limit must be a non-negative integer');
-          if (!/^\d+$/.test(process.env.OFFSET)) throw new Error('offset must be a non-negative integer');
+          if (!/^\\d+$/.test(process.env.LIMIT)) throw new Error('limit must be a non-negative integer');
+          if (!/^\\d+$/.test(process.env.OFFSET)) throw new Error('offset must be a non-negative integer');
           const c = Number(process.env.CONCURRENCY);
           if (!Number.isInteger(c) || c < 1 || c > 12) throw new Error('concurrency must be between 1 and 12');
           NODE
@@ -75,13 +103,13 @@ jobs:
         timeout-minutes: 20
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXT_PUBLIC_BASE_URL: ${{ inputs.base_url }}
-          BASE_URL: ${{ inputs.base_url }}
+          NEXT_PUBLIC_BASE_URL: ${{ steps.audit_params.outputs.base_url }}
+          BASE_URL: ${{ steps.audit_params.outputs.base_url }}
           CANONICAL_BASE_URL: "https://joboye.com"
-          SCOPE: ${{ inputs.scope }}
-          LIMIT: ${{ inputs.limit }}
-          OFFSET: ${{ inputs.offset }}
-          CONCURRENCY: ${{ inputs.concurrency }}
+          SCOPE: ${{ steps.audit_params.outputs.scope }}
+          LIMIT: ${{ steps.audit_params.outputs.limit }}
+          OFFSET: ${{ steps.audit_params.outputs.offset }}
+          CONCURRENCY: ${{ steps.audit_params.outputs.concurrency }}
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
           mkdir -p artifacts
@@ -93,4 +121,4 @@ jobs:
           name: joboye-url-integrity-${{ github.run_id }}
           path: artifacts/url-integrity-*.json
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 90
