@@ -32,6 +32,8 @@ const PILOT_IDS = process.env.FJA_PROMOTE_EXTERNAL_IDS
 const DEFAULT_LIMIT = DRY_RUN ? 50 : 0; // 0 = no limit
 const LIMIT = process.env.FJA_PROMOTE_LIMIT ? parseInt(process.env.FJA_PROMOTE_LIMIT, 10) : DEFAULT_LIMIT;
 const PUBLISH_AFTER_INGEST = process.env.FJA_PROMOTE_PUBLISH_AFTER_INGEST === "1";
+const FULL_INVENTORY = process.env.FJA_PROMOTE_FULL_INVENTORY === "1";
+const CONFIRM_FULL_INVENTORY = process.env.FJA_PROMOTE_CONFIRM_FULL_INVENTORY === "1";
 const JOBOYE_BASE_URL = (process.env.JOBOYE_BASE_URL ?? "https://www.joboye.com").replace(/\/+$/, "");
 
 // ---------------------------------------------------------------------------
@@ -372,10 +374,17 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  // A live write must always be explicitly scoped to reviewed external IDs.
-  // Broad inventory writes stay disabled even when confirm_live_write is set.
-  if (!DRY_RUN && (!PILOT_IDS || PILOT_IDS.length === 0)) {
-    throw new Error("Refusing unscoped live promotion. Set FJA_PROMOTE_EXTERNAL_IDS to an explicit comma-separated pilot allowlist.");
+  // Live writes require either an explicit pilot allowlist or a separately confirmed
+  // full eligible-inventory run. The latter still applies source-status, official-link,
+  // canonical deduplication, writer, and publication gates per record.
+  if (!DRY_RUN && (!PILOT_IDS || PILOT_IDS.length === 0) && !(FULL_INVENTORY && CONFIRM_FULL_INVENTORY)) {
+    throw new Error("Refusing unscoped live promotion. Supply external IDs or explicitly confirm full eligible-inventory mode.");
+  }
+  if (FULL_INVENTORY && PILOT_IDS && PILOT_IDS.length > 0) {
+    throw new Error("Choose either explicit external IDs or full eligible-inventory mode, not both.");
+  }
+  if (!DRY_RUN && FULL_INVENTORY && !CONFIRM_FULL_INVENTORY) {
+    throw new Error("Refusing full eligible-inventory live promotion without FJA_PROMOTE_CONFIRM_FULL_INVENTORY=1.");
   }
   if (PUBLISH_AFTER_INGEST && DRY_RUN) {
     throw new Error("FJA_PROMOTE_PUBLISH_AFTER_INGEST=1 is invalid during dry-run.");
@@ -384,6 +393,7 @@ async function main() {
   console.log(`\n=== FJA → canonical promotion ===`);
   console.log(`Mode: ${DRY_RUN ? "DRY RUN (no writes)" : "LIVE"}`);
   if (PILOT_IDS) console.log(`Pilot external_ids: ${PILOT_IDS.join(", ")}`);
+  if (FULL_INVENTORY) console.log(`Scope: FULL ELIGIBLE INVENTORY (only EXTRACTED + OPEN records pass selection)`);
   if (LIMIT) console.log(`Limit: ${LIMIT} rows`);
   console.log();
 
@@ -606,8 +616,8 @@ async function main() {
     if (insertedPostingIds.length === 0) {
       throw new Error("No newly inserted posting IDs were returned; refusing to run a publication pass.");
     }
-    if (insertedPostingIds.length !== toProcess.length) {
-      throw new Error(`Only ${insertedPostingIds.length} of ${toProcess.length} selected rows were newly inserted. Publication pass refused; review the ingestion results first.`);
+    if (PILOT_IDS && insertedPostingIds.length !== toProcess.length) {
+      throw new Error(`Only ${insertedPostingIds.length} of ${toProcess.length} selected rows were newly inserted. Pilot publication pass refused; review ingestion results first.`);
     }
 
     // Evaluate every inserted pilot row before changing any publication state.
@@ -616,7 +626,7 @@ async function main() {
     console.log("Scoped publication preflight:");
     console.log(JSON.stringify(publicationPreview, null, 2));
     if (publicationPreview.eligible !== insertedPostingIds.length) {
-      throw new Error(`Publication preflight eligible ${publicationPreview.eligible}/${insertedPostingIds.length} pilot rows. Nothing was published; rows remain PENDING/DRAFT.`);
+      throw new Error(`Publication preflight eligible ${publicationPreview.eligible}/${insertedPostingIds.length} inserted rows. Nothing was published; rows remain PENDING/DRAFT.`);
     }
 
     // Publish only the rows inserted by this exact pilot, never all pending rows.
@@ -624,7 +634,7 @@ async function main() {
     console.log("\n=== Scoped publication result ===");
     console.log(JSON.stringify(publication, null, 2));
     if (publication.promoted !== insertedPostingIds.length) {
-      throw new Error(`Publication applied to ${publication.promoted}/${insertedPostingIds.length} pilot rows after a passing preflight; investigate the race immediately.`);
+      throw new Error(`Publication applied to ${publication.promoted}/${insertedPostingIds.length} inserted rows after a passing preflight; investigate the race immediately.`);
     }
 
     const idList = insertedPostingIds.join(",");
