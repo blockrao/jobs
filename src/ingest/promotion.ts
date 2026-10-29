@@ -86,7 +86,9 @@ export async function promotePending(db: Db, opts: { apply?: boolean; now?: Date
   const now = opts.now ?? new Date();
   // When a caller supplies a posting ID allowlist, never broaden the scope.
   // An empty allowlist means "publish nothing", not "all pending rows".
-  if (opts.postingIds && opts.postingIds.length === 0) return report;
+  if (opts.postingIds && opts.postingIds.length === 0) {
+    return { considered: 0, eligible: 0, promoted: 0, failedReasons: {}, eligibleIds: [] };
+  }
   const rows = await db
     .select()
     .from(postings)
