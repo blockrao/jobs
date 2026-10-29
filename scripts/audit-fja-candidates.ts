@@ -132,7 +132,7 @@ async function main() {
   const db = getDb();
   const tableCheck = await db.execute(sql.raw("SELECT to_regclass('public.fja_job_inventory') AS table_name"));
   const tableRows = Array.isArray(tableCheck)
-    ? tableCheck as Array<{ table_name: string | null }>
+    ? tableCheck as unknown as Array<{ table_name: string | null }>
     : (tableCheck as unknown as { rows?: Array<{ table_name: string | null }> }).rows ?? [];
   if (!tableRows[0]?.table_name) {
     throw new Error("public.fja_job_inventory is absent; audit stopped safely and no database writes were performed.");
