@@ -144,6 +144,7 @@ export function HomeContent({
                 {isHi ? "खोजें" : "Search"}
               </button>
             </form>
+            <p className="mt-2 text-sm"><Link href="/government-jobs" className="font-semibold text-brand-700 hover:underline">Browse all government jobs →</Link></p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
