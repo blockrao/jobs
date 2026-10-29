@@ -58,22 +58,24 @@ function cell(v:unknown):string{const s=v==null?"":typeof v==="string"?v:JSON.st
 
 async function main(){
  const db=getDb();
- // The canonical promotion job uses legacy fja_job_inventory; current main
- // schema no longer declares it. Check table existence first, then query it.
+ // The current FJA source inventory is private and distinct from canonical tables.
+ // Read only the extracted rows, with the exact promotion filters and status scope.
  const tableCheck=await db.execute(sql.raw("SELECT to_regclass('public.fja_job_inventory') AS table_name"));
- const checkRows=Array.isArray(tableCheck)?tableCheck as Array<{table_name:string|null}>:(tableCheck as unknown as {rows?:Array<{table_name:string|null}>}).rows??[];
- if(!checkRows[0]?.table_name) throw new Error("fja_job_inventory is absent; rebuild this audit from source_observations before attempting any promotion.");
+ const tableRows=Array.isArray(tableCheck)?tableCheck as Array<{table_name:string|null}>:(tableCheck as unknown as {rows?:Array<{table_name:string|null}>}).rows??[];
+ if(!tableRows[0]?.table_name) throw new Error("fja_job_inventory is absent; no audit rows could be generated. Do not run live promotion until the source inventory is restored or migrated.");
  const raw=await db.execute(sql.raw(`
   SELECT f.id,f.external_id,f.source_url,f.title,f.organization_name,f.listing_category,
    f.published_date,f.application_start_date,f.application_end_date,f.advertisement_number,
    f.details,f.official_notification_url,f.other_info_raw,
    EXISTS(SELECT 1 FROM postings p WHERE lower(regexp_replace(trim(p.source_url), '/+$',''))=lower(regexp_replace(trim(f.source_url), '/+$',''))) AS duplicate_posting_source_url,
-   EXISTS(SELECT 1 FROM postings p WHERE p.source=f.source_slug AND p.external_id=f.external_id) AS duplicate_posting_external_id,
+   EXISTS(SELECT 1 FROM postings p WHERE p.source='fja' AND p.external_id=f.external_id) AS duplicate_posting_external_id,
    f.other_info_raw->>'canonical_recruitment_id' AS canonical_recruitment_id
-  FROM fja_job_inventory f
+  FROM public.fja_job_inventory f
   WHERE f.source_slug='freejobalert'
-   AND NOT EXISTS(SELECT 1 FROM postings p WHERE lower(regexp_replace(trim(p.source_url), '/+$',''))=lower(regexp_replace(trim(f.source_url), '/+$','')))
-   AND NOT EXISTS(SELECT 1 FROM postings p WHERE p.source=f.source_slug AND p.external_id=f.external_id)
+    AND f.detail_status='EXTRACTED'
+    AND lower(coalesce(f.listing_category,'')) NOT LIKE '%expired%'
+    AND NOT EXISTS(SELECT 1 FROM postings p WHERE lower(regexp_replace(trim(p.source_url), '/+$',''))=lower(regexp_replace(trim(f.source_url), '/+$','')))
+    AND NOT EXISTS(SELECT 1 FROM postings p WHERE p.source='fja' AND p.external_id=f.external_id)
   ORDER BY f.first_seen_at DESC
  `)) as unknown as Row[];
  const inventory=Array.isArray(raw)?raw:(raw as unknown as {rows?:Row[]}).rows??[];
