@@ -537,17 +537,33 @@ export async function listLivePostsBySector(
 // the visible list, its counts, and ItemList schema describe publishable entities.
 const publicLivePostCondition = and(
   livePostCondition,
-  // Moderation/provenance columns live on legacy/source postings, not canonical
-  // posts or recruitments. Exclude a canonical post when its linked source
-  // posting is explicitly rejected or quarantined; never query undeclared columns.
-  sql`NOT EXISTS (
-    SELECT 1
-    FROM ${postings}
-    WHERE ${postings.inferredPostId} = ${posts.id}
-      AND (
-        ${postings.reviewStatus} = 'REJECTED'
-        OR ${postings.verificationStatus} = 'QUARANTINED'
-      )
+  // Moderation/provenance columns live on source postings, not canonical
+  // posts or recruitments. If source rows are linked to this canonical entity,
+  // require at least one non-rejected, non-quarantined source row. A single
+  // rejected duplicate must not hide a canonical post backed by a valid source.
+  sql`(
+    NOT EXISTS (
+      SELECT 1 FROM ${postings} source_posting
+      WHERE source_posting.inferred_post_id = ${posts.id}
+    )
+    OR EXISTS (
+      SELECT 1 FROM ${postings} publishable_source
+      WHERE publishable_source.inferred_post_id = ${posts.id}
+        AND publishable_source.review_status IN ('APPROVED', 'PENDING')
+        AND publishable_source.verification_status IS DISTINCT FROM 'QUARANTINED'
+    )
+  )`,
+  sql`(
+    NOT EXISTS (
+      SELECT 1 FROM ${postings} source_recruitment
+      WHERE source_recruitment.inferred_recruitment_id = ${recruitments.id}
+    )
+    OR EXISTS (
+      SELECT 1 FROM ${postings} publishable_recruitment
+      WHERE publishable_recruitment.inferred_recruitment_id = ${recruitments.id}
+        AND publishable_recruitment.review_status IN ('APPROVED', 'PENDING')
+        AND publishable_recruitment.verification_status IS DISTINCT FROM 'QUARANTINED'
+    )
   )`,
   sql`${organizations.slug} <> ${UNRESOLVED_ORG_SLUG}`,
   sql`lower(btrim(${organizations.name})) <> ${UNRESOLVED_ORG_NAME.toLowerCase()}`,
