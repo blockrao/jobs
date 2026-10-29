@@ -7,16 +7,21 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
   },
   redirects: async () => [
-    // GSC 404 remediation (2026-10-29): historical URLs were emitted as
-    // /jobs/jobs/{legacy-recruitment-slug}. Remove only the duplicated "jobs"
-    // segment. The canonical jobs route then resolves the old slug through
-    // recruitment_slug_redirects and issues the second 301 to the true hub.
-    // The 11 examples in the supplied GSC export all have DB redirect mappings.
-    {
-      source: "/jobs/jobs/:slug",
-      destination: "/jobs/:slug",
-      permanent: true,
-    },
+    // GSC 404 remediation (2026-10-29): exact historical URLs with a duplicated
+    // /jobs/jobs/ prefix. Each destination was verified against the live
+    // recruitment_slug_redirects table so these are one-hop redirects to a
+    // canonical recruitment hub, not guesses or broad pattern rewrites.
+    { source: "/jobs/jobs/indian-institute-of-management-mumbai-2026-07", destination: "/jobs/org1329-2026-0007", permanent: true },
+    { source: "/jobs/jobs/railway-recruitment-board-2026-05", destination: "/jobs/org14-2026-0003", permanent: true },
+    { source: "/jobs/jobs/dr-b-r-ambedkar-open-university-2026-01", destination: "/jobs/org1253-2026-0001", permanent: true },
+    { source: "/jobs/jobs/employees-state-insurance-corporation-medical-college-hospital-indore-professor-associate-professor-", destination: "/jobs/org2288-2026-0001", permanent: true },
+    { source: "/jobs/jobs/himachal-pradesh-jal-shakti-vibhag-2026-01", destination: "/jobs/org1299-2026-0001", permanent: true },
+    { source: "/jobs/jobs/hindustan-aeronautics-limited-2026-01", destination: "/jobs/org1684-2026-0001", permanent: true },
+    { source: "/jobs/jobs/visva-bharati-2026-01", destination: "/jobs/org1575-2026-0001", permanent: true },
+    { source: "/jobs/jobs/navsari-agricultural-university-2026-01", destination: "/jobs/org1467-2026-0001", permanent: true },
+    { source: "/jobs/jobs/one-stop-centre-sivasagar-2026-02651", destination: "/jobs/org87-2026-0008", permanent: true },
+    { source: "/jobs/jobs/tata-institute-of-social-sciences-2026-02", destination: "/jobs/org1554-2026-0007", permanent: true },
+    { source: "/jobs/jobs/kalsi-forest-division-2026-01", destination: "/jobs/org1386-2026-0001", permanent: true },
 
     // CRITICAL FIX (2026-10-24): Removed the regex redirect rule that was stripping
     // trailing numbers from new slugs. New slugs like 'org1121-2026-0004' were being
