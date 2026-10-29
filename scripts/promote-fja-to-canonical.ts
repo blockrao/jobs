@@ -589,6 +589,19 @@ async function main() {
     errors.forEach((e) => console.log(`  ${e.externalId}: ${e.error}`));
   }
 
+  // An explicit live pilot is all-or-nothing from the publication perspective.
+  // Any record that fails ingestion remains unapproved and blocks further steps.
+  if (!DRY_RUN && PILOT_IDS && (
+    failed > 0 ||
+    held > 0 ||
+    heldMissingOfficialLink > 0 ||
+    succeeded !== toProcess.length
+  )) {
+    throw new Error(
+      `Controlled pilot incomplete: selected=${toProcess.length}, succeeded=${succeeded}, held=${held}, held_missing_official_url=${heldMissingOfficialLink}, failed=${failed}. No publication attempted.`
+    );
+  }
+
   if (PUBLISH_AFTER_INGEST) {
     if (insertedPostingIds.length === 0) {
       throw new Error("No newly inserted posting IDs were returned; refusing to run a publication pass.");
@@ -597,13 +610,21 @@ async function main() {
       throw new Error(`Only ${insertedPostingIds.length} of ${toProcess.length} selected rows were newly inserted. Publication pass refused; review the ingestion results first.`);
     }
 
-    // Promote only the rows inserted in this exact pilot. This cannot publish
-    // unrelated pending/draft rows elsewhere in production.
+    // Evaluate every inserted pilot row before changing any publication state.
+    // If one row fails the gate, none of the pilot rows are published.
+    const publicationPreview = await promotePending(db, { apply: false, postingIds: insertedPostingIds });
+    console.log("Scoped publication preflight:");
+    console.log(JSON.stringify(publicationPreview, null, 2));
+    if (publicationPreview.eligible !== insertedPostingIds.length) {
+      throw new Error(`Publication preflight eligible ${publicationPreview.eligible}/${insertedPostingIds.length} pilot rows. Nothing was published; rows remain PENDING/DRAFT.`);
+    }
+
+    // Publish only the rows inserted by this exact pilot, never all pending rows.
     const publication = await promotePending(db, { apply: true, postingIds: insertedPostingIds });
     console.log("\n=== Scoped publication result ===");
     console.log(JSON.stringify(publication, null, 2));
     if (publication.promoted !== insertedPostingIds.length) {
-      throw new Error(`Publication gate passed for ${publication.promoted}/${insertedPostingIds.length} pilot rows. Any ineligible rows remain PENDING/DRAFT; public URL verification stopped.`);
+      throw new Error(`Publication applied to ${publication.promoted}/${insertedPostingIds.length} pilot rows after a passing preflight; investigate the race immediately.`);
     }
 
     const idList = insertedPostingIds.join(",");
@@ -635,34 +656,47 @@ async function main() {
         { entity: "post_leaf", url: `${JOBOYE_BASE_URL}/jobs/${encodeURIComponent(row.recruitment_slug)}/${encodeURIComponent(row.post_slug)}` },
       ];
       for (const target of urls) {
-        try {
-          const response = await fetch(target.url, {
-            redirect: "follow",
-            headers: {
-              "user-agent": "JobOye-FJA-Canonical-Pilot/1.0",
-              "cache-control": "no-cache",
-            },
-          });
-          publicChecks.push({
-            external_id: row.external_id,
-            entity: target.entity,
-            requested_url: target.url,
-            final_url: response.url,
-            http_status: response.status,
-            ok: response.status === 200,
-            review_status: row.review_status,
-            publishing_status: row.publishing_status,
-            index_tier: row.index_tier,
-          });
-        } catch (error) {
-          publicChecks.push({
-            external_id: row.external_id,
-            entity: target.entity,
-            requested_url: target.url,
-            ok: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
+        let check: Record<string, unknown> | null = null;
+        let lastError: string | null = null;
+        // Retry transient 404s while the public route/ISR path observes the
+        // newly approved record. A URL is verified only after HTTP 200.
+        for (let attempt = 1; attempt <= 6; attempt++) {
+          try {
+            const response = await fetch(target.url, {
+              redirect: "follow",
+              headers: {
+                "user-agent": "JobOye-FJA-Canonical-Pilot/1.0",
+                "cache-control": "no-cache",
+              },
+            });
+            check = {
+              external_id: row.external_id,
+              entity: target.entity,
+              requested_url: target.url,
+              final_url: response.url,
+              http_status: response.status,
+              attempt,
+              ok: response.status === 200,
+              review_status: row.review_status,
+              publishing_status: row.publishing_status,
+              index_tier: row.index_tier,
+            };
+            if (response.status === 200) break;
+            lastError = `HTTP ${response.status}`;
+          } catch (error) {
+            lastError = error instanceof Error ? error.message : String(error);
+            check = null;
+          }
+          if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 10_000));
         }
+        publicChecks.push(check ?? {
+          external_id: row.external_id,
+          entity: target.entity,
+          requested_url: target.url,
+          ok: false,
+          attempts: 6,
+          error: lastError ?? "No successful response",
+        });
       }
     }
     console.log("Public URL verification:");
