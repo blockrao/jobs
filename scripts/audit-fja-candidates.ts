@@ -58,6 +58,13 @@ function cell(v:unknown):string{const s=v==null?"":typeof v==="string"?v:JSON.st
 
 async function main(){
  const db=getDb();
+  // Inventory may be absent in current environments after legacy cleanup.
+  // Fail with a targeted message and no writes instead of an opaque SQL error.
+  const exists = await db.execute(sql.raw("SELECT to_regclass('public.fja_job_inventory') AS table_name"));
+  const existsRows = Array.isArray(exists) ? exists as Array<{table_name:string|null}> : (exists as unknown as {rows?:Array<{table_name:string|null}>}).rows ?? [];
+  if (!existsRows[0]?.table_name) {
+    throw new Error("fja_job_inventory table is not present in the connected database. The legacy inventory has been removed; audit must be rebuilt from source_observations before proceeding.");
+  }
  // recruitment source URLs are not a top-level column in the canonical schema.
  // URL dedupe here follows the verified postings.source_url and external_id
  // checks used by the current promotion SQL; canonical mappings are separately flagged.
