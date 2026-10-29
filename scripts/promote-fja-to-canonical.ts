@@ -163,7 +163,7 @@ function extractOfficialNotificationUrl(links: Array<Record<string, unknown>>): 
       const score = (notificationLabel ? 5 : 0) + (isPdf ? 3 : 0) + (careerPath ? 2 : 0);
       return { url, score, isPdf, notificationLabel, careerPath };
     })
-    .filter((item) => item.notificationLabel || (item.isPdf && item.careerPath))
+    .filter((item) => item.notificationLabel || item.isPdf)
     .sort((a, b) => b.score - a.score);
   return candidates[0]?.url;
 }
@@ -214,23 +214,51 @@ function extractPostTable(
 // ---------------------------------------------------------------------------
 // Map one FJA inventory row to NormalizedPosting
 // ---------------------------------------------------------------------------
+function parseJsonRecord(value: unknown): Record<string, any> {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value === "string") {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, any>;
+    } catch { /* keep empty record; malformed source capture must not crash ingestion */ }
+  }
+  return {};
+}
+
+function collectLinkObjects(value: unknown, output: Array<Record<string, unknown>> = [], depth = 0): Array<Record<string, unknown>> {
+  if (depth > 10 || value == null) return output;
+  if (Array.isArray(value)) {
+    for (const item of value) collectLinkObjects(item, output, depth + 1);
+    return output;
+  }
+  if (typeof value !== "object") return output;
+  const record = value as Record<string, unknown>;
+  const url = typeof record.url === "string" ? record.url : typeof record.href === "string" ? record.href : undefined;
+  const label = typeof record.text === "string" ? record.text : typeof record.label === "string" ? record.label : typeof record.title === "string" ? record.title : undefined;
+  if (url && label) output.push({ url, text: label, label });
+  for (const [key, nested] of Object.entries(record)) {
+    if (["raw_html", "html", "detail_text", "normalized_text"].includes(key.toLowerCase())) continue;
+    collectLinkObjects(nested, output, depth + 1);
+  }
+  return output;
+}
+
 function toNormalized(row: FjaJobRow): NormalizedPosting {
-  // Reconciliation stores { listing, detail, reconciliation }; facts/links are nested under detail.
-  const wrapper = (row.details ?? {}) as Record<string, any>;
-  const detail = (wrapper.detail ?? wrapper) as Record<string, any>;
-  const facts = (detail.facts ?? (row.other_info_raw as Record<string, any> | null)?.facts ?? {}) as Record<string, any>;
+  // JSONB can arrive as an object or as serialized JSON depending on the query path.
+  // Parse defensively, then collect links from all captured nesting variants.
+  const wrapper = parseJsonRecord(row.details);
+  const otherInfo = parseJsonRecord(row.other_info_raw);
+  const detail = parseJsonRecord(wrapper.detail ?? wrapper);
+  const facts = parseJsonRecord(detail.facts ?? otherInfo.facts);
   // The inventory has several historical capture shapes. Merge them instead of
   // choosing the first present key: an empty all_links array must not mask links
   // captured under links/href or the wrapper/listing object.
-  const linkArrays = [
-    detail.all_links, detail.allLinks, detail.links,
-    facts.all_links, facts.allLinks, facts.links,
-    wrapper.all_links, wrapper.allLinks, wrapper.links,
-    (row.other_info_raw as Record<string, any> | null)?.all_links,
-    (row.other_info_raw as Record<string, any> | null)?.allLinks,
-    (row.other_info_raw as Record<string, any> | null)?.links,
-  ].filter(Array.isArray) as Array<Array<Record<string, unknown>>>;
-  const rawLinks = linkArrays.flat();
+  const rawLinks = [
+    ...collectLinkObjects(wrapper),
+    ...collectLinkObjects(otherInfo),
+  ].filter((link, index, list) =>
+    list.findIndex((other) => other.url === link.url) === index
+  );
   const allLinks = rawLinks.map((link) => ({
     url: typeof link.url === "string" ? link.url : typeof link.href === "string" ? link.href : undefined,
     label: typeof link.text === "string" ? link.text : typeof link.label === "string" ? link.label : typeof link.title === "string" ? link.title : undefined,
@@ -245,8 +273,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     facts.official_notification_url, facts.officialNotificationUrl,
     detail.official_notification_url, detail.officialNotificationUrl,
     wrapper.official_notification_url, wrapper.officialNotificationUrl,
-    (row.other_info_raw as Record<string, any> | null)?.official_notification_url,
-    (row.other_info_raw as Record<string, any> | null)?.officialNotificationUrl,
+    otherInfo.official_notification_url, otherInfo.officialNotificationUrl,
   ].find((value) => typeof value === "string" && isOfficialAuthorityHost(value)) as string | undefined;
   const officialNotificationUrl = storedOfficialNotificationUrl ?? capturedOfficialUrl ?? extractOfficialNotificationUrl(allLinks as Array<Record<string, unknown>>);
   const salaryRaw = (facts.salary_pay ?? facts.salary ?? detail.salary) as string | undefined;
