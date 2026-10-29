@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Public site base URL to check"
+        description: "Public site base URL to request (preferred canonical host is joboye.com)"
         required: true
         type: string
-        default: "https://www.joboye.com"
+        default: "https://joboye.com"
       scope:
         description: "canonical checks hubs and leaves; all also checks known recruitment aliases"
         required: true
@@ -17,10 +17,10 @@ on:
           - all
         default: canonical
       limit:
-        description: "Maximum URLs to check per batch (0 = all remaining URLs)"
+        description: "Maximum URLs to check per batch (use 100 for safe resumable batches; 0 = all remaining URLs)"
         required: true
         type: string
-        default: "500"
+        default: "100"
       offset:
         description: "Starting position in the balanced canonical inventory (0-based)"
         required: true
@@ -54,6 +54,7 @@ jobs:
       - name: Validate inputs
         env:
           BASE_URL: ${{ inputs.base_url }}
+          CANONICAL_BASE_URL: "https://joboye.com"
           SCOPE: ${{ inputs.scope }}
           LIMIT: ${{ inputs.limit }}
           OFFSET: ${{ inputs.offset }}
@@ -83,7 +84,7 @@ jobs:
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
           mkdir -p artifacts
-          npx tsx src/scripts/audit-url-integrity.ts --base "$BASE_URL" --scope "$SCOPE" --limit "$LIMIT" --offset "$OFFSET" --concurrency "$CONCURRENCY"
+          npx tsx src/scripts/audit-url-integrity.ts --base "$BASE_URL" --canonical-base "$CANONICAL_BASE_URL" --scope "$SCOPE" --limit "$LIMIT" --offset "$OFFSET" --concurrency "$CONCURRENCY"
       - name: Upload audit report even when checks fail
         if: always()
         uses: actions/upload-artifact@v4
