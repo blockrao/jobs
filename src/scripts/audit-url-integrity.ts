@@ -132,14 +132,19 @@ async function fetchRows(): Promise<UrlRow[]> {
   const hubs = await db.execute(sql`
     SELECT r.id, r.slug, r.name
     FROM public.recruitments r
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM public.postings source_posting
-      WHERE source_posting.inferred_recruitment_id = r.id
-        AND (
-          source_posting.review_status = 'REJECTED'
-          OR source_posting.verification_status = 'QUARANTINED'
-        )
+    WHERE (
+      NOT EXISTS (
+        SELECT 1
+        FROM public.postings source_posting
+        WHERE source_posting.inferred_recruitment_id = r.id
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM public.postings publishable_source
+        WHERE publishable_source.inferred_recruitment_id = r.id
+          AND publishable_source.review_status IN ('APPROVED', 'PENDING')
+          AND publishable_source.verification_status IS DISTINCT FROM 'QUARANTINED'
+      )
     )
     ORDER BY r.id
   `);
@@ -148,14 +153,19 @@ async function fetchRows(): Promise<UrlRow[]> {
     SELECT r.slug AS recruitment_slug, p.slug AS post_slug, p.title AS post_title
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM public.postings source_posting
-      WHERE source_posting.inferred_post_id = p.id
-        AND (
-          source_posting.review_status = 'REJECTED'
-          OR source_posting.verification_status = 'QUARANTINED'
-        )
+    WHERE (
+      NOT EXISTS (
+        SELECT 1
+        FROM public.postings source_posting
+        WHERE source_posting.inferred_post_id = p.id
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM public.postings publishable_source
+        WHERE publishable_source.inferred_post_id = p.id
+          AND publishable_source.review_status IN ('APPROVED', 'PENDING')
+          AND publishable_source.verification_status IS DISTINCT FROM 'QUARANTINED'
+      )
     )
     ORDER BY p.id
   `);
@@ -178,14 +188,19 @@ async function fetchRows(): Promise<UrlRow[]> {
       FROM public.recruitment_slug_redirects d
       JOIN public.recruitments r ON r.id = d.recruitment_id
       WHERE d.old_slug <> d.new_slug
-        AND NOT EXISTS (
-          SELECT 1
-          FROM public.postings source_posting
-          WHERE source_posting.inferred_recruitment_id = r.id
-            AND (
-              source_posting.review_status = 'REJECTED'
-              OR source_posting.verification_status = 'QUARANTINED'
-            )
+        AND (
+          NOT EXISTS (
+            SELECT 1
+            FROM public.postings source_posting
+            WHERE source_posting.inferred_recruitment_id = r.id
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM public.postings publishable_source
+            WHERE publishable_source.inferred_recruitment_id = r.id
+              AND publishable_source.review_status IN ('APPROVED', 'PENDING')
+              AND publishable_source.verification_status IS DISTINCT FROM 'QUARANTINED'
+          )
         )
       ORDER BY d.id
     `);
