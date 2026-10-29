@@ -24,6 +24,7 @@ type ReportJob = {
   notification_date: Date | string | null;
   application_end_date: Date | string | null;
   post_updated_at: Date | string | null;
+  official_notification_url: string | null;
 };
 
 function rowsOf<T>(result: unknown): T[] {
@@ -81,7 +82,8 @@ export default async function LatestGovernmentJobsPage() {
         r.status::text AS recruitment_status,
         r.notification_date AS notification_date,
         r.application_end_date AS application_end_date,
-        p.updated_at AS post_updated_at
+        p.updated_at AS post_updated_at,
+        r.official_notification_url AS official_notification_url
       FROM recruitments r
       INNER JOIN posts p ON p.recruitment_id = r.id
       LEFT JOIN organizations o ON o.id = r.organization_id
@@ -214,6 +216,16 @@ export default async function LatestGovernmentJobsPage() {
                       <Link href={hubUrl} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 hover:border-blue-400 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                         Recruitment hub
                       </Link>
+                      {job.official_notification_url ? (
+                        <a
+                          href={job.official_notification_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-800 hover:border-blue-400 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                          Official notification
+                        </a>
+                      ) : null}
                     </div>
                   </div>
                 </li>
