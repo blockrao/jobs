@@ -8,6 +8,11 @@ on:
         required: true
         type: string
         default: "1434"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build-fja-leaf-coverage.ts"
+      - ".github/workflows/fja-leaf-coverage.yml"
 
 permissions:
   contents: read
@@ -30,7 +35,7 @@ jobs:
       - name: Build complete non-mutating leaf coverage manifest
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          EXPECTED_INVENTORY_ROWS: ${{ inputs.expected_inventory_rows }}
+          EXPECTED_INVENTORY_ROWS: ${{ inputs.expected_inventory_rows || '1434' }}
         run: |
           test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret."; exit 1; }
           npx tsx scripts/build-fja-leaf-coverage.ts
