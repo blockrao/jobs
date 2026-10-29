@@ -85,6 +85,9 @@ async function main() {
   }).join(","))].join("\n");
   await writeFile("fja-1434-leaf-coverage.csv", csv);
   console.log("FJA_LEAF_COVERAGE_SUMMARY " + JSON.stringify({ inventoryRows: rows.length, proposedLeafRows: manifest.length, dispositionCounts: counts }));
-  if (rows.length !== 1434) console.warn(`Expected 1434 inventory rows; observed ${rows.length}. Review inventory drift.`);
+  const expected = Number(process.env.EXPECTED_INVENTORY_ROWS ?? "1434");
+  if (Number.isFinite(expected) && expected > 0 && rows.length !== expected) {
+    throw new Error(`Inventory count guard failed: expected ${expected}, observed ${rows.length}. Manifest written for diagnostics but must not be used for rollout.`);
+  }
 }
 main().catch(e => { console.error(e); process.exit(1); });
