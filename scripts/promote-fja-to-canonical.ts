@@ -32,7 +32,7 @@ const PILOT_IDS = process.env.FJA_PROMOTE_EXTERNAL_IDS
 const DEFAULT_LIMIT = DRY_RUN ? 50 : 0; // 0 = no limit
 const LIMIT = process.env.FJA_PROMOTE_LIMIT ? parseInt(process.env.FJA_PROMOTE_LIMIT, 10) : DEFAULT_LIMIT;
 const PUBLISH_AFTER_INGEST = process.env.FJA_PROMOTE_PUBLISH_AFTER_INGEST === "1";
-const JOBOYE_BASE_URL = (process.env.JOBOYE_BASE_URL ?? "https://www.joboye.com").replace(/\\/+$/, "");
+const JOBOYE_BASE_URL = (process.env.JOBOYE_BASE_URL ?? "https://www.joboye.com").replace(/\/+$/, "");
 
 // ---------------------------------------------------------------------------
 // FJA inventory row shape (only the columns we use)
@@ -600,7 +600,7 @@ async function main() {
     // Promote only the rows inserted in this exact pilot. This cannot publish
     // unrelated pending/draft rows elsewhere in production.
     const publication = await promotePending(db, { apply: true, postingIds: insertedPostingIds });
-    console.log("\\n=== Scoped publication result ===");
+    console.log("\n=== Scoped publication result ===");
     console.log(JSON.stringify(publication, null, 2));
     if (publication.promoted !== insertedPostingIds.length) {
       throw new Error(`Publication gate passed for ${publication.promoted}/${insertedPostingIds.length} pilot rows. Any ineligible rows remain PENDING/DRAFT; public URL verification stopped.`);
