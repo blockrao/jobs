@@ -173,7 +173,8 @@ async function main() {
       jsonLdErrors.push(error instanceof Error ? error.message : String(error));
     }
   }
-  const assets = extractAssets(html, origin);
+  // Use the final host after redirects so root-relative assets are tested on the canonical origin.
+  const assets = extractAssets(html, new URL(response.url));
   const assetResults = await mapLimit(assets, CONCURRENCY, async (url) => ({ url, ...(await fetchWithTimeout(url)) }));
   const brokenAssets = assetResults.filter((x) => x.error || x.status < 200 || x.status >= 400);
 
