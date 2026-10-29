@@ -23,6 +23,7 @@ import type { DedupedPosting } from "../src/ingest/deduplicate";
 import type { NormalizedPosting } from "../src/ingest/normalize";
 import { deterministicSlug, slugify } from "../src/ingest/normalize";
 import { sql } from "drizzle-orm";
+import { promotePending } from "../src/ingest/promotion";
 
 const DRY_RUN = process.env.FJA_PROMOTE_DRY_RUN === "1";
 const PILOT_IDS = process.env.FJA_PROMOTE_EXTERNAL_IDS
@@ -30,6 +31,8 @@ const PILOT_IDS = process.env.FJA_PROMOTE_EXTERNAL_IDS
   : null;
 const DEFAULT_LIMIT = DRY_RUN ? 50 : 0; // 0 = no limit
 const LIMIT = process.env.FJA_PROMOTE_LIMIT ? parseInt(process.env.FJA_PROMOTE_LIMIT, 10) : DEFAULT_LIMIT;
+const PUBLISH_AFTER_INGEST = process.env.FJA_PROMOTE_PUBLISH_AFTER_INGEST === "1";
+const JOBOYE_BASE_URL = (process.env.JOBOYE_BASE_URL ?? "https://www.joboye.com").replace(/\\/+$/, "");
 
 // ---------------------------------------------------------------------------
 // FJA inventory row shape (only the columns we use)
@@ -50,6 +53,8 @@ interface FjaJobRow {
   details: Record<string, unknown> | null;
   official_notification_url: string | null;
   other_info_raw: Record<string, unknown> | null;
+  detail_status: "EXTRACTED" | "PARTIAL" | "FAILED" | "PENDING";
+  source_status: "OPEN" | "CLOSED" | "UNKNOWN" | "REMOVED";
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +372,14 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
+  // A live write must always be explicitly scoped to reviewed external IDs.
+  // Broad inventory writes stay disabled even when confirm_live_write is set.
+  if (!DRY_RUN && (!PILOT_IDS || PILOT_IDS.length === 0)) {
+    throw new Error("Refusing unscoped live promotion. Set FJA_PROMOTE_EXTERNAL_IDS to an explicit comma-separated pilot allowlist.");
+  }
+  if (PUBLISH_AFTER_INGEST && DRY_RUN) {
+    throw new Error("FJA_PROMOTE_PUBLISH_AFTER_INGEST=1 is invalid during dry-run.");
+  }
   const db = getDb();
   console.log(`\n=== FJA → canonical promotion ===`);
   console.log(`Mode: ${DRY_RUN ? "DRY RUN (no writes)" : "LIVE"}`);
@@ -382,6 +395,8 @@ async function main() {
   // Build query: only new, fully extracted FJA rows with an open application window.
   // Compare normalized source URLs against both canonical entity tables to prevent re-imports.
   let whereClause = `source_slug = 'freejobalert'
+    AND detail_status = 'EXTRACTED'
+    AND source_status = 'OPEN'
     -- Deadline may be stored in application_end_date or only in captured detail facts.
     -- Apply the normalized-date eligibility filter after reading both fields in TypeScript.
     AND NOT EXISTS (
@@ -411,7 +426,8 @@ async function main() {
       SELECT id, external_id, source_url, title, organization_name,
              listing_category, published_date, application_start_date,
              application_end_date, advertisement_number, qualification,
-             vacancy_count, details, official_notification_url, other_info_raw
+             vacancy_count, details, official_notification_url, other_info_raw,
+             detail_status, source_status
       FROM fja_job_inventory
       WHERE ${whereClause}
       ORDER BY first_seen_at DESC
@@ -419,7 +435,14 @@ async function main() {
   );
   // drizzle returns the array directly (not { rows: [...] })
   const inventory = (Array.isArray(rawRows) ? rawRows : (rawRows as { rows?: unknown[] }).rows ?? []) as FjaJobRow[];
-  console.log(`Fetched ${inventory.length} FJA inventory rows matching extracted/open/unduplicated source criteria`);
+  if (PILOT_IDS) {
+    const returned = new Set(inventory.map((row) => row.external_id));
+    const rejectedPilotIds = PILOT_IDS.filter((id) => !returned.has(id));
+    if (rejectedPilotIds.length > 0) {
+      throw new Error(`Pilot allowlist failed preflight eligibility/dedup checks: ${rejectedPilotIds.join(", ")}. No writes were performed.`);
+    }
+  }
+  console.log(`Fetched ${inventory.length} FJA inventory rows passing detail_status=EXTRACTED, source_status=OPEN, and canonical dedup checks`);
 
   if (inventory.length === 0) {
     console.log("Nothing to promote. Exiting.");
@@ -507,9 +530,16 @@ async function main() {
   let heldMissingOfficialLink = 0;
   let failed = 0;
   const errors: Array<{ externalId: string; error: string }> = [];
+  const insertedPostingIds: number[] = [];
 
   for (const row of toProcess) {
     const normalized = toNormalized(row);
+    // Defense in depth: never ingest partial, closed, or unknown source records.
+    if (row.detail_status !== "EXTRACTED" || row.source_status !== "OPEN") {
+      held++;
+      console.log(`  HELD     ${row.external_id} — detail/source status ${row.detail_status}/${row.source_status} is not eligible`);
+      continue;
+    }
     // Do not promote a record unless an official notification destination was identified.
     if (!normalized.officialNotificationUrl) {
       heldMissingOfficialLink++;
@@ -530,6 +560,7 @@ async function main() {
       const action = rec?.action ?? "unknown";
       if (action === "inserted" || action === "updated" || action === "unchanged" || action === "flagged") {
         succeeded++;
+        if (action === "inserted" && typeof rec?.postingId === "number") insertedPostingIds.push(rec.postingId);
         console.log(`  OK(${action.padEnd(9)}) ${row.external_id} — ${row.title.slice(0, 60)}`);
       } else if (action === "held_candidate") {
         held++;
@@ -556,6 +587,90 @@ async function main() {
   if (errors.length > 0) {
     console.log(`\nErrors:`);
     errors.forEach((e) => console.log(`  ${e.externalId}: ${e.error}`));
+  }
+
+  if (PUBLISH_AFTER_INGEST) {
+    if (insertedPostingIds.length === 0) {
+      throw new Error("No newly inserted posting IDs were returned; refusing to run a publication pass.");
+    }
+    if (insertedPostingIds.length !== toProcess.length) {
+      throw new Error(`Only ${insertedPostingIds.length} of ${toProcess.length} selected rows were newly inserted. Publication pass refused; review the ingestion results first.`);
+    }
+
+    // Promote only the rows inserted in this exact pilot. This cannot publish
+    // unrelated pending/draft rows elsewhere in production.
+    const publication = await promotePending(db, { apply: true, postingIds: insertedPostingIds });
+    console.log("\\n=== Scoped publication result ===");
+    console.log(JSON.stringify(publication, null, 2));
+    if (publication.promoted !== insertedPostingIds.length) {
+      throw new Error(`Publication gate passed for ${publication.promoted}/${insertedPostingIds.length} pilot rows. Any ineligible rows remain PENDING/DRAFT; public URL verification stopped.`);
+    }
+
+    const idList = insertedPostingIds.join(",");
+    const rawPublicRows = await db.execute(sql.raw(`
+      SELECT p.id AS posting_id, p.external_id, p.review_status::text AS review_status,
+             p.publishing_status, p.index_tier,
+             r.slug AS recruitment_slug, po.slug AS post_slug
+      FROM public.postings p
+      LEFT JOIN public.recruitments r ON r.id = p.inferred_recruitment_id
+      LEFT JOIN public.posts po ON po.id = p.inferred_post_id
+      WHERE p.id = ANY(ARRAY[${idList}]::int[])
+      ORDER BY p.id
+    `));
+    const publicRows = (Array.isArray(rawPublicRows)
+      ? rawPublicRows
+      : (rawPublicRows as { rows?: unknown[] }).rows ?? []) as Array<{
+        posting_id: number; external_id: string; review_status: string;
+        publishing_status: string | null; index_tier: string; recruitment_slug: string | null; post_slug: string | null;
+      }>;
+
+    const publicChecks: Array<Record<string, unknown>> = [];
+    for (const row of publicRows) {
+      if (!row.recruitment_slug || !row.post_slug) {
+        publicChecks.push({ external_id: row.external_id, ok: false, reason: "MISSING_CANONICAL_SLUG", row });
+        continue;
+      }
+      const urls = [
+        { entity: "recruitment_hub", url: `${JOBOYE_BASE_URL}/jobs/${encodeURIComponent(row.recruitment_slug)}` },
+        { entity: "post_leaf", url: `${JOBOYE_BASE_URL}/jobs/${encodeURIComponent(row.recruitment_slug)}/${encodeURIComponent(row.post_slug)}` },
+      ];
+      for (const target of urls) {
+        try {
+          const response = await fetch(target.url, {
+            redirect: "follow",
+            headers: {
+              "user-agent": "JobOye-FJA-Canonical-Pilot/1.0",
+              "cache-control": "no-cache",
+            },
+          });
+          publicChecks.push({
+            external_id: row.external_id,
+            entity: target.entity,
+            requested_url: target.url,
+            final_url: response.url,
+            http_status: response.status,
+            ok: response.status === 200,
+            review_status: row.review_status,
+            publishing_status: row.publishing_status,
+            index_tier: row.index_tier,
+          });
+        } catch (error) {
+          publicChecks.push({
+            external_id: row.external_id,
+            entity: target.entity,
+            requested_url: target.url,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+    console.log("Public URL verification:");
+    console.log(JSON.stringify(publicChecks, null, 2));
+    const failedChecks = publicChecks.filter((check) => check.ok !== true);
+    if (failedChecks.length > 0) {
+      throw new Error(`Public URL verification failed for ${failedChecks.length} of ${publicChecks.length} route checks. See the logged requested/final URLs and HTTP statuses.`);
+    }
   }
 }
 
