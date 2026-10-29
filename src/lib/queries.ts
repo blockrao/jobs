@@ -18,6 +18,7 @@ import { applySemanticGate } from "@/lib/semantic-fields";
 import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 
 import { normalizeEducation, normalizeExperience, normalizeSelectionProcess, auditEnrichmentShape } from "@/lib/enrichment-normalization";
+import { UNRESOLVED_ORG_NAME, UNRESOLVED_ORG_SLUG } from "@/lib/organizations/unresolved";
 // Before DATABASE_URL is configured, every query degrades to an empty
 // result instead of throwing. This lets the site build and deploy (with
 // empty states) and light up automatically once the DB is connected.
@@ -520,7 +521,7 @@ export async function listLivePostsBySector(
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
-    .where(and(inArray(organizations.sector, sectors as never), livePostCondition))
+    .where(and(inArray(organizations.sector, sectors as never), publicLivePostCondition))
     .orderBy(
       sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
       desc(recruitments.updatedAt),
@@ -529,6 +530,19 @@ export async function listLivePostsBySector(
     .limit(limit)
     .offset(offset);
 }
+
+// The government-jobs hub is a public canonical projection, not an admin inventory.
+// Exclude quarantined recruitments, duplicate posts and placeholder employers so
+// the visible list, its counts, and ItemList schema describe publishable entities.
+const publicLivePostCondition = and(
+  livePostCondition,
+  sql`${posts.postingStatus} IS DISTINCT FROM 'DUPLICATE'`,
+  sql`${recruitments.verificationStatus} IS DISTINCT FROM 'QUARANTINED'`,
+  sql`${organizations.slug} <> ${UNRESOLVED_ORG_SLUG}`,
+  sql`lower(btrim(${organizations.name})) <> ${UNRESOLVED_ORG_NAME.toLowerCase()}`,
+  sql`btrim(${posts.slug}) <> ''`,
+  sql`btrim(${recruitments.slug}) <> ''`,
+);
 
 /** Live Post count per org sector — drives tile/index counts in one query. */
 export const countLivePostsBySector = cache(async (): Promise<Record<string, number>> => {
@@ -542,7 +556,7 @@ export const countLivePostsBySector = cache(async (): Promise<Record<string, num
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
-    .where(livePostCondition)
+    .where(publicLivePostCondition)
     .groupBy(organizations.sector);
   const out: Record<string, number> = {};
   for (const r of rows) out[r.sector] = r.count;
