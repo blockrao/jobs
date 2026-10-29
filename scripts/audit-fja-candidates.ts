@@ -84,13 +84,14 @@ async function main(){
   const official=extractOfficialUrl(r),flags={posting_source_url:Boolean(r.duplicate_posting_source_url),posting_external_id:Boolean(r.duplicate_posting_external_id)};
   const org=resolveOrganization(orgIndex,r.organization_name),mapped=(r as any).canonical_recruitment_id!=null,duplicate=Object.values(flags).some(Boolean);
   return {inventory_id:r.id,external_id:r.external_id,fja_title:r.title,organization:r.organization_name,fja_url:r.source_url,
-   listing_category:r.listing_category,official_notification_url:official?.url??"",official_url_extraction_method:official?.method??"not_found",official_url_link_label:official?.label??"",
+   listing_category:r.listing_category,detail_status:(r as any).detail_status,source_status:(r as any).source_status,
+   official_notification_url:official?.url??"",official_url_extraction_method:official?.method??"not_found",official_url_link_label:official?.label??"",
    official_url_host_recognized:official?officialHost(official.url):false,duplicate_status:duplicate?"DUPLICATE_FOUND":"NO_POSTING_SOURCE_KEY_DUPLICATE_FOUND",
    duplicate_checks:flags,already_canonical_mapped:mapped,canonical_recruitment_id:(r as any).canonical_recruitment_id??"",
    organization_resolution:org.kind,organization_resolution_reason:org.kind==="CANDIDATE"?org.reason:org.kind==="NONE"?org.reason:org.kind==="ALIAS"?"alias_match":org.ambiguous?"multiple_existing_matches":"existing_name_match",
    published_date:r.published_date,application_start_date:r.application_start_date,application_end_date:r.application_end_date,advertisement_number:r.advertisement_number};
  });
- const selected=(LIMIT>0?rows.slice(0,LIMIT):rows).map(r=>({...r,ingest_recommendation:r.already_canonical_mapped?"HOLD_ALREADY_CANONICAL_MAPPED":!r.official_notification_url?"HOLD_MISSING_OFFICIAL_URL":r.duplicate_status==="DUPLICATE_FOUND"?"HOLD_DUPLICATE":"REVIEW_OFFICIAL_URL_BEFORE_INGEST"}));
+ const selected=(LIMIT>0?rows.slice(0,LIMIT):rows).map(r=>({...r,ingest_recommendation:r.already_canonical_mapped?"HOLD_ALREADY_CANONICAL_MAPPED":r.detail_status!=="EXTRACTED"?"HOLD_NOT_EXTRACTED":r.source_status==="CLOSED"?"HOLD_CLOSED_SOURCE":!r.official_notification_url?"HOLD_MISSING_OFFICIAL_URL":r.duplicate_status==="DUPLICATE_FOUND"?"HOLD_DUPLICATE":"REVIEW_OFFICIAL_URL_BEFORE_INGEST"}));
  fs.mkdirSync(OUT_DIR,{recursive:true});const stamp=new Date().toISOString().replace(/[:.]/g,"-");
  const jp=path.join(OUT_DIR,`fja-candidate-audit-${stamp}.json`),cp=path.join(OUT_DIR,`fja-candidate-audit-${stamp}.csv`);
  const counts={official_url_found:selected.filter(r=>r.official_notification_url).length,official_url_missing:selected.filter(r=>!r.official_notification_url).length,duplicate_found:selected.filter(r=>r.duplicate_status==="DUPLICATE_FOUND").length,no_posting_source_key_duplicate_found:selected.filter(r=>r.duplicate_status==="NO_POSTING_SOURCE_KEY_DUPLICATE_FOUND").length,already_canonical_mapped:selected.filter(r=>r.already_canonical_mapped).length};
