@@ -15,6 +15,7 @@ import { performance } from "node:perf_hooks";
 const BASE_URL = (process.env.BASE_URL || "https://www.joboye.com").replace(/\/$/, "");
 const PAGE_PATH = process.env.PAGE_PATH || "/government-jobs";
 const ASSET_LIMIT = Math.max(1, Math.min(Number(process.env.ASSET_LIMIT || 80), 250));
+const LINK_LIMIT = Math.max(1, Math.min(Number(process.env.LINK_LIMIT || 20), 100));
 const CONCURRENCY = Math.max(1, Math.min(Number(process.env.CONCURRENCY || 8), 12));
 const TIMEOUT_MS = Math.max(1000, Math.min(Number(process.env.TIMEOUT_MS || 15000), 60000));
 const TTFB_WARN_MS = Number(process.env.TTFB_WARN_MS || 2000);
@@ -194,6 +195,9 @@ async function main() {
   const assets = extractAssets(html, new URL(response.url));
   const assetResults = await mapLimit(assets, CONCURRENCY, async (url) => ({ url, ...(await fetchWithTimeout(url)) }));
   const brokenAssets = assetResults.filter((x) => x.error || x.status < 200 || x.status >= 400);
+  const leafUrlsToCheck = uniqueVisibleLeafPaths.slice(0, LINK_LIMIT).map((path) => new URL(path, new URL(response.url)).href);
+  const leafResults = await mapLimit(leafUrlsToCheck, CONCURRENCY, async (url) => ({ url, ...(await fetchWithTimeout(url)) }));
+  const brokenLeafUrls = leafResults.filter((x) => x.error || x.status !== 200 || !(x.headers?.contentType || "").includes("text/html"));
 
   const checks = [
     { name: "HTML status is 200", pass: response.status === 200, actual: response.status },
@@ -208,6 +212,7 @@ async function main() {
     { name: "ItemList JSON-LD parses", pass: jsonLdErrors.length === 0, actual: jsonLdErrors },
     { name: "ItemList item count matches declared count", pass: itemLists.length > 0 && itemLists.every((x) => x.numberOfItems === (x.itemListElement || []).length), actual: itemLists.map((x) => ({ numberOfItems: x.numberOfItems, actualItems: x.itemListElement?.length })) },
     { name: "Visible job links match ItemList URLs", pass: visibleSchemaParity, actual: { visibleLinks: visibleLeafPaths.length, uniqueVisibleLinks: uniqueVisibleLeafPaths.length, schemaLinks: schemaLeafPaths.length, uniqueSchemaLinks: uniqueSchemaLeafPaths.length, missingFromSchema: uniqueVisibleLeafPaths.filter((path) => !uniqueSchemaLeafPaths.includes(path)).slice(0, 20), missingFromVisible: uniqueSchemaLeafPaths.filter((path) => !uniqueVisibleLeafPaths.includes(path)).slice(0, 20) } },
+    { name: "Sampled job leaf URLs resolve to HTML 200", pass: leafUrlsToCheck.length > 0 && brokenLeafUrls.length === 0, actual: { checked: leafResults.length, broken: brokenLeafUrls.map((x) => ({ url: x.url, status: x.status, error: x.error, contentType: x.headers?.contentType })) } },
     { name: "Referenced JS/CSS assets respond successfully", pass: brokenAssets.length === 0, actual: brokenAssets.map((x) => ({ url: x.url, status: x.status, error: x.error })) },
   ];
 
@@ -232,6 +237,8 @@ async function main() {
     metadata: { title, canonicalUrl, ogUrl, ogTitle, twitterTitle, appName },
     itemLists: itemLists.map((x) => ({ numberOfItems: x.numberOfItems, actualItems: x.itemListElement?.length })),
     assetsChecked: assetResults.length,
+    leafUrlsChecked: leafResults.length,
+    brokenLeafUrls,
     brokenAssets,
     checks,
     performanceWarnings: [
