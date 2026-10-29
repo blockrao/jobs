@@ -1,0 +1,45 @@
+name: Build FJA 1434 recruitment-to-leaf coverage manifest
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_inventory_rows:
+        description: "Expected FJA inventory rows; guard against silently incomplete exports"
+        required: true
+        type: string
+        default: "1434"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fja-leaf-coverage-manifest
+  cancel-in-progress: false
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build complete non-mutating leaf coverage manifest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EXPECTED_INVENTORY_ROWS: ${{ inputs.expected_inventory_rows }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret."; exit 1; }
+          npx tsx scripts/build-fja-leaf-coverage.ts
+      - name: Upload full coverage manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-1434-leaf-coverage
+          path: |
+            fja-1434-leaf-coverage.csv
+            fja-1434-leaf-coverage.json
+          if-no-files-found: error
+          retention-days: 30
