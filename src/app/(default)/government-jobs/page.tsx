@@ -40,11 +40,20 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       url: `${SITE_URL}${path}`,
       type: "website",
       siteName: "JobOye",
+      images: [
+        {
+          url: "/og-default.png",
+          width: 1200,
+          height: 630,
+          alt: "All Government Jobs in India — JobOye",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: socialTitle,
       description: PAGE_DESCRIPTION,
+      images: ["/og-default.png"],
     },
   };
 }
