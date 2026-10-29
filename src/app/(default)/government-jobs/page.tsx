@@ -17,16 +17,35 @@ const ALL_SECTORS = [...new Set(SECTORS.flatMap((sector) => sector.sectors))];
 
 type Props = { searchParams: Promise<{ page?: string }> };
 
+const PAGE_DESCRIPTION =
+  "Browse open central and state government vacancies across India, including railway, banking, defence, PSU and public-sector recruitment. Check posts, vacancy counts, deadlines and official application links.";
+
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
   const suffix = page > 1 ? ` — Page ${page}` : "";
   const path = page > 1 ? `/government-jobs?page=${page}` : "/government-jobs";
+  const pageTitle = `All Government Jobs 2026 — Latest Vacancies & Deadlines${suffix}`;
+  const socialTitle = `${pageTitle} | JobOye`;
+
   return {
-    title: `All Government Jobs 2026 — Latest Vacancies & Last Dates${suffix} | JobOye`,
-    description:
-      "Browse open central and state government vacancies across India, including railway, banking, defence, PSU and public-sector recruitment. Check posts, vacancy counts, deadlines and official application links.",
+    // The root layout supplies the "| JobOye" title template. Do not append
+    // the brand here or Next.js will render the brand twice.
+    title: pageTitle,
+    description: PAGE_DESCRIPTION,
     ...pageSeo(path),
+    openGraph: {
+      title: socialTitle,
+      description: PAGE_DESCRIPTION,
+      url: `${SITE_URL}${path}`,
+      type: "website",
+      siteName: "JobOye",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description: PAGE_DESCRIPTION,
+    },
   };
 }
 
