@@ -63,7 +63,7 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
-  if (deadline && lifecycle.state === "closed") bits.push(`applications closed on ${formatDate(deadline)}`);
+  if (deadline && lifecycle.state === "closed" && deadline.getTime() <= Date.now()) bits.push(`applications closed on ${formatDate(deadline)}`);
   else if (deadline && !applicationWindowEnded) bits.push(`last date ${formatDate(deadline)}`);
   const storedDescription = typeof post.description === "string" ? post.description.trim() : "";
   const fallbackDescription = `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
