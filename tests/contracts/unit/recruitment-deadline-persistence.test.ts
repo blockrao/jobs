@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { refreshRecruitmentDates } from "../../../src/ingest/resolve";
 
+// Exercise the production recruitment-row refresh function with a deterministic DB double.
 describe("recruitment deadline persistence boundary", () => {
   const existing = new Date("2026-11-30T10:00:00.000Z");
   const laterCandidate = new Date("2026-12-15T18:30:00.000Z");
