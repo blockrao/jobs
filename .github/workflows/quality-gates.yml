@@ -2,12 +2,6 @@ name: JobOye PR Quality Gates
 
 on:
   workflow_dispatch:
-    inputs:
-      target_ref:
-        description: "Branch or commit to validate (for example fix/shared-lifecycle-sql-policy)"
-        required: true
-        default: "main"
-        type: string
   # PRs targeting main use pull_request; stacked feature PRs are checked on push
   # to their head branch so the same suite runs without duplicate executions.
   pull_request:
@@ -36,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
