@@ -34,7 +34,7 @@ import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution 
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
-import { canonicalApplicationDeadline } from "../../ingest/deadline-authority";
+import { canonicalDeadlineWriteValues } from "../../ingest/deadline-authority";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -425,7 +425,7 @@ export async function writePostingsToDB(
       // Missing sources are created as AGGREGATED/non-official by getOrCreateSource(),
       // so unknown and secondary sources fail closed for canonical deadlines.
       const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
-      const canonicalValidThrough = canonicalApplicationDeadline(source.authority, source.isOfficial, norm.validThrough);
+      const deadlineWriteValues = canonicalDeadlineWriteValues(source.authority, source.isOfficial, norm.validThrough);
 
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
@@ -450,7 +450,7 @@ export async function writePostingsToDB(
             officialNotificationNumber: normalizeAdvertisementNumber(norm.advertisementNumber),
             title: norm.title,
             applicationStartDate: norm.applicationStartDate ?? null,
-            applicationEndDate: canonicalValidThrough,
+            applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
           },
         );
       }
@@ -540,7 +540,7 @@ export async function writePostingsToDB(
         applyUrl: clean.applyUrl,
         officialNotificationUrl: clean.officialNotificationUrl,
         currentStage,
-        validThrough: canonicalValidThrough,
+        validThrough: deadlineWriteValues.postingValidThrough,
         postNames: norm.postNames ?? null,
         isCanonical: true,
         canonicalSlug: null,
