@@ -340,22 +340,22 @@ const homeRecruitmentSelect = sql`
 function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
   return (rows as Record<string, unknown>[]).map((r) => {
     const deadline = toPlausibleRecruitmentDate(r.application_end_date);
-    return ({
-    slug: String(r.slug),
-    name: String(r.name),
-    orgName: String(r.org_name),
-    orgNameHi: r.org_name_hi ? String(r.org_name_hi) : null,
-    orgSlug: String(r.org_slug),
-    sector: String(r.sector),
-    totalVacancies:
-      r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
-        ? Number(r.total_vacancies)
-        : null,
-    applicationEndDate: deadline,
-    postCount: Number(r.post_count ?? 0),
-    daysLeft: deadline ? Math.ceil((deadline.getTime() - Date.now()) / 86_400_000) : null,
-    singlePostSlug: r.single_post_slug ? String(r.single_post_slug) : null,
-  });
+    return {
+      slug: String(r.slug),
+      name: String(r.name),
+      orgName: String(r.org_name),
+      orgNameHi: r.org_name_hi ? String(r.org_name_hi) : null,
+      orgSlug: String(r.org_slug),
+      sector: String(r.sector),
+      totalVacancies:
+        r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
+          ? Number(r.total_vacancies)
+          : null,
+      applicationEndDate: deadline,
+      postCount: Number(r.post_count ?? 0),
+      daysLeft: deadline ? Math.ceil((deadline.getTime() - Date.now()) / 86_400_000) : null,
+      singlePostSlug: r.single_post_slug ? String(r.single_post_slug) : null,
+    };
   });
 }
 
