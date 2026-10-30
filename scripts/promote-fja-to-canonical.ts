@@ -303,7 +303,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   // A future end_date is sufficient to conclude applications are open.
   const cat = (row.listing_category ?? "").toLowerCase();
   const now = new Date();
-  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date)) : undefined;
+  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date), { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
   const endDate = sourceDeadline?.date ?? (row.application_end_date ? new Date(row.application_end_date) : null);
   const startDate = row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) ?? null : null;
   const stage =
@@ -348,10 +348,11 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     advertisementNumber: row.advertisement_number ?? undefined,
     datePosted: row.published_date ? new Date(row.published_date) : facts.notification_date ? parseSourceDate(String(facts.notification_date)) : undefined,
     applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) : undefined,
-    validThrough: sourceDeadline?.date ?? (row.application_end_date ? new Date(row.application_end_date) : undefined),
+    validThrough: sourceDeadline?.date ?? undefined,
     validThroughPrecision: sourceDeadline?.precision,
     validThroughSourceText: sourceDeadline?.sourceText,
     validThroughTimezone: sourceDeadline?.timezone,
+    validThroughTimezoneBasis: sourceDeadline?.timezoneBasis,
     validThroughSourceLabel: sourceDeadline ? "FJA facts.application_end_date" : undefined,
     postTable,
     // Always create at least one post leaf; use the source title when no role line was extracted.
