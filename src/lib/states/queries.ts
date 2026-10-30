@@ -118,7 +118,9 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
   `);
   const now = new Date();
   return rowsOf<Row>(result)
-    .map((r) => ({
+    .map((r) => {
+      const lifecycle = deriveLifecycle(r.status, r.application_end_date, now);
+      return ({
       id: r.id,
       slug: r.slug,
       name: r.name,
@@ -127,9 +129,10 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
       totalVacancies: r.total_vacancies,
       postCount: r.post_count ?? 0,
       notificationDate: toDate(r.notification_date),
-      applicationEndDate: deriveLifecycle(r.status, r.application_end_date, now).deadline,
-      lifecycle: deriveLifecycle(r.status, r.application_end_date, now),
-    }))
+      applicationEndDate: lifecycle.deadline,
+      lifecycle,
+    });
+    })
     .filter((r) => r.lifecycle.isLive)
     .slice(0, limit);
 }
