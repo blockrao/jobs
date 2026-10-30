@@ -288,14 +288,14 @@ export function parseIndianDeadline(input: string | undefined | null): {
 } | undefined {
   if (!input?.trim()) return undefined;
   const sourceText = collapse(input);
-  const iso = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|UTC|GMT|IST|[+-]\d{2}:?\d{2})?$/i);
-  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})[\s/-]+([A-Za-z]{3,9}|\d{1,2})[\s,/-]+(\d{4})(?:\b|$)/);
-  const isoDateOnly = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  const isoDateOnly = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoDateOnly) {
-    const y=+isoDateOnly[1], mo=+isoDateOnly[2]-1, d=+isoDateOnly[3];
-    if (!validDeadlineParts(y,mo,d,0,0,0)) return undefined;
-    return { date:new Date(Date.UTC(y,mo,d,18,29,59,999)), precision:"DATE", sourceText, timezone:"Asia/Kolkata" };
+    const y = +isoDateOnly[1], mo = +isoDateOnly[2] - 1, d = +isoDateOnly[3];
+    if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
+    return { date: new Date(Date.UTC(y, mo, d, 18, 29, 59, 999)), precision: "DATE", sourceText, timezone: "Asia/Kolkata" };
   }
+
+  const iso = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|UTC|GMT|IST|[+-]\d{2}:?\d{2})?$/i);
   if (iso) {
     const [, ys, mos, ds, hs, mins, secs = "0", millis = "0", zone] = iso;
     const y = +ys, mo = +mos - 1, d = +ds, h = +hs, mi = +mins, sec = +secs;
@@ -306,21 +306,58 @@ export function parseIndianDeadline(input: string | undefined | null): {
     const value = new Date(Date.parse(stamp));
     return Number.isNaN(value.getTime()) ? undefined : { date: value, precision: "DATETIME", sourceText, timezone: z };
   }
+
+  // Indian source formats include ordinal days ("31st October, 2026"),
+  // numeric day-first dates, and month names with or without punctuation.
+  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})(?:st|nd|rd|th)?[\s/-]+([A-Za-z]{3,9}|\d{1,2})[\s,/-]+(\d{4})(?:\b|$)/i);
   if (!dateMatch) return undefined;
   const [, dayText, monthText, yearText] = dateMatch;
   const monthNum = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
   const y = +yearText, d = +dayText, mo = monthNum;
   if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
-  const timeMatches = [...sourceText.matchAll(/(?:\b|\()([01]?\d|2[0-3])[:.]([0-5]\d)(?::([0-5]\d))?\s*(AM|PM)?\s*(?:HRS?|HOURS)?(?:\))?/gi)];
-  if (timeMatches.length > 1) return undefined;
-  const timeMatch = timeMatches[0];
-  if (!timeMatch && /\d{1,2}[:.]\d{2}/.test(sourceText)) return undefined;
-  if (!timeMatch) {
+
+  // Do not mistake dotted numeric dates (05.11.2026) for 05:11.
+  // Accept HH:MM, H.MM, optional seconds, spaced/dotted AM/PM, and
+  // explicit 24-hour clock suffixes. A bare "5 PM" is also a time.
+  const timePattern = /(?<![\d./-])(\d{1,2})(?:(?::|\.)(\d{2})(?::(\d{2}))?)?\s*(a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)?\s*(?:hrs?|hours)?(?![./-]\d)/gi;
+  const timeMatches = [...sourceText.matchAll(timePattern)].filter((m) => {
+    const token = m[0].trim();
+    return /[:.]|(?:a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)|(?:hrs?|hours)\s*$/i.test(token);
+  });
+  const militaryMatches = [...sourceText.matchAll(/(?<![\d./-])([01]\d|2[0-3])([0-5]\d)\s*(?:hrs?|hours)\b/gi)];
+  const allTimes = [...timeMatches, ...militaryMatches];
+  if (allTimes.length > 1) return undefined;
+
+  const hasClockLikeText = /(?<![\d./-])\d{1,2}[:.]\d{2}(?![./-]\d)/.test(sourceText);
+  if (hasClockLikeText && allTimes.length === 0) return undefined;
+
+  if (allTimes.length === 0) {
     return { date: new Date(Date.UTC(y, mo, d, 18, 29, 59, 999)), precision: "DATE", sourceText, timezone: "Asia/Kolkata" };
   }
-  let h = +timeMatch[1], mi = +timeMatch[2], sec = +(timeMatch[3] || 0);
-  const meridiem = timeMatch[4]?.toUpperCase();
-  if (meridiem) { if (h < 1 || h > 12) return undefined; h = (h % 12) + (meridiem === "PM" ? 12 : 0); }
+
+  const match = allTimes[0];
+  let h: number, mi: number, sec = 0, marker: string | undefined;
+  if (militaryMatches.length) {
+    h = +militaryMatches[0][1];
+    mi = +militaryMatches[0][2];
+  } else {
+    h = +match[1];
+    mi = +(match[2] || "0");
+    sec = +(match[3] || "0");
+    marker = match[4]?.replace(/\s+/g, "").replace(/\./g, "").toLowerCase();
+  }
+
+  if (marker === "midnight") {
+    if (h !== 12 || mi !== 0 || sec !== 0) return undefined;
+    h = 0;
+  } else if (marker === "noon") {
+    if (h !== 12 || mi !== 0 || sec !== 0) return undefined;
+    h = 12;
+  } else if (marker === "am" || marker === "pm") {
+    if (h < 1 || h > 12) return undefined;
+    h = (h % 12) + (marker === "pm" ? 12 : 0);
+  }
+
   if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
   const zoneMatch = sourceText.match(/(?:^|\s|\()(IST|UTC|GMT|[+-]\d{2}:?\d{2})(?=\s|\)|$)/i);
   const zone = zoneMatch?.[1] || "IST";
@@ -329,7 +366,6 @@ export function parseIndianDeadline(input: string | undefined | null): {
   const value = new Date(Date.parse(stamp));
   return Number.isNaN(value.getTime()) ? undefined : { date: value, precision: "DATETIME", sourceText, timezone: zone };
 }
-
 function validDeadlineParts(y:number,mo:number,d:number,h:number,mi:number,sec:number):boolean {
   if(!Number.isInteger(y)||y<2000||y>2100||mo<0||mo>11||d<1||h<0||h>23||mi<0||mi>59||sec<0||sec>59) return false;
   return new Date(Date.UTC(y,mo,d)).getUTCDate()===d && new Date(Date.UTC(y,mo,d)).getUTCMonth()===mo;
