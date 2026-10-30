@@ -351,7 +351,7 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     validThrough: sourceDeadline?.date ?? undefined,
     validThroughPrecision: sourceDeadline?.precision,
     validThroughSourceText: sourceDeadline?.sourceText,
-    validThroughTimezone: sourceDeadline?.timezone,
+    validThroughTimezone: sourceDeadline?.timezone ?? undefined,
     validThroughTimezoneBasis: sourceDeadline?.timezoneBasis,
     validThroughSourceLabel: sourceDeadline ? "FJA facts.application_end_date" : undefined,
     postTable,
