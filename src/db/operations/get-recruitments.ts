@@ -3,7 +3,7 @@ import { stripAggregatorData } from "@/lib/aggregators";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { recruitmentIsLiveSql, recruitmentIsOpenSql } from "./recruitment-lifecycle-sql";
+import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql, recruitmentIsOpenSql } from "./recruitment-lifecycle-sql";
 
 // Recruitments quarantined by the data-integrity process are not public pages.
 // (verification_status is a live DB column not yet mirrored in the Drizzle schema.)
@@ -575,7 +575,7 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
         (CASE WHEN ${OPEN_RECRUITMENT_SQL} THEN 0
               WHEN ${LIVE_RECRUITMENT_SQL} THEN 1
               ELSE 2 END),
-        r.application_end_date ASC NULLS LAST,
+        ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} ASC NULLS LAST,
         COALESCE(r.notification_date, r.created_at) DESC,
         r.id DESC`;
 
