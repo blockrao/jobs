@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { deriveLifecycle, type Lifecycle } from "@/lib/lifecycle";
+import { recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
 
 /**
  * State hub queries — canonical recruitments only (2026-10-20).
@@ -111,8 +112,7 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
       ${sql.join(codes.map((code) => sql`${code}`), sql`, `)}
     )
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-      AND r.status IN ('ACTIVE', 'UPCOMING')
-      AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+      AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
     ORDER BY r.application_end_date ASC NULLS LAST, r.notification_date DESC NULLS LAST
     LIMIT ${limit * 2}
   `);
@@ -127,7 +127,7 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
       totalVacancies: r.total_vacancies,
       postCount: r.post_count ?? 0,
       notificationDate: toDate(r.notification_date),
-      applicationEndDate: toDate(r.application_end_date),
+      applicationEndDate: deriveLifecycle(r.status, r.application_end_date, now).deadline,
       lifecycle: deriveLifecycle(r.status, r.application_end_date, now),
     }))
     .filter((r) => r.lifecycle.isLive)
@@ -143,8 +143,7 @@ export async function countCurrentByState(): Promise<Record<string, number>> {
     FROM recruitments r
     WHERE r.location_state_code IS NOT NULL
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-      AND r.status IN ('ACTIVE', 'UPCOMING')
-      AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+      AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
     GROUP BY r.location_state_code
   `);
   const out: Record<string, number> = {};
