@@ -1,6 +1,7 @@
 name: JobOye PR Quality Gates
 
 on:
+  workflow_dispatch:
   # PRs targeting main use pull_request; stacked feature PRs are checked on push
   # to their head branch so the same suite runs without duplicate executions.
   # Keep push validation enabled for commits authored through GitHub integrations.
