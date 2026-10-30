@@ -74,14 +74,14 @@ describe("extracted source projection", () => {
     expect(source).toContain("recruitment.sourceVerificationStatus !== 'VERIFIED'");
     // Unverified facts are labelled as reported, never as official.
     expect(source).toContain("? 'Source listing published' : 'Notification published'");
-    expect(source).toContain("sourceFactsUnverified ? 'Application deadline (reported)' : 'Application closes'");
+    expect(source).toContain("sourceFactsUnverified ? 'Application deadline (reported)' : applicationWindowEnded ? 'Application deadline' : 'Application closes'");
     expect(source).toContain("The source listing reports");
     // Lifecycle-derived claims (closed state, countdown) come from the shared
     // lifecycle rule and are suppressed while unverified.
     expect(source).toContain("deriveLifecycle(recruitment.status, recruitment.applicationEndDate, now)");
     expect(source).toContain("sourceFactsUnverified ? null : lifecycle.state");
-    expect(source).toContain("sourceFactsUnverified ? false : lifecycle.state === 'closed'");
-    expect(source).toContain("sourceFactsUnverified ? null : lifecycle.daysLeft");
+    expect(source).toContain("sourceFactsUnverified ? false : !lifecycle.isOpen");
+    expect(source).toContain("sourceFactsUnverified || !lifecycle.isOpen ? null : lifecycle.daysLeft");
   });
   test("Post Leaves emit JobPosting until the deadline closes, regardless of verification; frontend labels unverified facts as reported", () => {
     // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
