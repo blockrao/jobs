@@ -143,3 +143,18 @@ This is strong evidence of at least two different deadline-time conventions in t
 **Important correction to implementation sequencing:** Do not simply change the lifecycle helper to treat every timestamp at 00:00 UTC as end-of-day. First audit the date ingestion and normalization paths and establish whether source precision (date-only vs exact time) is preserved. If it is not preserved, the smallest safe data-contract change may need explicit date precision/timezone semantics rather than another timestamp heuristic.
 
 Two official PDF URLs for sample rows were not retrievable through the available document fetcher in this audit, so their precise closing-time statements remain unverified. The sample rows are evidence of storage patterns, not proof of the official deadline time.
+
+
+### Source-level root cause confirmed
+
+A further source-path inspection identified a concrete loss of deadline-time precision:
+
+- `src/ingest/adapters/util.ts` — `parseIndianDate()` explicitly strips trailing time expressions such as `| 10:11 PM`, `(23:00 Hours)` and `23:00 Hrs`, then returns a UTC-midnight `Date` via `safeUTC()`.
+- `src/db/operations/write-postings-v2.ts` passes `norm.validThrough` into `resolveRecruitment()` as `applicationEndDate`, then calls `refreshRecruitmentDates()` with the same value. This writes the normalised timestamp onto the canonical recruitment.
+- `scripts/promote-fja-to-canonical.ts` also parses day-first source dates with `Date.UTC(...)`; its `parseSourceDate()` does not preserve a source time. `scripts/lib/fja-research-parser.ts` returns date-only ISO strings from source text.
+
+Therefore, the 00:00 UTC cluster is not merely a possible date-only convention: at least one active ingestion path deliberately discards explicit source times before writing the canonical recruitment deadline. The database timestamp cannot be trusted to retain the original closing time.
+
+**Required correction:** the ingestion contract must distinguish (a) date-only deadlines, which should remain valid through the stated India-local calendar date unless the official source says otherwise, from (b) explicit time deadlines, whose stated time and timezone must be preserved. Do not infer this distinction from the final timestamp alone. Preserve raw source text / source locator and an explicit precision/timezone attribute through normalization and canonical promotion. Then backfill only from recoverable source evidence; unresolved historical rows must remain unknown or be visibly qualified rather than assigned an invented closing time.
+
+The current helper and all SQL consumers should operate on the resolved canonical deadline instant (or explicit date-only inclusive boundary) only after this source contract is fixed.
