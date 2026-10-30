@@ -182,7 +182,7 @@ export function recordToRaw(rec: FileRecord): RawPosting {
     validThrough,
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
-    validThroughTimezone: deadline?.timezone,
+    validThroughTimezone: deadline?.timezone ?? undefined,
     validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: last?.label,
     examDate: examDate ? parseIndianDate(examDate.value) : undefined,
