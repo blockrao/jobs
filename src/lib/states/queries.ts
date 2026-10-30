@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { deriveLifecycle, type Lifecycle } from "@/lib/lifecycle";
-import { recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
+import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
 
 /**
  * State hub queries — canonical recruitments only (2026-10-20).
@@ -113,7 +113,7 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
     )
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
-    ORDER BY r.application_end_date ASC NULLS LAST, r.notification_date DESC NULLS LAST
+    ORDER BY ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} ASC NULLS LAST, r.notification_date DESC NULLS LAST
     LIMIT ${limit * 2}
   `);
   const now = new Date();
