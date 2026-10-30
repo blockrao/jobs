@@ -5,6 +5,7 @@
 
 import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
+import { recruitmentIsLiveSql } from "./recruitment-lifecycle-sql";
 
 export interface RelatedPost {
   id: string | number;
@@ -31,6 +32,8 @@ export async function getRelatedPostsGrouped(
 ): Promise<RelatedPostsGrouped> {
   const db = getDb();
 
+  const liveRecruitment = recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`);
+
   // Group 1: Same organization (3 posts)
   let byOrgData: RelatedPost[] = [];
   if (currentOrgId) {
@@ -43,6 +46,7 @@ export async function getRelatedPostsGrouped(
         WHERE r.organization_id = ${currentOrgId}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND ${liveRecruitment}
         ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
@@ -64,6 +68,7 @@ export async function getRelatedPostsGrouped(
         WHERE p.location_state = ${currentLocation}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND ${liveRecruitment}
         ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
@@ -92,6 +97,7 @@ export async function getRelatedPostsGrouped(
         WHERE LOWER(p.title) LIKE ${`%${roleKeywords}%`}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND ${liveRecruitment}
         ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
