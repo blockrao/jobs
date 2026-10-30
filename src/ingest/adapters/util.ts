@@ -325,7 +325,7 @@ export function parseIndianDeadline(
     timezoneBasis: "UNKNOWN",
   });
 
-  const isoDateOnly = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  const isoDateOnly = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoDateOnly) {
     const y = +isoDateOnly[1], mo = +isoDateOnly[2] - 1, d = +isoDateOnly[3];
     if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
@@ -340,7 +340,7 @@ export function parseIndianDeadline(
     };
   }
 
-  const iso = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})[T ](\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d{1,3}))?)?\\s*(Z|UTC|GMT|IST|[+-]\\d{2}:?\\d{2})?$/i);
+  const iso = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|UTC|GMT|IST|[+-]\d{2}:?\d{2})?$/i);
   if (iso) {
     const [, ys, mos, ds, hs, mins, secs = "0", millis = "0", zone] = iso;
     const y = +ys, mo = +mos - 1, d = +ds, h = +hs, mi = +mins, sec = +secs;
@@ -363,25 +363,25 @@ export function parseIndianDeadline(
 
   // Indian source formats include ordinal days, numeric day-first dates,
   // and month names with or without punctuation.
-  const dateMatch = sourceText.match(/(?:^|\\b)(\\d{1,2})(?:st|nd|rd|th)?[\\s./-]+([A-Za-z]{3,9}|\\d{1,2})[\\s,./-]+(\\d{4})(?:\\b|$)/i);
-  const monthFirstMatch = sourceText.match(/(?:^|\\b)([A-Za-z]{3,9})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?[,]?\\s+(\\d{4})(?:\\b|$)/i);
+  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})(?:st|nd|rd|th)?[\s./-]+([A-Za-z]{3,9}|\d{1,2})[\s,./-]+(\d{4})(?:\b|$)/i);
+  const monthFirstMatch = sourceText.match(/(?:^|\b)([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})(?:\b|$)/i);
   if (!dateMatch && !monthFirstMatch) return undefined;
   const y = +(dateMatch ? dateMatch[3] : monthFirstMatch![3]);
   const d = +(dateMatch ? dateMatch[1] : monthFirstMatch![2]);
   const monthText = dateMatch ? dateMatch[2] : monthFirstMatch![1];
-  const mo = /^\\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
+  const mo = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
   if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
 
-  const timePattern = /(?<![\\d./+-])(\\d{1,2})(?:(?::|\\.)(\\d{2})(?::(\\d{2}))?)?\\s*(a\\.?\\s*m\\.?|p\\.?\\s*m\\.?|am|pm|midnight|noon)?\\s*(?:hrs?|hours?|h)?(?![\\d./-])/gi;
+  const timePattern = /(?<![\d./+-])(\d{1,2})(?:(?::|\.)(\d{2})(?::(\d{2}))?)?\s*(a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)?\s*(?:hrs?|hours?|h)?(?![\d./-])/gi;
   const timeMatches = [...sourceText.matchAll(timePattern)].filter((m) => {
     const token = m[0].trim();
-    return /[:.]|(?:a\\.?\\s*m\\.?|p\\.?\\s*m\\.?|am|pm|midnight|noon)|(?:hrs?|hours)\\s*$/i.test(token);
+    return /[:.]|(?:a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)|(?:hrs?|hours)\s*$/i.test(token);
   });
-  const militaryMatches = [...sourceText.matchAll(/(?<![\\d./+-])([01]\\d|2[0-3])([0-5]\\d)\\s*(?:hrs?|hours?|h)\\b/gi)];
+  const militaryMatches = [...sourceText.matchAll(/(?<![\d./+-])([01]\d|2[0-3])([0-5]\d)\s*(?:hrs?|hours?|h)\b/gi)];
   const allTimes = [...timeMatches, ...militaryMatches];
   if (allTimes.length > 1) return undefined;
 
-  const hasClockLikeText = /(?<![\\d./+-])\\d{1,2}[:.]\\d{2}(?![./-]\\d)/.test(sourceText);
+  const hasClockLikeText = /(?<![\d./+-])\d{1,2}[:.]\d{2}(?![./-]\d)/.test(sourceText);
   if (hasClockLikeText && allTimes.length === 0) return undefined;
 
   if (allTimes.length === 0) {
@@ -404,7 +404,7 @@ export function parseIndianDeadline(
     h = +match[1];
     mi = +(match[2] || "0");
     sec = +(match[3] || "0");
-    marker = match[4]?.replace(/\\s+/g, "").replace(/\\./g, "").toLowerCase();
+    marker = match[4]?.replace(/\s+/g, "").replace(/\./g, "").toLowerCase();
   }
 
   if (marker === "midnight") {
@@ -419,7 +419,7 @@ export function parseIndianDeadline(
   }
 
   if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
-  const zoneMatch = sourceText.match(/(?:^|\\s|\\()(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})(?=\\s|\\)|$)/i);
+  const zoneMatch = sourceText.match(/(?:^|\s|\()(IST|UTC|GMT|[+-]\d{2}:?\d{2})(?=\s|\)|$)/i);
   const explicitZone = zoneMatch?.[1] || null;
   if (!explicitZone && !hasIndiaDefault) return unknown();
   const zone = explicitZone?.toUpperCase() === "IST" ? "Asia/Kolkata" : explicitZone || "Asia/Kolkata";
