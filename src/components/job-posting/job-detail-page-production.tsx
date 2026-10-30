@@ -176,11 +176,13 @@ export default function JobDetailPageProduction({
   const advertisementNumber = post.fjaExtract?.advertisementNumber ?? null;
   // A populated URL is not proof of officialness. A-070 defines MANUAL_VERIFIED
   // as the only affirmative provenance; aggregator-discovered links remain unverified.
-  const officialLinkVerified = isManuallyVerifiedOfficialLink(post.officialLinkSource);
-  const notificationLinkLabel = officialLinkVerified
+  const notificationLinkVerified = Boolean(post.officialSourceUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
+  const applicationLinkVerified = Boolean(post.applyUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
+  const jobPostingSourceVerified = notificationLinkVerified && applicationLinkVerified;
+  const notificationLinkLabel = notificationLinkVerified
     ? "Official notification"
     : "Notification link (not manually verified)";
-  const applicationLinkLabel = officialLinkVerified
+  const applicationLinkLabel = applicationLinkVerified
     ? "Apply online"
     : "Application link (not manually verified)";
 
@@ -209,7 +211,10 @@ export default function JobDetailPageProduction({
   if (!isApplicationClosed) pushLink(applicationLinkLabel, post.applyUrl);
   pushLink(notificationLinkLabel, post.officialSourceUrl);
   for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
-  if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
+  if (isApplicationClosed) {
+    const closedPortalLabel = lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)';
+    pushLink(applicationLinkVerified ? closedPortalLabel : `${closedPortalLabel} (not manually verified)`, post.applyUrl);
+  }
 
   // ── Intro (stored description or one sentence of known facts) ────────────
   const introFacts: string[] = [];
@@ -289,7 +294,7 @@ export default function JobDetailPageProduction({
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
       // Do not assert unverified links as citations or sameAs in structured data.
-      officialSourceUrl: officialLinkVerified ? post.officialSourceUrl : null,
+      officialSourceUrl: notificationLinkVerified ? post.officialSourceUrl : null,
       qualificationText,
       experienceText,
     },
@@ -320,7 +325,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && officialLinkVerified} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
@@ -339,7 +344,7 @@ export default function JobDetailPageProduction({
                 {statusText && (
                   <li className={`${styles.chip} ${isApplicationClosed ? styles.chipClosed : styles.chipOpen}`}>{statusText}</li>
                 )}
-                {post.officialSourceUrl && <li className={styles.chip}>{officialLinkVerified ? "Official source manually verified" : "Notification source not manually verified"}</li>}
+                {post.officialSourceUrl && <li className={styles.chip}>{notificationLinkVerified ? "Official source manually verified" : "Notification source not manually verified"}</li>}
                 {modifiedDate && <li className={`${styles.chip} ${styles.chipMuted}`}>Updated {formatDate(modifiedDate)}</li>}
               </ul>
               <h1 className={styles.heroTitle}>
@@ -358,7 +363,7 @@ export default function JobDetailPageProduction({
                 <p className={styles.notice}>
                   {publishedDate && <>Published <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>. </>}
                   {post.officialSourceUrl
-                    ? officialLinkVerified
+                    ? notificationLinkVerified
                       ? "The notification link has been manually verified as an official source. Confirm the latest details on the recruiting body's website before applying."
                       : "The notification link has not been manually verified as an official source. Confirm the notice and all details on the recruiting body's official website before applying."
                     : "Confirm the notice and all details on the recruiting body's official website before applying."}
