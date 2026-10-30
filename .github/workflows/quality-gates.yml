@@ -1,6 +1,7 @@
 name: JobOye PR Quality Gates
 
 on:
+  workflow_dispatch:
   # PRs targeting main use pull_request; stacked feature PRs are checked on push
   # to their head branch so the same suite runs without duplicate executions.
   pull_request:
@@ -74,7 +75,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
       - run: npx tsc --noEmit
 
   fja-reconciliation-typecheck:
