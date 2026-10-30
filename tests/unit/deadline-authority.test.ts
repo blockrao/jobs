@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canonicalApplicationDeadline, canonicalDeadlineWriteValues, deadlineObservationFacts, canFillMissingCanonicalDeadline } from "../../src/ingest/deadline-authority";
 
 describe("canonical application deadline authority", () => {
-  const candidate = new Date("2026-11-30T18:29:59.999Z");
+  const candidate = new Date("2026-11-30T18:30:00.000Z");
 
   it("allows an explicitly official registry source to set a canonical deadline", () => {
     expect(canonicalApplicationDeadline("OFFICIAL", true, candidate)).toBe(candidate);
