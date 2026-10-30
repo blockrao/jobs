@@ -61,7 +61,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
   bag.addFromText(metaDesc);
   bag.addFromText(bodyText);
 
-  const lastDate = metaDesc.match(/last date[:\\s]+([^,]+)/i);
+  const lastDate = metaDesc.match(/last date[:\s]+([^,]+)/i);
   const deadlineLabel = lastDate?.[1] || bag.find(/last date/i, /closing date/i, /application end/i);
   const deadline = parseIndianDeadline(deadlineLabel, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
   const loc = metaDesc.match(/\(([^,)]+),\s*([^)]+)\)/);
