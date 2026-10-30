@@ -9,6 +9,7 @@ import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
 import { JobPostingData, PostEnrichment } from "@/types/job-posting";
 import { transformEnrichment } from "./enrichment-transformer";
+import { recruitmentIsLiveSql } from "./recruitment-lifecycle-sql";
 
 type RawDate = string | Date | null;
 type FjaExtract = NonNullable<JobPostingData["fjaExtract"]>;
@@ -138,8 +139,7 @@ async function getPostCoreData(
         NULL AS "keyDates",
         NULL AS "requiredSkills",
         NULL AS "applicationChecklist",
-        (r.status IN ('UPCOMING','ACTIVE')
-          AND (r.application_end_date IS NULL OR r.application_end_date >= now())) AS "isLive",
+        ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)} AS "isLive",
         p.created_at AS "postedAt",
         p.created_at AS "createdAt",
         p.updated_at AS "updatedAt",
@@ -750,8 +750,7 @@ export async function getRelatedPostsForLeaf(
       JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p.position_id = ${positionId}
         AND p.id != ${postId}
-        AND r.status IN ('UPCOMING','ACTIVE')
-        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 6
@@ -780,8 +779,7 @@ export async function getRelatedPostsForLeaf(
       JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p."organizationId" = ${organizationId}
         AND p.id != ALL(${excludeIds})
-        AND r.status IN ('UPCOMING','ACTIVE')
-        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 5
@@ -810,8 +808,7 @@ export async function getRelatedPostsForLeaf(
       JOIN recruitments r ON COALESCE(p."recruitmentId"::integer, p.recruitment_id) = r.id
       WHERE p.location_state = ${locationState}
         AND p.id != ALL(${excludeIds})
-        AND r.status IN ('UPCOMING','ACTIVE')
-        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 4
@@ -940,8 +937,7 @@ export async function getPostsByRecruitment(
             WHERE old_slug = ${recruitmentSlug}
           )
         )
-        AND r.status IN ('UPCOMING','ACTIVE')
-        AND (r.application_end_date IS NULL OR r.application_end_date >= now())
+        AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
