@@ -34,7 +34,7 @@ jobs:
       - run: npm ci
       # The repository-wide lint command currently fails on hundreds of legacy
       # issues outside this change. Lint the files changed by this PR.
-      - run: npx eslint src/ingest/adapters/util.ts src/ingest/deadline-authority.ts src/db/operations/write-postings-v2.ts tests/unit/ingest-deadline-parser.test.ts tests/unit/deadline-authority.test.ts
+      - run: npx eslint src/ingest/adapters/util.ts src/ingest/deadline-authority.ts src/db/operations/write-postings-v2.ts src/lib/lifecycle.ts src/ingest/adapters/freejobalert-file.ts src/ingest/adapters/freejobalert.ts src/ingest/adapters/multi-source-file.ts src/ingest/adapters/sahisarkarijobs.ts src/ingest/adapters/sarkari-detail.ts src/ingest/adapters/sarkarinaukri.ts scripts/promote-fja-to-canonical.ts tests/unit/ingest-deadline-parser.test.ts tests/unit/deadline-authority.test.ts tests/unit/lifecycle-deadline-boundary.test.ts
 
   contract-tests:
     name: Architecture contract tests
