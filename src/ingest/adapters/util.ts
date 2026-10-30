@@ -282,7 +282,7 @@ const MONTHS: Record<string, number> = {
  */
 export function parseIndianDeadline(input: string | undefined | null): {
   date: Date;
-  precision: "DATE_ONLY" | "DATETIME";
+  precision: "DATE_ONLY" | "DATE_TIME";
   sourceText: string;
   timezone: string;
 } | undefined {
