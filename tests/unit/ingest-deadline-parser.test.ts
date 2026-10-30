@@ -41,6 +41,7 @@ describe("parseIndianDeadline", () => {
 
   it("preserves ordinal dates and dotted meridiem time formats found in source captures", () => {
     expect(parseIndianDeadline("31st October, 2026")?.precision).toBe("DATE");
+    expect(parseIndianDeadline("November 6, 2026")?.date.toISOString()).toBe("2026-11-06T18:29:59.999Z");
     expect(parseIndianDeadline("30/10/2026 by 5.00 p.m.")?.date.toISOString()).toBe("2026-10-30T11:30:00.000Z");
     expect(parseIndianDeadline("30 October 2026 by 5 PM")?.date.toISOString()).toBe("2026-10-30T11:30:00.000Z");
   });
