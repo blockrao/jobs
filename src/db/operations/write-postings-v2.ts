@@ -452,7 +452,7 @@ export async function writePostingsToDB(
       // A later sighting fills a missing start date or extends the end date on the recruitment.
       await refreshRecruitmentDates(db, recruitment.id, {
         applicationStartDate: norm.applicationStartDate ?? null,
-        applicationEndDate: canonicalValidThrough,
+        applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
       });
 
       let postId: number | null = existingPosting?.inferredPostId ?? null;
@@ -565,7 +565,7 @@ export async function writePostingsToDB(
         officialNotificationUrl: clean.officialNotificationUrl,
         applyUrl: clean.applyUrl,
         currentStage,
-        validThrough: canonicalValidThrough,
+        validThrough: deadlineWriteValues.postingValidThrough,
         examDate: norm.examDate ?? null,
         inferredRecruitmentId: recruitment.id,
         inferredPostId: postId,
