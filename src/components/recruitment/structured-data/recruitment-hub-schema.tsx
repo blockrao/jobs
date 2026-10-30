@@ -7,7 +7,6 @@
  *   - Article        — headline = page H1; datePublished / dateModified; about; isBasedOn
  *   - WebPage        — the hub page itself
  *   - FAQPage        — exactly the FAQ items rendered on the page
- *   - JobPosting     — ONLY when the recruitment has exactly one post
  *
  * Nothing is emitted that is not visible on the page. Every value is taken
  * from the same HubData the renderer uses, so the markup cannot drift from
@@ -52,35 +51,8 @@ function isAuthoritativeDomain(url: string | null | undefined): boolean {
   }
 }
 
-const EMPLOYMENT_TYPE_SCHEMA: Record<string, string> = {
-  FULL_TIME: "FULL_TIME",
-  PART_TIME: "PART_TIME",
-  CONTRACTOR: "CONTRACTOR",
-  TEMPORARY: "TEMPORARY",
-  INTERN: "INTERN",
-  INTERNSHIP: "INTERN",
-  APPRENTICESHIP: "INTERN",
-  PERMANENT: "FULL_TIME",
-};
-
-const SALARY_UNITS: Record<string, string> = {
-  MONTH: "MONTH", MONTHLY: "MONTH", PM: "MONTH", "PER MONTH": "MONTH",
-  YEAR: "YEAR", YEARLY: "YEAR", ANNUAL: "YEAR", "PER ANNUM": "YEAR", PA: "YEAR",
-  DAY: "DAY", DAILY: "DAY", HOUR: "HOUR", HOURLY: "HOUR", WEEK: "WEEK",
-};
-
-/** Google-valid unitText only when the stored pay-level record states a period. */
-function salaryUnit(payLevel: Record<string, unknown> | null | undefined): string | null {
-  const raw = payLevel?.period ?? payLevel?.unit ?? payLevel?.salaryPeriod;
-  if (typeof raw !== "string") return null;
-  return SALARY_UNITS[raw.trim().toUpperCase()] ?? null;
-}
-
-const escapeHtml = (s: string): string =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
 export default function RecruitmentHubStructuredData({ data }: RecruitmentHubSchemaProps) {
-  const { recruitment, posts } = data;
+  const { recruitment } = data;
   const hubUrl = `${SITE_URL}/jobs/${data.slug}`;
   const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
   const orgName = data.orgName;
@@ -184,71 +156,8 @@ export default function RecruitmentHubStructuredData({ data }: RecruitmentHubSch
       }
     : null;
 
-  // ── JobPosting (single-post recruitments only) ───────────────────────────
-  let jobPosting: Record<string, unknown> | null = null;
-  if (posts.length === 1 && data.postRows.length === 1) {
-    const post = posts[0];
-    const row = data.postRows[0];
-    const paragraphs: string[] = [];
-    if (row.qualification) paragraphs.push(`<p>Qualification: ${escapeHtml(row.qualification)}</p>`);
-    if (row.experience) paragraphs.push(`<p>Experience: ${escapeHtml(row.experience)}</p>`);
-    for (const t of data.ageTexts) paragraphs.push(`<p>Age: ${escapeHtml(t)}</p>`);
-    if (row.pay) paragraphs.push(`<p>Pay: ${escapeHtml(row.pay)}</p>`);
-    if (data.feeRows.length > 0) {
-      paragraphs.push(`<p>Application fee: ${escapeHtml(data.feeRows.map((f) => `${f.category}: ${f.amount}`).join("; "))}</p>`);
-    } else if (data.feeSummary ?? data.feeNote) {
-      paragraphs.push(`<p>Application fee: ${escapeHtml((data.feeSummary ?? data.feeNote) as string)}</p>`);
-    }
-    if (data.howToApply.length > 0) {
-      paragraphs.push(`<p>How to apply: ${escapeHtml(data.howToApply.join(" "))}</p>`);
-    }
-    // datePosted: the notification's publication date when known, otherwise
-    // the date this page was first published on JobOye (same rule as post pages).
-    const jobDatePosted = toIso(recruitment.notificationDate) ?? toIso(recruitment.createdAt);
-    const validThrough = toIso(recruitment.applicationEndDate);
-    const postingClosed = validThrough != null && new Date(validThrough).getTime() < Date.now();
-    const employmentType = EMPLOYMENT_TYPE_SCHEMA[(recruitment.employmentType ?? "").toUpperCase()];
 
-    if (paragraphs.length > 0 && jobDatePosted && orgName && !postingClosed) {
-      jobPosting = {
-        "@type": "JobPosting",
-        "@id": `${hubUrl}#jobposting`,
-        mainEntityOfPage: { "@id": `${hubUrl}#webpage` },
-        title: row.name,
-        description: paragraphs.join(""),
-        datePosted: jobDatePosted,
-        hiringOrganization: {
-          "@type": "Organization",
-          name: orgName,
-          ...(isAuthoritativeDomain(officialSite) ? { sameAs: officialSite } : {}),
-        },
-        jobLocation: {
-          "@type": "Place",
-          address: {
-            "@type": "PostalAddress",
-            ...(data.state ? { addressRegion: data.state.name } : {}),
-            addressCountry: "IN",
-          },
-        },
-        directApply: false,
-      };
-      if (validThrough) jobPosting.validThrough = validThrough;
-      if (employmentType) jobPosting.employmentType = employmentType;
-      if (data.totalVacancies != null) jobPosting.totalJobOpenings = data.totalVacancies;
-      if (data.notificationNumber) {
-        jobPosting.identifier = { "@type": "PropertyValue", name: "Advertisement number", value: data.notificationNumber };
-      }
-      const unit = salaryUnit(post.payLevel);
-      if (unit && (post.salaryMin != null || post.salaryMax != null)) {
-        const value: Record<string, unknown> = { "@type": "QuantitativeValue", unitText: unit };
-        if (post.salaryMin != null) value.minValue = post.salaryMin;
-        if (post.salaryMax != null) value.maxValue = post.salaryMax;
-        jobPosting.baseSalary = { "@type": "MonetaryAmount", currency: "INR", value };
-      }
-    }
-  }
-
-  const graph = jsonLdGraph(siteOrg, breadcrumb, article, webPage, faqPage, jobPosting);
+  const graph = jsonLdGraph(siteOrg, breadcrumb, article, webPage, faqPage);
 
   return (
     <script
