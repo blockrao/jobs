@@ -103,7 +103,7 @@ interface JobDetailPageProps {
   /** Page <title>/description from the route, so JSON-LD never disagrees with <head>. */
   pageTitle?: string;
   pageDescription?: string;
-  lifecycle?: { state: string; isOpen: boolean; isLive: boolean; deadline: Date | null };
+  lifecycle?: { state: string; isOpen: boolean; isLive: boolean; deadline: Date | null; daysLeft: number | null };
   /** Mirrors route-level robots eligibility; prevents JobPosting on noindex leaves. */
   indexable?: boolean;
   pillarSlug?: string | null;
