@@ -3,6 +3,7 @@ import { stripAggregatorData } from "@/lib/aggregators";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { recruitmentIsLiveSql, recruitmentIsOpenSql } from "./recruitment-lifecycle-sql";
 
 // Recruitments quarantined by the data-integrity process are not public pages.
 // (verification_status is a live DB column not yet mirrored in the Drizzle schema.)
@@ -535,15 +536,8 @@ export interface RecruitmentListRow {
 /** Recruitments whose organisation/identity could not be established are hidden everywhere. */
 export const NOT_QUARANTINED_SQL = sql`r.verification_status IS DISTINCT FROM 'QUARANTINED'`;
 
-const LIVE_RECRUITMENT_SQL = sql`
-  r.status IN ('UPCOMING', 'ACTIVE')
-  AND (r.application_end_date IS NULL OR r.application_end_date >= now())
-`;
-
-const OPEN_RECRUITMENT_SQL = sql`
-  r.status = 'ACTIVE'
-  AND (r.application_end_date IS NULL OR r.application_end_date >= now())
-`;
+const LIVE_RECRUITMENT_SQL = recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`);
+const OPEN_RECRUITMENT_SQL = recruitmentIsOpenSql(sql`r.status`, sql`r.application_end_date`);
 
 export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<RecruitmentListRow[]> {
   const db = getDb();
