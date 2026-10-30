@@ -286,7 +286,7 @@ export function buildHubData(
   const applicationWindowEnded = !sourceFactsUnverified && (lifecycle.state === 'closed' || lifecycle.state === 'results' || lifecycle.state === 'archived');
   const deadlinePassed = lifecycle.deadline ? lifecycle.deadline.getTime() <= now.getTime() : false;
   const appEndLabel = sourceFactsUnverified ? 'Application deadline (reported)' : applicationWindowEnded ? 'Application deadline' : 'Application closes';
-  const daysLeft = sourceFactsUnverified ? null : lifecycle.daysLeft;
+  const daysLeft = sourceFactsUnverified || !lifecycle.isOpen ? null : lifecycle.daysLeft;
   const updatedAtLabel = formatDate(recruitment.updatedAt);
 
   // ── Vacancies and post names ─────────────────────────────────────────────
