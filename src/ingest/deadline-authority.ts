@@ -47,12 +47,10 @@ export interface DeadlineObservationInput {
 export function hasResolvedDeadlineEvidence(input: DeadlineObservationInput): boolean {
   return input.validThrough instanceof Date
     && !Number.isNaN(input.validThrough.getTime())
-    && input.validThroughPrecision !== undefined
-    && input.validThroughPrecision !== "UNKNOWN"
+    && (input.validThroughPrecision === "DATE_ONLY" || input.validThroughPrecision === "DATE_TIME")
     && Boolean(input.validThroughSourceText?.trim())
     && Boolean(input.validThroughTimezone?.trim())
-    && input.validThroughTimezoneBasis !== undefined
-    && input.validThroughTimezoneBasis !== "UNKNOWN";
+    && (input.validThroughTimezoneBasis === "EXPLICIT_SOURCE" || input.validThroughTimezoneBasis === "INDIA_SOURCE_DEFAULT");
 }
 
 /** Stable observation payload for deadline evidence, including unresolved candidates. */
