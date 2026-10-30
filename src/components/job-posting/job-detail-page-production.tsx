@@ -15,9 +15,9 @@
  *     defaulted. A section renders only when it has data.
  *   - The FAQ list and the fact lines are computed once and handed to the
  *     structured-data component, so JSON-LD mirrors the visible page exactly.
- *   - JobPosting is gated on lifecycle only: a closed recruitment with no
- *     verifiable deadline emits no JobPosting (Google forbids live expired
- *     postings without a past validThrough).
+ *   - JobPosting requires an open lifecycle, an indexable leaf and explicit
+ *     MANUAL_VERIFIED official-link provenance; unknown/aggregator-discovered
+ *     links remain visible but are never represented as verified citations.
  *   - Uses the recruitment hub's stylesheet so hub and leaf look identical.
  */
 
@@ -26,6 +26,7 @@ import { formatDate, formatCurrency } from '@/lib/formatting';
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
 import type { LeafFaq, LeafFact } from '@/components/job-posting/structured-data/post-leaf-schema';
 import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
+import { isManuallyVerifiedOfficialLink } from '@/lib/source-verification';
 import styles from '@/components/recruitment/recruitment-hub.module.css';
 
 // Helper: Parse JSON strings safely
@@ -175,7 +176,7 @@ export default function JobDetailPageProduction({
   const advertisementNumber = post.fjaExtract?.advertisementNumber ?? null;
   // A populated URL is not proof of officialness. A-070 defines MANUAL_VERIFIED
   // as the only affirmative provenance; aggregator-discovered links remain unverified.
-  const officialLinkVerified = post.officialLinkSource === "MANUAL_VERIFIED";
+  const officialLinkVerified = isManuallyVerifiedOfficialLink(post.officialLinkSource);
   const notificationLinkLabel = officialLinkVerified
     ? "Official notification"
     : "Notification link (not manually verified)";
