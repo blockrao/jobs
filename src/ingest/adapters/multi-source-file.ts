@@ -27,7 +27,7 @@ import { readFileSync } from "node:fs";
 import { isDateLabel } from "../../lib/semantic-fields";
 import type { RawPosting } from "../types";
 import { FACTS_ONLY_DESCRIPTION_MARKER } from "../../lib/content-quality/gate";
-import { collapse, parseIndianDate, scoreConfidence, extractVacancies } from "./util";
+import { collapse, parseIndianDate, parseIndianDeadline, scoreConfidence, extractVacancies } from "./util";
 
 /** Source key map: label from Python scraper → stable source code */
 const SOURCE_KEY: Record<string, string> = {
@@ -147,7 +147,8 @@ export function recordToRaw(rec: FileRecord): RawPosting {
 
   const title = collapse(rec.title || rec.listTitle || "");
   const totalVacancies = vac ? (extractVacancies(vac.value) ?? undefined) : undefined;
-  const validThrough = last ? parseIndianDate(last.value) : undefined;
+  const deadline = last ? parseIndianDeadline(last.value) : undefined;
+  const validThrough = deadline?.date;
   const applicationStartDate = start ? parseIndianDate(start.value) : undefined;
   const published = rec.published ? new Date(rec.published) : undefined;
 
@@ -176,6 +177,10 @@ export function recordToRaw(rec: FileRecord): RawPosting {
     totalVacancies,
     applicationStartDate,
     validThrough,
+    validThroughPrecision: deadline?.precision,
+    validThroughSourceText: deadline?.sourceText,
+    validThroughTimezone: deadline?.timezone,
+    validThroughSourceLabel: last?.label,
     examDate: examDate ? parseIndianDate(examDate.value) : undefined,
     datePosted: published && !isNaN(published.getTime()) ? published : undefined,
     locationRegion: loc?.value,
