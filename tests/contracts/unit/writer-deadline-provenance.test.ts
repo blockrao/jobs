@@ -215,7 +215,7 @@ describe("writePostingsToDB deadline provenance integration", () => {
 
   it("writes an eligible official deadline and retains matching observation provenance", async () => {
     const { insertWrites } = setupWriter("OFFICIAL", true);
-    const deadline = new Date("2026-11-30T18:29:59.999Z");
+    const deadline = new Date("2026-11-30T18:30:00.000Z");
     const norm = normalizedDeadline({
       validThrough: deadline,
       precision: "DATE_ONLY",
