@@ -5,9 +5,10 @@
  * but they must not create or extend recruitments.application_end_date. The source
  * registry is the authority boundary: missing/unknown registry rows fail closed.
  */
-export function canSetCanonicalApplicationDeadline(
+export function canonicalApplicationDeadline(
   authority: string | null | undefined,
   isOfficial: boolean | null | undefined,
-): boolean {
-  return authority === "OFFICIAL" && isOfficial === true;
+  candidate: Date | null | undefined,
+): Date | null {
+  return authority === "OFFICIAL" && isOfficial === true ? candidate ?? null : null;
 }
