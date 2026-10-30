@@ -309,7 +309,7 @@ export function parseIndianDeadline(input: string | undefined | null): {
 
   // Indian source formats include ordinal days ("31st October, 2026"),
   // numeric day-first dates, and month names with or without punctuation.
-  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})(?:st|nd|rd|th)?[\s/-]+([A-Za-z]{3,9}|\d{1,2})[\s,/-]+(\d{4})(?:\b|$)/i);
+  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})(?:st|nd|rd|th)?[\s./-]+([A-Za-z]{3,9}|\d{1,2})[\s,./-]+(\d{4})(?:\b|$)/i);
   if (!dateMatch) return undefined;
   const [, dayText, monthText, yearText] = dateMatch;
   const monthNum = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
