@@ -34,7 +34,7 @@ import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution 
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
-import { canSetCanonicalApplicationDeadline } from "../../ingest/deadline-authority";
+import { canonicalApplicationDeadline } from "../../ingest/deadline-authority";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
