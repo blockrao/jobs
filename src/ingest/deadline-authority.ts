@@ -59,11 +59,9 @@ export function deadlineObservationFacts(input: DeadlineObservationInput) {
 
 
 /**
- * Existing recruitment rows do not store deadline precision metadata.
- * Until a provenance-aware reconciliation exists, never auto-extend or
- * replace a populated canonical deadline from a later observation. This
- * deliberately trades automatic extensions for protection against silently
- * degrading a verified DATE_TIME deadline with a less precise candidate.
+ * Fill-only helper for genuinely missing canonical deadlines. Populated
+ * deadlines are handled by decideOfficialDeadlineReconciliation(), which
+ * requires traceable official evidence and rejects precision degradation.
  */
 export function canFillMissingCanonicalDeadline(
   existing: Date | null | undefined,
