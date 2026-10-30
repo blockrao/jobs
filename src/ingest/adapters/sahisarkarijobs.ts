@@ -93,7 +93,7 @@ function build(card: Card): RawPosting {
     validThrough: deadline?.date ?? undefined,
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
-    validThroughTimezone: deadline?.timezone,
+    validThroughTimezone: deadline?.timezone ?? undefined,
     validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: lastDate ? "last date" : undefined,
   };
