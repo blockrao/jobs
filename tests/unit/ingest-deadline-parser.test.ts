@@ -81,11 +81,15 @@ describe("parseIndianDeadline timezone safety", () => {
     expect(parsed?.date).toBeNull();
   });
 
-  it("records an explicit source timezone separately from an India default", () => {
-    const explicit = parseIndianDeadline("07 September 2026 10:00 UTC");
-    expect(explicit?.precision).toBe("DATE_TIME");
-    expect(explicit?.timezone).toBe("UTC");
-    expect(explicit?.timezoneBasis).toBe("EXPLICIT_SOURCE");
+  it("records explicit source timezones separately from an India default", () => {
+    const explicitUtc = parseIndianDeadline("07 September 2026 10:00 UTC");
+    expect(explicitUtc?.precision).toBe("DATE_TIME");
+    expect(explicitUtc?.timezone).toBe("UTC");
+    expect(explicitUtc?.timezoneBasis).toBe("EXPLICIT_SOURCE");
+
+    const explicitIst = parseIndianDeadline("07 September 2026 10:00 IST");
+    expect(explicitIst?.timezone).toBe("Asia/Kolkata");
+    expect(explicitIst?.timezoneBasis).toBe("EXPLICIT_SOURCE");
   });
 
   it("uses the India source default only when the caller explicitly supplies that context", () => {
