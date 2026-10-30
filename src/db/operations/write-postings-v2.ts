@@ -148,6 +148,8 @@ export interface RecordResult {
   recruitmentOrgMismatch?: boolean;
   /** Columns written by a re-ingest (diagnostic). */
   writtenFields?: string[];
+  deadlineReviewRequired?: boolean;
+  deadlineReviewReason?: string;
 }
 
 export interface WriteOptions {
@@ -449,11 +451,25 @@ export async function writePostingsToDB(
         );
       }
 
-      // Authorised evidence may fill missing dates; populated canonical deadlines remain unchanged.
-      await refreshRecruitmentDates(db, recruitment.id, {
+      // New recruitments already receive their authorised deadline in resolveRecruitment.
+      // Existing recruitments use linked OFFICIAL observation evidence before any extension.
+      const deadlineRefresh = await refreshRecruitmentDates(db, recruitment.id, {
         applicationStartDate: norm.applicationStartDate ?? null,
-        applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
+        applicationEndDate: recruitment.created ? null : deadlineWriteValues.recruitmentApplicationEndDate,
+        deadlineEvidence: deadlineWriteValues.recruitmentApplicationEndDate
+          ? {
+              precision: norm.validThroughPrecision ?? "UNKNOWN",
+              sourceText: norm.validThroughSourceText ?? null,
+              timezone: norm.validThroughTimezone ?? null,
+              timezoneBasis: norm.validThroughTimezoneBasis ?? "UNKNOWN",
+            }
+          : null,
       });
+      const deadlineReviewReason = deadlineRefresh.deadlineReviewReason ?? null;
+      if (deadlineReviewReason) {
+        result.deadlineReviewRequired = true;
+        result.deadlineReviewReason = deadlineReviewReason;
+      }
 
       let postId: number | null = existingPosting?.inferredPostId ?? null;
       // Per-line Posts: only lines that pass the post-line classifier become Posts, and
@@ -605,7 +621,7 @@ export async function writePostingsToDB(
         result.action = "inserted";
         result.postingId = created.id;
         out.inserted++;
-        await setObservationOutcome(db, obs.id, "LOADED", null, created.id);
+        await setObservationOutcome(db, obs.id, "LOADED", deadlineReviewReason, created.id);
         continue;
       }
 
@@ -696,7 +712,7 @@ export async function writePostingsToDB(
           out.updated++;
         }
       }
-      await setObservationOutcome(db, obs.id, "LOADED", null, existingPosting.id);
+      await setObservationOutcome(db, obs.id, "LOADED", deadlineReviewReason, existingPosting.id);
     } catch (err) {
       result.action = "rejected";
       const cause = (err as { cause?: { message?: string } }).cause?.message;
