@@ -303,7 +303,10 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   // A future end_date is sufficient to conclude applications are open.
   const cat = (row.listing_category ?? "").toLowerCase();
   const now = new Date();
-  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date), { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
+  // FJA is an aggregator, not the issuing authority. Preserve its captured deadline text,
+  // but do not assume the issuer timezone from the aggregator or the India-focused inventory.
+  // The candidate remains UNKNOWN until issuer context is independently established.
+  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date)) : undefined;
   const endDate = sourceDeadline?.date ?? (row.application_end_date ? new Date(row.application_end_date) : null);
   const startDate = row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) ?? null : null;
   const stage =
