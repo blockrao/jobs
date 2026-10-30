@@ -17,7 +17,7 @@ import { posts, recruitments, positions, postAgeRules, selectionProcesses, recru
 import { applySemanticGate } from "@/lib/semantic-fields";
 import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 import { toPlausibleRecruitmentDate } from "@/lib/recruitment-dates";
-import { recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
+import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
 
 import { normalizeEducation, normalizeExperience, normalizeSelectionProcess, auditEnrichmentShape } from "@/lib/enrichment-normalization";
 // Before DATABASE_URL is configured, every query degrades to an empty
@@ -511,7 +511,7 @@ export async function listLivePostsBySector(
       recruitmentName: recruitments.name,
       recruitmentSlug: recruitments.slug,
       recruitmentStatus: recruitments.status,
-      applicationEndDate: recruitments.applicationEndDate,
+      applicationEndDate: plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
       locationStateCode: recruitments.locationStateCode,
       orgName: organizations.name,
       orgNameHi: organizations.nameHi,
@@ -1834,7 +1834,7 @@ export async function listLivePostsByQualification(
       postSlug: posts.slug,
       vacancyTotal: posts.vacancyTotal,
       recruitmentSlug: recruitments.slug,
-      applicationEndDate: recruitments.applicationEndDate,
+      applicationEndDate: plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
       orgName: organizations.name,
     })
     .from(posts)
