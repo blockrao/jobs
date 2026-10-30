@@ -34,7 +34,7 @@ import { loadOrgIndex, resolveOrganization, type OrgResolution } from "../../ing
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
-import { canonicalDeadlineWriteValues, deadlineObservationFacts } from "../../ingest/deadline-authority";
+import { canonicalDeadlineWriteValues, deadlineObservationFacts, hasResolvedDeadlineEvidence } from "../../ingest/deadline-authority";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -421,7 +421,12 @@ export async function writePostingsToDB(
       // Missing sources are created as AGGREGATED/non-official by getOrCreateSource(),
       // so unknown and secondary sources fail closed for canonical deadlines.
       const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
-      const deadlineWriteValues = canonicalDeadlineWriteValues(source.authority, source.isOfficial, norm.validThrough);
+      const hasResolvedDeadline = hasResolvedDeadlineEvidence(norm);
+      const deadlineWriteValues = canonicalDeadlineWriteValues(
+        source.authority,
+        source.isOfficial,
+        hasResolvedDeadline ? norm.validThrough : null,
+      );
 
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
