@@ -11,13 +11,6 @@
  * Nothing is emitted that is not visible on the page. Every value is taken
  * from the same HubData the renderer uses, so the markup cannot drift from
  * the visible facts. dateModified is emitted only from a genuine updatedAt.
- * datePosted keys on source verification (notificationDate when verified,
- * sourceListingPublishedDate when not); the JobPosting datePosted falls back
- * to createdAt (first published on JobOye), and no JobPosting is emitted once
- * the application end date has passed. baseSalary is emitted only when numeric bounds exist on the
- * post AND the pay period is stated on the post's payLevel record
- * (posts.salary_min/max carry no unit column); a free-text pay level never
- * becomes a MonetaryAmount.
  */
 
 import { SITE_URL } from "@/lib/site";
