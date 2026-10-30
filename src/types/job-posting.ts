@@ -55,6 +55,8 @@ export interface JobPostingData {
   // Source Links
   officialSourceUrl?: string;
   applyPortalUrl?: string;
+  /** Provenance of the recruitment-level official notification/application link. */
+  officialLinkSource?: string | null;
 
   // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
   vacancyTotal?: number | null;
