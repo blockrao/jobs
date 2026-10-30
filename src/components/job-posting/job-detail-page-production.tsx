@@ -168,7 +168,7 @@ export default function JobDetailPageProduction({
         : lifecycle?.state === 'archived'
           ? 'This recruitment is archived; applications are not open.'
           : lifecycle?.state === 'closed' || isApplicationClosed
-            ? applicationDeadline.getTime() <= Date.now()
+            ? (lifecycle?.daysLeft !== null && lifecycle?.daysLeft !== undefined && lifecycle.daysLeft <= 0)
               ? `Applications closed on ${formatDate(applicationDeadline)}.`
               : 'Applications are closed.'
             : `The last date to apply is ${formatDate(applicationDeadline)}.`;
