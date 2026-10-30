@@ -13,7 +13,7 @@ export default defineConfig({
   },
   esbuild: { jsx: "automatic" },
   test: {
-    include: ["tests/contracts/**/*.test.ts"],
+    include: ["tests/contracts/**/*.test.ts", "tests/unit/ingest-deadline-parser.test.ts"],
     environment: "node",
     // src/lib/site.ts resolves SITE_URL once at import time. Pin it so
     // canonical/hreflang assertions are deterministic regardless of the
