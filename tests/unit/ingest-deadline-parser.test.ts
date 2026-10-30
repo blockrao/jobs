@@ -31,12 +31,14 @@ describe("parseIndianDeadline", () => {
 
   it("rejects impossible calendar dates and invalid times", () => {
     expect(parseIndianDeadline("31 February 2026")).toBeUndefined();
+    expect(parseIndianDeadline("28.10.2026 (23:59 PM)")).toBeUndefined();
     expect(parseIndianDeadline("07 September 2026 25:61")).toBeUndefined();
   });
 
   it("parses ISO and dotted numeric date-only values without treating separators as times", () => {
     expect(parseIndianDeadline("2026-10-31")?.date.toISOString()).toBe("2026-10-31T18:29:59.999Z");
     expect(parseIndianDeadline("05.11.2026")?.date.toISOString()).toBe("2026-11-05T18:29:59.999Z");
+    expect(parseIndianDeadline("05.11.2026, 5.00 pm")?.date.toISOString()).toBe("2026-11-05T11:30:00.000Z");
   });
 
   it("preserves ordinal dates and dotted meridiem time formats found in source captures", () => {
