@@ -16,6 +16,8 @@ import {
 import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
 import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
+import { toPlausibleRecruitmentDate } from "@/lib/recruitment-dates";
+import { recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
 
 import { normalizeEducation, normalizeExperience, normalizeSelectionProcess, auditEnrichmentShape } from "@/lib/enrichment-normalization";
 // Before DATABASE_URL is configured, every query degrades to an empty
@@ -287,8 +289,7 @@ export interface HomeStats {
 }
 
 const liveGovRecruitment = sql`
-  r.status IN ('ACTIVE','UPCOMING')
-  AND (r.application_end_date IS NULL OR r.application_end_date > NOW())
+  ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
   AND r.slug IS NOT NULL
   AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
   AND o.slug <> 'unclassified-government-jobs'
@@ -332,8 +333,13 @@ const homeRecruitmentSelect = sql`
     r.total_vacancies,
     r.application_end_date,
     (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count,
-    CASE WHEN r.application_end_date IS NULL THEN NULL
-         ELSE (r.application_end_date::date - CURRENT_DATE) END AS days_left
+    CASE
+      WHEN r.application_end_date IS NULL
+        OR EXTRACT(YEAR FROM (r.application_end_date AT TIME ZONE 'UTC')) < 1900
+        OR EXTRACT(YEAR FROM (r.application_end_date AT TIME ZONE 'UTC')) >= 2090
+      THEN NULL
+      ELSE (r.application_end_date::date - CURRENT_DATE)
+    END AS days_left
   FROM public.recruitments r
   JOIN public.organizations o ON o.id = r.organization_id
 `;
@@ -350,7 +356,7 @@ function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
       r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
         ? Number(r.total_vacancies)
         : null,
-    applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
+    applicationEndDate: toPlausibleRecruitmentDate(r.application_end_date),
     postCount: Number(r.post_count ?? 0),
     daysLeft: r.days_left != null ? Number(r.days_left) : null,
     singlePostSlug: r.single_post_slug ? String(r.single_post_slug) : null,
@@ -441,8 +447,7 @@ export async function getHomeStats(): Promise<HomeStats> {
         SELECT COALESCE(SUM(r2.total_vacancies), 0)::int
         FROM public.recruitments r2
         JOIN public.organizations o2 ON o2.id = r2.organization_id
-        WHERE r2.status IN ('ACTIVE','UPCOMING')
-          AND (r2.application_end_date IS NULL OR r2.application_end_date > NOW())
+        WHERE ${recruitmentIsLiveSql(sql`r2.status`, sql`r2.application_end_date`)}
           AND r2.slug IS NOT NULL
           AND r2.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
           AND r2.official_notification_url ~ '^https?://'
@@ -855,11 +860,7 @@ export async function getPostSlugsForSitemap() {
       recruitmentSlug: recruitments.slug,
       postSlug: posts.slug,
       lastModified: sql<Date>`GREATEST(${posts.updatedAt}, ${recruitments.updatedAt})`,
-      isLive: sql<boolean>`
-        (${recruitments.status} IN ('ACTIVE', 'UPCOMING')
-         AND (${recruitments.applicationEndDate} IS NULL
-              OR ${recruitments.applicationEndDate} > NOW()))
-      `,
+      isLive: sql<boolean>`${recruitmentIsLiveSql(recruitments.status, recruitments.applicationEndDate)}`,
     })
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
@@ -877,7 +878,7 @@ export async function getRecruitmentSlugsForSitemap() {
   // is_live drives changeFrequency and priority.
   const rows = await db.execute(sql`
     SELECT r.slug, r.updated_at AS "updatedAt",
-      (r.status IN ('ACTIVE','UPCOMING') AND (r.application_end_date IS NULL OR r.application_end_date > NOW())) AS "isLive",
+      ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)} AS "isLive",
       (${singlePostLeafSlug}) IS NOT NULL AS "canonicalIsLeaf"
     FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
