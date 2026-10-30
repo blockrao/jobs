@@ -449,7 +449,7 @@ export async function writePostingsToDB(
         );
       }
 
-      // A later sighting fills a missing start date or extends the end date on the recruitment.
+      // Authorised evidence may fill missing dates; populated canonical deadlines remain unchanged.
       await refreshRecruitmentDates(db, recruitment.id, {
         applicationStartDate: norm.applicationStartDate ?? null,
         applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
