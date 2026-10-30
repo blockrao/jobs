@@ -124,3 +124,22 @@ Existing unit tests cover the principal states and placeholder behaviour in the 
 ## Audit conclusion
 
 The architecture has the right central primitive, but it is not yet consistently enforced. The smallest safe next implementation is a focused P0 PR that first locks lifecycle semantics and tests, then centralises canonical SQL predicates and corrects the leaf metadata/related-links/hub-schema defects. Keep the shared indexability gate as a separate but dependent workstream under #176.
+
+
+## Production read-only validation addendum — 2026-10-30
+
+After the code inventory, read-only queries were run against the connected production database to validate the date-storage assumptions. No writes were executed.
+
+- `recruitments.application_end_date` is `timestamp with time zone` (`timestamptz`).
+- Current recruitment rows with `application_end_date >= 2090-01-01 UTC`: **0**. Therefore the sentinel issue is a code-path risk, not a confirmed current recruitment-row population problem. Enrichment/source fields were not exhaustively checked for sentinels.
+- Recruitments with an unknown/null status outside ACTIVE, UPCOMING, CLOSED, RESULTS, ARCHIVED: **0**.
+- Recruitments whose deadline falls on the current India-local date: **123**.
+  - **93 ACTIVE** rows and **2 UPCOMING** rows are stored at exactly `00:00:00 UTC` (= `05:30:00 IST`).
+  - **28 ACTIVE** rows are stored at `23:59:00 IST`.
+- Across the full recruitment table, deadline timestamps cluster heavily at `05:30:00 IST` (**2,008 rows**, including 582 ACTIVE and 4 UPCOMING) and `23:59:00 IST` (**356 rows**, including 150 ACTIVE).
+
+This is strong evidence of at least two different deadline-time conventions in the data. The 00:00 UTC / 05:30 IST cluster may represent date-only values parsed as UTC midnight, while 23:59 IST may represent end-of-day deadlines. It is not safe to assume that every such row is date-only without checking the ingestion/date-normalisation contract and official-source examples.
+
+**Important correction to implementation sequencing:** Do not simply change the lifecycle helper to treat every timestamp at 00:00 UTC as end-of-day. First audit the date ingestion and normalization paths and establish whether source precision (date-only vs exact time) is preserved. If it is not preserved, the smallest safe data-contract change may need explicit date precision/timezone semantics rather than another timestamp heuristic.
+
+Two official PDF URLs for sample rows were not retrievable through the available document fetcher in this audit, so their precise closing-time statements remain unverified. The sample rows are evidence of storage patterns, not proof of the official deadline time.
