@@ -147,7 +147,7 @@ export function recordToRaw(rec: FileRecord): RawPosting {
 
   const title = collapse(rec.title || rec.listTitle || "");
   const totalVacancies = vac ? (extractVacancies(vac.value) ?? undefined) : undefined;
-  const deadline = last ? parseIndianDeadline(last.value) : undefined;
+  const deadline = last ? parseIndianDeadline(last.value, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
   const validThrough = deadline?.date;
   const applicationStartDate = start ? parseIndianDate(start.value) : undefined;
   const published = rec.published ? new Date(rec.published) : undefined;
@@ -180,6 +180,7 @@ export function recordToRaw(rec: FileRecord): RawPosting {
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
     validThroughTimezone: deadline?.timezone,
+    validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: last?.label,
     examDate: examDate ? parseIndianDate(examDate.value) : undefined,
     datePosted: published && !isNaN(published.getTime()) ? published : undefined,
