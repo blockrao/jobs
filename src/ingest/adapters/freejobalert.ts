@@ -159,6 +159,7 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     validThroughPrecision: detail.validThroughPrecision,
     validThroughSourceText: detail.validThroughSourceText,
     validThroughTimezone: detail.validThroughTimezone,
+    validThroughTimezoneBasis: detail.validThroughTimezoneBasis,
     validThroughSourceLabel: detail.validThroughSourceLabel,
     examDate: detail.examDate,
     postNames: detail.postNames,
