@@ -246,6 +246,37 @@ describe("writePostingsToDB deadline provenance integration", () => {
     });
   });
 
+
+
+  it("does not promote an official-source date whose precision or timezone provenance is unknown", async () => {
+    const { insertWrites } = setupWriter("OFFICIAL", true);
+    const unresolvedCandidate = new Date("2026-11-30T00:00:00.000Z");
+    const norm = normalizedDeadline({
+      validThrough: unresolvedCandidate,
+      precision: "UNKNOWN",
+      sourceText: "30 November 2026",
+      timezone: null,
+      timezoneBasis: "UNKNOWN",
+    });
+
+    const result = await writePostingsToDB([dedupedInput()] as never, [norm] as never);
+
+    const observation = insertWrites.find((write) => write.table === sourceObservations)?.values;
+    const posting = insertWrites.find((write) => write.table === postings)?.values;
+    expect(result.inserted).toBe(1);
+    expect(mocks.resolveRecruitment).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      applicationEndDate: null,
+    }));
+    expect(posting?.validThrough).toBeNull();
+    expect(observation?.facts).toMatchObject({
+      lastDate: null,
+      deadlinePrecision: "UNKNOWN",
+      deadlineSourceText: "30 November 2026",
+      deadlineTimezone: null,
+      deadlineTimezoneBasis: "UNKNOWN",
+    });
+  });
+
   it("persists a review-required outcome when an existing official deadline cannot be reconciled", async () => {
     const { outcomeWrites } = setupWriter("OFFICIAL", true);
     const reason = "DEADLINE_REVIEW_REQUIRED:EXISTING_DEADLINE_EVIDENCE_NOT_FOUND";
