@@ -310,10 +310,12 @@ export function parseIndianDeadline(input: string | undefined | null): {
   // Indian source formats include ordinal days ("31st October, 2026"),
   // numeric day-first dates, and month names with or without punctuation.
   const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})(?:st|nd|rd|th)?[\s./-]+([A-Za-z]{3,9}|\d{1,2})[\s,./-]+(\d{4})(?:\b|$)/i);
-  if (!dateMatch) return undefined;
-  const [, dayText, monthText, yearText] = dateMatch;
-  const monthNum = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
-  const y = +yearText, d = +dayText, mo = monthNum;
+  const monthFirstMatch = sourceText.match(/(?:^|\b)([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})(?:\b|$)/i);
+  if (!dateMatch && !monthFirstMatch) return undefined;
+  const y = +(dateMatch ? dateMatch[3] : monthFirstMatch![3]);
+  const d = +(dateMatch ? dateMatch[1] : monthFirstMatch![2]);
+  const monthText = dateMatch ? dateMatch[2] : monthFirstMatch![1];
+  const mo = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
   if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
 
   // Do not mistake dotted numeric dates (05.11.2026) for 05:11.
