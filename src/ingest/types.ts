@@ -61,6 +61,7 @@ export interface RawPosting {
   validThroughPrecision?: "DATE_ONLY" | "DATE_TIME";
   validThroughSourceText?: string;
   validThroughTimezone?: string;
+  validThroughTimezoneBasis?: "EXPLICIT_SOURCE" | "INDIA_SOURCE_DEFAULT" | "UNKNOWN";
   validThroughSourceLabel?: string;
   examDate?: Date;
 
