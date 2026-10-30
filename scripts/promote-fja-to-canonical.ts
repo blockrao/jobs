@@ -222,12 +222,12 @@ function extractPostTable(
 // ---------------------------------------------------------------------------
 // Map one FJA inventory row to NormalizedPosting
 // ---------------------------------------------------------------------------
-function parseJsonRecord(value: unknown): Record<string, any> {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, any>;
+function parseJsonRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
   if (typeof value === "string") {
     try {
       const parsed: unknown = JSON.parse(value);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, any>;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
     } catch { /* keep empty record; malformed source capture must not crash ingestion */ }
   }
   return {};
@@ -403,11 +403,6 @@ async function main() {
   if (FULL_INVENTORY) console.log(`Scope: FULL ELIGIBLE INVENTORY (only EXTRACTED + OPEN records pass selection)`);
   if (LIMIT) console.log(`Limit: ${LIMIT} rows`);
   console.log();
-
-  // Check for live-mapped rows (must never overwrite)
-  const liveMappedWarning = PILOT_IDS
-    ? `AND external_id = ANY(ARRAY[${PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",")}])`
-    : "";
 
   // Build query: only new, fully extracted FJA rows with an open application window.
   // Compare normalized source URLs against both canonical entity tables to prevent re-imports.
