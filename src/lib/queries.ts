@@ -472,10 +472,20 @@ export async function getHomeStats(): Promise<HomeStats> {
 // the same "live" rule as the sitemap (getPostSlugsForSitemap): recruitment
 // ACTIVE/UPCOMING and application window not yet closed.
 
+// SQL equivalent of deriveLifecycle(...).isLive for canonical recruitment records.
+// Placeholder dates (year >= 2090) are unknown facts: retain the status-derived
+// lifecycle but expose them as NULL to callers so they are never shown as real deadlines.
+// Quarantined recruitments are excluded consistently with canonical detail/hub loaders.
 const livePostCondition = sql`
   ${recruitments.status} IN ('ACTIVE', 'UPCOMING')
-  AND (${recruitments.applicationEndDate} IS NULL OR ${recruitments.applicationEndDate} > NOW())
-  AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
+  AND (
+    ${recruitments.applicationEndDate} IS NULL
+    OR ${recruitments.applicationEndDate} >= NOW()
+    OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= 2090
+  )
+  AND ${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'
+  AND ${posts.slug} IS NOT NULL
+  AND ${recruitments.slug} IS NOT NULL
 `;
 
 export interface SectorPostRow {
@@ -511,7 +521,12 @@ export async function listLivePostsBySector(
       recruitmentName: recruitments.name,
       recruitmentSlug: recruitments.slug,
       recruitmentStatus: recruitments.status,
-      applicationEndDate: recruitments.applicationEndDate,
+      applicationEndDate: sql<Date | null>`CASE
+        WHEN ${recruitments.applicationEndDate} IS NULL
+          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= 2090
+        THEN NULL
+        ELSE ${recruitments.applicationEndDate}
+      END`,
       locationStateCode: recruitments.locationStateCode,
       orgName: organizations.name,
       orgNameHi: organizations.nameHi,
@@ -522,7 +537,12 @@ export async function listLivePostsBySector(
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
     .where(and(inArray(organizations.sector, sectors as never), livePostCondition))
     .orderBy(
-      sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
+      sql`CASE
+        WHEN ${recruitments.applicationEndDate} IS NULL
+          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= 2090
+        THEN NULL
+        ELSE ${recruitments.applicationEndDate}
+      END ASC NULLS LAST`,
       desc(recruitments.updatedAt),
       posts.id,
     )
