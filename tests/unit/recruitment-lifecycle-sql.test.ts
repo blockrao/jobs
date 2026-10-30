@@ -5,6 +5,7 @@ import {
   recruitmentIsLiveSql,
   recruitmentIsOpenSql,
   recruitmentLifecycleStateSql,
+  plausibleRecruitmentDeadlineSql,
 } from "../../src/db/operations/recruitment-lifecycle-sql";
 
 const dialect = new PgDialect();
@@ -37,5 +38,16 @@ describe("shared canonical recruitment lifecycle SQL", () => {
     expect(open).toContain("= 'open'");
     expect(live).toContain("<= now()");
     expect(open).toContain("<= now()");
+  });
+});
+
+describe("plausible recruitment deadline SQL projection", () => {
+  it("returns NULL for absent or implausible/sentinel deadlines", () => {
+    const query = dialect.sqlToQuery(plausibleRecruitmentDeadlineSql(deadline)).sql;
+    expect(query).toContain("when r.application_end_date is null");
+    expect(query).toContain("< 1900");
+    expect(query).toContain(">= 2090");
+    expect(query).toContain("then null");
+    expect(query).toContain("else r.application_end_date");
   });
 });
