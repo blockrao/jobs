@@ -107,7 +107,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     validThrough,
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
-    validThroughTimezone: deadline?.timezone,
+    validThroughTimezone: deadline?.timezone ?? undefined,
     validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: deadlineLabel,
     examDate,
