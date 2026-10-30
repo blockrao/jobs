@@ -522,7 +522,7 @@ export async function listLivePostsBySector(
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
     .where(and(inArray(organizations.sector, sectors as never), livePostCondition))
     .orderBy(
-      sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
+      plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
       desc(recruitments.updatedAt),
       posts.id,
     )
@@ -1848,7 +1848,7 @@ export async function listLivePostsByQualification(
     )
     .orderBy(
       sql`COALESCE(${posts.vacancyTotal}, 0) DESC`,
-      sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
+      plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
     )
     .limit(limit)
     .offset(offset);
