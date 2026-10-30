@@ -5,6 +5,7 @@ import {
   collapse,
   extractVacancies,
   parseIndianDate,
+  parseIndianDeadline,
   parseSalary,
 } from "./util";
 
@@ -106,14 +107,14 @@ function pickFields(
   const datePosted = parseIndianDate(
     bag.find(/post date/i, /update/i, /notification date/i),
   );
-  const validThrough = parseIndianDate(
-    bag.find(
-      /last date.*(apply|online|application|submission)/i,
-      /application end/i,
-      /closing date/i,
-      /^last date$/i,
-    ),
+  const deadlineLabel = bag.find(
+    /last date.*(apply|online|application|submission)/i,
+    /application end/i,
+    /closing date/i,
+    /^last date$/i,
   );
+  const deadline = parseIndianDeadline(deadlineLabel);
+  const validThrough = deadline?.date;
   const examDate = parseIndianDate(
     bag.find(/exam date/i, /date of exam/i, /written exam/i, /tier.?i.*date/i),
   );
@@ -150,6 +151,10 @@ function pickFields(
     totalVacancies,
     datePosted,
     validThrough,
+    validThroughPrecision: deadline?.precision,
+    validThroughSourceText: deadline?.sourceText,
+    validThroughTimezone: deadline?.timezone,
+    validThroughSourceLabel: deadlineLabel,
     examDate,
     salaryMin,
     salaryMax,
