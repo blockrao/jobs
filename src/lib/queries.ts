@@ -332,7 +332,7 @@ const homeRecruitmentSelect = sql`
     o.sector,
     r.total_vacancies,
     r.application_end_date,
-    (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count,
+    (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count
   FROM public.recruitments r
   JOIN public.organizations o ON o.id = r.organization_id
 `;
