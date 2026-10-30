@@ -34,7 +34,7 @@ jobs:
       - run: npm ci
       # The repository-wide lint command currently fails on hundreds of legacy
       # issues outside this change. Lint the files changed by this PR.
-      - run: npx eslint src/ingest/adapters/util.ts tests/unit/ingest-deadline-parser.test.ts
+      - run: npx eslint src/ingest/adapters/util.ts src/ingest/deadline-authority.ts src/db/operations/write-postings-v2.ts tests/unit/ingest-deadline-parser.test.ts tests/unit/deadline-authority.test.ts
 
   contract-tests:
     name: Architecture contract tests
@@ -62,7 +62,7 @@ jobs:
       - run: npm ci
       # Type-check the new test and its pure helper in isolation. The full test
       # suite currently has unrelated legacy typing errors in other test files.
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types vitest/globals tests/contracts/unit/vacancy-integrity.test.ts src/lib/vacancy-integrity.ts
+      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types vitest/globals tests/contracts/unit/vacancy-integrity.test.ts src/lib/vacancy-integrity.ts tests/unit/deadline-authority.test.ts src/ingest/deadline-authority.ts
 
   application-typecheck:
     name: Application type-check
