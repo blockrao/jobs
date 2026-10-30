@@ -81,7 +81,7 @@ export interface StateRecruitment {
 type Row = {
   id: number; slug: string; name: string; status: string;
   org_name: string; org_slug: string; total_vacancies: number | null; post_count: number;
-  notification_date: Date | string | null; application_end_date: Date | string | null;
+  notification_date: Date | string | null; application_end_date: Date | string | null; query_now: Date | string;
 };
 
 function rowsOf<T>(result: unknown): T[] {
@@ -103,7 +103,7 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
   const codes = SLUG_TO_CODES[slug];
   if (!codes?.length) return [];
   const result = await db.execute(sql`
-    SELECT r.id, r.slug, r.name, r.status, r.total_vacancies, r.notification_date, r.application_end_date,
+    SELECT r.id, r.slug, r.name, r.status, r.total_vacancies, r.notification_date, r.application_end_date, now() AS query_now,
            o.name AS org_name, o.slug AS org_slug,
            (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count
     FROM recruitments r
@@ -116,8 +116,9 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
     ORDER BY ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} ASC NULLS LAST, r.notification_date DESC NULLS LAST
     LIMIT ${limit * 2}
   `);
-  const now = new Date();
-  return rowsOf<Row>(result)
+  const rows = rowsOf<Row>(result);
+  const now = rows[0] ? toDate(rows[0].query_now) ?? new Date() : new Date();
+  return rows
     .map((r) => {
       const lifecycle = deriveLifecycle(r.status, r.application_end_date, now);
       return {
