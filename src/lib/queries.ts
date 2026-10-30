@@ -333,19 +333,14 @@ const homeRecruitmentSelect = sql`
     r.total_vacancies,
     r.application_end_date,
     (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count,
-    CASE
-      WHEN r.application_end_date IS NULL
-        OR EXTRACT(YEAR FROM (r.application_end_date AT TIME ZONE 'UTC')) < 1900
-        OR EXTRACT(YEAR FROM (r.application_end_date AT TIME ZONE 'UTC')) >= 2090
-      THEN NULL
-      ELSE (r.application_end_date::date - CURRENT_DATE)
-    END AS days_left
   FROM public.recruitments r
   JOIN public.organizations o ON o.id = r.organization_id
 `;
 
 function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
-  return (rows as Record<string, unknown>[]).map((r) => ({
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const deadline = toPlausibleRecruitmentDate(r.application_end_date);
+    return ({
     slug: String(r.slug),
     name: String(r.name),
     orgName: String(r.org_name),
@@ -356,11 +351,12 @@ function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
       r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
         ? Number(r.total_vacancies)
         : null,
-    applicationEndDate: toPlausibleRecruitmentDate(r.application_end_date),
+    applicationEndDate: deadline,
     postCount: Number(r.post_count ?? 0),
-    daysLeft: r.days_left != null ? Number(r.days_left) : null,
+    daysLeft: deadline ? Math.ceil((deadline.getTime() - Date.now()) / 86_400_000) : null,
     singlePostSlug: r.single_post_slug ? String(r.single_post_slug) : null,
-  }));
+  });
+  });
 }
 
 /** For the recruitment hub's canonical decision: the single indexable Post leaf slug, if any. */
