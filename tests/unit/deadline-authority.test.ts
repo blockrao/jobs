@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalApplicationDeadline } from "../../src/ingest/deadline-authority";
+import { canonicalApplicationDeadline, canonicalDeadlineWriteValues } from "../../src/ingest/deadline-authority";
 
 describe("canonical application deadline authority", () => {
   const candidate = new Date("2026-11-30T18:29:59.999Z");
@@ -26,5 +26,23 @@ describe("canonical application deadline authority", () => {
 
   it("does not invent a deadline when an official source has no parseable candidate", () => {
     expect(canonicalApplicationDeadline("OFFICIAL", true, undefined)).toBeNull();
+  });
+});
+
+describe("canonical deadline writer field mapping", () => {
+  const candidate = new Date("2026-11-30T18:30:00.000Z");
+
+  it("blocks both recruitment and posting deadline writes for aggregated sources", () => {
+    expect(canonicalDeadlineWriteValues("AGGREGATED", false, candidate)).toEqual({
+      recruitmentApplicationEndDate: null,
+      postingValidThrough: null,
+    });
+  });
+
+  it("allows both canonical deadline fields only for an explicitly official source", () => {
+    expect(canonicalDeadlineWriteValues("OFFICIAL", true, candidate)).toEqual({
+      recruitmentApplicationEndDate: candidate,
+      postingValidThrough: candidate,
+    });
   });
 });
