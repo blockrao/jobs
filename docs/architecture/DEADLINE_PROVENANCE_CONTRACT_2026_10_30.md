@@ -1,6 +1,6 @@
 # Deadline Provenance Contract — 2026-10-30
 
-**Status:** Proposed implementation contract; no runtime or production data changes in this document-only change  
+**Status:** Implemented in consolidated PR #186; review, CI and release verification pending. No production data changes  
 **Parent:** JobOye Product & Discovery Operating Charter  
 **Tracking:** Issue #174; lifecycle consumers audited in PR #180  
 **Scope:** Canonical recruitment application deadlines only. Exam dates, notification dates and other date fields are not changed by this contract.
