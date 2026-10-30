@@ -84,7 +84,7 @@ The observation is linked to its posting, which resolves to the canonical recrui
 
 The observation facts must be persisted with the ingestion event. The canonical deadline may be created or extended only through the OFFICIAL source-registry gate. A later sighting may extend a deadline only when the new source evidence supports that extension; it must not replace a more precise verified deadline with a less precise value. Conflicting or earlier dates require a reviewable exception, not silent overwrite.
 
-The database migration must be additive and nullable. It must not rewrite existing `application_end_date` values or manufacture precision for historical rows.
+No recruitment-level schema migration is part of this release. The deadline precision and source evidence remain in the linked `source_observations.facts` JSONB record. Do not add recruitment columns or rewrite existing `application_end_date` values as part of this work. If a future queryability or audit requirement demonstrates a material need for denormalised fields, propose a separate additive migration with its own review and rollout.
 
 ## 5. Ingestion implementation requirements
 
