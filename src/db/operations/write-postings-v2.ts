@@ -30,7 +30,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
-import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution } from "../../ingest/organization-resolution";
+import { loadOrgIndex, resolveOrganization, type OrgResolution } from "../../ingest/organization-resolution";
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
