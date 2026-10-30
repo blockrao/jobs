@@ -158,3 +158,41 @@ Therefore, the 00:00 UTC cluster is not merely a possible date-only convention: 
 **Required correction:** the ingestion contract must distinguish (a) date-only deadlines, which should remain valid through the stated India-local calendar date unless the official source says otherwise, from (b) explicit time deadlines, whose stated time and timezone must be preserved. Do not infer this distinction from the final timestamp alone. Preserve raw source text / source locator and an explicit precision/timezone attribute through normalization and canonical promotion. Then backfill only from recoverable source evidence; unresolved historical rows must remain unknown or be visibly qualified rather than assigned an invented closing time.
 
 The current helper and all SQL consumers should operate on the resolved canonical deadline instant (or explicit date-only inclusive boundary) only after this source contract is fixed.
+
+
+## Implementation follow-up — shared lifecycle policy (2026-10-30)
+
+**Status:** Implemented on branch `fix/shared-lifecycle-sql-policy`; validation and review pending. No merge, deployment or production data mutation has occurred.
+
+The canonical recruitment lifecycle SQL expression is now centralised in `src/db/operations/recruitment-lifecycle-sql.ts` and mirrors `src/lib/lifecycle.ts`:
+
+- Uses UTC calendar year when applying the 1900–2089 plausibility range, matching the TypeScript UTC-year guard.
+- Treats the deadline as an exclusive cutoff: the recruitment is closed at or after the cutoff.
+- Preserves status precedence for ARCHIVED, RESULTS and CLOSED.
+- Treats ACTIVE as open and UPCOMING as upcoming unless an earlier deadline has passed.
+- Retains the existing unknown-status fallback (plausible unexpired deadline => open; otherwise closed).
+- Exposes separate `isLive` (open/upcoming) and `isOpen` (open only) SQL predicates.
+
+The shared expression has been applied to canonical recruitment consumers:
+
+- Recruitment browse filters and ordering in `get-recruitments.ts`.
+- Homepage, closing-soon, category/sector and qualification listing/count predicates in `src/lib/queries.ts`.
+- State list and count queries in `src/lib/states/queries.ts`.
+- Related-post recommendation groups and legacy canonical-post related queries.
+- Canonical post loader's derived `isLive` value.
+- Sitemap `isLive` freshness hints only; historical URL inclusion and canonical/indexability policy are unchanged.
+
+Additional public-consumer corrections:
+
+- Leaf metadata and application-deadline display now use the canonical recruitment lifecycle and its plausible deadline; post-enrichment closing dates no longer silently redefine recruitment lifecycle.
+- Related-job recommendations exclude CLOSED, RESULTS, ARCHIVED and expired recruitments while retaining UPCOMING opportunities as a distinct status.
+- Recruitment-hub structured data no longer emits JobPosting. The governing Charter reserves JobPosting for eligible individual post leaves.
+
+Scope boundaries retained:
+
+- No SQL/database function migration; the shared policy is a parameterised Drizzle SQL expression.
+- Legacy `postings` exam pages are not silently migrated into canonical lifecycle.
+- Sitemap URL inclusion, robots, canonical ownership and shared indexability remain a separate issue #176 workstream; lifecycle is not used as a blanket noindex rule.
+- No schema migration, production writes, historical backfill, deployment or publication.
+
+Tests added for the TypeScript lifecycle contract and generated SQL policy. Full CI and review are required before merge. Preview/production verification remains required after the Vercel build-rate-limit blocker is resolved.
