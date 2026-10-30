@@ -233,7 +233,8 @@ describe("writePostingsToDB deadline provenance integration", () => {
       applicationEndDate: deadline,
     }));
     expect(mocks.refreshRecruitmentDates).toHaveBeenCalledWith(expect.anything(), 42, expect.objectContaining({
-      applicationEndDate: deadline,
+      applicationEndDate: null,
+      deadlineEvidence: null,
     }));
     expect(posting?.validThrough).toBe(deadline);
     expect(observation?.facts).toMatchObject({
@@ -244,4 +245,36 @@ describe("writePostingsToDB deadline provenance integration", () => {
       deadlineTimezoneBasis: "INDIA_SOURCE_DEFAULT",
     });
   });
+
+  it("persists a review-required outcome when an existing official deadline cannot be reconciled", async () => {
+    const { outcomeWrites } = setupWriter("OFFICIAL", true);
+    const reason = "DEADLINE_REVIEW_REQUIRED:EXISTING_DEADLINE_EVIDENCE_NOT_FOUND";
+    mocks.resolveRecruitment.mockResolvedValue({ id: 42, created: false });
+    mocks.refreshRecruitmentDates.mockResolvedValue({
+      filledStart: false,
+      extendedEnd: false,
+      deadlineReviewReason: reason,
+    });
+    const deadline = new Date("2026-11-30T18:30:00.000Z");
+    const norm = normalizedDeadline({
+      validThrough: deadline,
+      precision: "DATE_ONLY",
+      sourceText: "30 November 2026",
+      timezone: "Asia/Kolkata",
+      timezoneBasis: "INDIA_SOURCE_DEFAULT",
+    });
+
+    const result = await writePostingsToDB([dedupedInput()] as never, [norm] as never);
+
+    expect(result.results[0]).toMatchObject({
+      deadlineReviewRequired: true,
+      deadlineReviewReason: reason,
+    });
+    expect(outcomeWrites).toContainEqual(expect.objectContaining({
+      outcome: "LOADED",
+      outcomeReason: reason,
+      postingId: 303,
+    }));
+  });
+
 });
