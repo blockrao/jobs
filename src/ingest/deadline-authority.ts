@@ -71,3 +71,69 @@ export function canFillMissingCanonicalDeadline(
 ): boolean {
   return !existing && candidate instanceof Date && !Number.isNaN(candidate.getTime());
 }
+
+
+export interface DeadlineEvidence {
+  precision: "DATE_ONLY" | "DATE_TIME" | "UNKNOWN";
+  sourceText: string | null;
+  timezone: string | null;
+  timezoneBasis: "EXPLICIT_SOURCE" | "INDIA_SOURCE_DEFAULT" | "UNKNOWN";
+}
+
+export type DeadlineReconciliationDecision =
+  | { action: "FILL" | "EXTEND" | "KEEP"; reason: string }
+  | { action: "REVIEW"; reason: string };
+
+/**
+ * Decide whether an official observation may change a canonical deadline.
+ * Existing evidence must exactly explain the currently stored canonical instant.
+ * Only later candidates with equal-or-better precision may extend automatically;
+ * corrections, untraceable legacy values and precision degradation require review.
+ */
+export function decideOfficialDeadlineReconciliation(
+  existing: Date | null | undefined,
+  candidate: Date | null | undefined,
+  existingEvidence: DeadlineEvidence | null,
+  candidateEvidence: DeadlineEvidence | null,
+): DeadlineReconciliationDecision {
+  if (!candidate || Number.isNaN(candidate.getTime())) {
+    return { action: "KEEP", reason: "NO_RESOLVED_OFFICIAL_DEADLINE" };
+  }
+  if (!existing) return { action: "FILL", reason: "CANONICAL_DEADLINE_MISSING" };
+  if (Number.isNaN(existing.getTime())) {
+    return { action: "REVIEW", reason: "EXISTING_CANONICAL_DEADLINE_INVALID" };
+  }
+  if (candidate.getTime() === existing.getTime()) {
+    return { action: "KEEP", reason: "DEADLINE_UNCHANGED" };
+  }
+  if (!existingEvidence) {
+    return { action: "REVIEW", reason: "EXISTING_DEADLINE_EVIDENCE_NOT_FOUND" };
+  }
+  if (
+    !candidateEvidence ||
+    candidateEvidence.precision === "UNKNOWN" ||
+    candidateEvidence.timezoneBasis === "UNKNOWN" ||
+    !candidateEvidence.timezone ||
+    !candidateEvidence.sourceText
+  ) {
+    return { action: "REVIEW", reason: "CANDIDATE_DEADLINE_PROVENANCE_INCOMPLETE" };
+  }
+  if (
+    existingEvidence.precision === "UNKNOWN" ||
+    existingEvidence.timezoneBasis === "UNKNOWN" ||
+    !existingEvidence.timezone ||
+    !existingEvidence.sourceText
+  ) {
+    return { action: "REVIEW", reason: "EXISTING_DEADLINE_PROVENANCE_INCOMPLETE" };
+  }
+  if (candidate.getTime() < existing.getTime()) {
+    return { action: "REVIEW", reason: "EARLIER_OFFICIAL_DEADLINE_REQUIRES_CORRECTION_REVIEW" };
+  }
+
+  const precisionRank = (precision: DeadlineEvidence["precision"]) =>
+    precision === "DATE_TIME" ? 2 : precision === "DATE_ONLY" ? 1 : 0;
+  if (precisionRank(candidateEvidence.precision) < precisionRank(existingEvidence.precision)) {
+    return { action: "REVIEW", reason: "LOWER_PRECISION_CANDIDATE_REQUIRES_REVIEW" };
+  }
+  return { action: "EXTEND", reason: "TRACEABLE_OFFICIAL_EXTENSION" };
+}
