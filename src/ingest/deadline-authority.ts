@@ -56,3 +56,18 @@ export function deadlineObservationFacts(input: DeadlineObservationInput) {
     deadlineSourceUrl: input.validThroughSourceText ? input.officialNotificationUrl ?? null : null,
   };
 }
+
+
+/**
+ * Existing recruitment rows do not store deadline precision metadata.
+ * Until a provenance-aware reconciliation exists, never auto-extend or
+ * replace a populated canonical deadline from a later observation. This
+ * deliberately trades automatic extensions for protection against silently
+ * degrading a verified DATE_TIME deadline with a less precise candidate.
+ */
+export function canFillMissingCanonicalDeadline(
+  existing: Date | null | undefined,
+  candidate: Date | null | undefined,
+): boolean {
+  return !existing && candidate instanceof Date && !Number.isNaN(candidate.getTime());
+}
