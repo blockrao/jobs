@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
 import { listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
-import { safeQuery } from "@/lib/safe-query";
+import { deriveLifecycle, lifecycleLabel } from "@/lib/lifecycle";
 import { SECTORS, sectorHref } from "@/lib/sectors";
 import { parsePage } from "@/lib/pagination";
 import { formatDate } from "@/lib/labels";
@@ -52,12 +52,11 @@ const FAQ = [
 export default async function AllGovernmentJobsPage({ searchParams }: Props) {
   const { page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
+  // Let database failures reach the route error boundary. Returning []/{} here
+  // would publish a convincing but false "no jobs" page and zero sector counts.
   const [rows, counts] = await Promise.all([
-    safeQuery(
-      () => listLivePostsBySector(ALL_SECTORS, { limit: PAGE_SIZE + 1, offset: (page - 1) * PAGE_SIZE }),
-      [],
-    ),
-    safeQuery(() => countLivePostsBySector(), {}),
+    listLivePostsBySector(ALL_SECTORS, { limit: PAGE_SIZE + 1, offset: (page - 1) * PAGE_SIZE }),
+    countLivePostsBySector(),
   ]);
 
   const hasNext = rows.length > PAGE_SIZE;
@@ -169,9 +168,10 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
         ) : (
           <ul className="mt-3 divide-y divide-black/10">
             {posts.map((post) => {
-              const end = post.applicationEndDate ? new Date(post.applicationEndDate) : null;
-              const days = end ? Math.ceil((end.getTime() - Date.now()) / 86_400_000) : null;
-              const deadline = end ? formatDate(end, "en-IN") : post.recruitmentStatus === "UPCOMING" ? "Upcoming" : "Deadline not listed";
+              const lifecycle = deriveLifecycle(post.recruitmentStatus, post.applicationEndDate);
+              const end = lifecycle.deadline;
+              const days = lifecycle.daysLeft;
+              const deadline = end ? formatDate(end, "en-IN") : "Closing date not listed";
               return (
                 <li key={post.postId} className="py-4">
                   <Link href={`/jobs/${post.recruitmentSlug}/${post.postSlug}`} className="font-semibold leading-6 hover:underline">
@@ -183,9 +183,12 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                     <Link href={recruitmentHref({ slug: post.recruitmentSlug })} className="hover:underline">{post.recruitmentName}</Link>
                   </p>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <span className={lifecycle.state === "open" ? "font-medium text-green-700" : "font-medium text-blue-700"}>
+                      {lifecycleLabel(lifecycle.state)}
+                    </span>
                     {post.vacancyTotal != null && <span className="text-neutral-700">{post.vacancyTotal.toLocaleString("en-IN")} vacancies</span>}
                     <span className={days !== null && days <= 7 ? "font-medium text-red-700" : "text-neutral-600"}>
-                      Last date: {deadline}{days !== null && days > 0 && days <= 14 ? ` · ${days} days left` : ""}
+                      Last date: {deadline}{lifecycle.state === "open" && days !== null && days > 0 && days <= 14 ? ` · ${days} days left` : ""}
                     </span>
                     {post.locationStateCode && <span className="text-neutral-500">Location: {post.locationStateCode}</span>}
                   </div>
