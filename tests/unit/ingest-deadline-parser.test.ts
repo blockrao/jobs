@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseIndianDeadline } from "../../src/ingest/adapters/util";
 
 describe("parseIndianDeadline", () => {
-  it("treats a date-only deadline as inclusive through the end of that IST day", () => {
+  it("uses the exclusive midnight after the stated IST date as its expiry boundary", () => {
     const parsed = parseIndianDeadline("07 September 2026", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
     expect(parsed?.precision).toBe("DATE_ONLY");
     expect(parsed?.timezone).toBe("Asia/Kolkata");
@@ -13,7 +13,7 @@ describe("parseIndianDeadline", () => {
   it("preserves 12-hour time expressions", () => {
     const parsed = parseIndianDeadline("07 September 2026 | 10:11 PM", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
     expect(parsed?.precision).toBe("DATE_TIME");
-    expect(parsed?.timezone).toBe("IST");
+    expect(parsed?.timezone).toBe("Asia/Kolkata");
     expect(parsed?.date?.toISOString()).toBe("2026-09-07T16:41:00.000Z");
     expect(parsed?.timezoneBasis).toBe("INDIA_SOURCE_DEFAULT");
   });
@@ -44,7 +44,7 @@ describe("parseIndianDeadline", () => {
   });
 
   it("preserves ordinal dates and dotted meridiem time formats found in source captures", () => {
-    expect(parseIndianDeadline("31st October, 2026")?.precision).toBe("DATE_ONLY");
+    expect(parseIndianDeadline("31st October, 2026", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.precision).toBe("DATE_ONLY");
     expect(parseIndianDeadline("November 6, 2026", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-11-06T18:30:00.000Z");
     expect(parseIndianDeadline("30/10/2026 by 5.00 p.m.", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-10-30T11:30:00.000Z");
     expect(parseIndianDeadline("30 October 2026 by 5 PM", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-10-30T11:30:00.000Z");
