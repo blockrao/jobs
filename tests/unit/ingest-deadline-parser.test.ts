@@ -3,29 +3,31 @@ import { parseIndianDeadline } from "../../src/ingest/adapters/util";
 
 describe("parseIndianDeadline", () => {
   it("treats a date-only deadline as inclusive through the end of that IST day", () => {
-    const parsed = parseIndianDeadline("07 September 2026");
+    const parsed = parseIndianDeadline("07 September 2026", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
     expect(parsed?.precision).toBe("DATE_ONLY");
     expect(parsed?.timezone).toBe("Asia/Kolkata");
-    expect(parsed?.date.toISOString()).toBe("2026-09-07T18:29:59.999Z");
+    expect(parsed?.date?.toISOString()).toBe("2026-09-07T18:30:00.000Z");
+    expect(parsed?.timezoneBasis).toBe("INDIA_SOURCE_DEFAULT");
   });
 
   it("preserves 12-hour time expressions", () => {
-    const parsed = parseIndianDeadline("07 September 2026 | 10:11 PM");
+    const parsed = parseIndianDeadline("07 September 2026 | 10:11 PM", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
     expect(parsed?.precision).toBe("DATE_TIME");
     expect(parsed?.timezone).toBe("IST");
-    expect(parsed?.date.toISOString()).toBe("2026-09-07T16:41:00.000Z");
+    expect(parsed?.date?.toISOString()).toBe("2026-09-07T16:41:00.000Z");
+    expect(parsed?.timezoneBasis).toBe("INDIA_SOURCE_DEFAULT");
   });
 
   it("preserves 24-hour Hours/Hrs expressions", () => {
-    expect(parseIndianDeadline("07 October 2026 (23:00 Hours)")?.date.toISOString())
+    expect(parseIndianDeadline("07 October 2026 (23:00 Hours)", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString())
       .toBe("2026-10-07T17:30:00.000Z");
-    expect(parseIndianDeadline("07 October 2026 23:00 Hrs")?.precision).toBe("DATE_TIME");
+    expect(parseIndianDeadline("07 October 2026 23:00 Hrs", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.precision).toBe("DATE_TIME");
   });
 
   it("honours explicit UTC and numeric offsets", () => {
-    expect(parseIndianDeadline("2026-09-07T10:00:00Z")?.date.toISOString())
+    expect(parseIndianDeadline("2026-09-07T10:00:00Z")?.date?.toISOString())
       .toBe("2026-09-07T10:00:00.000Z");
-    expect(parseIndianDeadline("07 September 2026 10:00 +05:30")?.date.toISOString())
+    expect(parseIndianDeadline("07 September 2026 10:00 +05:30")?.date?.toISOString())
       .toBe("2026-09-07T04:30:00.000Z");
   });
 
@@ -36,21 +38,21 @@ describe("parseIndianDeadline", () => {
   });
 
   it("parses ISO and dotted numeric date-only values without treating separators as times", () => {
-    expect(parseIndianDeadline("2026-10-31")?.date.toISOString()).toBe("2026-10-31T18:29:59.999Z");
-    expect(parseIndianDeadline("05.11.2026")?.date.toISOString()).toBe("2026-11-05T18:29:59.999Z");
-    expect(parseIndianDeadline("05.11.2026, 5.00 pm")?.date.toISOString()).toBe("2026-11-05T11:30:00.000Z");
+    expect(parseIndianDeadline("2026-10-31", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-10-31T18:30:00.000Z");
+    expect(parseIndianDeadline("05.11.2026", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-11-05T18:30:00.000Z");
+    expect(parseIndianDeadline("05.11.2026, 5.00 pm", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-11-05T11:30:00.000Z");
   });
 
   it("preserves ordinal dates and dotted meridiem time formats found in source captures", () => {
     expect(parseIndianDeadline("31st October, 2026")?.precision).toBe("DATE_ONLY");
-    expect(parseIndianDeadline("November 6, 2026")?.date.toISOString()).toBe("2026-11-06T18:29:59.999Z");
-    expect(parseIndianDeadline("30/10/2026 by 5.00 p.m.")?.date.toISOString()).toBe("2026-10-30T11:30:00.000Z");
-    expect(parseIndianDeadline("30 October 2026 by 5 PM")?.date.toISOString()).toBe("2026-10-30T11:30:00.000Z");
+    expect(parseIndianDeadline("November 6, 2026", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-11-06T18:30:00.000Z");
+    expect(parseIndianDeadline("30/10/2026 by 5.00 p.m.", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-10-30T11:30:00.000Z");
+    expect(parseIndianDeadline("30 October 2026 by 5 PM", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-10-30T11:30:00.000Z");
   });
 
   it("parses compact 24-hour and midnight deadlines", () => {
-    expect(parseIndianDeadline("01-11-2026 up to 1700 Hrs")?.date.toISOString()).toBe("2026-11-01T11:30:00.000Z");
-    expect(parseIndianDeadline("01 November 2026 (12:00 midnight)")?.date.toISOString()).toBe("2026-10-31T18:30:00.000Z");
+    expect(parseIndianDeadline("01-11-2026 up to 1700 Hrs", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-11-01T11:30:00.000Z");
+    expect(parseIndianDeadline("01 November 2026 (12:00 midnight)", { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" })?.date?.toISOString()).toBe("2026-10-31T18:30:00.000Z");
   });
 
   it("rejects multiple stated times rather than choosing one", () => {
@@ -60,5 +62,39 @@ describe("parseIndianDeadline", () => {
   it("retains the exact source text for observation provenance", () => {
     const raw = "07 September 2026 (23:00 Hours)";
     expect(parseIndianDeadline(raw)?.sourceText).toBe(raw);
+  });
+});
+
+
+describe("parseIndianDeadline timezone safety", () => {
+  it("returns UNKNOWN rather than assuming IST for an unzoned date-time without issuer context", () => {
+    const parsed = parseIndianDeadline("07 September 2026 | 10:11 PM");
+    expect(parsed?.precision).toBe("UNKNOWN");
+    expect(parsed?.date).toBeNull();
+    expect(parsed?.timezone).toBeNull();
+    expect(parsed?.timezoneBasis).toBe("UNKNOWN");
+  });
+
+  it("returns UNKNOWN rather than assigning a timezone to a date-only value without India context", () => {
+    const parsed = parseIndianDeadline("07 September 2026");
+    expect(parsed?.precision).toBe("UNKNOWN");
+    expect(parsed?.date).toBeNull();
+  });
+
+  it("records an explicit source timezone separately from an India default", () => {
+    const explicit = parseIndianDeadline("07 September 2026 10:00 UTC");
+    expect(explicit?.precision).toBe("DATE_TIME");
+    expect(explicit?.timezone).toBe("UTC");
+    expect(explicit?.timezoneBasis).toBe("EXPLICIT_SOURCE");
+  });
+
+  it("uses the India source default only when the caller explicitly supplies that context", () => {
+    const assumed = parseIndianDeadline("07 September 2026 10:00", {
+      defaultTimezone: "Asia/Kolkata",
+      defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT",
+    });
+    expect(assumed?.timezone).toBe("Asia/Kolkata");
+    expect(assumed?.timezoneBasis).toBe("INDIA_SOURCE_DEFAULT");
+    expect(assumed?.date?.toISOString()).toBe("2026-09-07T04:30:00.000Z");
   });
 });
