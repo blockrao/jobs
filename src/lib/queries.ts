@@ -478,8 +478,7 @@ export async function getHomeStats(): Promise<HomeStats> {
 // ACTIVE/UPCOMING and application window not yet closed.
 
 const livePostCondition = sql`
-  ${recruitments.status} IN ('ACTIVE', 'UPCOMING')
-  AND (${recruitments.applicationEndDate} IS NULL OR ${recruitments.applicationEndDate} > NOW())
+  ${recruitmentIsLiveSql(recruitments.status, recruitments.applicationEndDate)}
   AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
 `;
 
