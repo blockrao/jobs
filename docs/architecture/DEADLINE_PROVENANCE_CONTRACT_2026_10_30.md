@@ -75,6 +75,8 @@ The implementation PR should add nullable recruitment-level metadata alongside `
 
 The existing source observation must retain the captured deadline text and source context. Where available, preserve the official notification URL/source locator that supports the value. Do not treat an aggregator URL as the official evidence source.
 
+**Source-authority gate:** a parsed deadline may create or extend the canonical recruitment deadline only when its source-registry record is explicitly `authority = OFFICIAL` and `is_official = true`. `TRUSTED_SECONDARY`, `AGGREGATED`, missing and unknown source records may contribute observations/candidate facts only. An aggregator's capture of an official notification URL does not make the aggregator's deadline an official fact; the deadline itself must be supported by evidence from the issuing body.
+
 These fields must be written atomically with the canonical deadline. A later sighting may extend a deadline only when the new source evidence supports that extension; it must not replace a more precise verified deadline with a less precise value. Conflicting or earlier dates require a reviewable exception, not silent overwrite.
 
 The database migration must be additive and nullable. It must not rewrite existing `application_end_date` values or manufacture precision for historical rows.
@@ -83,7 +85,7 @@ The database migration must be additive and nullable. It must not rewrite existi
 
 1. Add a dedicated deadline parser returning the effective instant, precision, timezone, timezone basis and original source text. Do not overload the legacy generic date parser used for notification/exam dates.
 2. Update every adapter that extracts an application closing date to use the dedicated parser. Preserve raw source text in the observation facts.
-3. Update FJA promotion to preserve its captured source deadline text and precision. Do not parse a date-only value as UTC midnight and then treat it as a precise expiry instant.
+3. Update FJA promotion to preserve its captured source deadline text and precision as an observation/candidate. FJA data is aggregated and must not set or extend the canonical recruitment deadline unless the deadline is independently verified against issuing-body evidence.
 4. Extend `RawPosting` / normalized types and the canonical writer to pass deadline metadata into recruitment resolution and date refresh.
 5. Ensure the canonical recruitment is the sole lifecycle deadline owner. Post enrichment may retain source observations but cannot silently redefine recruitment lifecycle.
 6. Add unit tests for date-only, explicit time, AM/PM, 24-hour time, explicit IST/UTC offsets, missing timezone, invalid dates, ambiguous text and timezone-default eligibility.
