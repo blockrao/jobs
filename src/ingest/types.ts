@@ -58,7 +58,7 @@ export interface RawPosting {
   datePosted?: Date;
   validThrough?: Date;
   /** Precision and verbatim evidence for the application deadline. */
-  validThroughPrecision?: "DATE" | "DATETIME";
+  validThroughPrecision?: "DATE_ONLY" | "DATE_TIME";
   validThroughSourceText?: string;
   validThroughTimezone?: string;
   validThroughSourceLabel?: string;
