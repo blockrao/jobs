@@ -6,6 +6,7 @@ on:
   # Keep push validation enabled for commits authored through GitHub integrations.
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
