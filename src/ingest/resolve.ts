@@ -19,7 +19,7 @@ import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
 import { buildDescriptiveRecruitmentSlug } from "./slug-generator";
-import { canFillMissingCanonicalDeadline } from "./deadline-authority";
+import { canFillMissingCanonicalDeadline, decideOfficialDeadlineReconciliation, type DeadlineEvidence } from "./deadline-authority";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -55,33 +55,102 @@ export function normalizeAdvertisementNumber(raw: string | null | undefined): st
 }
 
 /**
- * Fill missing recruitment dates from an authorised sighting. Existing application deadlines
- * are immutable here because their precision/provenance is not queryable on the recruitment row.
- * Automatic extensions require a separate provenance-aware reconciliation and are disabled.
+ * Fill missing recruitment dates and reconcile official deadline extensions.
+ *
+ * A populated deadline is changed only when a prior OFFICIAL observation exactly
+ * explains the stored instant and the new official candidate is later with equal-or-
+ * better precision. Untraceable legacy values, corrections and precision conflicts
+ * are left untouched and surfaced on the current source observation for review.
  */
 export async function refreshRecruitmentDates(
   db: Db,
   recruitmentId: number,
-  dates: { applicationStartDate?: Date | null; applicationEndDate?: Date | null },
-): Promise<{ filledStart: boolean; extendedEnd: boolean }> {
+  dates: {
+    applicationStartDate?: Date | null;
+    applicationEndDate?: Date | null;
+    deadlineEvidence?: DeadlineEvidence | null;
+  },
+): Promise<{ filledStart: boolean; extendedEnd: boolean; deadlineReviewReason?: string }> {
   const row = await db.query.recruitments.findFirst({ where: eq(recruitments.id, recruitmentId) });
   if (!row) return { filledStart: false, extendedEnd: false };
   const patch: Record<string, unknown> = {};
   let filledStart = false;
   let extendedEnd = false;
+  let deadlineReviewReason: string | undefined;
+
   if (dates.applicationStartDate && !row.applicationStartDate) {
     patch.applicationStartDate = dates.applicationStartDate;
     filledStart = true;
   }
+
   if (canFillMissingCanonicalDeadline(row.applicationEndDate, dates.applicationEndDate)) {
     patch.applicationEndDate = dates.applicationEndDate;
     extendedEnd = true;
+  } else if (
+    row.applicationEndDate &&
+    dates.applicationEndDate &&
+    row.applicationEndDate.getTime() !== dates.applicationEndDate.getTime()
+  ) {
+    try {
+      // The observation is linked through its posting; source registry authority is
+      // joined independently and must be OFFICIAL + is_official=true.
+      const evidenceResult = await db.execute(sql`
+        SELECT so.facts
+        FROM public.source_observations so
+        INNER JOIN public.postings p ON p.id = so.posting_id
+        INNER JOIN public.sources s ON s.slug = so.source
+        WHERE p.inferred_recruitment_id = ${recruitmentId}
+          AND s.authority = 'OFFICIAL'
+          AND s.is_official IS TRUE
+          AND so.outcome = 'LOADED'
+          AND so.facts->>'lastDate' = ${row.applicationEndDate.toISOString()}
+        ORDER BY so.observed_at DESC, so.id DESC
+        LIMIT 1
+      `);
+      const evidenceRows = Array.isArray(evidenceResult)
+        ? evidenceResult as unknown as Array<{ facts: Record<string, unknown> }>
+        : [];
+      const facts = evidenceRows[0]?.facts;
+      const existingEvidence: DeadlineEvidence | null = facts
+        ? {
+            precision: facts.deadlinePrecision === "DATE_ONLY" || facts.deadlinePrecision === "DATE_TIME"
+              ? facts.deadlinePrecision
+              : "UNKNOWN",
+            sourceText: typeof facts.deadlineSourceText === "string" ? facts.deadlineSourceText : null,
+            timezone: typeof facts.deadlineTimezone === "string" ? facts.deadlineTimezone : null,
+            timezoneBasis: facts.deadlineTimezoneBasis === "EXPLICIT_SOURCE" || facts.deadlineTimezoneBasis === "INDIA_SOURCE_DEFAULT"
+              ? facts.deadlineTimezoneBasis
+              : "UNKNOWN",
+          }
+        : null;
+
+      const decision = decideOfficialDeadlineReconciliation(
+        row.applicationEndDate,
+        dates.applicationEndDate,
+        existingEvidence,
+        dates.deadlineEvidence ?? null,
+      );
+      if (decision.action === "EXTEND") {
+        patch.applicationEndDate = dates.applicationEndDate;
+        extendedEnd = true;
+      } else if (decision.action === "REVIEW") {
+        deadlineReviewReason = `DEADLINE_REVIEW_REQUIRED:${decision.reason}`;
+      }
+    } catch {
+      // Fail closed: a query/shape failure must never turn into an automatic overwrite.
+      deadlineReviewReason = "DEADLINE_REVIEW_REQUIRED:EXISTING_DEADLINE_EVIDENCE_LOOKUP_FAILED";
+    }
   }
+
   if (filledStart || extendedEnd) {
     patch.updatedAt = new Date();
     await db.update(recruitments).set(patch).where(eq(recruitments.id, recruitmentId));
   }
-  return { filledStart, extendedEnd };
+  return {
+    filledStart,
+    extendedEnd,
+    ...(deadlineReviewReason ? { deadlineReviewReason } : {}),
+  };
 }
 
 export interface ResolvedRecruitment {
