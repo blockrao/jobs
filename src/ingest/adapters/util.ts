@@ -319,12 +319,12 @@ export function parseIndianDeadline(input: string | undefined | null): {
   // Do not mistake dotted numeric dates (05.11.2026) for 05:11.
   // Accept HH:MM, H.MM, optional seconds, spaced/dotted AM/PM, and
   // explicit 24-hour clock suffixes. A bare "5 PM" is also a time.
-  const timePattern = /(?<![\d./-])(\d{1,2})(?:(?::|\.)(\d{2})(?::(\d{2}))?)?\s*(a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)?\s*(?:hrs?|hours)?(?![./-]\d)/gi;
+  const timePattern = /(?<![\d./-])(\d{1,2})(?:(?::|\.)(\d{2})(?::(\d{2}))?)?\s*(a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)?\s*(?:hrs?|hours?|h)?(?![\d./-])/gi;
   const timeMatches = [...sourceText.matchAll(timePattern)].filter((m) => {
     const token = m[0].trim();
     return /[:.]|(?:a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)|(?:hrs?|hours)\s*$/i.test(token);
   });
-  const militaryMatches = [...sourceText.matchAll(/(?<![\d./-])([01]\d|2[0-3])([0-5]\d)\s*(?:hrs?|hours)\b/gi)];
+  const militaryMatches = [...sourceText.matchAll(/(?<![\d./-])([01]\d|2[0-3])([0-5]\d)\s*(?:hrs?|hours?|h)\b/gi)];
   const allTimes = [...timeMatches, ...militaryMatches];
   if (allTimes.length > 1) return undefined;
 
