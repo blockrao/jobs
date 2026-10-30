@@ -148,7 +148,7 @@ export function recordToRaw(rec: FileRecord): RawPosting {
   const title = collapse(rec.title || rec.listTitle || "");
   const totalVacancies = vac ? (extractVacancies(vac.value) ?? undefined) : undefined;
   const deadline = last ? parseIndianDeadline(last.value, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
-  const validThrough = deadline?.date;
+  const validThrough = deadline?.date ?? undefined;
   const applicationStartDate = start ? parseIndianDate(start.value) : undefined;
   const published = rec.published ? new Date(rec.published) : undefined;
 
