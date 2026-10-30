@@ -22,7 +22,7 @@ export type DetailFields = Partial<
   | "validThrough"
     | "validThroughPrecision"
     | "validThroughSourceText"
-    | "validThroughTimezone"
+    | "validThroughTimezone" | "validThroughTimezoneBasis"
     | "validThroughSourceLabel"
   | "examDate"
   | "salaryMin"
@@ -117,7 +117,7 @@ function pickFields(
     /closing date/i,
     /^last date$/i,
   );
-  const deadline = parseIndianDeadline(deadlineLabel);
+  const deadline = parseIndianDeadline(deadlineLabel, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
   const validThrough = deadline?.date;
   const examDate = parseIndianDate(
     bag.find(/exam date/i, /date of exam/i, /written exam/i, /tier.?i.*date/i),
@@ -158,6 +158,7 @@ function pickFields(
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
     validThroughTimezone: deadline?.timezone,
+    validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: deadlineLabel,
     examDate,
     salaryMin,
