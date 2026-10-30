@@ -315,7 +315,7 @@ export function parseIndianDeadline(input: string | undefined | null): {
   const meridiem=timeMatch[4]?.toUpperCase();
   if (meridiem) { if(h<1||h>12) return undefined; h=(h%12)+(meridiem==="PM"?12:0); }
   if (!validDeadlineParts(y,mo,d,h,mi,sec)) return undefined;
-  const zoneMatch=sourceText.match(/\\b(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})\\b/i);
+  const zoneMatch=sourceText.match(/(?:^|\\s|\\()(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})(?=\\s|\\)|$)/i);
   const zone=zoneMatch?.[1] || "IST";
   let suffix=zone.toUpperCase()==="IST"?"+05:30":zone.toUpperCase()==="UTC"||zone.toUpperCase()==="GMT"?"Z":zone;
   const value=new Date(Date.parse(`${String(y).padStart(4,"0")}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}T${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}:${String(sec).padStart(2,"0")}${suffix}`));
