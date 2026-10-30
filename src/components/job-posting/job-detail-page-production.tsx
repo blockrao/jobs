@@ -210,7 +210,13 @@ export default function JobDetailPageProduction({
   };
   if (!isApplicationClosed) pushLink(applicationLinkLabel, post.applyUrl);
   pushLink(notificationLinkLabel, post.officialSourceUrl);
-  for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
+  for (const l of post.officialLinks ?? []) {
+    const label = linkLabel(l);
+    pushLink(
+      isManuallyVerifiedOfficialLink(l.source) ? label : `${label} (not manually verified)`,
+      l.url,
+    );
+  }
   if (isApplicationClosed) {
     const closedPortalLabel = lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)';
     pushLink(applicationLinkVerified ? closedPortalLabel : `${closedPortalLabel} (not manually verified)`, post.applyUrl);
@@ -615,7 +621,9 @@ export default function JobDetailPageProduction({
             </nav>
 
             <p className={styles.note}>
-              JobOye is not a government website. Information on this page is compiled from the official notification; candidates should verify every detail on the official website before applying.
+              JobOye is not a government website. {notificationLinkVerified
+                ? "Information on this page is compiled from a manually verified official notification; candidates should confirm the latest details on the recruiting body's website before applying."
+                : "Information on this page is compiled from available recruitment records. Any notification or application links shown as not manually verified must be checked against the recruiting body's official website before applying."}
               {' '}<Link href="/contact">Report an error</Link>.
             </p>
           </article>
