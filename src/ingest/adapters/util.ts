@@ -276,65 +276,123 @@ const MONTHS: Record<string, number> = {
 };
 
 /**
- * Parse an application deadline without discarding its stated precision.
- * Date-only values are inclusive through the end of that calendar day in India (IST).
- * Explicit times retain their stated offset; unzoned times default to IST.
+ * Parse an application deadline without guessing its timezone.
+ *
+ * DATE_ONLY is represented as an exclusive next-midnight boundary in the
+ * explicitly established timezone. For India-based recruitment this is
+ * 00:00 Asia/Kolkata on the following calendar day. This avoids JavaScript
+ * Date's millisecond ceiling and preserves the full stated calendar day.
+ *
+ * An unzoned value is resolved only when the caller supplies a verified
+ * India-recruitment timezone context. Otherwise it is returned as UNKNOWN.
  */
-export function parseIndianDeadline(input: string | undefined | null): {
-  date: Date;
-  precision: "DATE_ONLY" | "DATE_TIME";
+export type DeadlinePrecision = "DATE_ONLY" | "DATE_TIME" | "UNKNOWN";
+export type DeadlineTimezoneBasis = "EXPLICIT_SOURCE" | "INDIA_SOURCE_DEFAULT" | "UNKNOWN";
+
+export interface DeadlineParseOptions {
+  /** Set only when the adapter/recruitment scope establishes an India-based issuer. */
+  defaultTimezone?: "Asia/Kolkata";
+  defaultTimezoneBasis?: "INDIA_SOURCE_DEFAULT";
+}
+
+export function parseIndianDeadline(
+  input: string | undefined | null,
+  options: DeadlineParseOptions = {},
+): {
+  /** Resolved instant or exclusive boundary; null when timezone is unknown. */
+  date: Date | null;
+  precision: DeadlinePrecision;
   sourceText: string;
-  timezone: string;
+  timezone: string | null;
+  timezoneBasis: DeadlineTimezoneBasis;
 } | undefined {
   if (!input?.trim()) return undefined;
   const sourceText = collapse(input);
-  const isoDateOnly = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const hasIndiaDefault = options.defaultTimezone === "Asia/Kolkata"
+    && options.defaultTimezoneBasis === "INDIA_SOURCE_DEFAULT";
+
+  const unknown = (): {
+    date: null;
+    precision: "UNKNOWN";
+    sourceText: string;
+    timezone: null;
+    timezoneBasis: "UNKNOWN";
+  } => ({
+    date: null,
+    precision: "UNKNOWN",
+    sourceText,
+    timezone: null,
+    timezoneBasis: "UNKNOWN",
+  });
+
+  const isoDateOnly = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
   if (isoDateOnly) {
     const y = +isoDateOnly[1], mo = +isoDateOnly[2] - 1, d = +isoDateOnly[3];
     if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
-    return { date: new Date(Date.UTC(y, mo, d, 18, 29, 59, 999)), precision: "DATE_ONLY", sourceText, timezone: "Asia/Kolkata" };
+    if (!hasIndiaDefault) return unknown();
+    // Exclusive boundary: midnight after the stated date, represented in IST.
+    return {
+      date: new Date(Date.UTC(y, mo, d, 18, 30, 0, 0)),
+      precision: "DATE_ONLY",
+      sourceText,
+      timezone: "Asia/Kolkata",
+      timezoneBasis: "INDIA_SOURCE_DEFAULT",
+    };
   }
 
-  const iso = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|UTC|GMT|IST|[+-]\d{2}:?\d{2})?$/i);
+  const iso = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})[T ](\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d{1,3}))?)?\\s*(Z|UTC|GMT|IST|[+-]\\d{2}:?\\d{2})?$/i);
   if (iso) {
     const [, ys, mos, ds, hs, mins, secs = "0", millis = "0", zone] = iso;
     const y = +ys, mo = +mos - 1, d = +ds, h = +hs, mi = +mins, sec = +secs;
     if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
-    const z = zone || "IST";
-    const suffix = z.toUpperCase() === "IST" ? "+05:30" : z.toUpperCase() === "UTC" || z.toUpperCase() === "GMT" ? "Z" : z;
+    const explicitZone = zone || null;
+    if (!explicitZone && !hasIndiaDefault) return unknown();
+    const z = explicitZone || "Asia/Kolkata";
+    const suffix = z.toUpperCase() === "IST" ? "+05:30"
+      : z.toUpperCase() === "UTC" || z.toUpperCase() === "GMT" ? "Z" : z;
     const stamp = ys + "-" + mos + "-" + ds + "T" + hs + ":" + mins + ":" + String(sec).padStart(2, "0") + "." + millis.padEnd(3, "0") + suffix;
     const value = new Date(Date.parse(stamp));
-    return Number.isNaN(value.getTime()) ? undefined : { date: value, precision: "DATE_TIME", sourceText, timezone: z };
+    return Number.isNaN(value.getTime()) ? undefined : {
+      date: value,
+      precision: "DATE_TIME",
+      sourceText,
+      timezone: z,
+      timezoneBasis: explicitZone ? "EXPLICIT_SOURCE" : "INDIA_SOURCE_DEFAULT",
+    };
   }
 
-  // Indian source formats include ordinal days ("31st October, 2026"),
-  // numeric day-first dates, and month names with or without punctuation.
-  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})(?:st|nd|rd|th)?[\s./-]+([A-Za-z]{3,9}|\d{1,2})[\s,./-]+(\d{4})(?:\b|$)/i);
-  const monthFirstMatch = sourceText.match(/(?:^|\b)([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})(?:\b|$)/i);
+  // Indian source formats include ordinal days, numeric day-first dates,
+  // and month names with or without punctuation.
+  const dateMatch = sourceText.match(/(?:^|\\b)(\\d{1,2})(?:st|nd|rd|th)?[\\s./-]+([A-Za-z]{3,9}|\\d{1,2})[\\s,./-]+(\\d{4})(?:\\b|$)/i);
+  const monthFirstMatch = sourceText.match(/(?:^|\\b)([A-Za-z]{3,9})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?[,]?\\s+(\\d{4})(?:\\b|$)/i);
   if (!dateMatch && !monthFirstMatch) return undefined;
   const y = +(dateMatch ? dateMatch[3] : monthFirstMatch![3]);
   const d = +(dateMatch ? dateMatch[1] : monthFirstMatch![2]);
   const monthText = dateMatch ? dateMatch[2] : monthFirstMatch![1];
-  const mo = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
+  const mo = /^\\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
   if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
 
-  // Do not mistake dotted numeric dates (05.11.2026) for 05:11.
-  // Accept HH:MM, H.MM, optional seconds, spaced/dotted AM/PM, and
-  // explicit 24-hour clock suffixes. A bare "5 PM" is also a time.
-  const timePattern = /(?<![\d./+-])(\d{1,2})(?:(?::|\.)(\d{2})(?::(\d{2}))?)?\s*(a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)?\s*(?:hrs?|hours?|h)?(?![\d./-])/gi;
+  const timePattern = /(?<![\\d./+-])(\\d{1,2})(?:(?::|\\.)(\\d{2})(?::(\\d{2}))?)?\\s*(a\\.?\\s*m\\.?|p\\.?\\s*m\\.?|am|pm|midnight|noon)?\\s*(?:hrs?|hours?|h)?(?![\\d./-])/gi;
   const timeMatches = [...sourceText.matchAll(timePattern)].filter((m) => {
     const token = m[0].trim();
-    return /[:.]|(?:a\.?\s*m\.?|p\.?\s*m\.?|am|pm|midnight|noon)|(?:hrs?|hours)\s*$/i.test(token);
+    return /[:.]|(?:a\\.?\\s*m\\.?|p\\.?\\s*m\\.?|am|pm|midnight|noon)|(?:hrs?|hours)\\s*$/i.test(token);
   });
-  const militaryMatches = [...sourceText.matchAll(/(?<![\d./+-])([01]\d|2[0-3])([0-5]\d)\s*(?:hrs?|hours?|h)\b/gi)];
+  const militaryMatches = [...sourceText.matchAll(/(?<![\\d./+-])([01]\\d|2[0-3])([0-5]\\d)\\s*(?:hrs?|hours?|h)\\b/gi)];
   const allTimes = [...timeMatches, ...militaryMatches];
   if (allTimes.length > 1) return undefined;
 
-  const hasClockLikeText = /(?<![\d./+-])\d{1,2}[:.]\d{2}(?![./-]\d)/.test(sourceText);
+  const hasClockLikeText = /(?<![\\d./+-])\\d{1,2}[:.]\\d{2}(?![./-]\\d)/.test(sourceText);
   if (hasClockLikeText && allTimes.length === 0) return undefined;
 
   if (allTimes.length === 0) {
-    return { date: new Date(Date.UTC(y, mo, d, 18, 29, 59, 999)), precision: "DATE_ONLY", sourceText, timezone: "Asia/Kolkata" };
+    if (!hasIndiaDefault) return unknown();
+    return {
+      date: new Date(Date.UTC(y, mo, d, 18, 30, 0, 0)),
+      precision: "DATE_ONLY",
+      sourceText,
+      timezone: "Asia/Kolkata",
+      timezoneBasis: "INDIA_SOURCE_DEFAULT",
+    };
   }
 
   const match = allTimes[0];
@@ -346,7 +404,7 @@ export function parseIndianDeadline(input: string | undefined | null): {
     h = +match[1];
     mi = +(match[2] || "0");
     sec = +(match[3] || "0");
-    marker = match[4]?.replace(/\s+/g, "").replace(/\./g, "").toLowerCase();
+    marker = match[4]?.replace(/\\s+/g, "").replace(/\\./g, "").toLowerCase();
   }
 
   if (marker === "midnight") {
@@ -361,12 +419,21 @@ export function parseIndianDeadline(input: string | undefined | null): {
   }
 
   if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
-  const zoneMatch = sourceText.match(/(?:^|\s|\()(IST|UTC|GMT|[+-]\d{2}:?\d{2})(?=\s|\)|$)/i);
-  const zone = zoneMatch?.[1] || "IST";
-  const suffix = zone.toUpperCase() === "IST" ? "+05:30" : zone.toUpperCase() === "UTC" || zone.toUpperCase() === "GMT" ? "Z" : zone;
+  const zoneMatch = sourceText.match(/(?:^|\\s|\\()(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})(?=\\s|\\)|$)/i);
+  const explicitZone = zoneMatch?.[1] || null;
+  if (!explicitZone && !hasIndiaDefault) return unknown();
+  const zone = explicitZone || "Asia/Kolkata";
+  const suffix = zone.toUpperCase() === "IST" ? "+05:30"
+    : zone.toUpperCase() === "UTC" || zone.toUpperCase() === "GMT" ? "Z" : zone;
   const stamp = String(y).padStart(4, "0") + "-" + String(mo + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0") + "T" + String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + String(sec).padStart(2, "0") + suffix;
   const value = new Date(Date.parse(stamp));
-  return Number.isNaN(value.getTime()) ? undefined : { date: value, precision: "DATE_TIME", sourceText, timezone: zone };
+  return Number.isNaN(value.getTime()) ? undefined : {
+    date: value,
+    precision: "DATE_TIME",
+    sourceText,
+    timezone: zone,
+    timezoneBasis: explicitZone ? "EXPLICIT_SOURCE" : "INDIA_SOURCE_DEFAULT",
+  };
 }
 function validDeadlineParts(y:number,mo:number,d:number,h:number,mi:number,sec:number):boolean {
   if(!Number.isInteger(y)||y<2000||y>2100||mo<0||mo>11||d<1||h<0||h>23||mi<0||mi>59||sec<0||sec>59) return false;
