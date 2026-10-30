@@ -32,8 +32,9 @@ The contract applies to the recruitment-level `application_end_date`, because re
 
 For India-based recruitment notifications, a source-stated date-only deadline remains valid through the end of that calendar date in `Asia/Kolkata`.
 
-- Resolve the effective expiry instant to the final representable instant of that date in `Asia/Kolkata` (23:59:59.999999 IST).
-- Preserve the original date text and mark precision `DATE_ONLY` and timezone `Asia/Kolkata`.
+- Represent the deadline as an **exclusive cutoff** at midnight immediately after the stated date in `Asia/Kolkata`.
+- This makes the entire stated local calendar date valid without relying on a sub-millisecond timestamp that JavaScript `Date` cannot represent.
+- Preserve the original date text and mark precision `DATE_ONLY`, timezone `Asia/Kolkata`, and timezone basis `INDIA_SOURCE_DEFAULT` when the issuing authority/recruitment is demonstrably India-based.
 - Do not interpret UTC midnight as the end of the application window.
 - Do not apply this India timezone rule to a non-India recruitment unless the source establishes that timezone.
 
@@ -41,7 +42,7 @@ For India-based recruitment notifications, a source-stated date-only deadline re
 
 - Preserve the exact stated wall-clock time.
 - If the source explicitly supplies a timezone or UTC offset, preserve it and resolve the instant from it.
-- If the timezone is omitted but the issuing authority/recruitment is demonstrably India-based, use `Asia/Kolkata` and record that the timezone basis was the India-source rule, not an explicit source statement.
+- If the timezone is omitted but the issuing authority/recruitment is demonstrably India-based, use `Asia/Kolkata` and record `INDIA_SOURCE_DEFAULT`, not an explicit source timezone.
 - If neither the timezone nor an India-based authority can be established, classify the effective deadline as `UNKNOWN`; do not invent a timezone or assert a precise expiry instant.
 
 ### 2.3 Unknown and legacy deadlines
@@ -54,13 +55,15 @@ For India-based recruitment notifications, a source-stated date-only deadline re
 
 ## 3. Lifecycle boundary
 
-The lifecycle service must compare the current instant against the resolved effective expiry instant:
+The lifecycle service must compare the current instant against the resolved **exclusive cutoff**:
 
-- Before the expiry instant: deadline has not passed.
-- At the expiry instant: the deadline has not passed.
-- After the expiry instant: deadline has passed.
+- Before the cutoff: the application window remains open.
+- At or after the cutoff: the application window is closed.
+- For `DATE_ONLY`, the cutoff is midnight immediately after the stated India-local date.
+- For `DATE_TIME`, the cutoff is the exact stated closing instant.
+- `UNKNOWN` must not be converted into an invented instant.
 
-For `DATE_ONLY`, the resolved expiry is the end of the stated India-local date. For `DATE_TIME`, it is the exact resolved instant. `UNKNOWN` must not be converted into an invented instant.
+This exclusive-boundary convention is deliberate: it avoids JavaScript's millisecond precision limit while ensuring a date-only deadline remains valid for the entire stated local day.
 
 The status rules remain separate and authoritative: `CLOSED`, `RESULTS` and `ARCHIVED` remain non-live regardless of a future deadline. This contract does not silently change the existing unknown-status fallback; that behaviour must be explicitly decided and tested in the lifecycle-policy implementation.
 
@@ -83,7 +86,7 @@ The database migration must be additive and nullable. It must not rewrite existi
 
 ## 5. Ingestion implementation requirements
 
-1. Add a dedicated deadline parser returning the effective instant, precision, timezone, timezone basis and original source text. Do not overload the legacy generic date parser used for notification/exam dates.
+1. Add a dedicated deadline parser returning the exclusive cutoff, precision, timezone, timezone basis and original source text. The parser must return `UNKNOWN` with no effective instant when timezone context is not established. Do not overload the legacy generic date parser used for notification/exam dates.
 2. Update every adapter that extracts an application closing date to use the dedicated parser. Preserve raw source text in the observation facts.
 3. Update FJA promotion to preserve its captured source deadline text and precision as an observation/candidate. FJA data is aggregated and must not set or extend the canonical recruitment deadline unless the deadline is independently verified against issuing-body evidence.
 4. Extend `RawPosting` / normalized types and the canonical writer to pass deadline metadata into recruitment resolution and date refresh.
@@ -114,8 +117,9 @@ The database migration must be additive and nullable. It must not rewrite existi
 ## 8. Acceptance criteria
 
 - The original source deadline text is retained and traceable.
-- Date-only India deadlines resolve through the stated India-local calendar day.
+- Date-only India deadlines resolve to the exclusive midnight cutoff after the stated India-local calendar day.
 - Explicit times and explicit timezones are preserved without truncation.
+- Unzoned times use `Asia/Kolkata` only with an explicitly supplied India-based recruitment context, recorded as `INDIA_SOURCE_DEFAULT`.
 - Unresolved timezone/precision remains `UNKNOWN`, not guessed.
 - Existing historical timestamps are not reinterpreted without evidence.
 - Canonical lifecycle uses only the recruitment-owned, provenance-qualified deadline.
