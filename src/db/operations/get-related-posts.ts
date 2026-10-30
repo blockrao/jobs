@@ -47,7 +47,7 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND ${liveRecruitment}
-        ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
+        ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
       byOrgData = (Array.isArray(byOrgResult) ? byOrgResult : []) as RelatedPost[];
@@ -69,7 +69,7 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND ${liveRecruitment}
-        ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
+        ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
       byLocationData = (Array.isArray(byLocationResult) ? byLocationResult : []) as RelatedPost[];
@@ -98,7 +98,7 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND ${liveRecruitment}
-        ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
+        ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
       byRoleData = (Array.isArray(byRoleResult) ? byRoleResult : []) as RelatedPost[];
