@@ -276,6 +276,58 @@ const MONTHS: Record<string, number> = {
 };
 
 /**
+ * Parse an application deadline without discarding its stated precision.
+ * Date-only values expire at the end of that calendar day in India (IST).
+ * Explicit times retain their stated offset; unzoned times default to IST.
+ */
+export function parseIndianDeadline(input: string | undefined | null): {
+  date: Date;
+  precision: "DATE" | "DATETIME";
+  sourceText: string;
+  timezone: string;
+} | undefined {
+  if (!input?.trim()) return undefined;
+  const sourceText = collapse(input);
+  const iso = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})[T ](\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d{1,3}))?)?\\s*(Z|UTC|GMT|IST|[+-]\\d{2}:?\\d{2})?$/i);
+  const dateMatch = sourceText.match(/(?:^|\\b)(\\d{1,2})[\\s/-]+([A-Za-z]{3,9}|\\d{1,2})[\\s,/-]+(\\d{4})(?:\\b|$)/);
+  if (iso) {
+    const [, ys, mos, ds, hs, mins, secs = "0", millis = "0", zone] = iso;
+    const y=+ys, mo=+mos-1, d=+ds, h=+hs, mi=+mins, sec=+secs;
+    if (!validDeadlineParts(y,mo,d,h,mi,sec)) return undefined;
+    const ms=+(millis.padEnd(3,"0"));
+    const z=zone || "IST";
+    const suffix = z.toUpperCase()==="IST" ? "+05:30" : z.toUpperCase()==="UTC" || z.toUpperCase()==="GMT" ? "Z" : z;
+    const value = new Date(Date.parse(`${ys}-${mos}-${ds}T${hs}:${mins}:${String(sec).padStart(2,"0")}.${String(ms).padStart(3,"0")}${suffix}`));
+    return Number.isNaN(value.getTime()) ? undefined : {date:value,precision:"DATETIME",sourceText,timezone:z};
+  }
+  if (!dateMatch) return undefined;
+  const [, dayText, monthText, yearText] = dateMatch;
+  const monthNum = /^\\d+$/.test(monthText) ? +monthText-1 : MONTHS[monthText.slice(0,3).toLowerCase()];
+  const y=+yearText, d=+dayText, mo=monthNum;
+  if (!validDeadlineParts(y,mo,d,0,0,0)) return undefined;
+
+  const timeMatch=sourceText.match(/(?:\\b|\\()([01]?\\d|2[0-3])[:.]([0-5]\\d)(?::([0-5]\\d))?\\s*(AM|PM)?\\s*(?:HRS?|HOURS)?(?:\\))?/i);
+  if (!timeMatch) {
+    // Inclusive end of the stated date, represented as a real UTC instant.
+    return {date:new Date(Date.UTC(y,mo,d,18,29,59,999)),precision:"DATE",sourceText,timezone:"Asia/Kolkata"};
+  }
+  let h=+timeMatch[1], mi=+timeMatch[2], sec=+(timeMatch[3]||0);
+  const meridiem=timeMatch[4]?.toUpperCase();
+  if (meridiem) { if(h<1||h>12) return undefined; h=(h%12)+(meridiem==="PM"?12:0); }
+  if (!validDeadlineParts(y,mo,d,h,mi,sec)) return undefined;
+  const zoneMatch=sourceText.match(/\\b(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})\\b/i);
+  const zone=zoneMatch?.[1] || "IST";
+  let suffix=zone.toUpperCase()==="IST"?"+05:30":zone.toUpperCase()==="UTC"||zone.toUpperCase()==="GMT"?"Z":zone;
+  const value=new Date(Date.parse(`${String(y).padStart(4,"0")}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}T${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}:${String(sec).padStart(2,"0")}${suffix}`));
+  return Number.isNaN(value.getTime())?undefined:{date:value,precision:"DATETIME",sourceText,timezone:zone};
+}
+
+function validDeadlineParts(y:number,mo:number,d:number,h:number,mi:number,sec:number):boolean {
+  if(!Number.isInteger(y)||y<2000||y>2100||mo<0||mo>11||d<1||h<0||h>23||mi<0||mi>59||sec<0||sec>59) return false;
+  return new Date(Date.UTC(y,mo,d)).getUTCDate()===d && new Date(Date.UTC(y,mo,d)).getUTCMonth()===mo;
+}
+
+/**
  * Parse the messy date formats these portals use into a Date (UTC midnight):
  *   "07 September 2026", "07/09/2026", "21-08-2020", "07 Sep 2026 | 10:11 PM",
  *   "07 October 2026 (23:00 Hours)". Returns undefined if nothing parseable.

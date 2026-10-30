@@ -57,6 +57,11 @@ export interface RawPosting {
 
   datePosted?: Date;
   validThrough?: Date;
+  /** Precision and verbatim evidence for the application deadline. */
+  validThroughPrecision?: "DATE" | "DATETIME";
+  validThroughSourceText?: string;
+  validThroughTimezone?: string;
+  validThroughSourceLabel?: string;
   examDate?: Date;
 
   // Category slugs or names to attach (created if missing).
