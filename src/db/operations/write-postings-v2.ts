@@ -424,9 +424,7 @@ export async function writePostingsToDB(
       // Missing sources are created as AGGREGATED/non-official by getOrCreateSource(),
       // so unknown and secondary sources fail closed for canonical deadlines.
       const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
-      const canonicalValidThrough = canSetCanonicalApplicationDeadline(source.authority, source.isOfficial)
-        ? norm.validThrough ?? null
-        : null;
+      const canonicalValidThrough = canonicalApplicationDeadline(source.authority, source.isOfficial, norm.validThrough);
 
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
