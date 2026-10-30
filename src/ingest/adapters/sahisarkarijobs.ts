@@ -76,7 +76,7 @@ function build(card: Card): RawPosting {
     ) ||
     // "Ends 31 May 2026" — only trust it when a 4-digit year is present.
     card.cardText.match(/\bEnds\s+([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})/i);
-  const deadline = parseIndianDeadline(lastDate?.[1]);
+  const deadline = parseIndianDeadline(lastDate?.[1], { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
   const p: RawPosting = {
     externalId,
     sourceUrl: card.url,
@@ -90,10 +90,11 @@ function build(card: Card): RawPosting {
     locationRegion: org.organizationState,
     locationCountry: "India",
     stageHintText: card.title,
-    validThrough: deadline?.date,
+    validThrough: deadline?.date ?? undefined,
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
     validThroughTimezone: deadline?.timezone,
+    validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: lastDate ? "last date" : undefined,
   };
   p.confidence = scoreConfidence(p);
