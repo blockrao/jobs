@@ -97,9 +97,10 @@ export async function refreshRecruitmentDates(
       const evidenceResult = await db.execute(sql`
         SELECT so.facts
         FROM public.source_observations so
-        INNER JOIN public.postings p ON p.id = so.posting_id
+        INNER JOIN public.postings source_posting ON source_posting.id = so.posting_id
+        INNER JOIN public.posts canonical_post ON canonical_post.id = source_posting.inferred_post_id
         INNER JOIN public.sources s ON s.slug = so.source
-        WHERE p.inferred_recruitment_id = ${recruitmentId}
+        WHERE canonical_post.recruitment_id = ${recruitmentId}
           AND s.authority = 'OFFICIAL'
           AND s.is_official IS TRUE
           AND so.outcome = 'LOADED'
