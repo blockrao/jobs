@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { refreshRecruitmentDates } from "../../../src/ingest/resolve";
 
-const existing = new Date("2026-11-30T10:00:00.000Z");
+const existing = new Date("2026-11-30T18:30:00.000Z");
 const laterCandidate = new Date("2026-12-15T18:30:00.000Z");
 const dateOnlyEvidence = {
   deadlinePrecision: "DATE_ONLY",
@@ -105,7 +105,7 @@ describe("recruitment deadline persistence boundary", () => {
     const evidence = {
       lastDate: existing.toISOString(),
       deadlinePrecision: "DATE_TIME",
-      deadlineSourceText: "30 November 2026 at 4:00 PM IST",
+      deadlineSourceText: "1 December 2026 at 12:00 AM IST",
       deadlineTimezone: "Asia/Kolkata",
       deadlineTimezoneBasis: "EXPLICIT_SOURCE",
     };
