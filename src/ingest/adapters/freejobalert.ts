@@ -89,7 +89,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     /^last date$/i,
   );
   const deadline = parseIndianDeadline(deadlineLabel, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
-  const validThrough = deadline?.date;
+  const validThrough = deadline?.date ?? undefined;
   const examDate = parseIndianDate(bag.find(/exam date/i, /date of exam/i, /tier.?i.*date/i));
   const jobLocation = bag.find(/job location/i, /location/i, /place of posting/i);
   const eligibility = bag.findQualification(/qualification/i, /eligib/i, /educational/i);
