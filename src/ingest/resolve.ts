@@ -19,6 +19,7 @@ import type { getDb } from "../db";
 import { recruitments, posts, positions } from "../db/schema";
 import { classifyPostLine, decidePostIdentity, POST_LINE_CLASSIFIER_VERSION, type PostLineVerdict } from "./post-lines";
 import { buildDescriptiveRecruitmentSlug } from "./slug-generator";
+import { canFillMissingCanonicalDeadline } from "./deadline-authority";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -54,8 +55,9 @@ export function normalizeAdvertisementNumber(raw: string | null | undefined): st
 }
 
 /**
- * Fill or extend recruitment dates from a later sighting. A start date is only filled when empty;
- * an end date is only moved later (an extension), never earlier. Nothing else on the row changes.
+ * Fill missing recruitment dates from an authorised sighting. Existing application deadlines
+ * are immutable here because their precision/provenance is not queryable on the recruitment row.
+ * Automatic extensions require a separate provenance-aware reconciliation and are disabled.
  */
 export async function refreshRecruitmentDates(
   db: Db,
@@ -71,7 +73,7 @@ export async function refreshRecruitmentDates(
     patch.applicationStartDate = dates.applicationStartDate;
     filledStart = true;
   }
-  if (dates.applicationEndDate && (!row.applicationEndDate || dates.applicationEndDate.getTime() > row.applicationEndDate.getTime())) {
+  if (canFillMissingCanonicalDeadline(row.applicationEndDate, dates.applicationEndDate)) {
     patch.applicationEndDate = dates.applicationEndDate;
     extendedEnd = true;
   }
