@@ -290,6 +290,12 @@ export function parseIndianDeadline(input: string | undefined | null): {
   const sourceText = collapse(input);
   const iso = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|UTC|GMT|IST|[+-]\d{2}:?\d{2})?$/i);
   const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})[\s/-]+([A-Za-z]{3,9}|\d{1,2})[\s,/-]+(\d{4})(?:\b|$)/);
+  const isoDateOnly = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  if (isoDateOnly) {
+    const y=+isoDateOnly[1], mo=+isoDateOnly[2]-1, d=+isoDateOnly[3];
+    if (!validDeadlineParts(y,mo,d,0,0,0)) return undefined;
+    return { date:new Date(Date.UTC(y,mo,d,18,29,59,999)), precision:"DATE", sourceText, timezone:"Asia/Kolkata" };
+  }
   if (iso) {
     const [, ys, mos, ds, hs, mins, secs = "0", millis = "0", zone] = iso;
     const y = +ys, mo = +mos - 1, d = +ds, h = +hs, mi = +mins, sec = +secs;
