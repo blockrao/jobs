@@ -73,7 +73,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     validThrough: deadline?.date ?? undefined,
     validThroughPrecision: deadline?.precision,
     validThroughSourceText: deadline?.sourceText,
-    validThroughTimezone: deadline?.timezone,
+    validThroughTimezone: deadline?.timezone ?? undefined,
     validThroughTimezoneBasis: deadline?.timezoneBasis,
     validThroughSourceLabel: deadlineLabel,
     examDate: parseIndianDate(bag.find(/exam date/i, /date of exam/i)),
