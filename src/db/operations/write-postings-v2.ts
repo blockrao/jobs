@@ -34,7 +34,7 @@ import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution 
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
-import { canonicalDeadlineWriteValues } from "../../ingest/deadline-authority";
+import { canonicalDeadlineWriteValues, deadlineObservationFacts } from "../../ingest/deadline-authority";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -193,13 +193,7 @@ async function recordObservation(
     organization: norm.organizationName || null,
     organizationFromLabel: norm.organizationFromLabel ?? false,
     vacancies: norm.totalVacancies ?? null,
-    lastDate: iso(norm.validThrough),
-    deadlinePrecision: norm.validThroughPrecision ?? null,
-    deadlineSourceText: norm.validThroughSourceText ?? null,
-    deadlineTimezone: norm.validThroughTimezone ?? null,
-    deadlineTimezoneBasis: norm.validThroughTimezoneBasis ?? "UNKNOWN",
-    deadlineSourceLabel: norm.validThroughSourceLabel ?? null,
-    deadlineSourceUrl: norm.validThroughSourceText ? norm.sourceUrl : null,
+    ...deadlineObservationFacts(norm),
     startDate: iso(norm.applicationStartDate),
     examDate: iso(norm.examDate),
     notificationUrl: publicLink(norm.officialNotificationUrl),
