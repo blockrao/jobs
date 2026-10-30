@@ -82,7 +82,7 @@ The observation is linked to its posting, which resolves to the canonical recrui
 
 **Source-authority gate:** a parsed deadline may create or extend the canonical recruitment deadline only when its source-registry record is explicitly `authority = OFFICIAL` and `is_official = true`. `TRUSTED_SECONDARY`, `AGGREGATED`, missing and unknown source records may contribute observations/candidate facts only. An aggregator's capture of an official notification URL does not make the aggregator's deadline an official fact; the deadline itself must be supported by evidence from the issuing body.
 
-The observation facts must be persisted with the ingestion event. The canonical deadline may be created or extended only through the OFFICIAL source-registry gate. A later sighting may extend a deadline only when the new source evidence supports that extension; it must not replace a more precise verified deadline with a less precise value. Conflicting or earlier dates require a reviewable exception, not silent overwrite.
+The observation facts must be persisted with the ingestion event. The canonical deadline may be created only through the OFFICIAL source-registry gate. Automatic extension of an existing canonical deadline is disabled in this release because the current recruitment row does not carry queryable precision metadata. Existing deadlines are left unchanged until a provenance-aware reconciliation can compare the existing evidence with the new observation. Conflicting, later or earlier dates require a reviewable exception, not silent overwrite.
 
 No recruitment-level schema migration is part of this release. The deadline precision and source evidence remain in the linked `source_observations.facts` JSONB record. Do not add recruitment columns or rewrite existing `application_end_date` values as part of this work. If a future queryability or audit requirement demonstrates a material need for denormalised fields, propose a separate additive migration with its own review and rollout.
 
@@ -99,13 +99,12 @@ No recruitment-level schema migration is part of this release. The deadline prec
 
 ## 6. Rollout and safety
 
-- Add schema migration and Drizzle schema in one focused PR.
+- No schema migration is required for this release; provenance remains in existing `source_observations.facts` JSONB.
 - Run parser, lifecycle and writer tests; run typecheck and build.
 - Produce a read-only inventory of affected legacy rows and source evidence.
-- Deploy the additive schema before enabling writes to the new columns.
-- Verify a small, explicitly allowlisted pilot from official notification evidence.
+- Verify a small, explicitly allowlisted pilot from issuing-body evidence after code approval.
 - Reconcile stored values and public rendering before expanding ingestion.
-- Do not run a bulk production backfill or update recruitment lifecycle/status as part of the schema deployment.
+- Do not run a bulk production backfill or update recruitment lifecycle/status as part of this release.
 
 ## 7. Out of scope
 
