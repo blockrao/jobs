@@ -306,7 +306,10 @@ export function parseIndianDeadline(input: string | undefined | null): {
   const y=+yearText, d=+dayText, mo=monthNum;
   if (!validDeadlineParts(y,mo,d,0,0,0)) return undefined;
 
-  const timeMatch=sourceText.match(/(?:\\b|\\()([01]?\\d|2[0-3])[:.]([0-5]\\d)(?::([0-5]\\d))?\\s*(AM|PM)?\\s*(?:HRS?|HOURS)?(?:\\))?/i);
+  const timeMatches=[...sourceText.matchAll(/(?:\\b|\\()([01]?\\d|2[0-3])[:.]([0-5]\\d)(?::([0-5]\\d))?\\s*(AM|PM)?\\s*(?:HRS?|HOURS)?(?:\\))?/gi)];
+  if (timeMatches.length > 1) return undefined;
+  const timeMatch=timeMatches[0];
+  if (!timeMatch && /\\d{1,2}[:.]\\d{2}/.test(sourceText)) return undefined;
   if (!timeMatch) {
     // Inclusive end of the stated date, represented as a real UTC instant.
     return {date:new Date(Date.UTC(y,mo,d,18,29,59,999)),precision:"DATE",sourceText,timezone:"Asia/Kolkata"};
