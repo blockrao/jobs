@@ -82,7 +82,23 @@ The observation is linked to its posting, which resolves to the canonical recrui
 
 **Source-authority gate:** a parsed deadline may create or extend the canonical recruitment deadline only when its source-registry record is explicitly `authority = OFFICIAL` and `is_official = true`. `TRUSTED_SECONDARY`, `AGGREGATED`, missing and unknown source records may contribute observations/candidate facts only. An aggregator's capture of an official notification URL does not make the aggregator's deadline an official fact; the deadline itself must be supported by evidence from the issuing body.
 
-The observation facts must be persisted with the ingestion event. The canonical deadline may be created only through the OFFICIAL source-registry gate. Automatic extension of an existing canonical deadline is disabled in this release because the current recruitment row does not carry queryable precision metadata. Existing deadlines are left unchanged until a provenance-aware reconciliation can compare the existing evidence with the new observation. Conflicting, later or earlier dates require a reviewable exception, not silent overwrite.
+The observation facts must be persisted with the ingestion event. The canonical deadline may be created or extended only through the OFFICIAL source-registry gate. A populated canonical deadline may be extended automatically only when all of the following are true:
+
+1. A prior observation is linked to a posting belonging to the same recruitment.
+2. Its source registry row is explicitly `authority = OFFICIAL` and `is_official = true`.
+3. Its persisted `facts.lastDate` exactly matches the current canonical `application_end_date`, and its precision, source text and timezone provenance are complete.
+4. The new candidate is later than the current deadline, has a resolved timezone and source text, and has equal-or-better precision (`DATE_TIME` is more precise than `DATE_ONLY`).
+
+Earlier official dates (potential corrections), less-precise candidates, missing/mismatched historical evidence and provenance lookup failures do not change the canonical deadline. The incoming observation is still linked to its posting with `outcome = 'LOADED'`; `outcome_reason` receives the prefix `DEADLINE_REVIEW_REQUIRED:` and a stable reason code so the case can be reviewed. Aggregated and secondary sources remain observation-only. This deliberately permits evidence-backed official extensions while preventing silent corrections or precision degradation.
+
+Review queue query (read-only):
+
+```sql
+SELECT id, posting_id, observed_at, outcome_reason, facts
+FROM public.source_observations
+WHERE outcome_reason LIKE 'DEADLINE_REVIEW_REQUIRED:%'
+ORDER BY observed_at DESC, id DESC;
+```
 
 No recruitment-level schema migration is part of this release. The deadline precision and source evidence remain in the linked `source_observations.facts` JSONB record. Do not add recruitment columns or rewrite existing `application_end_date` values as part of this work. If a future queryability or audit requirement demonstrates a material need for denormalised fields, propose a separate additive migration with its own review and rollout.
 
@@ -95,7 +111,8 @@ No recruitment-level schema migration is part of this release. The deadline prec
 5. Ensure the canonical recruitment is the sole lifecycle deadline owner. Post enrichment may retain source observations but cannot silently redefine recruitment lifecycle.
 6. Add unit tests for date-only, explicit time, AM/PM, 24-hour time, explicit IST/UTC offsets, missing timezone, invalid dates, ambiguous text and timezone-default eligibility.
 7. Add writer tests proving precision metadata and effective instant are persisted together, and that a less-precise later observation cannot degrade a verified deadline.
-8. Add a dry-run report for legacy rows that can be reconciled from retained source evidence. No production backfill until the report is reviewed.
+8. Reconcile an existing deadline only from matching linked OFFICIAL evidence; automatically apply later equal-or-better precision extensions and persist all other conflicts as review-required observation outcomes.
+9. Add a dry-run report for legacy rows that can be reconciled from retained source evidence. No production backfill until the report is reviewed.
 
 ## 6. Rollout and safety
 
@@ -124,7 +141,8 @@ No recruitment-level schema migration is part of this release. The deadline prec
 - Unresolved timezone/precision remains `UNKNOWN`, not guessed.
 - Existing historical timestamps are not reinterpreted without evidence.
 - Canonical lifecycle uses only the recruitment-owned, provenance-qualified deadline.
-- Unit, writer, integration and type checks pass.
+- Unit, writer, integration and type checks pass, including traceable official extensions and review-required conflicts.
+- Review-required cases are queryable from `source_observations.outcome_reason`.
 - Production migration and pilot are separately verified; merge alone is not release evidence.
 
 **Decision principle:** JobOye must never close an application early because a date-only value was stored at UTC midnight, and must never leave an application open past an explicitly stated closing time because ingestion discarded its time.
