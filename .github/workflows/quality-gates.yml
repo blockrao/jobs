@@ -2,9 +2,14 @@ name: JobOye PR Quality Gates
 
 on:
   workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Branch or commit to validate (for example fix/shared-lifecycle-sql-policy)"
+        required: true
+        default: "main"
+        type: string
   # PRs targeting main use pull_request; stacked feature PRs are checked on push
   # to their head branch so the same suite runs without duplicate executions.
-  # Keep push validation enabled for commits authored through GitHub integrations.
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -31,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -64,14 +69,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      # Type-check the new test and its pure helper in isolation. The full test
-      # suite currently has unrelated legacy typing errors in other test files.
+      # Type-check the existing vacancy-integrity test and the deadline authority contract.
       - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types vitest/globals tests/contracts/unit/vacancy-integrity.test.ts src/lib/vacancy-integrity.ts tests/unit/deadline-authority.test.ts src/ingest/deadline-authority.ts
 
   application-typecheck:
@@ -81,7 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -96,7 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
