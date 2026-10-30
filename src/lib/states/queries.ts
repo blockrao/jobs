@@ -120,18 +120,18 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
   return rowsOf<Row>(result)
     .map((r) => {
       const lifecycle = deriveLifecycle(r.status, r.application_end_date, now);
-      return ({
-      id: r.id,
-      slug: r.slug,
-      name: r.name,
-      orgName: r.org_name,
-      orgSlug: r.org_slug,
-      totalVacancies: r.total_vacancies,
-      postCount: r.post_count ?? 0,
-      notificationDate: toDate(r.notification_date),
-      applicationEndDate: lifecycle.deadline,
-      lifecycle,
-    });
+      return {
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        orgName: r.org_name,
+        orgSlug: r.org_slug,
+        totalVacancies: r.total_vacancies,
+        postCount: r.post_count ?? 0,
+        notificationDate: toDate(r.notification_date),
+        applicationEndDate: lifecycle.deadline,
+        lifecycle,
+      };
     })
     .filter((r) => r.lifecycle.isLive)
     .slice(0, limit);
