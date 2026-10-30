@@ -456,7 +456,7 @@ export async function writePostingsToDB(
       const deadlineRefresh = await refreshRecruitmentDates(db, recruitment.id, {
         applicationStartDate: norm.applicationStartDate ?? null,
         applicationEndDate: recruitment.created ? null : deadlineWriteValues.recruitmentApplicationEndDate,
-        deadlineEvidence: deadlineWriteValues.recruitmentApplicationEndDate
+        deadlineEvidence: !recruitment.created && deadlineWriteValues.recruitmentApplicationEndDate
           ? {
               precision: norm.validThroughPrecision ?? "UNKNOWN",
               sourceText: norm.validThroughSourceText ?? null,
