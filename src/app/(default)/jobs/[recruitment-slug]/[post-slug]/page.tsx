@@ -186,6 +186,7 @@ export default async function JobDetailPage({ params }: Props) {
         updatedAt: post.updatedAt,
         notificationPublicationDate: post.notificationPublicationDate,
         officialSourceUrl: post.officialSourceUrl,
+        officialLinkSource: post.officialLinkSource ?? null,
         applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
         employmentType: post.employmentType ?? null,
         qualificationText:
