@@ -52,3 +52,15 @@ export function recruitmentIsOpenSql(
 ): SQL {
   return sql`(${recruitmentLifecycleStateSql(status, applicationEndDate, now)} = 'open')`;
 }
+
+/** SQL projection that suppresses missing, sentinel and implausible deadlines in public output. */
+export function plausibleRecruitmentDeadlineSql(applicationEndDate: SQLWrapper): SQL {
+  const utcYear = sql`extract(year from (${applicationEndDate} at time zone 'UTC'))`;
+  return sql`case
+    when ${applicationEndDate} is null
+      or ${utcYear} < 1900
+      or ${utcYear} >= 2090
+    then null
+    else ${applicationEndDate}
+  end`;
+}
