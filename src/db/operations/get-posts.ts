@@ -145,6 +145,7 @@ async function getPostCoreData(
         p.updated_at AS "updatedAt",
         r.official_notification_url AS "officialSourceUrl",
         r.official_application_url AS "applyPortalUrl",
+        r.official_link_source AS "officialLinkSource",
         p.vacancy_total AS "vacancyTotal",
         p.salary_min AS "legacySalaryMin",
         p.salary_max AS "legacySalaryMax",
@@ -613,6 +614,7 @@ export async function getPostBySlug(
       updatedAt: new Date(data.updatedAt),
       officialSourceUrl: data.officialSourceUrl,
       applyPortalUrl: data.applyPortalUrl,
+      officialLinkSource: data.officialLinkSource ?? null,
       // Preserve extracted source facts as a distinct, explicitly unverified projection.
       // Never pass these fields into canonical fact resolvers or official-link CTAs.
       fjaExtract: data.fjaInventoryPostId != null ? {
