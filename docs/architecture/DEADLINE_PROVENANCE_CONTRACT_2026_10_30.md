@@ -1,6 +1,6 @@
 # Deadline Provenance Contract — 2026-10-30
 
-**Status:** Implemented in consolidated PR #186; review, CI and release verification pending. No production data changes  
+**Status:** Implemented in PR #186 using immutable source-observation JSONB facts plus the canonical recruitment deadline; review, CI and release verification pending. No production data changes  
 **Parent:** JobOye Product & Discovery Operating Charter  
 **Tracking:** Issue #174; lifecycle consumers audited in PR #180  
 **Scope:** Canonical recruitment application deadlines only. Exam dates, notification dates and other date fields are not changed by this contract.
@@ -69,18 +69,20 @@ The status rules remain separate and authoritative: `CLOSED`, `RESULTS` and `ARC
 
 ## 4. Data model and provenance requirements
 
-The implementation PR should add nullable recruitment-level metadata alongside `application_end_date`:
+The canonical lifecycle value remains on `recruitments.application_end_date`. Its evidence is retained in the linked `source_observations.facts` JSONB record rather than duplicated into new recruitment columns in this release:
 
-- `application_end_date_precision`: `DATE_ONLY`, `DATE_TIME` or `UNKNOWN`.
-- `application_end_date_timezone`: IANA timezone or explicit offset used to resolve the deadline; nullable when unknown.
-- `application_end_date_source_text`: exact source-stated deadline text, retained for audit and reprocessing.
-- `application_end_date_timezone_basis`: distinguishes explicit source timezone from the India-source default; nullable for unknown.
+- `deadlinePrecision`: `DATE_ONLY`, `DATE_TIME` or `UNKNOWN`.
+- `deadlineTimezone`: IANA timezone or explicit offset used to resolve the deadline; null when unknown.
+- `deadlineTimezoneBasis`: `EXPLICIT_SOURCE`, `INDIA_SOURCE_DEFAULT` or `UNKNOWN`.
+- `deadlineSourceText`: exact source-stated deadline text.
+- `deadlineSourceLabel`: the source field/label from which the deadline was extracted.
+- `deadlineSourceUrl`: candidate issuing-body notification locator when captured; it is not, by itself, proof of official authority.
 
-The existing source observation must retain the captured deadline text and source context. Where available, preserve the official notification URL/source locator that supports the value. Do not treat an aggregator URL as the official evidence source.
+The observation is linked to its posting, which resolves to the canonical recruitment. This avoids a schema migration and duplicated metadata in this release. A direct recruitment-level evidence foreign key or denormalised metadata may be considered only if queryability or audit requirements demonstrate a material need. Do not treat an aggregator URL as the official evidence source.
 
 **Source-authority gate:** a parsed deadline may create or extend the canonical recruitment deadline only when its source-registry record is explicitly `authority = OFFICIAL` and `is_official = true`. `TRUSTED_SECONDARY`, `AGGREGATED`, missing and unknown source records may contribute observations/candidate facts only. An aggregator's capture of an official notification URL does not make the aggregator's deadline an official fact; the deadline itself must be supported by evidence from the issuing body.
 
-These fields must be written atomically with the canonical deadline. A later sighting may extend a deadline only when the new source evidence supports that extension; it must not replace a more precise verified deadline with a less precise value. Conflicting or earlier dates require a reviewable exception, not silent overwrite.
+The observation facts must be persisted with the ingestion event. The canonical deadline may be created or extended only through the OFFICIAL source-registry gate. A later sighting may extend a deadline only when the new source evidence supports that extension; it must not replace a more precise verified deadline with a less precise value. Conflicting or earlier dates require a reviewable exception, not silent overwrite.
 
 The database migration must be additive and nullable. It must not rewrite existing `application_end_date` values or manufacture precision for historical rows.
 
@@ -116,7 +118,7 @@ The database migration must be additive and nullable. It must not rewrite existi
 
 ## 8. Acceptance criteria
 
-- The original source deadline text is retained and traceable.
+- The original source deadline text and precision/timezone metadata are retained in the linked source observation and traceable to the canonical recruitment.
 - Date-only India deadlines resolve to the exclusive midnight cutoff after the stated India-local calendar day.
 - Explicit times and explicit timezones are preserved without truncation.
 - Unzoned times use `Asia/Kolkata` only with an explicitly supplied India-based recruitment context, recorded as `INDIA_SOURCE_DEFAULT`.
