@@ -63,6 +63,8 @@ interface JobDetailPageProps {
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
+    /** Only MANUAL_VERIFIED provenance permits the UI to call this an official source. */
+    officialLinkSource?: string | null;
     applyUrl?: string | null;
     employmentType?: string | null;
     qualificationText?: string | null;
@@ -171,6 +173,15 @@ export default function JobDetailPageProduction({
     : post.fjaExtract?.salaryRaw ?? null;
   const orgName = post.organizationName ?? null;
   const advertisementNumber = post.fjaExtract?.advertisementNumber ?? null;
+  // A populated URL is not proof of officialness. A-070 defines MANUAL_VERIFIED
+  // as the only affirmative provenance; aggregator-discovered links remain unverified.
+  const officialLinkVerified = post.officialLinkSource === "MANUAL_VERIFIED";
+  const notificationLinkLabel = officialLinkVerified
+    ? "Official notification"
+    : "Notification link (not manually verified)";
+  const applicationLinkLabel = officialLinkVerified
+    ? "Apply online"
+    : "Application link (not manually verified)";
 
   const feeRows = (post.applicationFees ?? []).map((f) => ({
     who: f.waivedFor ? `Waived for ${f.waivedFor}` : f.note ?? 'All candidates',
@@ -194,8 +205,8 @@ export default function JobDetailPageProduction({
     seen.add(href);
     links.push({ label, href });
   };
-  if (!isApplicationClosed) pushLink('Apply online', post.applyUrl);
-  pushLink('Official notification', post.officialSourceUrl);
+  if (!isApplicationClosed) pushLink(applicationLinkLabel, post.applyUrl);
+  pushLink(notificationLinkLabel, post.officialSourceUrl);
   for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
   if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
 
@@ -276,7 +287,8 @@ export default function JobDetailPageProduction({
       postedAt: post.postedAt ? new Date(post.postedAt) : null,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
-      officialSourceUrl: post.officialSourceUrl,
+      // Do not assert unverified links as citations or sameAs in structured data.
+      officialSourceUrl: officialLinkVerified ? post.officialSourceUrl : null,
       qualificationText,
       experienceText,
     },
@@ -307,7 +319,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && officialLinkVerified} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
@@ -326,7 +338,7 @@ export default function JobDetailPageProduction({
                 {statusText && (
                   <li className={`${styles.chip} ${isApplicationClosed ? styles.chipClosed : styles.chipOpen}`}>{statusText}</li>
                 )}
-                {post.officialSourceUrl && <li className={styles.chip}>From official notification</li>}
+                {post.officialSourceUrl && <li className={styles.chip}>{officialLinkVerified ? "Official source manually verified" : "Notification source not manually verified"}</li>}
                 {modifiedDate && <li className={`${styles.chip} ${styles.chipMuted}`}>Updated {formatDate(modifiedDate)}</li>}
               </ul>
               <h1 className={styles.heroTitle}>
@@ -335,16 +347,20 @@ export default function JobDetailPageProduction({
               <p className={styles.lead}>{intro}</p>
               <p className={styles.actions}>
                 {post.applyUrl && !isApplicationClosed && (
-                  <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">Apply online</a>
+                  <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">{applicationLinkLabel}</a>
                 )}
                 {post.officialSourceUrl && (
-                  <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
+                  <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">{notificationLinkLabel}</a>
                 )}
               </p>
-              {publishedDate && (
+              {(publishedDate || post.officialSourceUrl) && (
                 <p className={styles.notice}>
-                  Published <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>
-                  {post.officialSourceUrl ? '. Facts on this page are read from the official notification; confirm on the official site before applying.' : '.'}
+                  {publishedDate && <>Published <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>. </>}
+                  {post.officialSourceUrl
+                    ? officialLinkVerified
+                      ? "The notification link has been manually verified as an official source. Confirm the latest details on the recruiting body's website before applying."
+                      : "The notification link has not been manually verified as an official source. Confirm the notice and all details on the recruiting body's official website before applying."
+                    : "Confirm the notice and all details on the recruiting body's official website before applying."}
                 </p>
               )}
             </header>
