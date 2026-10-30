@@ -347,7 +347,7 @@ export function parseIndianDeadline(
     if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
     const explicitZone = zone || null;
     if (!explicitZone && !hasIndiaDefault) return unknown();
-    const z = explicitZone || "Asia/Kolkata";
+    const z = explicitZone?.toUpperCase() === "IST" ? "Asia/Kolkata" : explicitZone || "Asia/Kolkata";
     const suffix = z.toUpperCase() === "IST" ? "+05:30"
       : z.toUpperCase() === "UTC" || z.toUpperCase() === "GMT" ? "Z" : z;
     const stamp = ys + "-" + mos + "-" + ds + "T" + hs + ":" + mins + ":" + String(sec).padStart(2, "0") + "." + millis.padEnd(3, "0") + suffix;
@@ -422,7 +422,7 @@ export function parseIndianDeadline(
   const zoneMatch = sourceText.match(/(?:^|\\s|\\()(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})(?=\\s|\\)|$)/i);
   const explicitZone = zoneMatch?.[1] || null;
   if (!explicitZone && !hasIndiaDefault) return unknown();
-  const zone = explicitZone || "Asia/Kolkata";
+  const zone = explicitZone?.toUpperCase() === "IST" ? "Asia/Kolkata" : explicitZone || "Asia/Kolkata";
   const suffix = zone.toUpperCase() === "IST" ? "+05:30"
     : zone.toUpperCase() === "UTC" || zone.toUpperCase() === "GMT" ? "Z" : zone;
   const stamp = String(y).padStart(4, "0") + "-" + String(mo + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0") + "T" + String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + String(sec).padStart(2, "0") + suffix;
