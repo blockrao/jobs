@@ -277,7 +277,7 @@ const MONTHS: Record<string, number> = {
 
 /**
  * Parse an application deadline without discarding its stated precision.
- * Date-only values expire at the end of that calendar day in India (IST).
+ * Date-only values are inclusive through the end of that calendar day in India (IST).
  * Explicit times retain their stated offset; unzoned times default to IST.
  */
 export function parseIndianDeadline(input: string | undefined | null): {
@@ -288,41 +288,40 @@ export function parseIndianDeadline(input: string | undefined | null): {
 } | undefined {
   if (!input?.trim()) return undefined;
   const sourceText = collapse(input);
-  const iso = sourceText.match(/^(\\d{4})-(\\d{2})-(\\d{2})[T ](\\d{2}):(\\d{2})(?::(\\d{2})(?:\\.(\\d{1,3}))?)?\\s*(Z|UTC|GMT|IST|[+-]\\d{2}:?\\d{2})?$/i);
-  const dateMatch = sourceText.match(/(?:^|\\b)(\\d{1,2})[\\s/-]+([A-Za-z]{3,9}|\\d{1,2})[\\s,/-]+(\\d{4})(?:\\b|$)/);
+  const iso = sourceText.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(Z|UTC|GMT|IST|[+-]\d{2}:?\d{2})?$/i);
+  const dateMatch = sourceText.match(/(?:^|\b)(\d{1,2})[\s/-]+([A-Za-z]{3,9}|\d{1,2})[\s,/-]+(\d{4})(?:\b|$)/);
   if (iso) {
     const [, ys, mos, ds, hs, mins, secs = "0", millis = "0", zone] = iso;
-    const y=+ys, mo=+mos-1, d=+ds, h=+hs, mi=+mins, sec=+secs;
-    if (!validDeadlineParts(y,mo,d,h,mi,sec)) return undefined;
-    const ms=+(millis.padEnd(3,"0"));
-    const z=zone || "IST";
-    const suffix = z.toUpperCase()==="IST" ? "+05:30" : z.toUpperCase()==="UTC" || z.toUpperCase()==="GMT" ? "Z" : z;
-    const value = new Date(Date.parse(`${ys}-${mos}-${ds}T${hs}:${mins}:${String(sec).padStart(2,"0")}.${String(ms).padStart(3,"0")}${suffix}`));
-    return Number.isNaN(value.getTime()) ? undefined : {date:value,precision:"DATETIME",sourceText,timezone:z};
+    const y = +ys, mo = +mos - 1, d = +ds, h = +hs, mi = +mins, sec = +secs;
+    if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
+    const z = zone || "IST";
+    const suffix = z.toUpperCase() === "IST" ? "+05:30" : z.toUpperCase() === "UTC" || z.toUpperCase() === "GMT" ? "Z" : z;
+    const stamp = ys + "-" + mos + "-" + ds + "T" + hs + ":" + mins + ":" + String(sec).padStart(2, "0") + "." + millis.padEnd(3, "0") + suffix;
+    const value = new Date(Date.parse(stamp));
+    return Number.isNaN(value.getTime()) ? undefined : { date: value, precision: "DATETIME", sourceText, timezone: z };
   }
   if (!dateMatch) return undefined;
   const [, dayText, monthText, yearText] = dateMatch;
-  const monthNum = /^\\d+$/.test(monthText) ? +monthText-1 : MONTHS[monthText.slice(0,3).toLowerCase()];
-  const y=+yearText, d=+dayText, mo=monthNum;
-  if (!validDeadlineParts(y,mo,d,0,0,0)) return undefined;
-
-  const timeMatches=[...sourceText.matchAll(/(?:\\b|\\()([01]?\\d|2[0-3])[:.]([0-5]\\d)(?::([0-5]\\d))?\\s*(AM|PM)?\\s*(?:HRS?|HOURS)?(?:\\))?/gi)];
+  const monthNum = /^\d+$/.test(monthText) ? +monthText - 1 : MONTHS[monthText.slice(0, 3).toLowerCase()];
+  const y = +yearText, d = +dayText, mo = monthNum;
+  if (!validDeadlineParts(y, mo, d, 0, 0, 0)) return undefined;
+  const timeMatches = [...sourceText.matchAll(/(?:\b|\()([01]?\d|2[0-3])[:.]([0-5]\d)(?::([0-5]\d))?\s*(AM|PM)?\s*(?:HRS?|HOURS)?(?:\))?/gi)];
   if (timeMatches.length > 1) return undefined;
-  const timeMatch=timeMatches[0];
-  if (!timeMatch && /\\d{1,2}[:.]\\d{2}/.test(sourceText)) return undefined;
+  const timeMatch = timeMatches[0];
+  if (!timeMatch && /\d{1,2}[:.]\d{2}/.test(sourceText)) return undefined;
   if (!timeMatch) {
-    // Inclusive end of the stated date, represented as a real UTC instant.
-    return {date:new Date(Date.UTC(y,mo,d,18,29,59,999)),precision:"DATE",sourceText,timezone:"Asia/Kolkata"};
+    return { date: new Date(Date.UTC(y, mo, d, 18, 29, 59, 999)), precision: "DATE", sourceText, timezone: "Asia/Kolkata" };
   }
-  let h=+timeMatch[1], mi=+timeMatch[2], sec=+(timeMatch[3]||0);
-  const meridiem=timeMatch[4]?.toUpperCase();
-  if (meridiem) { if(h<1||h>12) return undefined; h=(h%12)+(meridiem==="PM"?12:0); }
-  if (!validDeadlineParts(y,mo,d,h,mi,sec)) return undefined;
-  const zoneMatch=sourceText.match(/(?:^|\\s|\\()(IST|UTC|GMT|[+-]\\d{2}:?\\d{2})(?=\\s|\\)|$)/i);
-  const zone=zoneMatch?.[1] || "IST";
-  let suffix=zone.toUpperCase()==="IST"?"+05:30":zone.toUpperCase()==="UTC"||zone.toUpperCase()==="GMT"?"Z":zone;
-  const value=new Date(Date.parse(`${String(y).padStart(4,"0")}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}T${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}:${String(sec).padStart(2,"0")}${suffix}`));
-  return Number.isNaN(value.getTime())?undefined:{date:value,precision:"DATETIME",sourceText,timezone:zone};
+  let h = +timeMatch[1], mi = +timeMatch[2], sec = +(timeMatch[3] || 0);
+  const meridiem = timeMatch[4]?.toUpperCase();
+  if (meridiem) { if (h < 1 || h > 12) return undefined; h = (h % 12) + (meridiem === "PM" ? 12 : 0); }
+  if (!validDeadlineParts(y, mo, d, h, mi, sec)) return undefined;
+  const zoneMatch = sourceText.match(/(?:^|\s|\()(IST|UTC|GMT|[+-]\d{2}:?\d{2})(?=\s|\)|$)/i);
+  const zone = zoneMatch?.[1] || "IST";
+  const suffix = zone.toUpperCase() === "IST" ? "+05:30" : zone.toUpperCase() === "UTC" || zone.toUpperCase() === "GMT" ? "Z" : zone;
+  const stamp = String(y).padStart(4, "0") + "-" + String(mo + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0") + "T" + String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0") + ":" + String(sec).padStart(2, "0") + suffix;
+  const value = new Date(Date.parse(stamp));
+  return Number.isNaN(value.getTime()) ? undefined : { date: value, precision: "DATETIME", sourceText, timezone: zone };
 }
 
 function validDeadlineParts(y:number,mo:number,d:number,h:number,mi:number,sec:number):boolean {
