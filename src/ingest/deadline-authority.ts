@@ -43,10 +43,22 @@ export interface DeadlineObservationInput {
   officialNotificationUrl?: string;
 }
 
+/** True only when the candidate has an effective instant and complete source precision/timezone evidence. */
+export function hasResolvedDeadlineEvidence(input: DeadlineObservationInput): boolean {
+  return input.validThrough instanceof Date
+    && !Number.isNaN(input.validThrough.getTime())
+    && input.validThroughPrecision !== undefined
+    && input.validThroughPrecision !== "UNKNOWN"
+    && Boolean(input.validThroughSourceText?.trim())
+    && Boolean(input.validThroughTimezone?.trim())
+    && input.validThroughTimezoneBasis !== undefined
+    && input.validThroughTimezoneBasis !== "UNKNOWN";
+}
+
 /** Stable observation payload for deadline evidence, including unresolved candidates. */
 export function deadlineObservationFacts(input: DeadlineObservationInput) {
   return {
-    lastDate: input.validThrough?.toISOString() ?? null,
+    lastDate: hasResolvedDeadlineEvidence(input) ? input.validThrough!.toISOString() : null,
     deadlinePrecision: input.validThroughPrecision ?? "UNKNOWN",
     deadlineSourceText: input.validThroughSourceText ?? null,
     deadlineTimezone: input.validThroughTimezone ?? null,
