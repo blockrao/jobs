@@ -14,6 +14,7 @@ describe("complete persisted source-origin coverage", () => {
     ["canonical Post sourceName", { sourceName: "aggregator_extracted" }],
     ["preliminary canonical Post", { sourceName: "pilot_preliminary" }],
     ["FJA source reference", { sourceReference: "https://www.freejobalert.com/example/" }],
+    ["scheme-less FJA source reference", { sourceReference: "www.freejobalert.com/example/" }],
     ["FJA original recruitment URL", { originalRecruitmentUrl: "https://freejobalert.com/example/" }],
     ["FJA Recruitment source URL", { recruitmentSourceUrl: "https://jobs.freejobalert.com/example/" }],
     ["legacy postings.source", { legacyPostingSource: "fja" }],
