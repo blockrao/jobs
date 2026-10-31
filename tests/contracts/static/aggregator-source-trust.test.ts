@@ -218,6 +218,8 @@ describe("aggregator source trust gate", () => {
     );
 
     expect(migration).toContain("authority_review_status text NOT NULL DEFAULT 'UNVERIFIED'");
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS category varchar(100)");
+    expect(migration).toContain("AGGREGATOR_DISCOVERED source origin is immutable");
     expect(migration).toContain("authority_evidence_url");
     expect(migration).toContain("authority_reviewed_by");
     expect(migration).toContain("authority_reviewed_at");
