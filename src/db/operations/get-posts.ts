@@ -352,8 +352,6 @@ export async function getPostBySlug(
     }
     console.log(`[getPostBySlug] Core data found: post id=${coreData.id}`);
 
-    const postId = coreData.id;
-
     // ENRICHMENT: Now stored as JSONB in posts table (included in coreData)
     // Extract enrichment from posts.enrichment column
     const enrichmentJsonb = coreData.enrichment || {};
