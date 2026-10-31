@@ -62,7 +62,9 @@ interface JobDetailPageProps {
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
+    officialSourceVerified?: boolean;
     applyUrl?: string | null;
+    officialApplicationVerified?: boolean;
     employmentType?: string | null;
     qualificationText?: string | null;
     experienceText?: string | null;
@@ -157,7 +159,7 @@ export default function JobDetailPageProduction({
   const isApplicationClosed = !isApplicationOpen;
   // JobPosting is only for an application that is currently open. The schema
   // builder independently omits markup for a known expired deadline.
-  const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
+  const emitJobPosting = (lifecycle ? lifecycle.isOpen : !isApplicationClosed) && post.officialSourceVerified === true;
   const deadlineStatusText = !applicationDeadline
     ? null
     : lifecycle?.state === 'upcoming'
@@ -211,10 +213,14 @@ export default function JobDetailPageProduction({
     seen.add(href);
     links.push({ label, href });
   };
-  if (!isApplicationClosed) pushLink('Apply online', post.applyUrl);
-  pushLink('Official notification', post.officialSourceUrl);
-  for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
-  if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
+  if (!isApplicationClosed && post.officialApplicationVerified === true) pushLink('Apply online', post.applyUrl);
+  if (post.officialSourceVerified === true) {
+    pushLink('Official notification', post.officialSourceUrl);
+    for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
+  }
+  if (isApplicationClosed && post.officialApplicationVerified === true) {
+    pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
+  }
 
   // ── Intro (stored description or one sentence of known facts) ────────────
   const introFacts: string[] = [];
@@ -288,7 +294,7 @@ export default function JobDetailPageProduction({
       notificationPublicationDate: notificationDate,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
-      officialSourceUrl: post.officialSourceUrl,
+      officialSourceUrl: post.officialSourceVerified === true ? post.officialSourceUrl : null,
       qualificationText,
       experienceText,
     },
@@ -325,7 +331,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && notificationDate !== null} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && notificationDate !== null && post.officialSourceVerified === true} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
@@ -344,7 +350,7 @@ export default function JobDetailPageProduction({
                 {statusText && (
                   <li className={`${styles.chip} ${isApplicationClosed ? styles.chipClosed : styles.chipOpen}`}>{statusText}</li>
                 )}
-                {post.officialSourceUrl && <li className={styles.chip}>From official notification</li>}
+                {post.officialSourceVerified === true && post.officialSourceUrl && <li className={styles.chip}>From official notification</li>}
                 {modifiedDate && <li className={`${styles.chip} ${styles.chipMuted}`}>Updated {formatDate(modifiedDate)}</li>}
               </ul>
               <h1 className={styles.heroTitle}>
@@ -352,17 +358,22 @@ export default function JobDetailPageProduction({
               </h1>
               <p className={styles.lead}>{intro}</p>
               <p className={styles.actions}>
-                {post.applyUrl && !isApplicationClosed && (
+                {post.officialApplicationVerified === true && post.applyUrl && !isApplicationClosed && (
                   <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">Apply online</a>
                 )}
-                {post.officialSourceUrl && (
+                {post.officialSourceVerified === true && post.officialSourceUrl && (
                   <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
                 )}
               </p>
+              {post.officialSourceVerified !== true && (
+                <p className={styles.notice}>
+                  Official notification and application links have not been independently verified against the issuer registry. No application link is shown until the issuer destination is confirmed.
+                </p>
+              )}
               {notificationDate && (
                 <p className={styles.notice}>
-                  Notification date <time dateTime={notificationDate.toISOString()}>{formatDate(notificationDate)}</time>
-                  {post.officialSourceUrl ? '. Facts on this page are read from the official notification; confirm on the official site before applying.' : '.'}
+                  {post.officialSourceVerified === true ? 'Notification date' : 'Reported notification date'} <time dateTime={notificationDate.toISOString()}>{formatDate(notificationDate)}</time>
+                  {post.officialSourceVerified === true && post.officialSourceUrl ? '. Facts on this page are read from the registered official notification; confirm on the issuer site before applying.' : '.'}
                 </p>
               )}
             </header>
