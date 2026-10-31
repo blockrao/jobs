@@ -25,6 +25,11 @@ import JobDetailPageProduction from "@/components/job-posting/job-detail-page-pr
 import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
+import {
+  isManuallyVerifiedOfficialLink,
+  isRecruitmentSourceTrusted,
+  isUnverifiedAggregatorSource,
+} from "@/lib/source-verification";
 
 export const revalidate = 86400; // 1 day ISR
 
@@ -84,6 +89,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const sourceUnverified = isUnverifiedAggregatorSource({
+    sourceDiscoveryOrigin: post.recruitmentSourceDiscoveryOrigin,
+    officialLinkSource: post.recruitmentOfficialLinkSource,
+    verificationStatus: post.recruitmentVerificationStatus,
+    metadata: post.recruitmentMetadata,
+  });
+  if (sourceUnverified) {
+    const title = "Recruitment details under verification | JobOye";
+    const description = "JobOye is checking this recruitment against the issuing body's official notification. Verified details and application links will appear after review.";
+    return {
+      title,
+      description,
+      alternates: generateAlternates(post.recruitmentSlug, post.slug),
+      ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: false }),
+    };
+  }
+
   const { title, description } = composeLeafSeo(post);
 
   return {
@@ -120,6 +142,36 @@ export default async function JobDetailPage({ params }: Props) {
   ) {
     permanentRedirect(`/jobs/${post.recruitmentSlug}/${post.slug}`);
   }
+
+  const sourceUnverified = isUnverifiedAggregatorSource({
+    sourceDiscoveryOrigin: post.recruitmentSourceDiscoveryOrigin,
+    officialLinkSource: post.recruitmentOfficialLinkSource,
+    verificationStatus: post.recruitmentVerificationStatus,
+    metadata: post.recruitmentMetadata,
+  });
+  if (sourceUnverified) {
+    return (
+      <section className="mx-auto max-w-3xl px-4 py-12" role="status">
+        <h1 className="text-2xl font-semibold">Recruitment details under verification</h1>
+        {post.organizationName ? <p className="mt-3 text-base">{post.organizationName}</p> : null}
+        <p className="mt-4 text-sm leading-6">
+          JobOye is checking this recruitment against the issuing body&apos;s official notification.
+          Vacancy details, eligibility and application links will appear after verification.
+        </p>
+      </section>
+    );
+  }
+
+  const sourceTrusted = isRecruitmentSourceTrusted({
+    sourceDiscoveryOrigin: post.recruitmentSourceDiscoveryOrigin,
+    officialLinkSource: post.recruitmentOfficialLinkSource,
+    verificationStatus: post.recruitmentVerificationStatus,
+    metadata: post.recruitmentMetadata,
+  });
+  const officialLinksVerified = sourceTrusted
+    && ["VERIFIED", "MANUALLY_VERIFIED"].includes((post.recruitmentVerificationStatus ?? "").toUpperCase())
+    && isManuallyVerifiedOfficialLink(post.recruitmentOfficialLinkSource)
+    && Boolean(post.officialSourceUrl);
 
   // Lifecycle from the canonical recruitment: status + verified deadline.
   const lifecycle = deriveLifecycle(
@@ -186,8 +238,8 @@ export default async function JobDetailPage({ params }: Props) {
         postedAt: post.postedAt,
         updatedAt: post.updatedAt,
         notificationPublicationDate: post.notificationPublicationDate,
-        officialSourceUrl: post.officialSourceUrl,
-        applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
+        officialSourceUrl: officialLinksVerified ? post.officialSourceUrl : null,
+        applyUrl: officialLinksVerified ? (post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl) : null,
         employmentType: post.employmentType ?? null,
         qualificationText:
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
@@ -298,7 +350,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
+      indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) && officialLinksVerified}
     />
   );
 }
