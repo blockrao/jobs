@@ -306,6 +306,7 @@ describe("aggregator source trust gate", () => {
     expect(rollback).toContain("DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_recruitment_verification");
     expect(rollback).toContain("CREATE OR REPLACE FUNCTION public.aggregate_enrichment_for_post(p_post_id integer)");
     expect(rollback).toContain("Deliberately retained: additive columns, indexes, constraints, comments");
+    expect(rollback).toContain("Rollback blocked: source review decisions have been recorded");
   });
 
   it("keeps source verification independent from application deadline availability", () => {
