@@ -106,6 +106,8 @@ interface JobDetailPageProps {
   lifecycle?: { state: string; isOpen: boolean; isLive: boolean; deadline: Date | null; daysLeft: number | null };
   /** Source issuer and fact review must pass before JobPosting is emitted. */
   sourceVerified?: boolean;
+  /** Source issuer and fact review must pass before JobPosting is emitted. */
+  sourceVerified?: boolean;
   /** Mirrors route-level robots eligibility; prevents JobPosting on noindex leaves. */
   indexable?: boolean;
   pillarSlug?: string | null;
@@ -145,6 +147,7 @@ export default function JobDetailPageProduction({
   pageDescription,
   lifecycle,
   indexable = true,
+  sourceVerified = false,
   pillarSlug,
 }: JobDetailPageProps) {
   // ── Normalise ────────────────────────────────────────────────────────────
@@ -160,7 +163,7 @@ export default function JobDetailPageProduction({
   const isApplicationClosed = !isApplicationOpen;
   // JobPosting is only for an application that is currently open. The schema
   // builder independently omits markup for a known expired deadline.
-  const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
+  const emitJobPosting = sourceVerified && (lifecycle ? lifecycle.isOpen : !isApplicationClosed);
   const deadlineStatusText = !applicationDeadline
     ? null
     : lifecycle?.state === 'upcoming'
