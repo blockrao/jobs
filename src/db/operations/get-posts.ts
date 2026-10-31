@@ -777,6 +777,15 @@ export async function getRelatedPostsForLeaf(
         AND r.status IN ('UPCOMING','ACTIVE')
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND (
+          COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+          OR (
+            r.verification_status = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+            AND r.application_end_date IS NOT NULL
+          )
+        )
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 6
     `);
@@ -807,6 +816,15 @@ export async function getRelatedPostsForLeaf(
         AND r.status IN ('UPCOMING','ACTIVE')
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND (
+          COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+          OR (
+            r.verification_status = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+            AND r.application_end_date IS NOT NULL
+          )
+        )
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 5
     `);
@@ -837,6 +855,15 @@ export async function getRelatedPostsForLeaf(
         AND r.status IN ('UPCOMING','ACTIVE')
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND (
+          COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+          OR (
+            r.verification_status = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+            AND r.application_end_date IS NOT NULL
+          )
+        )
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 4
     `);
@@ -967,6 +994,15 @@ export async function getPostsByRecruitment(
         AND r.status IN ('UPCOMING','ACTIVE')
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND (
+          COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+          OR (
+            r.verification_status = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+            AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+            AND r.application_end_date IS NOT NULL
+          )
+        )
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
       OFFSET ${offset}
