@@ -308,4 +308,19 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("'aggregator_extracted'");
     expect(migration).toContain('"sourceVerificationStatus" := \'UNVERIFIABLE\'');
   });
+  
+  it("backfills and verifies the complete institutional_aggregation origin cohort", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20261031120000_p0_official_digest_source_authority_gate.sql",
+      "utf8",
+    );
+    const postCheck = readFileSync(
+      "scripts/audits/official-source-provenance-post-migration-check.sql",
+      "utf8",
+    );
+    expect(migration).toContain("enrichment_data->'meta'->>'source' = 'institutional_aggregation'");
+    expect(postCheck).toContain("institutional_aggregation_without_discovery_origin");
+    expect(postCheck).toContain("uppsc_contamination_without_discovery_origin");
+  });
+
 });
