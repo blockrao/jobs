@@ -80,7 +80,7 @@ interface JobDetailPageProps {
     selectionProcessStages?: Array<{ order: number; name: string; scheduledDate?: string; durationMinutes?: number; totalMarks?: number; minimumMarks?: number }>;
     requiredDocuments?: Array<{ name: string; category: string; isRequired: boolean }>;
     importantDates?: Array<{ type: string; date: string }>;
-    ageRules?: Array<{ category: string; maxAge?: number; relaxationYears?: number; ruleType: string; note?: string }>;
+    ageRules?: Array<{ category: string; maxAge?: number | null; relaxationYears?: number; ruleType?: string; note?: string }>;
     applicationFees?: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string }>;
     officialLinks?: Array<{ type?: string; url?: string; title?: string; source?: string }>;
     fjaExtract?: {
