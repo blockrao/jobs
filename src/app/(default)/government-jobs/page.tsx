@@ -229,7 +229,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                   return (
                     <li key={post.postId}>
                       <JobOpportunityCard
-                        postName={post.postName ?? post.recruitmentName}
+                        postName={post.postName ?? post.recruitmentName ?? "Government job opportunity"}
                         organizationName={post.orgName}
                         organizationHref={`/organizations/${post.orgSlug}`}
                         recruitmentName={post.recruitmentName}
