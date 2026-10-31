@@ -108,7 +108,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         JOIN organizations ro ON ro.id = r.organization_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
               AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -127,7 +127,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         JOIN organizations ro ON ro.id = r.organization_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
               AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -148,7 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         JOIN recruitments r ON r.organization_id = o.id
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
               AND r.official_link_source = 'MANUAL_VERIFIED'
