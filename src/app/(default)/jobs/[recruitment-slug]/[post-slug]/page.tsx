@@ -27,6 +27,7 @@ import { deriveLifecycle } from "@/lib/lifecycle";
 import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
 import {
   isManuallyVerifiedOfficialLink,
+  isPreliminaryUnverifiedSourceMetadata,
   isRecruitmentSourceTrusted,
   isUnverifiedAggregatorSource,
 } from "@/lib/source-verification";
@@ -94,7 +95,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     officialLinkSource: post.recruitmentOfficialLinkSource,
     verificationStatus: post.recruitmentVerificationStatus,
     metadata: post.recruitmentMetadata,
-  });
+  }) || isPreliminaryUnverifiedSourceMetadata(post.recruitmentMetadata);
   if (sourceUnverified) {
     const title = "Recruitment details under verification | JobOye";
     const description = "JobOye is checking this recruitment against the issuing body's official notification. Verified details and application links will appear after review.";
@@ -162,7 +163,7 @@ export default async function JobDetailPage({ params }: Props) {
     officialLinkSource: post.recruitmentOfficialLinkSource,
     verificationStatus: post.recruitmentVerificationStatus,
     metadata: post.recruitmentMetadata,
-  });
+  }) || isPreliminaryUnverifiedSourceMetadata(post.recruitmentMetadata);
   if (sourceUnverified) {
     return (
       <section className="mx-auto max-w-3xl px-4 py-12" role="status">
