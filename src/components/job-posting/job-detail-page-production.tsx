@@ -161,8 +161,8 @@ export default function JobDetailPageProduction({
   const isApplicationOpen = lifecycle ? lifecycle.isOpen : !(applicationDeadline && new Date() > applicationDeadline);
   const recruitmentClosed = lifecycle ? lifecycle.state === 'closed' || lifecycle.state === 'results' || lifecycle.state === 'archived' : false;
   const isApplicationClosed = !isApplicationOpen;
-  // JobPosting is only for an application that is currently open. The schema
-  // builder independently omits markup for a known expired deadline.
+  // This is the lifecycle component of JobPosting eligibility. The final
+  // renderer gate also requires verified source links and Tier A content.
   const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
   const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
