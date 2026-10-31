@@ -322,7 +322,17 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     enrichment.sourceVerificationStatus = rawEnrichment.sourceVerificationStatus || 'PENDING';
 
     // Extraction confidence score (0-100)
-    enrichment.extractionConfidence = rawEnrichment.extractionConfidence || 75;
+    // Confidence must come from the stored extraction evidence. A missing,
+    // malformed, out-of-range or explicit zero value must never be replaced
+    // with a synthetic score that can pass downstream resolver thresholds.
+    const rawConfidence = rawEnrichment.extractionConfidence;
+    enrichment.extractionConfidence =
+      typeof rawConfidence === 'number'
+      && Number.isFinite(rawConfidence)
+      && rawConfidence >= 0
+      && rawConfidence <= 100
+        ? rawConfidence
+        : 0;
 
     // Data gaps tracking (required field)
     enrichment.dataGaps = Array.isArray(rawEnrichment.dataGaps)
