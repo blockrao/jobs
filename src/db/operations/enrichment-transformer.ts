@@ -236,37 +236,33 @@ export function transformEnrichment(
     // APPLICATION FEES
     // ─────────────────────────────────────────────────────────────────
 
-    if (hasPostFactReview('application_fees') && rawEnrichment.application_fees && typeof rawEnrichment.application_fees === 'object') {
+    const verifiedFeeEntries = eligibleObjectEntries(rawEnrichment.application_fees, 'application_fees');
+    if (verifiedFeeEntries.length > 0) {
       const feesObject: Record<string, number | string> = {};
       const feesArray: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string; isExempted?: boolean; exemptionCategory?: string }> = [];
 
-      Object.entries(rawEnrichment.application_fees).forEach(([category, feeData]: [string, any]) => {
+      verifiedFeeEntries.forEach(([category, feeData]: [string, any]) => {
         if (feeData && typeof feeData === 'object') {
-          const amount = feeData.amount || feeData.fee_amount;
-          const isExempt = feeData.currency_code === 'EXEMPT' || feeData.exemption_status === 'EXEMPT';
-
-          feesObject[category] = isExempt ? 'Exempted' : (amount || 0);
-
-          // Also add to array format for page component
+          const amount = feeData.amount ?? feeData.fee_amount ?? null;
+          feesObject[category] = amount == null ? 'Not stated' : amount;
           feesArray.push({
-            amount: isExempt ? null : amount,
-            currency: feeData.currency_code || feeData.currency || 'INR',
-            waivedFor: feeData.waived_for || feeData.waivedFor,
-            paymentMethods: feeData.payment_methods || feeData.paymentMethods,
+            amount,
+            currency: feeData.currency || feeData.currency_code || 'INR',
+            waivedFor: Array.isArray(feeData.waived_for)
+              ? feeData.waived_for.join(', ')
+              : (feeData.waived_for ?? feeData.waivedFor),
+            paymentMethods: Array.isArray(feeData.payment_methods)
+              ? feeData.payment_methods.join(', ')
+              : (feeData.payment_methods ?? feeData.paymentMethods),
             note: feeData.note,
-            isExempted: isExempt,
+            isExempted: false,
             exemptionCategory: category,
           });
         }
       });
 
-      if (Object.keys(feesObject).length > 0) {
-        enrichment.feesByCategory = feesObject;
-        enrichment.applicationFees = feesArray; // Page component expects this
-      } else {
-        enrichment.feesByCategory = {};
-        enrichment.applicationFees = [];
-      }
+      enrichment.feesByCategory = feesObject;
+      enrichment.applicationFees = feesArray;
     } else {
       enrichment.feesByCategory = {};
       enrichment.applicationFees = [];
