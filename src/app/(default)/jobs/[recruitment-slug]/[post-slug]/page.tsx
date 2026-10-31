@@ -178,7 +178,7 @@ export default async function JobDetailPage({ params }: Props) {
         description: typeof post.description === "string" ? stripAggregatorData(post.description) || null : null,
         organizationName: post.organizationName,
         organizationType: post.organizationSector,
-        organizationWebsite,
+        organizationWebsite: publicLink(organizationWebsite),
         locationCity: post.locationCity,
         locationState: post.locationState,
         recruitmentSlug: post.recruitmentSlug,
