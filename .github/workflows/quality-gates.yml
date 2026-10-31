@@ -85,7 +85,7 @@ jobs:
       - run: npm ci
       # Type-check the focused unit test and pure helper in isolation. The full test
       # suite currently has unrelated legacy typing errors in other test files.
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types vitest/globals tests/unit/source-verification.test.ts src/lib/source-verification.ts
+      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types vitest/globals tests/contracts/unit/vacancy-integrity.test.ts src/lib/vacancy-integrity.ts tests/unit/source-verification.test.ts src/lib/source-verification.ts
 
   application-typecheck:
     name: Application type-check
