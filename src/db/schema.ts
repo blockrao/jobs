@@ -1197,9 +1197,11 @@ export const recruitments = pgTable(
     // NULL for national-level recruitments (UPSC, SSC, Railway Board etc.)
     // that have no single state. Populated during enrichment. (A-082)
     locationStateCode: varchar("location_state_code", { length: 10 }),
-    // Provenance of the official notification/apply link on this recruitment:
-    // MANUAL_VERIFIED | AGGREGATOR_DISCOVERED. Null = no link. (A-070)
+    // Verification state for official notification/application links (A-070).
+    // MANUAL_VERIFIED is affirmative; all other values remain unverified.
     officialLinkSource: varchar("official_link_source", { length: 40 }),
+    // Immutable discovery origin, kept separate from link verification state.
+    sourceDiscoveryOrigin: varchar("source_discovery_origin", { length: 40 }),
     // Official advertisement/notification number as printed in the notice,
     // e.g. "12/2026" for UPSC Advt. No. 12/2026. Used to build the hub-page
     // URL slug and breadcrumb. Nullable — not all sources capture it.
