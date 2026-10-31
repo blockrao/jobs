@@ -478,6 +478,7 @@ export async function getHomeStats(): Promise<HomeStats> {
           AND r2.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
           AND r2.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND private.is_recruitment_publicly_trusted(r2.id)
+          AND private.is_post_publicly_trusted(po.id)
           AND o2.slug <> 'unclassified-government-jobs'
       ) AS total_vacancies,
       COUNT(DISTINCT r.id)::int AS live_recruitments
@@ -909,7 +910,7 @@ export async function getRecruitmentSlugsForSitemap() {
     FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
     WHERE r.slug IS NOT NULL
-      AND private.is_post_publicly_trusted(p.id)
+      AND private.is_recruitment_publicly_trusted(r.id)
     ORDER BY r.id
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
@@ -1052,6 +1053,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
     `),
 
     // Deadline buckets (exclude expired)
@@ -1806,7 +1808,7 @@ export async function listPostsEnhanced(opts?: {
       LEFT JOIN public.post_enrichments e ON p.id = e.post_id
       LEFT JOIN public.recruitments r ON p."recruitmentId" = r.id
       WHERE p."isLive" = true
-        AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(p.id)
         ${stateCode ? sql`AND r."locationStateCode" = ${stateCode}` : sql``}
         ${opts?.employment ? sql`AND LOWER(r."employmentType") = LOWER(${opts.employment})` : sql``}
         ${salaryMinPaise !== null ? sql`AND e."salaryMax" >= ${salaryMinPaise}` : sql``}
