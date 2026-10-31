@@ -171,7 +171,7 @@ export interface PostEnrichment {
   importantDates?: Array<{ label: string; date?: Date; dateStr?: string }>;
 
   /** Array of required documents */
-  requiredDocuments?: Array<{ name: string; category?: string; required?: boolean }>;
+  requiredDocuments?: Array<{ name: string; category?: string; required?: boolean | null }>;
 
   // Eligibility Pathways
   eligibilityPathways?: Array<{
