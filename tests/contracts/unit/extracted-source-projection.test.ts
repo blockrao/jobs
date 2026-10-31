@@ -102,11 +102,12 @@ describe("extracted source projection", () => {
     expect(page).toContain("verificationStatus");
   });
 
-  test("the leaf renderer gates JobPosting on lifecycle only, never on verification status", () => {
+  test("the leaf renderer gates JobPosting on open lifecycle and manually verified official links", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
-    expect(renderer).toMatch(/const emitJobPosting = lifecycle \? lifecycle\.isOpen : !isApplicationClosed;/);
-    expect(renderer).not.toMatch(/emitJobPosting[^\n]*[vV]erif/);
-  });
+    expect(renderer).toContain("const notificationLinkVerified = Boolean(post.officialSourceUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);");
+    expect(renderer).toContain("const applicationLinkVerified = Boolean(post.applyUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);");
+    expect(renderer).toMatch(/const emitJobPosting = [\\s\\S]*?&& indexable && notificationLinkVerified && applicationLinkVerified;/);
+  });;
 
   test("a recruitment hub remains canonical and is indexable only when source and employer checks pass (URL contract 2026-10-20)", () => {
     // The single-post-leaf canonical exception (Oct 2026) was retired with the
