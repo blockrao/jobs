@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { JobPostingData, PostEnrichment } from "@/types/job-posting";
 import { transformEnrichment } from "./enrichment-transformer";
 import { recruitmentIsLiveSql } from "./recruitment-lifecycle-sql";
+import { isVerifiedOfficialUrl } from "@/lib/official-source";
 
 type RawDate = string | Date | null;
 type FjaExtract = NonNullable<JobPostingData["fjaExtract"]>;
@@ -145,6 +146,14 @@ async function getPostCoreData(
         p.updated_at AS "updatedAt",
         r.official_notification_url AS "officialSourceUrl",
         r.official_application_url AS "applyPortalUrl",
+        (
+          SELECT s.url
+          FROM public.sources s
+          WHERE s.slug = r.official_link_source
+            AND s.authority = 'OFFICIAL'
+            AND s.is_official IS TRUE
+          LIMIT 1
+        ) AS "officialSourceRegistryUrl",
         p.vacancy_total AS "vacancyTotal",
         p.salary_min AS "legacySalaryMin",
         p.salary_max AS "legacySalaryMax",
@@ -570,9 +579,25 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    // Transform raw JSONB enrichment to canonical EnrichmentSchema
-    // This is the single source of truth for all enrichment transformations
-    const transformedEnrichment = transformEnrichment(enrichmentJsonb);
+    // An external URL is not an official issuer link merely because an
+    // aggregator discovered it or it is hosted on a government-looking domain.
+    // Require a registered OFFICIAL source and an exact/subdomain HTTPS host match.
+    const officialSourceRegistryUrl = data.officialSourceRegistryUrl ?? null;
+    const officialSourceVerified = isVerifiedOfficialUrl(data.officialSourceUrl, officialSourceRegistryUrl);
+    const officialApplicationVerified = isVerifiedOfficialUrl(data.applyPortalUrl, officialSourceRegistryUrl);
+
+    // Transform raw JSONB enrichment to canonical EnrichmentSchema. Any
+    // additional officialLinks must independently match the same registered
+    // issuer host before they can reach the public page.
+    const transformed = transformEnrichment(enrichmentJsonb);
+    const transformedEnrichment = transformed
+      ? {
+          ...transformed,
+          officialLinks: (transformed.officialLinks ?? []).filter((link) =>
+            isVerifiedOfficialUrl(link.url, officialSourceRegistryUrl)
+          ),
+        }
+      : transformed;
 
     return {
       id: data.id,
@@ -611,8 +636,11 @@ export async function getPostBySlug(
       isLive: data.isLive,
       postedAt: new Date(data.postedAt),
       updatedAt: new Date(data.updatedAt),
-      officialSourceUrl: data.officialSourceUrl,
-      applyPortalUrl: data.applyPortalUrl,
+      officialSourceUrl: officialSourceVerified ? data.officialSourceUrl : null,
+      applyPortalUrl: officialApplicationVerified ? data.applyPortalUrl : null,
+      officialSourceRegistryUrl,
+      officialSourceVerified,
+      officialApplicationVerified,
       // Preserve extracted source facts as a distinct, explicitly unverified projection.
       // Never pass these fields into canonical fact resolvers or official-link CTAs.
       fjaExtract: data.fjaInventoryPostId != null ? {
@@ -649,8 +677,8 @@ export async function getPostBySlug(
       legacySalaryMax: data.legacySalaryMax ?? null,
       // Recruitment-level fields for resolvers
       recruitmentVacancyTotal: data.recruitmentVacancyTotal ?? null,
-      recruitmentOfficialNotificationUrl: data.recruitmentOfficialNotificationUrl ?? null,
-      recruitmentOfficialApplicationUrl: data.recruitmentOfficialApplicationUrl ?? null,
+      recruitmentOfficialNotificationUrl: officialSourceVerified ? data.recruitmentOfficialNotificationUrl ?? null : null,
+      recruitmentOfficialApplicationUrl: officialApplicationVerified ? data.recruitmentOfficialApplicationUrl ?? null : null,
       recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
         ? new Date(data.recruitmentApplicationEndDate)
         : null,
