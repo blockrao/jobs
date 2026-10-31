@@ -756,6 +756,9 @@ export async function getRelatedPostsForLeaf(
         AND p.id != ${postId}
         AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND public.is_recruitment_source_trusted(
+          r.source_discovery_origin, r.official_link_source, r.verification_status, r.metadata
+        )
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 6
     `);
