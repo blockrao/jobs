@@ -246,6 +246,43 @@ candidates AS (
      )
      OR EXISTS (SELECT 1 FROM legacy_origin lo WHERE lo.recruitment_id = r.id)
 ),
+post_source_refs AS (
+  SELECT p.recruitment_id,
+         jsonb_agg(jsonb_build_object(
+           'post_id', p.id,
+           'post_slug', p.slug,
+           'posting_status', p.posting_status,
+           'source_name', p."sourceName",
+           'source_reference', p."sourceReference",
+           'official_source_url', p."officialSourceUrl",
+           'official_notification_url', p."officialNotificationUrl",
+           'application_url', p.application_url
+         ) ORDER BY p.id) AS post_source_evidence
+  FROM public.posts p
+  GROUP BY p.recruitment_id
+),
+legacy_posting_refs AS (
+  SELECT coalesce(sp.inferred_recruitment_id, cp.recruitment_id) AS recruitment_id,
+         jsonb_agg(jsonb_build_object(
+           'legacy_posting_id', sp.id,
+           'external_id', sp.external_id,
+           'title', sp.title,
+           'source', sp.source,
+           'source_type', sp.source_type,
+           'enrichment_source', sp.enrichment_source,
+           'source_portals', sp.source_portals,
+           'source_url', sp.source_url,
+           'official_notification_url', sp.official_notification_url,
+           'apply_url', sp.apply_url,
+           'review_status', sp.review_status,
+           'inferred_recruitment_id', sp.inferred_recruitment_id,
+           'inferred_post_id', sp.inferred_post_id
+         ) ORDER BY sp.id) AS legacy_posting_evidence
+  FROM public.postings sp
+  LEFT JOIN public.posts cp ON cp.id = sp.inferred_post_id
+  WHERE sp.inferred_recruitment_id IS NOT NULL OR cp.recruitment_id IS NOT NULL
+  GROUP BY coalesce(sp.inferred_recruitment_id, cp.recruitment_id)
+),
 manifest AS (
   SELECT r.id, r.slug, r.name, o.name AS organization_name, r.organization_id,
          r.status::text AS lifecycle_status, r.verification_status,
@@ -265,9 +302,13 @@ manifest AS (
            SELECT 1 FROM public.postings sp
            LEFT JOIN public.posts cp ON cp.id = sp.inferred_post_id
            WHERE sp.inferred_recruitment_id = r.id OR cp.recruitment_id = r.id
-         ) AS has_legacy_mapping
+         ) AS has_legacy_mapping,
+         coalesce(ps.post_source_evidence, '[]'::jsonb) AS post_source_evidence,
+         coalesce(lp.legacy_posting_evidence, '[]'::jsonb) AS legacy_posting_evidence
   FROM public.recruitments r
   LEFT JOIN public.organizations o ON o.id = r.organization_id
+  LEFT JOIN post_source_refs ps ON ps.recruitment_id = r.id
+  LEFT JOIN legacy_posting_refs lp ON lp.recruitment_id = r.id
   JOIN candidates c ON c.id = r.id
 ),
 unmatched AS (
@@ -301,7 +342,8 @@ SELECT ranked.queue_rank, ranked.total_queue_rows,
        ranked.official_application_url, ranked.source_url,
        ranked.notification_date, ranked.application_start_date, ranked.application_end_date,
        ranked.enrichment_source, ranked.ingest_batch, ranked.has_staging_match,
-       ranked.valid_post_count, ranked.has_legacy_mapping, ranked.review_action
+       ranked.valid_post_count, ranked.has_legacy_mapping, ranked.review_action,
+       ranked.post_source_evidence, ranked.legacy_posting_evidence
 FROM ranked, params
 WHERE ranked.queue_rank BETWEEN
       ((params.page_number - 1) * params.page_size + 1)
