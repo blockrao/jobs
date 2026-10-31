@@ -170,11 +170,11 @@ WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
 ORDER BY fact_family;
 
 
--- Every institutional_aggregation record must retain its discovery origin,
+-- Every aggregator extraction record must retain its discovery origin,
 -- including rows whose legacy official_link_source was NULL.
-SELECT count(*) AS institutional_aggregation_without_discovery_origin
+SELECT count(*) AS aggregator_extraction_without_discovery_origin
 FROM public.recruitments
-WHERE enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+WHERE enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
   AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
 
 -- The known UPPSC payload-contamination cluster must not escape origin gating.
@@ -184,5 +184,5 @@ WHERE (
     enrichment_data->'reference'->>'source' ILIKE '%UPPSC%'
     OR enrichment_data->'institution'->>'name' ILIKE '%UPPSC%'
   )
-  AND enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+  AND enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
   AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
