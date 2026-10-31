@@ -51,7 +51,7 @@ PARALLEL SAFE
 SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce(
-    lower(btrim(p_value)) ~ '^https?://([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)',
+    lower(btrim(p_value)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)',
     false
   );
 $fn$;
