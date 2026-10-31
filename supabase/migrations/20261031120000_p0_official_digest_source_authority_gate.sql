@@ -1111,54 +1111,75 @@ ON public.official_digest_promote
 FOR EACH ROW
 EXECUTE FUNCTION public.sync_promoted_digest_review_state();
 
--- Backfill only education/experience arrays from their canonical child tables.
--- Preserve all other JSONB fields, including source_provenance.
+-- Backfill canonical JSONB fact arrays/objects from their child tables.
+-- Existing JSONB-only values are preserved when a child table has no rows.
+-- All non-fact JSONB fields and source_provenance remain untouched.
+WITH fact_rows AS (
+  SELECT
+    p.id,
+    p.enrichment,
+    public.aggregate_enrichment_for_post(p.id) AS payload
+  FROM public.posts p
+  WHERE EXISTS (SELECT 1 FROM public.posts_vacancies x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_education x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_experience x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_selection_process x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_documents x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_important_dates x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.post_age_rules x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_application_fee x WHERE x.post_id = p.id)
+     OR EXISTS (SELECT 1 FROM public.posts_official_links x WHERE x.post_id = p.id)
+)
 UPDATE public.posts p
 SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
-  'education',
-  COALESCE(
-    (SELECT jsonb_agg(jsonb_build_object(
-      'fact_id', pe.id,
-      'degree', pe.degree,
-        'subject', pe.subject,
-        'specialization', pe.specialization,
-        'minimum_percentage', pe.minimum_percentage,
-        'minimum_marks', pe.minimum_marks,
-        'source', pe.source,
-        'confidence_score', pe.confidence_score,
-        'extracted_at', pe.extracted_at,
-        'verified_at', pe.verified_at,
-        'source_ref', pe.source_ref,
-        'source_locator', pe.source_locator
-    ) ORDER BY pe.id)
-    FROM public.posts_education pe
-    WHERE pe.post_id = p.id),
-    p.enrichment -> 'education',
-    '[]'::jsonb
-  ),
-  'experience',
-  COALESCE(
-    (SELECT jsonb_agg(jsonb_build_object(
-      'fact_id', pex.id,
-        'total_years', pex.total_years,
-        'min_years', pex.min_years,
-        'type', pex.experience_type,
-        'experience_type', pex.experience_type,
-        'source', pex.source,
-        'confidence_score', pex.confidence_score,
-        'extracted_at', pex.extracted_at,
-        'verified_at', pex.verified_at,
-        'source_ref', pex.source_ref,
-        'source_locator', pex.source_locator
-    ) ORDER BY pex.id)
-    FROM public.posts_experience pex
-    WHERE pex.post_id = p.id),
-    p.enrichment -> 'experience',
-    '[]'::jsonb
-  )
+  'vacancies', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_vacancies x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'vacancies'
+    ELSE COALESCE(fact_rows.enrichment -> 'vacancies', '{}'::jsonb)
+  END,
+  'education', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_education x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'education'
+    ELSE COALESCE(fact_rows.enrichment -> 'education', '[]'::jsonb)
+  END,
+  'experience', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_experience x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'experience'
+    ELSE COALESCE(fact_rows.enrichment -> 'experience', '[]'::jsonb)
+  END,
+  'selection_process', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_selection_process x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'selection_process'
+    ELSE COALESCE(fact_rows.enrichment -> 'selection_process', '[]'::jsonb)
+  END,
+  'documents', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_documents x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'documents'
+    ELSE COALESCE(fact_rows.enrichment -> 'documents', '[]'::jsonb)
+  END,
+  'important_dates', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_important_dates x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'important_dates'
+    ELSE COALESCE(fact_rows.enrichment -> 'important_dates', '[]'::jsonb)
+  END,
+  'age_rules', CASE
+    WHEN EXISTS (SELECT 1 FROM public.post_age_rules x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'age_rules'
+    ELSE COALESCE(fact_rows.enrichment -> 'age_rules', '{}'::jsonb)
+  END,
+  'application_fees', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_application_fee x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'application_fees'
+    ELSE COALESCE(fact_rows.enrichment -> 'application_fees', '{}'::jsonb)
+  END,
+  'official_links', CASE
+    WHEN EXISTS (SELECT 1 FROM public.posts_official_links x WHERE x.post_id = p.id)
+      THEN fact_rows.payload -> 'official_links'
+    ELSE COALESCE(fact_rows.enrichment -> 'official_links', '[]'::jsonb)
+  END
 )
-WHERE EXISTS (SELECT 1 FROM public.posts_education pe WHERE pe.post_id = p.id)
-   OR EXISTS (SELECT 1 FROM public.posts_experience pex WHERE pex.post_id = p.id);
+FROM fact_rows
+WHERE p.id = fact_rows.id;
 
 -- Existing eligibility rows marked VERIFIED without issuer evidence are not verified facts.
 UPDATE public.eligibilities
