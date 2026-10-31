@@ -514,7 +514,7 @@ export async function getDuplicatePostRecruitmentSlug(
     WHERE p.slug = ${postSlug}
       AND p.posting_status = 'DUPLICATE'
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        AND private.is_post_publicly_trusted(p.id)
+        AND private.is_recruitment_publicly_trusted(r.id)
       AND (
         r.slug = ${recruitmentSlug}
         OR r.id IN (
