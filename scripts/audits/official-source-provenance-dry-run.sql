@@ -223,3 +223,49 @@ FROM public.recruitments r
 WHERE r.official_link_source = 'AGGREGATOR_DISCOVERED'
   AND r.verification_status = 'VERIFIED'
 ORDER BY r.id;
+
+
+-- 9) Full institutional_aggregation cohort: origin, verification conflicts and contamination.
+-- This cohort is identified by immutable extraction provenance, not only by
+-- official_link_source (which is NULL on many affected records).
+SELECT
+  COALESCE(r.official_link_source, 'NULL') AS official_link_source,
+  COALESCE(r.verification_status, 'NULL') AS verification_status,
+  count(*) AS recruitments,
+  count(*) FILTER (WHERE r.enrichment_data->'meta'->>'verified' = 'false') AS meta_unverified,
+  count(*) FILTER (
+    WHERE r.enrichment_data->'reference'->>'source' ILIKE '%UPPSC%'
+       OR r.enrichment_data->'institution'->>'name' ILIKE '%UPPSC%'
+  ) AS uppsc_contaminated
+FROM public.recruitments r
+WHERE r.enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+GROUP BY 1,2
+ORDER BY recruitments DESC, official_link_source, verification_status;
+
+-- Exact frozen review manifest for every institutional_aggregation Recruitment.
+SELECT
+  r.id,
+  r.slug,
+  r.name,
+  r.status::text AS lifecycle_status,
+  r.verification_status,
+  r.official_link_source,
+  r.official_notification_url,
+  r.official_application_url,
+  r.last_verified_at,
+  r.enrichment_data->'meta'->>'source' AS enrichment_source,
+  r.enrichment_data->'meta'->>'verified' AS enrichment_verified,
+  r.enrichment_data->'meta'->>'extraction_timestamp' AS extraction_timestamp,
+  r.enrichment_data->'reference'->>'source' AS reference_source,
+  r.enrichment_data->'institution'->>'name' AS enrichment_institution,
+  CASE
+    WHEN r.enrichment_data->'reference'->>'source' ILIKE '%UPPSC%'
+      OR r.enrichment_data->'institution'->>'name' ILIKE '%UPPSC%'
+    THEN 'ENTITY_CONTAMINATION_REVIEW_REQUIRED'
+    WHEN r.official_link_source IS DISTINCT FROM 'AGGREGATOR_DISCOVERED'
+    THEN 'DISCOVERY_ORIGIN_BACKFILL_REQUIRED'
+    ELSE 'SOURCE_AND_FACT_REVIEW_REQUIRED'
+  END AS review_action
+FROM public.recruitments r
+WHERE r.enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+ORDER BY r.id;
