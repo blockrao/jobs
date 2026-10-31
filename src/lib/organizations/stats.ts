@@ -186,13 +186,6 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
 
   const nextDeadline = live.find((r) => r.lifecycle.deadline)?.lifecycle.deadline ?? null;
 
-  const roles: OrgPostRole[] = rowsOf<RoleRow>(roleResult).map((r) => ({
-    name: r.name,
-    recruitmentCount: r.recruitment_count,
-    salaryMin: r.salary_min,
-    salaryMax: r.salary_max,
-  }));
-
   const examMap = new Map<string, OrgExam>();
   for (const r of recruitments) {
     if (!r.examSlug || !r.examName) continue;
