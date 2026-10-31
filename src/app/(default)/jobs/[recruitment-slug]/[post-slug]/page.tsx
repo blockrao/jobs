@@ -91,6 +91,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const unverifiedAggregator = isUnverifiedAggregatorSource(
+    post.recruitmentOfficialLinkSource,
+    post.recruitmentVerificationStatus,
+    post.recruitmentMetadata,
+  );
   const { title, description } = composeLeafSeo(post);
 
   return {
