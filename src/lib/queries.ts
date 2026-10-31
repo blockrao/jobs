@@ -509,7 +509,7 @@ export async function getHomeStats(): Promise<HomeStats> {
 const livePostCondition = sql`
   ${recruitmentIsLiveSql(recruitments.status, recruitments.applicationEndDate)}
   AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
-  AND private.is_recruitment_publicly_trusted(${recruitments.id})
+  AND private.is_post_publicly_trusted(${posts.id})
 `;
 
 export interface SectorPostRow {
@@ -779,7 +779,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     where: and(
       eq(posts.recruitmentId, recruitmentData.id),
       eq(posts.slug, postSlug),
-      sql`private.is_recruitment_publicly_trusted(${posts.recruitmentId})`,
+      sql`private.is_post_publicly_trusted(${posts.id})`,
     ),
     with: {
       position: true,
@@ -852,7 +852,7 @@ export async function getPostsForRecruitment(recruitmentId: number) {
   if (!hasDb()) return [];
   const db = getDb();
   return db.query.posts.findMany({
-    where: and(eq(posts.recruitmentId, recruitmentId), sql`private.is_recruitment_publicly_trusted(${posts.recruitmentId})`),
+    where: and(eq(posts.recruitmentId, recruitmentId), sql`private.is_post_publicly_trusted(${posts.id})`),
     with: {
       position: true,
       ageRules: true,
@@ -913,7 +913,7 @@ export async function getRecruitmentSlugsForSitemap() {
     FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
     WHERE r.slug IS NOT NULL
-      AND private.is_recruitment_publicly_trusted(r.id)
+      AND private.is_post_publicly_trusted(p.id)
     ORDER BY r.id
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
@@ -1558,7 +1558,7 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     JOIN public.recruitments r ON r.id = p.recruitment_id
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
-      AND private.is_recruitment_publicly_trusted(r.id)
+      AND private.is_post_publicly_trusted(p.id)
     ORDER BY
       CASE WHEN e.post_id IS NOT NULL THEN 0 ELSE 1 END ASC,
       e."extractionConfidence" DESC NULLS LAST,
@@ -1646,7 +1646,7 @@ export async function getPostsCount() {
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE p."isLive" = true
-      AND private.is_recruitment_publicly_trusted(r.id)
+      AND private.is_post_publicly_trusted(p.id)
   `);
 
   return (result?.[0]?.count) || 0;
@@ -1682,7 +1682,7 @@ export async function getEnrichmentStats() {
     JOIN public.recruitments r ON r.id = p.recruitment_id
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
-      AND private.is_recruitment_publicly_trusted(r.id)
+      AND private.is_post_publicly_trusted(p.id)
   `);
 
   const stats = result?.[0];
