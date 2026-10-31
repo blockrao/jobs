@@ -671,8 +671,14 @@ BEGIN
   -- Backward compatibility for the historical promotion function: it still
   -- writes AGGREGATOR_DISCOVERED into official_link_source. Capture that as
   -- immutable origin before applying the independent verification-state gate.
-  IF NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
-     AND NEW.source_discovery_origin IS NULL THEN
+  IF NEW.source_discovery_origin IS NULL AND (
+       NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
+       OR NEW.enrichment_data->'meta'->>'source' IN (
+         'institutional_aggregation',
+         'institution_aggregation',
+         'fja_html'
+       )
+     ) THEN
     NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
   END IF;
 
@@ -952,7 +958,7 @@ $recruitment$;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_recruitment_verification
   ON public.recruitments;
 CREATE TRIGGER trg_guard_aggregator_discovered_recruitment_verification
-BEFORE INSERT OR UPDATE OF verification_status, official_link_source, source_discovery_origin, official_notification_url, metadata
+BEFORE INSERT OR UPDATE OF verification_status, official_link_source, source_discovery_origin, official_notification_url, metadata, enrichment_data
 ON public.recruitments
 FOR EACH ROW
 EXECUTE FUNCTION public.guard_aggregator_discovered_recruitment_verification();
