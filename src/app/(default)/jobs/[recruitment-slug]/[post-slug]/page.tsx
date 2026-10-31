@@ -192,6 +192,7 @@ export default async function JobDetailPage({ params }: Props) {
           ? post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl
           : null,
         officialApplicationVerified: post.officialApplicationVerified,
+        officialVacancyEvidenceAccepted: post.officialVacancyEvidenceAccepted === true,
         employmentType: post.employmentType ?? null,
         qualificationText:
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
