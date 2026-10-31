@@ -7,9 +7,29 @@ export function isPreliminaryUnverifiedSourceMetadata(metadata: unknown): boolea
   return (metadata as Record<string, unknown>).verification_state === "preliminary_unverified";
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasCompleteFactReviewEvidence(factReview: any): boolean {
+  const reviewedFields = factReview?.reviewed_fields;
+  const evidence = factReview?.evidence;
+  if (!Array.isArray(reviewedFields) || reviewedFields.length === 0) return false;
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) return false;
+
+  return reviewedFields.every((field: unknown) => {
+    if (!isNonEmptyString(field)) return false;
+    const item = evidence[field];
+    return item && typeof item === "object" &&
+      isNonEmptyString(item.evidence_ref) &&
+      isNonEmptyString(item.excerpt);
+  });
+}
+
 /**
  * Aggregator-discovered recruitment records are not safe to publish as
- * verified facts until an issuer-source review has explicitly upgraded them.
+ * verified facts until issuer-source and fact reviews have both been recorded
+ * with complete, field-addressable evidence.
  */
 export function isUnverifiedAggregatorSource(
   officialLinkSource: unknown,
@@ -27,21 +47,15 @@ export function isUnverifiedAggregatorSource(
   const provenance = (metadata as Record<string, any>).source_provenance;
   const authority = provenance?.authority_review;
   const factReview = provenance?.fact_review;
-  const evidence = factReview?.evidence;
   return authority?.status !== "VERIFIED" ||
-    typeof authority.evidence_url !== "string" ||
+    !isNonEmptyString(authority.evidence_url) ||
     !authority.evidence_url.startsWith("https://") ||
-    typeof authority.reviewed_by !== "string" ||
-    !authority.reviewed_by.trim() ||
-    !authority.reviewed_at ||
+    !isNonEmptyString(authority.reviewed_by) ||
+    !isNonEmptyString(authority.reviewed_at) ||
+    !isNonEmptyString(authority.notes) ||
     factReview?.status !== "VERIFIED" ||
-    typeof factReview.reviewed_by !== "string" ||
-    !factReview.reviewed_by.trim() ||
-    !factReview.reviewed_at ||
-    !Array.isArray(factReview.reviewed_fields) ||
-    factReview.reviewed_fields.length === 0 ||
-    !evidence ||
-    typeof evidence !== "object" ||
-    Array.isArray(evidence) ||
-    Object.keys(evidence).length === 0;
+    !isNonEmptyString(factReview.reviewed_by) ||
+    !isNonEmptyString(factReview.reviewed_at) ||
+    !isNonEmptyString(factReview.notes) ||
+    !hasCompleteFactReviewEvidence(factReview);
 }
