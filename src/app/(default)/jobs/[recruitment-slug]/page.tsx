@@ -143,6 +143,7 @@ function publicHubInput(recruitment: any, posts: any[]) {
     const name = String(post.name ?? post.title ?? "").trim();
     return {
       ...post,
+      enrichment: null,
       description: hasPostReview(name, "description") ? post.description : null,
       salaryMin: hasPostReview(name, "salary_min") || hasPostReview(name, "salary") ? post.salaryMin : null,
       salaryMax: hasPostReview(name, "salary_max") || hasPostReview(name, "salary") ? post.salaryMax : null,
