@@ -27,17 +27,6 @@ CREATE INDEX IF NOT EXISTS idx_recruitments_source_discovery_origin
   ON public.recruitments (source_discovery_origin)
   WHERE source_discovery_origin IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_posts_recruitment_id_source_gate
-  ON public.posts (recruitment_id);
-
-CREATE INDEX IF NOT EXISTS idx_postings_inferred_recruitment_id_source_gate
-  ON public.postings (inferred_recruitment_id)
-  WHERE inferred_recruitment_id IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_postings_inferred_post_id_source_gate
-  ON public.postings (inferred_post_id)
-  WHERE inferred_post_id IS NOT NULL;
-
 -- The helper schema is not exposed through the Supabase Data API.
 CREATE SCHEMA IF NOT EXISTS private;
 REVOKE ALL ON SCHEMA private FROM PUBLIC;
