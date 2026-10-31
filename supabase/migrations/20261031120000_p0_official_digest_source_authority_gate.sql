@@ -2,6 +2,17 @@
 -- This migration is forward-only. It does not edit the historical promotion migration.
 -- Existing aggregator-discovered rows are demoted to unverified; no records are deleted.
 
+-- Education already had verified_at; add source pointers. Experience previously
+-- had no verification timestamp at all, so add the complete fact-level evidence fields.
+ALTER TABLE public.posts_education
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.posts_experience
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
 ALTER TABLE public.official_digest_promote
   ADD COLUMN IF NOT EXISTS authority_review_status text NOT NULL DEFAULT 'UNVERIFIED',
   ADD COLUMN IF NOT EXISTS authority_evidence_url text,
