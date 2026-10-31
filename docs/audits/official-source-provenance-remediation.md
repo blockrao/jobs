@@ -158,3 +158,19 @@ Keep three decisions separate:
 A reviewed UPCOMING recruitment can remain a useful indexable Recruitment Hub while its application window is not yet announced. The source-authority gate must not require `application_end_date IS NOT NULL`; the page should state the missing window accurately, and JobPosting schema/Apply actions remain separately gated.
 
 No production migration or data mutation has been applied.
+
+
+### Existing-record review-queue coverage (2026-10-31 06:27 UTC)
+
+The proposed `official_digest_promote` workflow was matched against the 5,381 existing extraction-origin Recruitments using `metadata.ingest_batch + official_notification_url`:
+
+| Source | Existing rows | With ingest batch | Matching staging row |
+|---|---:|---:|---:|
+| `fja_html` | 1,265 | 0 | 0 |
+| `institution_aggregation` | 114 | 12 | 12 |
+| `institutional_aggregation` | 4,002 | 350 | 343 |
+| **Total** | **5,381** | **362** | **355** |
+
+5,019 rows have no ingest batch and 5,026 have no matching staging row. The current review trigger can therefore re-verify only 355 existing rows. Before the Stage 2 remediation is applied, a legacy-record review/backfill path must be designed for the remaining 5,026, preserving Recruitment/Post identity and canonical URLs and retaining the same authority/fact evidence requirements.
+
+No staging backfill or production mutation has been performed.
