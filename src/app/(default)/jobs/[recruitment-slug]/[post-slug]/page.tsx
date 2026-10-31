@@ -106,6 +106,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const sourceTrusted = isRecruitmentSourceTrusted({
+    sourceDiscoveryOrigin: post.recruitmentSourceDiscoveryOrigin,
+    officialLinkSource: post.recruitmentOfficialLinkSource,
+    verificationStatus: post.recruitmentVerificationStatus,
+    metadata: post.recruitmentMetadata,
+  });
+  const officialLinksVerified = sourceTrusted
+    && ["VERIFIED", "MANUALLY_VERIFIED"].includes((post.recruitmentVerificationStatus ?? "").toUpperCase())
+    && isManuallyVerifiedOfficialLink(post.recruitmentOfficialLinkSource)
+    && Boolean(post.officialSourceUrl);
   const { title, description } = composeLeafSeo(post);
 
   return {
@@ -114,7 +124,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: generateAlternates(post.recruitmentSlug, post.slug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) }),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, {
+      index: !isUnresolvedOrganization(post.organizationName)
+        && !isUnresolvedOrganization(post.organizationSlug)
+        && officialLinksVerified,
+    }),
   };
 }
 
@@ -350,6 +364,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
+      sourceVerified={officialLinksVerified}
       indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) && officialLinksVerified}
     />
   );
