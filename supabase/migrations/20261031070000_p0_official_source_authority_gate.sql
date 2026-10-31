@@ -1167,6 +1167,168 @@ ON public.posts
 FOR EACH ROW
 EXECUTE FUNCTION public.guard_aggregator_discovered_post_source();
 
+-- Child fact provenance is independently guarded. A writer cannot set verified_at,
+-- source_ref or source_locator on an aggregator-discovered fact unless the same
+-- reviewed staging record explicitly covers that canonical Post and fact family.
+CREATE OR REPLACE FUNCTION public.guard_aggregator_discovered_child_fact_provenance()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $child_fact$
+DECLARE
+  v_discovery_origin text;
+  v_batch text;
+  v_official_url text;
+  v_post_name text;
+  v_field_family text;
+  v_field_key text;
+  v_expected_locator text;
+  v_review public.official_digest_promote%ROWTYPE;
+  v_review_ok boolean := false;
+BEGIN
+  IF NEW.verified_at IS NULL
+     AND NEW.source_ref IS NULL
+     AND NEW.source_locator IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT r.source_discovery_origin, r.metadata ->> 'ingest_batch',
+         r.official_notification_url, p.name
+  INTO v_discovery_origin, v_batch, v_official_url, v_post_name
+  FROM public.posts p
+  JOIN public.recruitments r ON r.id = p.recruitment_id
+  WHERE p.id = NEW.post_id
+  LIMIT 1;
+
+  IF v_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED' THEN
+    RETURN NEW;
+  END IF;
+
+  v_field_family := CASE TG_TABLE_NAME
+    WHEN 'posts_education' THEN 'education'
+    WHEN 'posts_experience' THEN 'experience'
+    WHEN 'posts_vacancies' THEN 'vacancies'
+    WHEN 'posts_selection_process' THEN 'selection_process'
+    WHEN 'posts_documents' THEN 'documents'
+    WHEN 'posts_important_dates' THEN 'important_dates'
+    WHEN 'post_age_rules' THEN 'age_rules'
+    WHEN 'posts_application_fee' THEN 'application_fees'
+    WHEN 'posts_official_links' THEN 'official_links'
+    ELSE NULL
+  END;
+
+  IF v_field_family IS NULL THEN
+    RAISE EXCEPTION 'No source-review fact family is configured for table %', TG_TABLE_NAME;
+  END IF;
+
+  v_field_key := 'post:' || v_post_name || ':' || v_field_family;
+
+  SELECT d.* INTO v_review
+  FROM public.official_digest_promote d
+  WHERE d.batch = v_batch
+    AND d.hub ->> 'official_url' = v_official_url
+    AND d.status = 'PROMOTED'
+  ORDER BY d.rownum
+  LIMIT 1;
+
+  v_expected_locator := v_review.fact_review_evidence -> v_field_key ->> 'evidence_ref';
+
+  v_review_ok := FOUND
+    AND public.official_digest_authority_review_complete(
+      v_review.authority_review_status,
+      v_review.authority_evidence_url,
+      v_review.authority_reviewed_by,
+      v_review.authority_reviewed_at,
+      v_review.authority_review_notes
+    )
+    AND public.official_digest_fact_review_complete(
+      v_review.fact_review_status,
+      v_review.fact_reviewed_fields,
+      v_review.fact_review_evidence,
+      v_review.hub,
+      v_review.posts,
+      v_review.fact_reviewed_by,
+      v_review.fact_reviewed_at,
+      v_review.fact_review_notes
+    )
+    AND public.official_digest_posts_match_recruitment(
+      (SELECT r.id FROM public.recruitments r
+       JOIN public.posts p ON p.recruitment_id = r.id
+       WHERE p.id = NEW.post_id),
+      v_review.post_ids,
+      v_review.posts
+    )
+    AND v_review.fact_reviewed_fields @> ARRAY[v_field_key]
+    AND NEW.verified_at IS NOT NULL
+    AND NEW.verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC'
+    AND NEW.source_ref = v_review.authority_evidence_url
+    AND nullif(btrim(v_expected_locator), '') IS NOT NULL
+    AND NEW.source_locator = v_expected_locator;
+
+  IF NOT v_review_ok THEN
+    RAISE EXCEPTION
+      'Aggregator-derived % fact cannot be marked verified without exact issuer and field evidence for Post %',
+      TG_TABLE_NAME, NEW.post_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$child_fact$;
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_education_provenance ON public.posts_education;
+CREATE TRIGGER trg_guard_aggregator_posts_education_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_education FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_experience_provenance ON public.posts_experience;
+CREATE TRIGGER trg_guard_aggregator_posts_experience_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_experience FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_vacancies_provenance ON public.posts_vacancies;
+CREATE TRIGGER trg_guard_aggregator_posts_vacancies_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_vacancies FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_selection_process_provenance ON public.posts_selection_process;
+CREATE TRIGGER trg_guard_aggregator_posts_selection_process_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_selection_process FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_documents_provenance ON public.posts_documents;
+CREATE TRIGGER trg_guard_aggregator_posts_documents_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_documents FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_important_dates_provenance ON public.posts_important_dates;
+CREATE TRIGGER trg_guard_aggregator_posts_important_dates_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_important_dates FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_post_age_rules_provenance ON public.post_age_rules;
+CREATE TRIGGER trg_guard_aggregator_post_age_rules_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.post_age_rules FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_application_fee_provenance ON public.posts_application_fee;
+CREATE TRIGGER trg_guard_aggregator_posts_application_fee_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_application_fee FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_posts_official_links_provenance ON public.posts_official_links;
+CREATE TRIGGER trg_guard_aggregator_posts_official_links_provenance
+BEFORE INSERT OR UPDATE OF post_id, verified_at, source_ref, source_locator
+ON public.posts_official_links FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_discovered_child_fact_provenance();
+
 -- JSONB enrichment consolidation may rebuild the object. Preserve the review
 -- evidence so later aggregation cannot erase the canonical provenance record.
 CREATE OR REPLACE FUNCTION public.preserve_post_source_provenance()
@@ -1264,6 +1426,9 @@ BEGIN
         d.fact_reviewed_at,
         d.fact_review_notes
       )
+      AND public.official_digest_posts_match_recruitment(
+        r.id, d.post_ids, d.posts
+      )
   ) INTO v_review_ok;
 
   IF NOT v_review_ok AND EXISTS (
@@ -1297,6 +1462,7 @@ SET search_path = public
 AS $eligibility$
 DECLARE
   v_discovery_origin text;
+  v_recruitment_id integer;
   v_batch text;
   v_official_url text;
   v_post_name text;
@@ -1304,9 +1470,9 @@ DECLARE
   v_review public.official_digest_promote%ROWTYPE;
   v_review_ok boolean := false;
 BEGIN
-  SELECT r.source_discovery_origin, r.metadata ->> 'ingest_batch',
+  SELECT r.source_discovery_origin, r.id, r.metadata ->> 'ingest_batch',
          r.official_notification_url, p.name
-  INTO v_discovery_origin, v_batch, v_official_url, v_post_name
+  INTO v_discovery_origin, v_recruitment_id, v_batch, v_official_url, v_post_name
   FROM public.posts p
   JOIN public.recruitments r ON r.id = p.recruitment_id
   WHERE p.id = NEW.post_id
@@ -1343,6 +1509,9 @@ BEGIN
           v_review.fact_reviewed_by,
           v_review.fact_reviewed_at,
           v_review.fact_review_notes
+        )
+        AND public.official_digest_posts_match_recruitment(
+          v_recruitment_id, v_review.post_ids, v_review.posts
         )
         AND v_review.fact_reviewed_fields @> ARRAY['post:' || v_post_name || ':eligibility']
         AND nullif(btrim(v_expected_locator), '') IS NOT NULL
@@ -1412,6 +1581,9 @@ BEGIN
       NEW.fact_reviewed_by,
       NEW.fact_reviewed_at,
       NEW.fact_review_notes
+    )
+    AND public.official_digest_posts_match_recruitment(
+      NEW.recruitment_id, NEW.post_ids, NEW.posts
     );
 
   IF v_review_ok THEN
