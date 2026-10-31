@@ -234,6 +234,7 @@ $fn$;
 CREATE OR REPLACE FUNCTION private.guard_recruitment_discovery_origin()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fn$
 BEGIN
@@ -264,9 +265,41 @@ ON public.recruitments
 FOR EACH ROW
 EXECUTE FUNCTION private.guard_recruitment_discovery_origin();
 
+CREATE OR REPLACE FUNCTION private.legacy_posting_has_aggregator_origin_for_post(p_post_id integer)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.postings sp
+    WHERE sp.inferred_post_id = p_post_id
+      AND (
+        private.is_aggregator_source_value(sp.source)
+        OR private.is_aggregator_source_value(sp.enrichment_source)
+        OR upper(btrim(coalesce(sp.source_type, ''))) = 'AGGREGATOR'
+        OR private.is_fja_url(sp.source_url)
+        OR EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements_text(
+            CASE
+              WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
+                THEN sp.source_portals
+              ELSE '[]'::jsonb
+            END
+          ) AS portal(value)
+          WHERE private.is_aggregator_source_value(portal.value)
+        )
+      )
+  );
+$fn$;
+
 CREATE OR REPLACE FUNCTION private.propagate_post_discovery_origin()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fn$
 BEGIN
@@ -274,7 +307,8 @@ BEGIN
     IF private.is_aggregator_source_value(OLD."sourceName")
        OR private.is_fja_url(OLD."sourceReference")
        OR private.is_fja_url(OLD.original_recruitment_url)
-       OR private.is_fja_url(OLD."originalRecruitmentUrl") THEN
+       OR private.is_fja_url(OLD."originalRecruitmentUrl")
+       OR private.legacy_posting_has_aggregator_origin_for_post(OLD.id) THEN
       UPDATE public.recruitments
       SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       WHERE id = OLD.recruitment_id
@@ -287,7 +321,8 @@ BEGIN
     IF private.is_aggregator_source_value(OLD."sourceName")
        OR private.is_fja_url(OLD."sourceReference")
        OR private.is_fja_url(OLD.original_recruitment_url)
-       OR private.is_fja_url(OLD."originalRecruitmentUrl") THEN
+       OR private.is_fja_url(OLD."originalRecruitmentUrl")
+       OR private.legacy_posting_has_aggregator_origin_for_post(OLD.id) THEN
       UPDATE public.recruitments
       SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       WHERE id = OLD.recruitment_id
@@ -298,7 +333,8 @@ BEGIN
   IF private.is_aggregator_source_value(NEW."sourceName")
      OR private.is_fja_url(NEW."sourceReference")
      OR private.is_fja_url(NEW.original_recruitment_url)
-     OR private.is_fja_url(NEW."originalRecruitmentUrl") THEN
+     OR private.is_fja_url(NEW."originalRecruitmentUrl")
+     OR private.legacy_posting_has_aggregator_origin_for_post(NEW.id) THEN
     UPDATE public.recruitments
     SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
     WHERE id = NEW.recruitment_id
@@ -310,7 +346,7 @@ $fn$;
 
 DROP TRIGGER IF EXISTS trg_propagate_post_discovery_origin ON public.posts;
 CREATE TRIGGER trg_propagate_post_discovery_origin
-AFTER INSERT OR UPDATE OF recruitment_id, "sourceName", "sourceReference", original_recruitment_url, "originalRecruitmentUrl" OR DELETE
+BEFORE INSERT OR UPDATE OF recruitment_id, "sourceName", "sourceReference", original_recruitment_url, "originalRecruitmentUrl" OR DELETE
 ON public.posts
 FOR EACH ROW
 EXECUTE FUNCTION private.propagate_post_discovery_origin();
@@ -318,6 +354,7 @@ EXECUTE FUNCTION private.propagate_post_discovery_origin();
 CREATE OR REPLACE FUNCTION private.propagate_legacy_posting_discovery_origin()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fn$
 BEGIN
@@ -452,6 +489,7 @@ REVOKE ALL ON FUNCTION private.has_complete_issuer_fact_review(jsonb) FROM PUBLI
 REVOKE ALL ON FUNCTION private.is_recruitment_publicly_trusted(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_post_publicly_trusted(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.guard_recruitment_discovery_origin() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.legacy_posting_has_aggregator_origin_for_post(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.propagate_post_discovery_origin() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.propagate_legacy_posting_discovery_origin() FROM PUBLIC, anon, authenticated;
 
