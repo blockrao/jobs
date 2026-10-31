@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     // Unresolved organisations and Hubs without a canonical Post Leaf stay noindex.
     ...pageSeo(`/jobs/${recruitment.slug}`, {
-      index: hasCanonicalPostLeaf && !isUnresolvedOrganization(recruitment.organizationSlug),
+      index: hasCanonicalPostLeaf && recruitment.organizationIdentityMismatch !== true && !isUnresolvedOrganization(recruitment.organizationSlug),
     }),
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
