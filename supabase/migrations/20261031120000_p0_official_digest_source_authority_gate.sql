@@ -249,6 +249,16 @@ BEGIN
     NEW.fact_review_notes := NULL;
   END IF;
 
+  IF TG_OP = 'UPDATE' AND OLD.status = 'PROMOTED' AND NEW.status <> 'PROMOTED' THEN
+    RAISE EXCEPTION 'Promoted official-digest rows are terminal; revoke authority/fact review instead of resetting promotion status';
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+     AND NEW.status = 'PROMOTED'
+     AND OLD.status NOT IN ('PENDING', 'PROMOTED') THEN
+    RAISE EXCEPTION 'Only PENDING official-digest rows can be promoted';
+  END IF;
+
   IF NEW.authority_review_status = 'VERIFIED'
      AND (
        NOT COALESCE((NEW.hub ->> 'official_url') ~* '^https://', false)
