@@ -65,7 +65,7 @@ The listing's previous SQL selected ACTIVE/UPCOMING recruitments with a future o
 
 The query also returned placeholder dates (year >= 2090) as real deadlines, although the shared lifecycle helper treats these as unknown. The page independently calculated days remaining rather than using the central lifecycle resolver.
 
-**Remediation in PR #190:** shared live-post query excludes quarantined records, normalizes sentinel dates to NULL for display and ordering, and the page uses `deriveLifecycle` / `lifecycleLabel`.
+**Remediation in PR #190:** shared live-post query excludes quarantined records, normalizes implausible dates to NULL for display and ordering, and the page uses `deriveLifecycle` / `lifecycleLabel`. The listing heading now says “Current and Upcoming Government Jobs” because UPCOMING records are included.
 
 ### P0 — false-empty listing on query failure
 
