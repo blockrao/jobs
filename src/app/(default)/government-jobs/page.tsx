@@ -42,7 +42,7 @@ function formatCount(value: number) {
 
 function initials(name: string) {
   return name
-    .split(/\\s+/)
+    .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
@@ -279,17 +279,10 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-600 sm:text-sm">
                               <span className="inline-flex items-center gap-1.5">
                                 <span aria-hidden="true" className="text-slate-400">◷</span>
-                                <span className="font-medium text-slate-500">{lifecycle.state === "upcoming" ? "Expected / listed date" : "Application deadline"}:</span>
+                                <span className="font-medium text-slate-500">Application deadline:</span>
                                 <span className={urgent ? "font-bold text-rose-700" : "font-semibold text-slate-800"}>{deadline}</span>
                                 {urgent && <span className="font-semibold text-rose-700">· {lifecycle.daysLeft === 0 ? "Last day" : `${lifecycle.daysLeft} days left`}</span>}
                               </span>
-                              {post.locationStateCode && (
-                                <span className="inline-flex items-center gap-1.5">
-                                  <span aria-hidden="true" className="text-slate-400">⌖</span>
-                                  <span className="font-medium text-slate-500">State code:</span>
-                                  <span className="font-semibold text-slate-800">{post.locationStateCode}</span>
-                                </span>
-                              )}
                             </div>
 
                             <div className="mt-4 flex justify-end">
