@@ -8,6 +8,7 @@ describe("issuer / organisation mismatch publication guard", () => {
   test("Post Leaf metadata becomes noindex for a conflicting organisation", () => {
     const source = read("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx");
     expect(source).toContain("post.organizationIdentityMismatch !== true");
+    expect(source).toContain("indexable={post.organizationIdentityMismatch !== true");
   });
 
   test("Recruitment Hub metadata becomes noindex for a conflicting organisation", () => {
