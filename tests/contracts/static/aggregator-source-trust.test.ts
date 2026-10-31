@@ -184,6 +184,7 @@ describe("aggregator source trust gate", () => {
     expect(query).toContain('r.official_link_source AS "recruitmentOfficialLinkSource"');
     expect(query).toContain('r.source_discovery_origin AS "recruitmentSourceDiscoveryOrigin"');
     expect(query).toContain("sourceOrigin: data.recruitmentSourceDiscoveryOrigin");
+    expect(query).toContain('data.recruitmentSourceDiscoveryOrigin == null && data.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED"');
     expect(query).toContain('r.metadata AS "recruitmentMetadata"');
     expect(query).toContain('post:${data.title}:${field}');
     const transformer = readFileSync("src/db/operations/enrichment-transformer.ts", "utf8");
@@ -211,6 +212,7 @@ describe("aggregator source trust gate", () => {
     const leafComponent = readFileSync("src/components/job-posting/job-detail-page-production.tsx", "utf8");
 
     expect(hubRoute).toContain("publicHubInput(recruitment, posts)");
+    expect(hubRoute).toContain('recruitment.sourceDiscoveryOrigin == null && recruitment.officialLinkSource === "AGGREGATOR_DISCOVERED"');
     expect(hubRoute).toContain("posts: []");
     expect(hubRoute).toContain("index: !safeInput.unverifiedAggregator");
     expect(hubRoute).toContain("hasPostReview(name, \"education\")");
