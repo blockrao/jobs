@@ -318,8 +318,11 @@ describe("aggregator source trust gate", () => {
       "scripts/audits/official-source-provenance-post-migration-check.sql",
       "utf8",
     );
-    expect(migration).toContain("enrichment_data->'meta'->>'source' = 'institutional_aggregation'");
-    expect(postCheck).toContain("institutional_aggregation_without_discovery_origin");
+    expect(migration).toContain("enrichment_data->'meta'->>'source' IN (");
+    expect(migration).toContain("'institutional_aggregation'");
+    expect(migration).toContain("'institution_aggregation'");
+    expect(migration).toContain("'fja_html'");
+    expect(postCheck).toContain("aggregator_extraction_without_discovery_origin");
     expect(postCheck).toContain("uppsc_contamination_without_discovery_origin");
   });
 
