@@ -16,6 +16,8 @@ export type SourceTrustInput = {
   metadata?: unknown;
   legacyPostingSource?: unknown;
   legacyPostingSourceType?: unknown;
+  legacyPostingEnrichmentSource?: unknown;
+  legacyPostingSourceUrl?: unknown;
   legacyPostingSourcePortals?: unknown;
 };
 
@@ -124,6 +126,8 @@ export function isAggregatorDiscoveredSource(input: SourceTrustInput): boolean {
     isAggregatorSourceValue(enrichmentMeta?.source) ||
     isAggregatorSourceValue(input.sourceName) ||
     isAggregatorSourceValue(input.legacyPostingSource) ||
+    isAggregatorSourceValue(input.legacyPostingEnrichmentSource) ||
+    isFjaUrl(input.legacyPostingSourceUrl) ||
     (typeof input.legacyPostingSourceType === "string"
       && input.legacyPostingSourceType.trim().toUpperCase() === "AGGREGATOR") ||
     portals.some(isAggregatorSourceValue) ||
