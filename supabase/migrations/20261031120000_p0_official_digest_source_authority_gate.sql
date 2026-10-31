@@ -331,6 +331,183 @@ EXECUTE FUNCTION public.guard_official_digest_promotion_review();
 
 -- Defence in depth: even alternate writers cannot set an aggregator-discovered
 -- recruitment to VERIFIED without the matching reviewed staging record.
+-- Preserve fact-level provenance in canonical JSONB whenever enrichment is rebuilt.
+-- This function intentionally mirrors the existing aggregation contract while
+-- retaining the source, confidence and verification timestamp for education
+-- and experience facts. The preservation trigger above retains source_provenance.
+CREATE OR REPLACE FUNCTION public.aggregate_enrichment_for_post(p_post_id INT)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SET search_path = public
+AS $aggregate$
+DECLARE
+  v_enrichment jsonb := '{}'::jsonb;
+BEGIN
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'vacancies',
+    (SELECT jsonb_build_object(
+      'total', SUM(pv.total_vacancies)::INT,
+      'categories', jsonb_object_agg(pv.category, pv.total_vacancies::INT)
+        FILTER (WHERE pv.category IS NOT NULL),
+      'location_count', MAX(pv.location_count)::INT,
+      'category_count', MAX(pv.category_count)::INT,
+      'by_location', jsonb_object_agg(pv.location, pv.total_vacancies::INT)
+        FILTER (WHERE pv.location IS NOT NULL)
+    )
+    FROM public.posts_vacancies pv
+    WHERE pv.post_id = p_post_id)
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'education',
+    COALESCE(
+      (SELECT jsonb_agg(jsonb_build_object(
+        'fact_id', pe.id,
+        'degree', pe.degree,
+        'subject', pe.subject,
+        'specialization', pe.specialization,
+        'minimum_percentage', pe.minimum_percentage,
+        'minimum_marks', pe.minimum_marks,
+        'source', pe.source,
+        'confidence_score', pe.confidence_score,
+        'extracted_at', pe.extracted_at,
+        'verified_at', pe.verified_at,
+        'source_ref', pe.source_ref,
+        'source_locator', pe.source_locator
+      ) ORDER BY pe.id)
+      FROM public.posts_education pe
+      WHERE pe.post_id = p_post_id),
+      '[]'::jsonb
+    )
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'experience',
+    COALESCE(
+      (SELECT jsonb_agg(jsonb_build_object(
+        'fact_id', pex.id,
+        'total_years', pex.total_years,
+        'min_years', pex.min_years,
+        'type', pex.experience_type,
+        'experience_type', pex.experience_type,
+        'source', pex.source,
+        'confidence_score', pex.confidence_score,
+        'extracted_at', pex.extracted_at,
+        'verified_at', pex.verified_at,
+        'source_ref', pex.source_ref,
+        'source_locator', pex.source_locator
+      ) ORDER BY pex.id)
+      FROM public.posts_experience pex
+      WHERE pex.post_id = p_post_id),
+      '[]'::jsonb
+    )
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'selection_process',
+    COALESCE(
+      (SELECT jsonb_agg(jsonb_build_object(
+        'step', psp.id,
+        'name', psp.stage_name,
+        'description', psp.description,
+        'marks', psp.marks,
+        'duration', psp.duration,
+        'mode', psp.mode
+      ) ORDER BY psp.id)
+      FROM public.posts_selection_process psp
+      WHERE psp.post_id = p_post_id),
+      '[]'::jsonb
+    )
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'documents',
+    COALESCE(
+      (SELECT jsonb_agg(jsonb_build_object(
+        'name', pd.document_name,
+        'category', pd.document_category,
+        'required', pd.is_required,
+        'required_for_categories', pd.required_for_categories
+      ) ORDER BY pd.id)
+      FROM public.posts_documents pd
+      WHERE pd.post_id = p_post_id),
+      '[]'::jsonb
+    )
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'important_dates',
+    COALESCE(
+      (SELECT jsonb_agg(jsonb_build_object(
+        'label', pid.date_type,
+        'description', pid.description
+      ) ORDER BY pid.id)
+      FROM public.posts_important_dates pid
+      WHERE pid.post_id = p_post_id),
+      '[]'::jsonb
+    )
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'age_rules',
+    (SELECT jsonb_object_agg(par.category, jsonb_build_object(
+      'max', par.max_age,
+      'relaxation_years', par.relaxation_years,
+      'rule_type', par.rule_type,
+      'condition', par.condition_text
+    ))
+    FROM public.post_age_rules par
+    WHERE par.post_id = p_post_id)
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'application_fees',
+    (SELECT jsonb_object_agg(paf.category, jsonb_build_object(
+      'amount', paf.amount,
+      'currency_code', paf.currency_code,
+      'payment_mode', paf.payment_mode,
+      'note', paf.note
+    ))
+    FROM public.posts_application_fee paf
+    WHERE paf.post_id = p_post_id)
+  );
+
+  v_enrichment := v_enrichment || jsonb_build_object(
+    'official_links',
+    COALESCE(
+      (SELECT jsonb_agg(jsonb_build_object(
+        'type', pol.link_type,
+        'label', pol.label,
+        'url', pol.url,
+        'is_official', pol.is_official
+      ) ORDER BY pol.id)
+      FROM public.posts_official_links pol
+      WHERE pol.post_id = p_post_id),
+      '[]'::jsonb
+    )
+  );
+
+  v_enrichment := CASE
+    WHEN v_enrichment -> 'vacancies' IS NULL THEN v_enrichment || '{"vacancies": {}}'::jsonb
+    ELSE v_enrichment
+  END;
+
+  v_enrichment := CASE
+    WHEN v_enrichment -> 'age_rules' IS NULL THEN v_enrichment || '{"age_rules": {}}'::jsonb
+    ELSE v_enrichment
+  END;
+
+  v_enrichment := CASE
+    WHEN v_enrichment -> 'application_fees' IS NULL THEN v_enrichment || '{"application_fees": {}}'::jsonb
+    ELSE v_enrichment
+  END;
+
+  RETURN v_enrichment;
+END;
+$aggregate$;
+
+
 CREATE OR REPLACE FUNCTION public.guard_aggregator_discovered_recruitment_verification()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -840,182 +1017,6 @@ AFTER UPDATE OF
 ON public.official_digest_promote
 FOR EACH ROW
 EXECUTE FUNCTION public.sync_promoted_digest_review_state();
-
--- Preserve fact-level provenance in canonical JSONB whenever enrichment is rebuilt.
--- This function intentionally mirrors the existing aggregation contract while
--- retaining the source, confidence and verification timestamp for education
--- and experience facts. The preservation trigger above retains source_provenance.
-CREATE OR REPLACE FUNCTION public.aggregate_enrichment_for_post(p_post_id INT)
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SET search_path = public
-AS $aggregate$
-DECLARE
-  v_enrichment jsonb := '{}'::jsonb;
-BEGIN
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'vacancies',
-    (SELECT jsonb_build_object(
-      'total', SUM(pv.total_vacancies)::INT,
-      'categories', jsonb_object_agg(pv.category, pv.total_vacancies::INT)
-        FILTER (WHERE pv.category IS NOT NULL),
-      'location_count', MAX(pv.location_count)::INT,
-      'category_count', MAX(pv.category_count)::INT,
-      'by_location', jsonb_object_agg(pv.location, pv.total_vacancies::INT)
-        FILTER (WHERE pv.location IS NOT NULL)
-    )
-    FROM public.posts_vacancies pv
-    WHERE pv.post_id = p_post_id)
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'education',
-    COALESCE(
-      (SELECT jsonb_agg(jsonb_build_object(
-        'fact_id', pe.id,
-        'degree', pe.degree,
-        'subject', pe.subject,
-        'specialization', pe.specialization,
-        'minimum_percentage', pe.minimum_percentage,
-        'minimum_marks', pe.minimum_marks,
-        'source', pe.source,
-        'confidence_score', pe.confidence_score,
-        'extracted_at', pe.extracted_at,
-        'verified_at', pe.verified_at,
-        'source_ref', pe.source_ref,
-        'source_locator', pe.source_locator
-      ) ORDER BY pe.id)
-      FROM public.posts_education pe
-      WHERE pe.post_id = p_post_id),
-      '[]'::jsonb
-    )
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'experience',
-    COALESCE(
-      (SELECT jsonb_agg(jsonb_build_object(
-        'fact_id', pex.id,
-        'total_years', pex.total_years,
-        'min_years', pex.min_years,
-        'type', pex.experience_type,
-        'experience_type', pex.experience_type,
-        'source', pex.source,
-        'confidence_score', pex.confidence_score,
-        'extracted_at', pex.extracted_at,
-        'verified_at', pex.verified_at,
-        'source_ref', pex.source_ref,
-        'source_locator', pex.source_locator
-      ) ORDER BY pex.id)
-      FROM public.posts_experience pex
-      WHERE pex.post_id = p_post_id),
-      '[]'::jsonb
-    )
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'selection_process',
-    COALESCE(
-      (SELECT jsonb_agg(jsonb_build_object(
-        'step', psp.id,
-        'name', psp.stage_name,
-        'description', psp.description,
-        'marks', psp.marks,
-        'duration', psp.duration,
-        'mode', psp.mode
-      ) ORDER BY psp.id)
-      FROM public.posts_selection_process psp
-      WHERE psp.post_id = p_post_id),
-      '[]'::jsonb
-    )
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'documents',
-    COALESCE(
-      (SELECT jsonb_agg(jsonb_build_object(
-        'name', pd.document_name,
-        'category', pd.document_category,
-        'required', pd.is_required,
-        'required_for_categories', pd.required_for_categories
-      ) ORDER BY pd.id)
-      FROM public.posts_documents pd
-      WHERE pd.post_id = p_post_id),
-      '[]'::jsonb
-    )
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'important_dates',
-    COALESCE(
-      (SELECT jsonb_agg(jsonb_build_object(
-        'label', pid.date_type,
-        'description', pid.description
-      ) ORDER BY pid.id)
-      FROM public.posts_important_dates pid
-      WHERE pid.post_id = p_post_id),
-      '[]'::jsonb
-    )
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'age_rules',
-    (SELECT jsonb_object_agg(par.category, jsonb_build_object(
-      'max', par.max_age,
-      'relaxation_years', par.relaxation_years,
-      'rule_type', par.rule_type,
-      'condition', par.condition_text
-    ))
-    FROM public.post_age_rules par
-    WHERE par.post_id = p_post_id)
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'application_fees',
-    (SELECT jsonb_object_agg(paf.category, jsonb_build_object(
-      'amount', paf.amount,
-      'currency_code', paf.currency_code,
-      'payment_mode', paf.payment_mode,
-      'note', paf.note
-    ))
-    FROM public.posts_application_fee paf
-    WHERE paf.post_id = p_post_id)
-  );
-
-  v_enrichment := v_enrichment || jsonb_build_object(
-    'official_links',
-    COALESCE(
-      (SELECT jsonb_agg(jsonb_build_object(
-        'type', pol.link_type,
-        'label', pol.label,
-        'url', pol.url,
-        'is_official', pol.is_official
-      ) ORDER BY pol.id)
-      FROM public.posts_official_links pol
-      WHERE pol.post_id = p_post_id),
-      '[]'::jsonb
-    )
-  );
-
-  v_enrichment := CASE
-    WHEN v_enrichment -> 'vacancies' IS NULL THEN v_enrichment || '{"vacancies": {}}'::jsonb
-    ELSE v_enrichment
-  END;
-
-  v_enrichment := CASE
-    WHEN v_enrichment -> 'age_rules' IS NULL THEN v_enrichment || '{"age_rules": {}}'::jsonb
-    ELSE v_enrichment
-  END;
-
-  v_enrichment := CASE
-    WHEN v_enrichment -> 'application_fees' IS NULL THEN v_enrichment || '{"application_fees": {}}'::jsonb
-    ELSE v_enrichment
-  END;
-
-  RETURN v_enrichment;
-END;
-$aggregate$;
 
 -- Backfill only education/experience arrays from their canonical child tables.
 -- Preserve all other JSONB fields, including source_provenance.
