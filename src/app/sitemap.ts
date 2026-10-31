@@ -29,7 +29,7 @@ import { STATES } from "@/lib/states/states";
 // configured runtime connection and never publishes a partial build-time snapshot.
 export const dynamic = "force-dynamic";
 
-type HubRow = { slug: string; status: string; application_end_date: Date | string | null; updated_at: Date | string | null; recruitment_name: string; organisation_name: string; institution_name: string | null; enrichment_source: string | null };
+type HubRow = { slug: string; status: string; application_end_date: Date | string | null; updated_at: Date | string | null; recruitment_name: string; organisation_name: string | null; institution_name: string | null; enrichment_source: string | null };
 type LeafRow = HubRow & { post_slug: string; post_updated_at: Date | string | null };
 
 function toDate(v: Date | string | null | undefined): Date {
