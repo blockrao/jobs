@@ -321,8 +321,10 @@ describe("aggregator source trust gate", () => {
   it("keeps source verification independent from application deadline availability", () => {
     const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     const postQueries = readFileSync("src/db/operations/get-posts.ts", "utf8");
+    const relatedQueries = readFileSync("src/db/operations/get-related-posts.ts", "utf8");
     expect(recruitmentQueries).not.toContain("AND r.application_end_date IS NOT NULL");
     expect(postQueries).not.toContain("AND r.application_end_date IS NOT NULL");
+    expect(relatedQueries).not.toContain("AND r.application_end_date IS NOT NULL");
     expect(recruitmentQueries).toContain("r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'");
     expect(postQueries).toContain("r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'");
   });
