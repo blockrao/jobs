@@ -83,13 +83,6 @@ interface JobDetailPageProps {
     ageRules?: Array<{ category: string; maxAge?: number; relaxationYears?: number; ruleType: string; note?: string }>;
     applicationFees?: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string }>;
     officialLinks?: Array<{ type?: string; url?: string; title?: string; source?: string }>;
-    fjaExtract?: {
-      qualificationRaw?: string | null;
-      experienceRaw?: string | null;
-      advertisementNumber?: string | null;
-      ageRaw?: string | null;
-      salaryRaw?: string | null;
-    };
   };
   relatedJobs?: Array<{ id: string; title: string; slug: string; recruitmentSlug: string; applicationDeadline?: Date | string | null }>;
   relatedByOrg?: RelatedPost[];
