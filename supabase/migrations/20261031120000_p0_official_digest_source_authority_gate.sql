@@ -9,8 +9,11 @@ ALTER TABLE public.recruitments
 
 UPDATE public.recruitments
 SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-WHERE official_link_source = 'AGGREGATOR_DISCOVERED'
-  AND source_discovery_origin IS NULL;
+WHERE source_discovery_origin IS NULL
+  AND (
+    official_link_source = 'AGGREGATOR_DISCOVERED'
+    OR enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+  );
 
 CREATE INDEX IF NOT EXISTS idx_recruitments_source_discovery_origin
   ON public.recruitments(source_discovery_origin)
