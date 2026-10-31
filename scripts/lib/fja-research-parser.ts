@@ -247,7 +247,7 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
       if (!label || !value || headerLikeValue) continue;
       for (const [field, re] of Object.entries(LABELS)) {
         if (!re.test(label) || facts[field]) continue;
-        if (field === "vacancies" && (!/\d/.test(value) || /does not print a number|not stated|not specified|to be occurred|panel preparation/i.test(value))) {
+        if (field === "vacancies" && !/\d/.test(value)) {
           unparsedVacancyValues.push({ label, value });
           continue;
         }
