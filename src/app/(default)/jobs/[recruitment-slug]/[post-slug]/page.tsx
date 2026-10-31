@@ -272,12 +272,16 @@ export default async function JobDetailPage({ params }: Props) {
           isExempted: f.isExempted,
           exemptionCategory: f.exemptionCategory,
         })) : [],
-        officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
-          type: l.type,
-          url: l.url,
-          title: l.title,
-          source: l.source,
-        })) : [],
+        officialLinks: Array.isArray(enrichment?.officialLinks)
+          ? enrichment.officialLinks
+              .map((l: any) => ({
+                type: stripAggregatorData(l.type),
+                url: publicLink(l.url),
+                title: stripAggregatorData(l.title),
+                source: stripAggregatorData(l.source),
+              }))
+              .filter((l: any) => !!l.url && !!l.title)
+          : [],
       }}
       relatedByOrg={relatedPosts.byOrganization.map((p) => ({
         title: p.title,
