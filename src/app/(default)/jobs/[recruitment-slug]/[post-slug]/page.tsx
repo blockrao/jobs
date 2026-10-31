@@ -43,7 +43,7 @@ interface Props {
  */
 function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
   const unverifiedAggregator = isUnverifiedAggregatorSource(
-    post.recruitmentOfficialLinkSource,
+    post.recruitmentSourceDiscoveryOrigin,
     post.recruitmentVerificationStatus,
     post.recruitmentMetadata,
   );
@@ -209,11 +209,12 @@ export default async function JobDetailPage({ params }: Props) {
         recruitmentSlug: post.recruitmentSlug,
         recruitmentName: post.recruitmentName,
         slug: post.slug,
-        postedAt: post.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED" ? null : post.postedAt,
+        postedAt: post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" ? null : post.postedAt,
         updatedAt: post.updatedAt,
         notificationPublicationDate: unverifiedAggregator ? null : post.notificationPublicationDate,
         officialSourceUrl: unverifiedAggregator ? null : post.officialSourceUrl,
-        applyUrl: unverifiedAggregator ? null : (post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl),
+        officialLinkSource: post.recruitmentOfficialLinkSource ?? null,
+        applyUrl: unverifiedAggregator ? null : (post.applyPortalUrl || post.recruitmentOfficialApplicationUrl),
         employmentType: unverifiedAggregator ? null : (post.employmentType ?? null),
         qualificationText: unverifiedAggregator ? null : (
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw
