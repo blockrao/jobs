@@ -387,12 +387,35 @@ BEGIN
     'vacancies',
     (SELECT jsonb_build_object(
       'total', SUM(pv.total_vacancies)::INT,
-      'categories', jsonb_object_agg(pv.category, pv.total_vacancies::INT)
-        FILTER (WHERE pv.category IS NOT NULL),
+      'categories', COALESCE(
+        jsonb_object_agg(pv.category, pv.total_vacancies::INT)
+          FILTER (WHERE pv.category IS NOT NULL),
+        '{}'::jsonb
+      ),
       'location_count', MAX(pv.location_count)::INT,
       'category_count', MAX(pv.category_count)::INT,
-      'by_location', jsonb_object_agg(pv.location, pv.total_vacancies::INT)
-        FILTER (WHERE pv.location IS NOT NULL)
+      'by_location', COALESCE(
+        jsonb_object_agg(pv.location, pv.total_vacancies::INT)
+          FILTER (WHERE pv.location IS NOT NULL),
+        '{}'::jsonb
+      ),
+      'rows', COALESCE(
+        jsonb_agg(jsonb_build_object(
+          'fact_id', pv.id,
+          'category', pv.category,
+          'total_vacancies', pv.total_vacancies,
+          'location', pv.location,
+          'state', pv.state,
+          'location_count', pv.location_count,
+          'category_count', pv.category_count,
+          'source', pv.source,
+          'extracted_at', pv.extracted_at,
+          'verified_at', pv.verified_at,
+          'source_ref', pv.source_ref,
+          'source_locator', pv.source_locator
+        ) ORDER BY pv.id),
+        '[]'::jsonb
+      )
     )
     FROM public.posts_vacancies pv
     WHERE pv.post_id = p_post_id)
@@ -447,13 +470,22 @@ BEGIN
     'selection_process',
     COALESCE(
       (SELECT jsonb_agg(jsonb_build_object(
-        'step', psp.id,
+        'fact_id', psp.id,
+        'step', psp.stage_order,
         'name', psp.stage_name,
-        'description', psp.description,
-        'marks', psp.marks,
-        'duration', psp.duration,
-        'mode', psp.mode
-      ) ORDER BY psp.id)
+        'scheduled_date', psp.scheduled_date,
+        'duration_minutes', psp.duration_minutes,
+        'total_marks', psp.total_marks,
+        'minimum_marks', psp.minimum_marks,
+        'passing_marks', psp.passing_marks,
+        'mode', psp.mode,
+        'is_qualifying', psp.is_qualifying,
+        'source', psp.source,
+        'extracted_at', psp.extracted_at,
+        'verified_at', psp.verified_at,
+        'source_ref', psp.source_ref,
+        'source_locator', psp.source_locator
+      ) ORDER BY psp.stage_order NULLS LAST, psp.id)
       FROM public.posts_selection_process psp
       WHERE psp.post_id = p_post_id),
       '[]'::jsonb
@@ -464,10 +496,16 @@ BEGIN
     'documents',
     COALESCE(
       (SELECT jsonb_agg(jsonb_build_object(
+        'fact_id', pd.id,
         'name', pd.document_name,
         'category', pd.document_category,
         'required', pd.is_required,
-        'required_for_categories', pd.required_for_categories
+        'required_for_categories', pd.required_for_categories,
+        'source', pd.source,
+        'extracted_at', pd.extracted_at,
+        'verified_at', pd.verified_at,
+        'source_ref', pd.source_ref,
+        'source_locator', pd.source_locator
       ) ORDER BY pd.id)
       FROM public.posts_documents pd
       WHERE pd.post_id = p_post_id),
@@ -479,8 +517,15 @@ BEGIN
     'important_dates',
     COALESCE(
       (SELECT jsonb_agg(jsonb_build_object(
+        'fact_id', pid.id,
         'label', pid.date_type,
-        'description', pid.description
+        'date', pid.date_value,
+        'notes', pid.notes,
+        'source', pid.source,
+        'extracted_at', pid.extracted_at,
+        'verified_at', pid.verified_at,
+        'source_ref', pid.source_ref,
+        'source_locator', pid.source_locator
       ) ORDER BY pid.id)
       FROM public.posts_important_dates pid
       WHERE pid.post_id = p_post_id),
@@ -490,36 +535,60 @@ BEGIN
 
   v_enrichment := v_enrichment || jsonb_build_object(
     'age_rules',
-    (SELECT jsonb_object_agg(par.category, jsonb_build_object(
-      'max', par.max_age,
-      'relaxation_years', par.relaxation_years,
-      'rule_type', par.rule_type,
-      'condition', par.condition_text
-    ))
-    FROM public.post_age_rules par
-    WHERE par.post_id = p_post_id)
+    COALESCE(
+      (SELECT jsonb_object_agg(par.category, jsonb_build_object(
+        'fact_id', par.id,
+        'max', par.max_age,
+        'relaxation_years', par.relaxation_years,
+        'note', par.note,
+        'rule_type', par.rule_type,
+        'condition_text', par.condition_text,
+        'source', par.source,
+        'extracted_at', par.extracted_at,
+        'verified_at', par.verified_at,
+        'source_ref', par.source_ref,
+        'source_locator', par.source_locator
+      ))
+      FROM public.post_age_rules par
+      WHERE par.post_id = p_post_id),
+      '{}'::jsonb
+    )
   );
 
   v_enrichment := v_enrichment || jsonb_build_object(
     'application_fees',
-    (SELECT jsonb_object_agg(paf.category, jsonb_build_object(
-      'amount', paf.amount,
-      'currency_code', paf.currency_code,
-      'payment_mode', paf.payment_mode,
-      'note', paf.note
-    ))
-    FROM public.posts_application_fee paf
-    WHERE paf.post_id = p_post_id)
+    COALESCE(
+      (SELECT jsonb_object_agg(paf.category, jsonb_build_object(
+        'fact_id', paf.id,
+        'amount', paf.fee_amount,
+        'currency', paf.fee_currency,
+        'waived_for', paf.fee_waived_for,
+        'payment_methods', paf.payment_methods,
+        'source', paf.source,
+        'extracted_at', paf.extracted_at,
+        'verified_at', paf.verified_at,
+        'source_ref', paf.source_ref,
+        'source_locator', paf.source_locator
+      ))
+      FROM public.posts_application_fee paf
+      WHERE paf.post_id = p_post_id),
+      '{}'::jsonb
+    )
   );
 
   v_enrichment := v_enrichment || jsonb_build_object(
     'official_links',
     COALESCE(
       (SELECT jsonb_agg(jsonb_build_object(
+        'fact_id', pol.id,
         'type', pol.link_type,
-        'label', pol.label,
-        'url', pol.url,
-        'is_official', pol.is_official
+        'title', pol.link_label,
+        'url', pol.link_url,
+        'source', pol.source,
+        'extracted_at', pol.extracted_at,
+        'verified_at', pol.verified_at,
+        'source_ref', pol.source_ref,
+        'source_locator', pol.source_locator
       ) ORDER BY pol.id)
       FROM public.posts_official_links pol
       WHERE pol.post_id = p_post_id),
@@ -527,25 +596,9 @@ BEGIN
     )
   );
 
-  v_enrichment := CASE
-    WHEN v_enrichment -> 'vacancies' IS NULL THEN v_enrichment || '{"vacancies": {}}'::jsonb
-    ELSE v_enrichment
-  END;
-
-  v_enrichment := CASE
-    WHEN v_enrichment -> 'age_rules' IS NULL THEN v_enrichment || '{"age_rules": {}}'::jsonb
-    ELSE v_enrichment
-  END;
-
-  v_enrichment := CASE
-    WHEN v_enrichment -> 'application_fees' IS NULL THEN v_enrichment || '{"application_fees": {}}'::jsonb
-    ELSE v_enrichment
-  END;
-
   RETURN v_enrichment;
 END;
 $aggregate$;
-
 
 CREATE OR REPLACE FUNCTION public.guard_aggregator_discovered_recruitment_verification()
 RETURNS trigger
