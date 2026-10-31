@@ -36,7 +36,7 @@ export async function getPostingBySlug(slug: string) {
   if (!hasDb()) return null;
   const db = getDb();
   const posting = await db.query.postings.findFirst({
-    where: and(eq(postings.slug, slug), or(eq(postings.reviewStatus, "APPROVED"), eq(postings.reviewStatus, "PENDING"))),
+    where: and(eq(postings.slug, slug), or(eq(postings.reviewStatus, "APPROVED"), eq(postings.reviewStatus, "PENDING")), sourceTrustedPosting),
     with: {
       organization: true,
       exam: true,
@@ -124,6 +124,37 @@ export async function getPostingBySlug(slug: string) {
  */
 const notPastLastDate = sql`(${postings.validThrough} IS NULL OR ${postings.validThrough} >= now()::date)`;
 
+// Legacy Posting rows are never independently canonical. They are visible only
+// when both persisted Recruitment/Post relationships resolve to trusted entities.
+const sourceTrustedPosting = sql`
+  private.is_recruitment_publicly_trusted(
+    COALESCE(
+      ${postings.inferredRecruitmentId},
+      (SELECT p.recruitment_id FROM public.posts p WHERE p.id = ${postings.inferredPostId})
+    )
+  )
+  AND (
+    ${postings.inferredPostId} IS NULL
+    OR private.is_post_publicly_trusted(${postings.inferredPostId})
+  )
+`;
+
+const sourceTrustedPostingLink = sql`
+  EXISTS (
+    SELECT 1
+    FROM public.postings sp
+    LEFT JOIN public.posts linked_post ON linked_post.id = sp.inferred_post_id
+    WHERE sp.id = ${postingCategories.postingId}
+      AND private.is_recruitment_publicly_trusted(
+        COALESCE(sp.inferred_recruitment_id, linked_post.recruitment_id)
+      )
+      AND (
+        sp.inferred_post_id IS NULL
+        OR private.is_post_publicly_trusted(sp.inferred_post_id)
+      )
+  )
+`;
+
 export async function listPostings(opts?: {
   kind?: "GOVERNMENT" | "PRIVATE";
   categorySlug?: string;
@@ -140,7 +171,7 @@ export async function listPostings(opts?: {
 
   // `is_expired` is maintained by refresh_recruitment_lifecycle(). Search already honours it; the
   // listing must too, or an expired opening stays on /jobs and the home page after its last date.
-  const conditions: (SQL | undefined)[] = [inArray(postings.reviewStatus, ["APPROVED", "PENDING"]), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
+  const conditions: (SQL | undefined)[] = [inArray(postings.reviewStatus, ["APPROVED", "PENDING"]), sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate, sourceTrustedPosting];
   if (opts?.kind) conditions.push(eq(postings.kind, opts.kind));
   if (opts?.search) {
     conditions.push(
@@ -190,7 +221,7 @@ export function isPastLastDate(validThrough: Date | string | null | undefined, n
 }
 
 /** Entity pages (organization, category, exam, commission) list current postings only (A-067 principle). */
-const currentOnly = [sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate];
+const currentOnly = [sql`${postings.isExpired} IS NOT TRUE`, notPastLastDate, sourceTrustedPosting];
 
 export async function getOrganizationBySlug(slug: string) {
   if (!hasDb()) return null;
@@ -227,7 +258,7 @@ export async function getCategoryBySlug(slug: string) {
   // PERF-002: Fetch posting and article links in parallel instead of sequentially
   const [postingLinks, articleLinks] = await Promise.all([
     db.query.postingCategories.findMany({
-      where: eq(postingCategories.categoryId, category.id),
+      where: and(eq(postingCategories.categoryId, category.id), sourceTrustedPostingLink),
       with: { posting: { with: { organization: true } } },
     }),
     db.query.articleCategories.findMany({
@@ -292,6 +323,7 @@ const liveGovRecruitment = sql`
   ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
   AND r.slug IS NOT NULL
   AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+  AND private.is_recruitment_publicly_trusted(r.id)
   AND o.slug <> 'unclassified-government-jobs'
 `;
 
@@ -449,6 +481,7 @@ export async function getHomeStats(): Promise<HomeStats> {
           AND r2.official_notification_url ~ '^https?://'
           AND r2.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
           AND r2.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND private.is_recruitment_publicly_trusted(r2.id)
           AND o2.slug <> 'unclassified-government-jobs'
       ) AS total_vacancies,
       COUNT(DISTINCT r.id)::int AS live_recruitments
@@ -726,7 +759,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
   // Resolve the recruitment first — inferred type includes { organization, exam, selectionProcesses, fees }
   // Note: feeNote, ageNote, selectionProcess are text fields on the recruitments table and are automatically selected
   const recruitmentData = await db.query.recruitments.findFirst({
-    where: eq(recruitments.slug, recruitmentSlug),
+    where: and(eq(recruitments.slug, recruitmentSlug), sql`private.is_recruitment_publicly_trusted(${recruitments.id})`),
     with: { organization: true, exam: true, selectionProcesses: true, fees: true },
   }).catch((err: unknown) => {
     console.error("[getPostBySlug] recruitments query threw", {
@@ -817,7 +850,7 @@ export async function getPostsForRecruitment(recruitmentId: number) {
   if (!hasDb()) return [];
   const db = getDb();
   return db.query.posts.findMany({
-    where: eq(posts.recruitmentId, recruitmentId),
+    where: and(eq(posts.recruitmentId, recruitmentId), sql`private.is_recruitment_publicly_trusted(${recruitments.id})`),
     with: {
       position: true,
       ageRules: true,
@@ -861,7 +894,7 @@ export async function getPostSlugsForSitemap() {
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
     // All posts are included in sitemap; consumer protection via frontend labels.
-    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL`)
+    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL AND private.is_recruitment_publicly_trusted(${recruitments.id})`)
     .orderBy(posts.id);
   return rows;
 }
@@ -878,6 +911,7 @@ export async function getRecruitmentSlugsForSitemap() {
     FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
     WHERE r.slug IS NOT NULL
+      AND private.is_recruitment_publicly_trusted(r.id)
     ORDER BY r.id
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
@@ -1019,6 +1053,7 @@ export async function getJobsControlCenter(): Promise<{
       FROM public.recruitments r
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
     `),
 
     // Deadline buckets (exclude expired)
@@ -1037,6 +1072,7 @@ export async function getJobsControlCenter(): Promise<{
       FROM public.recruitments r
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY 1
       ORDER BY MIN(r.application_end_date) NULLS LAST
@@ -1054,6 +1090,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.recruitments r ON r.organization_id = o.id
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
       GROUP BY o.id, o.name, o.slug
       ORDER BY vacancies DESC NULLS LAST
       LIMIT 12
@@ -1078,6 +1115,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.organizations o ON o.id = r.organization_id
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY r.id, o.name
       ORDER BY r.application_end_date ASC NULLS LAST
@@ -1094,6 +1132,7 @@ export async function getJobsControlCenter(): Promise<{
       FROM public.posts po
       JOIN public.recruitments r ON r.id = po.recruitment_id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY po.name
       ORDER BY total_vacancies DESC NULLS LAST
@@ -1201,6 +1240,7 @@ export async function getHomepageStats(): Promise<{
       FROM public.recruitments r
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
     `),
     db.execute(sql`
       SELECT
@@ -1213,6 +1253,7 @@ export async function getHomepageStats(): Promise<{
       JOIN public.organizations o ON o.id = r.organization_id
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
+        AND private.is_recruitment_publicly_trusted(r.id)
         AND r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '10 days'
       GROUP BY r.id, r.slug, r.name, r.application_end_date, r.total_vacancies, o.name
       ORDER BY r.application_end_date ASC
@@ -1512,8 +1553,11 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
       e."interviewScheduleDate",
       e."parsed_skills" as "parsedSkills"
     FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
+      AND private.is_recruitment_publicly_trusted(r.id)
+      AND private.is_recruitment_publicly_trusted(r.id)
     ORDER BY
       CASE WHEN e.post_id IS NOT NULL THEN 0 ELSE 1 END ASC,
       e."extractionConfidence" DESC NULLS LAST,
@@ -1597,7 +1641,11 @@ export async function getPostsCount() {
 
   const db = getDb();
   const result = await db.execute<{ count: number }>(sql`
-    SELECT COUNT(*)::int as count FROM posts WHERE "isLive" = true
+    SELECT COUNT(*)::int as count
+    FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE p."isLive" = true
+      AND private.is_recruitment_publicly_trusted(r.id)
   `);
 
   return (result?.[0]?.count) || 0;
@@ -1630,8 +1678,10 @@ export async function getEnrichmentStats() {
       COUNT(CASE WHEN e.post_id IS NULL THEN 1 END)::int as "notEnriched",
       COALESCE(ROUND(AVG(CASE WHEN e."extractionConfidence" IS NOT NULL THEN e."extractionConfidence" ELSE 0 END))::int, 0) as "avgConfidence"
     FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
+      AND private.is_recruitment_publicly_trusted(r.id)
   `);
 
   const stats = result?.[0];
@@ -1754,6 +1804,7 @@ export async function listPostsEnhanced(opts?: {
       LEFT JOIN public.post_enrichments e ON p.id = e.post_id
       LEFT JOIN public.recruitments r ON p."recruitmentId" = r.id
       WHERE p."isLive" = true
+        AND private.is_recruitment_publicly_trusted(r.id)
         ${stateCode ? sql`AND r."locationStateCode" = ${stateCode}` : sql``}
         ${opts?.employment ? sql`AND LOWER(r."employmentType") = LOWER(${opts.employment})` : sql``}
         ${salaryMinPaise !== null ? sql`AND e."salaryMax" >= ${salaryMinPaise}` : sql``}
