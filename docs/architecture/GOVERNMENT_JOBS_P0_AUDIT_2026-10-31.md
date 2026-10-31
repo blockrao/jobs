@@ -60,7 +60,7 @@ The query also returned placeholder dates (year >= 2090) as real deadlines, alth
 
 The page wrapped its listing and sector-count queries in `safeQuery` with empty fallbacks. A database error could therefore look like a legitimate zero-result page.
 
-**Remediation in PR #190:** query failures propagate to the route error boundary rather than being converted into empty inventory data.
+**Remediation in PR #190:** query failures propagate to the route error boundary rather than being converted into empty inventory data; missing DATABASE_URL is also a hard error on this indexable page rather than a fabricated zero-result state.
 
 ### P0 — official-link provenance misrepresentation
 
