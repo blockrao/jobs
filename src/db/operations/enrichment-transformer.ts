@@ -281,7 +281,7 @@ export function transformEnrichment(
     enrichment.requiredDocuments = verifiedDocuments.map((doc: any) => ({
       name: doc.name || doc.document_name || '',
       category: doc.category || doc.document_category,
-      required: doc.required !== false && doc.is_required !== false,
+      required: doc.required ?? doc.is_required ?? null,
     }));
 
     // ─────────────────────────────────────────────────────────────────
