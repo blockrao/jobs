@@ -2,7 +2,7 @@ import { cache } from "react";
 import { stripAggregatorData } from "@/lib/aggregators";
 import { getDb } from "../index";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 // Recruitments quarantined by the data-integrity process are not public pages.
 // (verification_status is a live DB column not yet mirrored in the Drizzle schema.)
@@ -59,7 +59,14 @@ export async function getRecruitmentPosts(recruitmentId: number) {
     })
     .from(posts)
     .innerJoin(positions, eq(posts.positionId, positions.id))
-    .leftJoin(eligibilities, eq(posts.id, eligibilities.postId))
+    .leftJoin(eligibilities, and(
+      eq(posts.id, eligibilities.postId),
+      eq(eligibilities.status, "VERIFIED"),
+      eq(eligibilities.sourceType, "OFFICIAL_NOTIFICATION"),
+      isNotNull(eligibilities.verifiedAt),
+      isNotNull(eligibilities.sourceRef),
+      isNotNull(eligibilities.sourceLocator),
+    ))
     .where(eq(posts.recruitmentId, recruitmentId));
 
   // Group by post ID since there can be multiple eligibilities per post
@@ -331,7 +338,14 @@ export async function getRecruitmentWithPosts(slug: string) {
         const result = await db
           .select()
           .from(eligibilities)
-          .where(inArray(eligibilities.postId, postIds));
+          .where(and(
+            inArray(eligibilities.postId, postIds),
+            eq(eligibilities.status, "VERIFIED"),
+            eq(eligibilities.sourceType, "OFFICIAL_NOTIFICATION"),
+            isNotNull(eligibilities.verifiedAt),
+            isNotNull(eligibilities.sourceRef),
+            isNotNull(eligibilities.sourceLocator),
+          ));
         console.log(`[getRecruitmentWithPosts] Eligibilities fetch complete: ${result.length} records`);
         return result;
       })(),
