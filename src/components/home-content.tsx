@@ -161,7 +161,7 @@ export function HomeContent({
               <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "सक्रिय अधिसूचनाएं" : "live notifications"}</span>
             </Link>
             <Link href="/categories" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
-              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{FEATURED_SECTORS.length</span>
+              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{FEATURED_SECTORS.length}</span>
               <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "श्रेणियां · UPSC व SSC" : "sectors · UPSC & SSC hubs"}</span>
             </Link>
           </div>
