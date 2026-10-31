@@ -93,9 +93,292 @@ WHERE
     AND p.enrichment->>'sourceVerificationStatus'
       IS DISTINCT FROM pe."sourceVerificationStatus")
   OR
-  (p.enrichment ? 'extractionConfidence'
-    AND p.enrichment->>'extractionConfidence'
-      IS DISTINCT FROM pe."extractionConfidence")
+  (
+    p.enrichment->>'extractionConfidence' ~ '^-?[0-9]+
+ORDER BY p.id;
+
+-- ---------------------------------------------------------------------------
+-- 4. Vacancy total comparison: JSONB vs post_enrichments
+-- ---------------------------------------------------------------------------
+WITH compared AS (
+  SELECT
+    p.id AS post_id,
+    p.slug,
+    pe."sourceVerificationStatus" AS structured_status,
+    pe."extractionConfidence" AS structured_confidence,
+    pe."vacanciesTotal" AS structured_vacancies,
+    CASE
+      WHEN p.enrichment->>'vacanciesTotal' ~ '^-?[0-9]+$'
+      THEN (p.enrichment->>'vacanciesTotal')::integer
+      ELSE NULL
+    END AS jsonb_vacancies,
+    r.total_vacancies AS recruitment_total_vacancies,
+    r.official_link_source,
+    r.official_notification_url
+  FROM public.posts p
+  JOIN public.post_enrichments pe ON pe.post_id = p.id
+  LEFT JOIN public.recruitments r ON r.id = p.recruitment_id
+)
+SELECT
+  COUNT(*) FILTER (
+    WHERE structured_vacancies IS NOT NULL AND jsonb_vacancies IS NOT NULL
+  ) AS both_have_vacancy_total,
+  COUNT(*) FILTER (
+    WHERE structured_vacancies IS NOT NULL
+      AND jsonb_vacancies IS NOT NULL
+      AND structured_vacancies = jsonb_vacancies
+  ) AS equal_values,
+  COUNT(*) FILTER (
+    WHERE structured_vacancies IS NOT NULL
+      AND jsonb_vacancies IS NOT NULL
+      AND structured_vacancies <> jsonb_vacancies
+  ) AS conflicting_values
+FROM compared;
+
+-- Full candidate list for the vacancy conflicts. Review each against source
+-- notification evidence and post-vs-recruitment scope before proposing a fix.
+WITH compared AS (
+  SELECT
+    p.id AS post_id,
+    p.slug,
+    p.name AS post_name,
+    p.recruitment_id,
+    pe."sourceVerificationStatus" AS structured_status,
+    pe."extractionConfidence" AS structured_confidence,
+    pe."vacanciesTotal" AS structured_vacancies,
+    CASE
+      WHEN p.enrichment->>'vacanciesTotal' ~ '^-?[0-9]+$'
+      THEN (p.enrichment->>'vacanciesTotal')::integer
+      ELSE NULL
+    END AS jsonb_vacancies,
+    p.vacancy_total AS legacy_post_vacancy_total,
+    r.total_vacancies AS recruitment_total_vacancies,
+    r.official_link_source,
+    r.official_notification_url
+  FROM public.posts p
+  JOIN public.post_enrichments pe ON pe.post_id = p.id
+  LEFT JOIN public.recruitments r ON r.id = p.recruitment_id
+)
+SELECT *
+FROM compared
+WHERE structured_vacancies IS NOT NULL
+  AND jsonb_vacancies IS NOT NULL
+  AND structured_vacancies <> jsonb_vacancies
+ORDER BY post_id;
+
+-- JSONB vacancy shape actually present in production.
+SELECT
+  COUNT(*) FILTER (WHERE enrichment ? 'vacanciesTotal') AS top_level_vacancies_total_present,
+  COUNT(*) FILTER (
+    WHERE jsonb_typeof(enrichment->'vacancies') = 'array'
+      AND jsonb_array_length(enrichment->'vacancies') > 0
+  ) AS nonempty_vacancies_array,
+  COUNT(*) FILTER (
+    WHERE jsonb_typeof(enrichment->'vacancies') = 'object'
+      AND enrichment->'vacancies' ? 'total'
+  ) AS nested_vacancies_total_present,
+  COUNT(*) FILTER (
+    WHERE jsonb_typeof(enrichment->'vacancies') = 'object'
+      AND jsonb_typeof(enrichment->'vacancies'->'categories') = 'object'
+  ) AS nested_vacancies_categories_object
+FROM public.posts
+WHERE enrichment IS NOT NULL AND enrichment <> '{}'::jsonb;
+
+-- ---------------------------------------------------------------------------
+-- 5. Closing-date anomaly candidates
+-- ---------------------------------------------------------------------------
+SELECT
+  p.id AS post_id,
+  p.slug,
+  pe."applicationClosingDate",
+  pe.created_at,
+  pe.updated_at,
+  pe."sourceVerificationStatus",
+  pe."extractionConfidence",
+  r.official_notification_url
+FROM public.post_enrichments pe
+JOIN public.posts p ON p.id = pe.post_id
+LEFT JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE pe."applicationClosingDate" IS NOT NULL
+  AND ABS(EXTRACT(EPOCH FROM (pe."applicationClosingDate" - pe.created_at))) <= 2
+ORDER BY p.id;
+
+-- Broader same-calendar-day review population; this is a review signal, not
+-- an automatic invalidation rule.
+SELECT
+  COUNT(*) FILTER (
+    WHERE "applicationClosingDate"::date = created_at::date
+  ) AS same_calendar_day_as_created,
+  COUNT(*) FILTER (
+    WHERE ABS(EXTRACT(EPOCH FROM ("applicationClosingDate" - created_at))) <= 2
+  ) AS within_two_seconds_of_created
+FROM public.post_enrichments
+WHERE "applicationClosingDate" IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- 6. Field-source distribution retained by normalized detail tables
+-- ---------------------------------------------------------------------------
+SELECT 'posts_vacancies' AS table_name, source, COUNT(*) AS rows
+FROM public.posts_vacancies GROUP BY source
+UNION ALL
+SELECT 'posts_education', source, COUNT(*)
+FROM public.posts_education GROUP BY source
+UNION ALL
+SELECT 'posts_experience', source, COUNT(*)
+FROM public.posts_experience GROUP BY source
+UNION ALL
+SELECT 'posts_selection_process', source, COUNT(*)
+FROM public.posts_selection_process GROUP BY source
+UNION ALL
+SELECT 'posts_documents', source, COUNT(*)
+FROM public.posts_documents GROUP BY source
+UNION ALL
+SELECT 'posts_important_dates', source, COUNT(*)
+FROM public.posts_important_dates GROUP BY source
+UNION ALL
+SELECT 'posts_application_fee', source, COUNT(*)
+FROM public.posts_application_fee GROUP BY source
+UNION ALL
+SELECT 'posts_official_links', source, COUNT(*)
+FROM public.posts_official_links GROUP BY source
+ORDER BY table_name, source;
+
+-- ---------------------------------------------------------------------------
+-- 7. Provisional operational live slice (not the shared lifecycle contract)
+-- ---------------------------------------------------------------------------
+WITH provisional_posts AS (
+  SELECT
+    p.id,
+    p.recruitment_id
+  FROM public.posts p
+  JOIN public.recruitments r ON r.id = p.recruitment_id
+  WHERE r.status IN ('ACTIVE', 'UPCOMING')
+    AND (
+      r.application_end_date IS NULL
+      OR r.application_end_date > NOW()
+      OR EXTRACT(YEAR FROM r.application_end_date) < 1900
+      OR EXTRACT(YEAR FROM r.application_end_date) >= 2090
+    )
+    AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+    AND p.slug IS NOT NULL
+    AND r.slug IS NOT NULL
+)
+SELECT
+  COUNT(*) AS provisional_posts,
+  COUNT(pe.post_id) AS posts_with_post_enrichment,
+  COUNT(*) FILTER (
+    WHERE pe."sourceVerificationStatus" = 'VERIFIED'
+  ) AS verified_rows,
+  COUNT(*) FILTER (
+    WHERE pe."sourceVerificationStatus" = 'UNVERIFIABLE'
+  ) AS unverifiable_rows,
+  COUNT(*) FILTER (
+    WHERE pe."sourceVerificationStatus" = 'PENDING'
+  ) AS pending_rows,
+  COUNT(*) FILTER (
+    WHERE pe."sourceVerificationStatus" = 'VERIFIED'
+      AND pe.updated_at = TIMESTAMPTZ '2026-10-15 11:43:30.211896+00'
+  ) AS heuristic_batch_verified_rows
+FROM provisional_posts pp
+LEFT JOIN public.post_enrichments pe ON pe.post_id = pp.id;
+
+-- Provisional live status by recruitment official-link provenance.
+WITH provisional_posts AS (
+  SELECT p.id, p.recruitment_id
+  FROM public.posts p
+  JOIN public.recruitments r ON r.id = p.recruitment_id
+  WHERE r.status IN ('ACTIVE', 'UPCOMING')
+    AND (
+      r.application_end_date IS NULL
+      OR r.application_end_date > NOW()
+      OR EXTRACT(YEAR FROM r.application_end_date) < 1900
+      OR EXTRACT(YEAR FROM r.application_end_date) >= 2090
+    )
+    AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+    AND p.slug IS NOT NULL
+    AND r.slug IS NOT NULL
+)
+SELECT
+  COALESCE(r.official_link_source, '<NULL>') AS official_link_source,
+  pe."sourceVerificationStatus" AS enrichment_status,
+  COUNT(*) AS rows
+FROM provisional_posts pp
+JOIN public.recruitments r ON r.id = pp.recruitment_id
+JOIN public.post_enrichments pe ON pe.post_id = pp.id
+GROUP BY 1, 2
+ORDER BY 1, 2;
+
+-- ---------------------------------------------------------------------------
+-- 8. Candidate-level evidence packet for manual reconciliation
+-- ---------------------------------------------------------------------------
+-- This is intentionally a candidate packet, not an automatic winner selection.
+-- Add source capture/document identifiers as those relationships are recovered.
+SELECT
+  p.id AS post_id,
+  p.slug,
+  p.name AS post_name,
+  p.recruitment_id,
+  p.officialSourceUrl AS post_official_source_url,
+  p.applyPortalUrl AS post_apply_portal_url,
+  p.salary_min AS legacy_salary_min,
+  p.salary_max AS legacy_salary_max,
+  p.vacancy_total AS legacy_post_vacancy_total,
+  p.enrichment AS jsonb_enrichment,
+  pe."sourceVerificationStatus",
+  pe."sourceVerificationDate",
+  pe."extractionConfidence",
+  pe."salaryMin",
+  pe."salaryMax",
+  pe."payScale",
+  pe."payLevel",
+  pe."vacanciesTotal",
+  pe."vacanciesByCategory",
+  pe."applicationOpenDate",
+  pe."applicationClosingDate",
+  pe.education,
+  pe.experience,
+  pe."eligibilityPathways",
+  pe."selectionProcess",
+  r.name AS recruitment_name,
+  r.total_vacancies AS recruitment_total_vacancies,
+  r.official_link_source,
+  r.official_notification_url,
+  r.official_application_url,
+  r.verification_status AS recruitment_verification_status,
+  r.last_verified_at AS recruitment_last_verified_at
+FROM public.posts p
+LEFT JOIN public.post_enrichments pe ON pe.post_id = p.id
+LEFT JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE
+  pe.post_id IS NOT NULL
+  AND (
+    pe.updated_at = TIMESTAMPTZ '2026-10-15 11:43:30.211896+00'
+    OR (
+      (p.enrichment ? 'sourceVerificationStatus')
+      AND p.enrichment->>'sourceVerificationStatus'
+        IS DISTINCT FROM pe."sourceVerificationStatus"
+    )
+    OR (
+      pe."vacanciesTotal" IS NOT NULL
+      AND p.enrichment->>'vacanciesTotal' ~ '^-?[0-9]+
+ORDER BY p.id;
+
+-- End of read-only dry-run queries. No writes are included in this file.
+
+      AND pe."vacanciesTotal" <> (p.enrichment->>'vacanciesTotal')::integer
+    )
+    OR (
+      pe."applicationClosingDate" IS NOT NULL
+      AND ABS(EXTRACT(EPOCH FROM (pe."applicationClosingDate" - pe.created_at))) <= 2
+    )
+  )
+ORDER BY p.id;
+
+-- End of read-only dry-run queries. No writes are included in this file.
+
+    AND (p.enrichment->>'extractionConfidence')::integer
+      IS DISTINCT FROM pe."extractionConfidence"
+  )
 ORDER BY p.id;
 
 -- ---------------------------------------------------------------------------
