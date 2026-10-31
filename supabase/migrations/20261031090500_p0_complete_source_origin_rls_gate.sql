@@ -310,6 +310,7 @@ AS $fn$
 BEGIN
   IF TG_OP = 'UPDATE' THEN
     IF private.is_aggregator_source_value(OLD.source)
+       OR private.is_aggregator_source_value(OLD.enrichment_source)
        OR upper(btrim(coalesce(OLD.source_type, ''))) = 'AGGREGATOR'
        OR private.is_fja_url(OLD.source_url)
        OR EXISTS (
