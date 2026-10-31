@@ -996,6 +996,33 @@ WHERE pe.post_id = p.id
     OR pe."sourceVerificationDate" IS NOT NULL
   );
 
+-- A child education/experience fact sourced from the retired FJA inventory
+-- without a verified_at timestamp prevents the aggregate enrichment record
+-- from being labelled VERIFIED, regardless of the parent's source label.
+UPDATE public.post_enrichments pe
+SET "sourceVerificationStatus" = 'UNVERIFIABLE',
+    "sourceVerificationDate" = NULL,
+    updated_at = now()
+FROM public.posts p
+WHERE pe.post_id = p.id
+  AND pe."sourceVerificationStatus" = 'VERIFIED'
+  AND (
+    EXISTS (
+      SELECT 1
+      FROM public.posts_education e
+      WHERE e.post_id = p.id
+        AND e.source = 'fja_post_inventory'
+        AND e.verified_at IS NULL
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM public.posts_experience x
+      WHERE x.post_id = p.id
+        AND x.source = 'fja_post_inventory'
+        AND x.verified_at IS NULL
+    )
+  );
+
 COMMENT ON FUNCTION public.guard_aggregator_discovered_recruitment_verification() IS
   'Prevents aggregator-discovered recruitment rows from being VERIFIED without a matching PROMOTED official-digest row with complete issuer-source and fact reviews.';
 COMMENT ON FUNCTION public.guard_aggregator_discovered_post_source() IS
