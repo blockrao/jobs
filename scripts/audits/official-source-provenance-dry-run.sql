@@ -258,6 +258,21 @@ SELECT
   r.enrichment_data->'meta'->>'extraction_timestamp' AS extraction_timestamp,
   r.enrichment_data->'reference'->>'source' AS reference_source,
   r.enrichment_data->'institution'->>'name' AS enrichment_institution,
+  (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = r.id) AS canonical_post_count,
+  (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = r.id AND p."isLive" IS TRUE) AS live_post_count,
+  (
+    SELECT jsonb_agg(jsonb_build_object(
+      'post_id', p.id,
+      'post_slug', p.slug,
+      'post_name', p.name,
+      'is_live', p."isLive",
+      'source_name', p."sourceName",
+      'is_official_source', p."isOfficialSource",
+      'source_verification_status', p.enrichment->>'sourceVerificationStatus'
+    ) ORDER BY p.id)
+    FROM public.posts p
+    WHERE p.recruitment_id = r.id
+  ) AS canonical_posts,
   CASE
     WHEN r.enrichment_data->'reference'->>'source' ILIKE '%UPPSC%'
       OR r.enrichment_data->'institution'->>'name' ILIKE '%UPPSC%'
@@ -269,3 +284,23 @@ SELECT
 FROM public.recruitments r
 WHERE r.enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
 ORDER BY r.id;
+
+
+-- Canonical Post-level manifest for every Recruitment in the extraction cohort.
+-- Preserve the exact Recruitment -> Post relationship and page identity.
+SELECT
+  p.id AS post_id,
+  p.slug AS post_slug,
+  p.name AS post_name,
+  p.recruitment_id,
+  r.slug AS recruitment_slug,
+  r.name AS recruitment_name,
+  p."isLive" AS is_live,
+  p."sourceName" AS source_name,
+  p."isOfficialSource" AS is_official_source,
+  p.enrichment->>'sourceVerificationStatus' AS source_verification_status,
+  p.enrichment->>'sourceVerificationDate' AS source_verification_date
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
+ORDER BY r.id, p.id;
