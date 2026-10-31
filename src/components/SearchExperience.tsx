@@ -30,6 +30,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [partial, setPartial] = useState(false);
   const [searchedQuery, setSearchedQuery] = useState("");
+  const [submittedState, setSubmittedState] = useState<SearchInitialState>({});
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
     if (state.location?.trim()) params.set("location", state.location.trim());
     if (state.sort && state.sort !== (state.q?.trim() ? "relevance" : "newest")) params.set("sort", state.sort);
     const queryString = params.toString();
-    window.history.replaceState(null, "", queryString ? `/search?${queryString}` : "/search");
+    window.history.pushState(null, "", queryString ? `/search?${queryString}` : "/search");
   }, []);
 
   const requestResults = useCallback(async (offset: number, append: boolean, state: SearchInitialState) => {
@@ -77,6 +78,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
         throw new Error(data?.message || "Search is temporarily unavailable. Please try again.");
       }
       setResults((current) => append ? [...current, ...data.data] : data.data);
+      if (!append) setSubmittedState(state);
       setPartial(Boolean(data.partial));
       setSearchedQuery(state.q?.trim() ?? "");
       setHasMore(Boolean(data.pagination?.hasMore));
@@ -105,7 +107,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
 
   const loadMore = () => {
     if (!loadingMore && hasMore) {
-      void requestResults(nextOffset, true, { q: searchedQuery, announcement, closing, location, sort });
+      void requestResults(nextOffset, true, submittedState);
     }
   };
 
@@ -118,6 +120,27 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
     writeUrlState({});
     void requestResults(0, false, { sort: "newest" });
   };
+
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const next: SearchInitialState = {
+        q: params.get("q") ?? "",
+        announcement: (params.get("announcement") ?? "") as AnnouncementFilter,
+        closing: (params.get("closing") ?? "") as ClosingFilter,
+        location: params.get("location") ?? "",
+        sort: (params.get("sort") ?? undefined) as SortOption | undefined,
+      };
+      setQuery(next.q ?? "");
+      setAnnouncement(next.announcement ?? "");
+      setClosing(next.closing ?? "");
+      setLocation(next.location ?? "");
+      setSort(next.sort ?? (next.q ? "relevance" : "newest"));
+      void requestResults(0, false, next);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [requestResults]);
 
   useEffect(() => {
     const hasInitialState = Boolean(initialState.q || initialState.announcement || initialState.closing || initialState.location);
@@ -180,7 +203,6 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
   };
 
   const activeFilters = Boolean(query.trim() || announcement || closing || location.trim());
-  const currentSearchState = { q: searchedQuery, announcement, closing, location, sort };
 
   return (
     <div className="space-y-7">
