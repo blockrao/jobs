@@ -298,6 +298,16 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain('"sourceVerificationStatus" := \'UNVERIFIABLE\'');
   });
   
+  it("provides a non-destructive rollback for the additive source gate migration", () => {
+    const rollback = readFileSync(
+      "supabase/rollback/20261031120000_p0_official_digest_source_authority_gate.down.sql",
+      "utf8",
+    );
+    expect(rollback).toContain("DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_recruitment_verification");
+    expect(rollback).toContain("CREATE OR REPLACE FUNCTION public.aggregate_enrichment_for_post(p_post_id integer)");
+    expect(rollback).toContain("Deliberately retained: additive columns, indexes, constraints, comments");
+  });
+
   it("keeps source verification independent from application deadline availability", () => {
     const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     const postQueries = readFileSync("src/db/operations/get-posts.ts", "utf8");
