@@ -53,9 +53,45 @@ GROUP BY 1,2
 ORDER BY signal, records DESC, value;
 
 -- 2) Expanded Recruitment candidate cohort.
--- Include canonical Recruitment/Post signals, legacy postings.source/source_type,
--- source_portals, and the known pilot_preliminary/FJA source-reference signal.
-WITH candidates AS (
+-- Include canonical Recruitment/Post signals, legacy Posting signals and every
+-- known aggregator host from src/lib/aggregators.ts.
+WITH aggregator_domains(domain) AS (
+  VALUES
+    ('freejobalert.com'),('sarkariresult.com'),('sarkarinaukri.com'),
+    ('indiasarkarinaukri.com'),('sahisarkarijobs.com'),('sarkariexam.com'),
+    ('t.me'),('telegram.me'),('whatsapp.com'),('arattai.in'),('wa.me'),
+    ('telegram.org'),('facebook.com'),('twitter.com'),('x.com'),
+    ('instagram.com'),('youtube.com'),('marugujarat.co.in'),
+    ('pdfjobsjankari.com'),('onlineupcar.com'),('rojgarresult.com'),
+    ('freshersworld.com')
+),
+url_values AS (
+  SELECT r.id AS recruitment_id, r.source_url AS value FROM public.recruitments r WHERE r.source_url IS NOT NULL
+  UNION ALL SELECT r.id, r.official_notification_url FROM public.recruitments r WHERE r.official_notification_url IS NOT NULL
+  UNION ALL SELECT r.id, r.official_application_url FROM public.recruitments r WHERE r.official_application_url IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p."sourceReference" FROM public.posts p WHERE p."sourceReference" IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p.original_recruitment_url FROM public.posts p WHERE p.original_recruitment_url IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p."originalRecruitmentUrl" FROM public.posts p WHERE p."originalRecruitmentUrl" IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p."officialSourceUrl" FROM public.posts p WHERE p."officialSourceUrl" IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p."applyPortalUrl" FROM public.posts p WHERE p."applyPortalUrl" IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p.application_url FROM public.posts p WHERE p.application_url IS NOT NULL
+  UNION ALL SELECT p.recruitment_id, p."officialNotificationUrl" FROM public.posts p WHERE p."officialNotificationUrl" IS NOT NULL
+  UNION ALL SELECT coalesce(sp.inferred_recruitment_id, cp.recruitment_id), sp.source_url
+    FROM public.postings sp LEFT JOIN public.posts cp ON cp.id = sp.inferred_post_id
+    WHERE sp.source_url IS NOT NULL
+),
+url_hosts AS (
+  SELECT recruitment_id,
+    lower((regexp_match(btrim(value), '^(?:(?:https?:)?//)?([^/:?#]+)'))[1]) AS host
+  FROM url_values
+  WHERE recruitment_id IS NOT NULL
+),
+aggregator_url_recruitments AS (
+  SELECT DISTINCT u.recruitment_id
+  FROM url_hosts u
+  JOIN aggregator_domains d ON u.host = d.domain OR u.host LIKE '%.' || d.domain
+),
+candidates AS (
   SELECT
     r.id,
     r.metadata ->> 'ingest_batch' AS ingest_batch,
