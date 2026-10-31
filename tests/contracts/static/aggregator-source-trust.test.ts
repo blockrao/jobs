@@ -219,6 +219,8 @@ describe("aggregator source trust gate", () => {
 
     expect(migration).toContain("authority_review_status text NOT NULL DEFAULT 'UNVERIFIED'");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS category varchar(100)");
+    expect(migration).toContain("WHERE x.post_id = p.id AND x.category IS NOT NULL");
+    expect(migration).toContain("Preserve existing JSONB fee facts when legacy child rows cannot be grouped");
     expect(migration).toContain("AGGREGATOR_DISCOVERED source origin is immutable");
     expect(migration).toContain("authority_evidence_url");
     expect(migration).toContain("authority_reviewed_by");
