@@ -183,7 +183,7 @@ describe("aggregator source trust gate", () => {
     expect(query).toContain('r.verification_status AS "recruitmentVerificationStatus"');
     expect(query).toContain('r.official_link_source AS "recruitmentOfficialLinkSource"');
     expect(query).toContain('r.source_discovery_origin AS "recruitmentSourceDiscoveryOrigin"');
-    expect(query).toContain("sourceOrigin: data.recruitmentSourceDiscoveryOrigin");
+    expect(query).toContain("sourceOrigin: data.recruitmentSourceDiscoveryOrigin ??");
     expect(query).toContain('data.recruitmentSourceDiscoveryOrigin == null && data.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED"');
     expect(query).toContain('r.metadata AS "recruitmentMetadata"');
     expect(query).toContain('post:${data.title}:${field}');
