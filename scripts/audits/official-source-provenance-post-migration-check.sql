@@ -25,6 +25,18 @@ WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
     OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
   );
 
+-- This count must be zero: unreviewed aggregator posts cannot retain a VERIFIED
+-- aggregate-enrichment state or source-provenance approval.
+SELECT count(*) AS unreviewed_aggregator_posts_with_verified_enrichment
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (p.enrichment ->> 'sourceVerificationStatus' = 'VERIFIED'
+    OR p.enrichment ? 'source_provenance');
+
 -- This count must be zero: aggregator-derived posts cannot carry official flags
 -- unless their parent recruitment has passed the source/fact review gates.
 SELECT count(*) AS unverified_aggregator_posts_with_official_flags
