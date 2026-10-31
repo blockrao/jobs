@@ -60,7 +60,7 @@ export async function getOrganizationExams(organizationId: number) {
     .selectDistinct({ exam: exams })
     .from(exams)
     .innerJoin(recruitments, eq(recruitments.examId, exams.id))
-    .where(eq(recruitments.organizationId, organizationId));
+    .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   return result.map((r) => r.exam);
 }
@@ -79,7 +79,7 @@ export async function getOrganizationPositions(organizationId: number) {
     .from(positions)
     .innerJoin(posts, eq(positions.id, posts.positionId))
     .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
-    .where(eq(recruitments.organizationId, organizationId));
+    .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   return result.map((r) => r.position);
 }
@@ -95,7 +95,7 @@ export async function getOrganizationPostNames(organizationId: number): Promise<
     .selectDistinct({ name: posts.name })
     .from(posts)
     .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
-    .where(eq(recruitments.organizationId, organizationId));
+    .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   return result.map((r) => r.name).filter(Boolean) as string[];
 }
@@ -149,20 +149,20 @@ export async function getOrganizationStats(organizationId: number) {
   const recruitmentsCount = await db
     .select()
     .from(recruitments)
-    .where(eq(recruitments.organizationId, organizationId));
+    .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   const examsCount = await db
     .selectDistinct({ id: exams.id })
     .from(exams)
     .innerJoin(recruitments, eq(recruitments.examId, exams.id))
-    .where(eq(recruitments.organizationId, organizationId));
+    .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   const positionsCount = await db
     .selectDistinct({ id: positions.id })
     .from(positions)
     .innerJoin(posts, eq(positions.id, posts.positionId))
     .innerJoin(recruitments, eq(posts.recruitmentId, recruitments.id))
-    .where(eq(recruitments.organizationId, organizationId));
+    .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   return {
     recruitmentCount: recruitmentsCount.length,
