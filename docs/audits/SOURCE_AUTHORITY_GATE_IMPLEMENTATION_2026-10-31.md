@@ -74,7 +74,9 @@ Server-rendered reads use the same database trust function so the app's owner-le
 - Organization discovery counts.
 - Recruitment Hub, Post Leaf and organization sitemap queries.
 
-The sitemap therefore cannot advertise a record that the application-level source gate excludes.
+The sitemap therefore cannot advertise a record that the application-level source gate excludes. The same review now covers homepage statistics, qualification/sector lists, organization and legacy-posting discovery, search/autocomplete, related Post results and Recruitment Hub leaf loading. Legacy Posting discovery requires a valid mapping to a trusted canonical Post; an inferred Recruitment ID alone is not enough.
+
+The public Post Leaf renderer no longer uses raw FJA extraction as a fallback for qualification, experience, age, salary or advertisement number. Its notification and application links come from the Recruitment-owned official URLs, and enrichment/related labels are passed through aggregator sanitization. Search announcement state uses `recruitments.notification_date`, never `posts.created_at` or `recruitments.created_at`.
 
 ## Rollout and verification gates
 
