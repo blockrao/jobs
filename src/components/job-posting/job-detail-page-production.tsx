@@ -71,6 +71,7 @@ interface JobDetailPageProps {
     employmentType?: string | null;
     qualificationText?: string | null;
     qualificationVerificationStatus?: "VERIFIED" | "PENDING";
+    enrichmentVerificationStatus?: "VERIFIED" | "PENDING" | "UNVERIFIABLE" | null;
     experienceText?: string | null;
     ageLimit?: string | null;
     selectionProcess?: string | null;
@@ -170,6 +171,8 @@ export default function JobDetailPageProduction({
   const qualificationText = post.qualificationText || post.fjaExtract?.qualificationRaw || null;
   const experienceText = post.experienceText || post.fjaExtract?.experienceRaw || null;
   const ageText = post.ageLimit || post.fjaExtract?.ageRaw || null;
+  const enrichmentFactsVerified = post.enrichmentVerificationStatus === "VERIFIED";
+  const enrichmentFactsNote = "Reported; not independently verified against the official recruitment notice.";
   const employmentLabel = post.employmentType ? EMPLOYMENT_LABELS[post.employmentType.toUpperCase()] ?? null : null;
   const salaryText = salaryMin
     ? (salaryMax && salaryMax !== salaryMin ? `${inr(salaryMin)} – ${inr(salaryMax)} per month` : `${inr(salaryMin)} per month`)
@@ -433,6 +436,7 @@ export default function JobDetailPageProduction({
                   <>
                     <h3 className={styles.subTitle}>Educational qualification</h3>
                     <p className={styles.preLine}>{qualificationText}</p>
+                    {!enrichmentFactsVerified && <p className={styles.muted}>{enrichmentFactsNote}</p>}
                   </>
                 )}
                 {post.educationRequirements && post.educationRequirements.length > 0 && (
@@ -448,7 +452,10 @@ export default function JobDetailPageProduction({
                 {(experienceText || (post.experienceRequirements && post.experienceRequirements.length > 0)) && (
                   <>
                     <h3 className={styles.subTitle}>Experience</h3>
-                    {experienceText && <p className={styles.preLine}>{experienceText}</p>}
+                    {experienceText && <>
+                      <p className={styles.preLine}>{experienceText}</p>
+                      {!enrichmentFactsVerified && <p className={styles.muted}>{enrichmentFactsNote}</p>}
+                    </>}
                     {post.experienceRequirements && post.experienceRequirements.length > 0 && (
                       <ul className={styles.list}>
                         {post.experienceRequirements.map((x, i) => (
@@ -464,7 +471,10 @@ export default function JobDetailPageProduction({
             {/* ── Age limit ── */}
             {(ageText || (post.ageRules && post.ageRules.length > 0)) && (
               <Section id="age" title="Age limit">
-                {ageText && <p className={styles.preLine}>{ageText}</p>}
+                {ageText && <>
+                  <p className={styles.preLine}>{ageText}</p>
+                  {!enrichmentFactsVerified && <p className={styles.muted}>{enrichmentFactsNote}</p>}
+                </>}
                 {post.ageRules && post.ageRules.length > 0 && (
                   <div className={styles.scroll}>
                     <table className={styles.table}>
