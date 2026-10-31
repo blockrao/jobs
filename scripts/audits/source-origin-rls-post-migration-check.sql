@@ -1,7 +1,9 @@
 -- JobOye P0 source-origin / RLS post-migration verification.
 -- READ ONLY. Run only after the reviewed migration is applied.
 -- The first result must report 6,365 aggregator-origin Recruitments for the
--- 2026-10-31 production snapshot. The anon-role results prove the REST boundary.
+-- 2026-10-31 production snapshot, including all known aggregator URL hosts.
+-- Recruitments and Posts are intentionally not available through the anon REST
+-- role because those base rows contain internal source/provenance columns.
 
 BEGIN TRANSACTION READ ONLY;
 
@@ -59,6 +61,8 @@ WHERE private.recruitment_has_aggregator_origin(r.id)
 ORDER BY r.id, sp.id;
 
 -- 3) Verify all five job-data tables have RLS and a non-permissive SELECT policy.
+-- Recruitments and Posts must have no anon table SELECT grant; child tables keep
+-- their RLS-filtered anon SELECT grants.
 SELECT
   c.relname AS table_name,
   c.relrowsecurity AS rls_enabled,
@@ -76,12 +80,18 @@ GROUP BY c.relname, c.relrowsecurity, c.oid
 ORDER BY c.relname;
 
 -- 4) Verify the source-sensitive public REST boundary as anon.
--- On the audited snapshot, all 6,365 Recruitments have aggregator/preliminary
--- origin and none has complete issuer + fact review. Expected counts are zero.
+-- Recruitments and Posts must be denied at the privilege boundary. Child rows
+-- remain queryable only through their source-trust RLS policies; expected counts
+-- are zero for the current 6,365-record snapshot.
+SELECT
+  table_name,
+  has_table_privilege('anon', format('public.%I', table_name), 'SELECT') AS anon_select_granted
+FROM (VALUES ('recruitments'),('posts'),('eligibilities'),('post_age_rules'),('vacancies'))
+  AS expected(table_name)
+ORDER BY table_name;
+
 SET LOCAL ROLE anon;
-SELECT 'recruitments' AS table_name, count(*) AS anon_visible_rows FROM public.recruitments
-UNION ALL SELECT 'posts', count(*) FROM public.posts
-UNION ALL SELECT 'eligibilities', count(*) FROM public.eligibilities
+SELECT 'eligibilities' AS table_name, count(*) AS anon_visible_rows FROM public.eligibilities
 UNION ALL SELECT 'post_age_rules', count(*) FROM public.post_age_rules
 UNION ALL SELECT 'vacancies', count(*) FROM public.vacancies
 UNION ALL SELECT 'organizations', count(*) FROM public.organizations
