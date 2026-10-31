@@ -181,9 +181,14 @@ async function loadQueue(pageNumber: number): Promise<QueueRow[]> {
                    'id', so.id, 'source', so.source, 'external_id', so.external_id,
                    'source_url', so.source_url, 'observed_at', so.observed_at,
                    'outcome', so.outcome, 'outcome_reason', so.outcome_reason,
-                   'facts', so.facts, 'links', so.links
+                   'facts', CASE WHEN jsonb_typeof(so.facts #> '{stated,detail,facts}') = 'object'
+                     THEN so.facts #> '{stated,detail,facts}' ELSE so.facts END,
+                   'links', so.links
                  ) ORDER BY so.observed_at DESC), '[]'::jsonb)
-                 FROM public.source_observations so WHERE so.posting_id = sp.id
+                 FROM (
+                   SELECT so.* FROM public.source_observations so
+                   WHERE so.posting_id = sp.id ORDER BY so.observed_at DESC LIMIT 3
+                 ) so
                ),
                'inferred_recruitment_id', sp.inferred_recruitment_id,
                'inferred_post_id', sp.inferred_post_id
@@ -363,7 +368,7 @@ export default async function SourceOriginReviewQueuePage({
                         <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-all rounded bg-neutral-50 p-2 text-[10px]">{JSON.stringify(row.post_source_evidence ?? [], null, 2)}</pre>
                       </div>
                       <div>
-                        <p className="font-semibold">Legacy Posting / source document / observations</p>
+                        <p className="font-semibold">Legacy Posting / source document / latest 3 observations</p>
                         <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap break-all rounded bg-neutral-50 p-2 text-[10px]">{JSON.stringify(row.legacy_posting_evidence ?? [], null, 2)}</pre>
                       </div>
                     </div>
