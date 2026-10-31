@@ -59,6 +59,8 @@ describe("P0 source-origin RLS migration contract", () => {
   it("requires at least one canonical non-duplicate Post Leaf before a Recruitment is public", () => {
     expect(migration).toContain("p.posting_status IS DISTINCT FROM 'DUPLICATE'");
     expect(migration).toContain("private.is_recruitment_publicly_trusted");
+    expect(migration).toContain("'required_fields'");
+    expect(migration).toContain("<@ (p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields')");
   });
 
   it("does not alter shared reference table policies or grant access to legacy tables", () => {
