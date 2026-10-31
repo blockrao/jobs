@@ -97,9 +97,9 @@ describe("extracted source projection", () => {
 
   test("the leaf renderer displays and passes only a plausible, non-future source notification date", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
-    expect(renderer).toContain("const candidatePublishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
-    expect(renderer).toContain("candidatePublishedDate.getTime() > 0");
-    expect(renderer).toContain("candidatePublishedDate.getTime() <= Date.now()");
+    expect(renderer).toContain("const candidateNotificationDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
+    expect(renderer).toContain("candidateNotificationDate.getTime() > 0");
+    expect(renderer).toContain("candidateNotificationDate.getTime() <= Date.now()");
     expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && publishedDate !== null}");
     expect(renderer).not.toContain("post.postedAt");
   });
