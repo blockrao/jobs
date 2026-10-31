@@ -175,6 +175,7 @@ describe("aggregator source trust gate", () => {
     const query = readFileSync("src/db/operations/get-posts.ts", "utf8");
     expect(query).toContain('r.verification_status AS "recruitmentVerificationStatus"');
     expect(query).toContain('r.official_link_source AS "recruitmentOfficialLinkSource"');
+    expect(query).toContain('r.source_discovery_origin AS "recruitmentSourceDiscoveryOrigin"');
     expect(query).toContain('r.metadata AS "recruitmentMetadata"');
     expect(query).toContain('post:${data.title}:${field}');
     const transformer = readFileSync("src/db/operations/enrichment-transformer.ts", "utf8");
@@ -207,7 +208,8 @@ describe("aggregator source trust gate", () => {
     expect(listingQueries).toContain("metadata -> 'source_provenance' -> 'fact_review'");
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
     expect(recruitmentQueries).toContain("'AGGREGATOR_DISCOVERED'");
-    expect(sitemap).toContain("COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'");
+    expect(sitemap).toContain("COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'");
+    expect(sitemap).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
     expect(sitemap).toContain("r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'");
   });
 
