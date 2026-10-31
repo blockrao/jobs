@@ -215,7 +215,6 @@ export default function PostLeafStructuredData({
     breadcrumb: { "@id": `${leafUrl}#breadcrumb` },
     ...(shouldEmitJobPosting ? { mainEntity: { "@id": `${leafUrl}#jobposting` } } : {}),
   };
-  if (datePostedIso) webPage.datePublished = datePostedIso;
   if (dateModifiedIso) webPage.dateModified = dateModifiedIso;
   if (post.officialSourceUrl) {
     webPage.citation = { "@type": "CreativeWork", url: post.officialSourceUrl };
