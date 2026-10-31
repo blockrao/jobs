@@ -121,3 +121,49 @@ The PR is intentionally not merged or deployed until its CI checks and review ar
 
 
 Additional provenance breakdown: 273 `fja_official_link_extracted`, 6 `official_link_extracted`, 7 freeform portal labels and 1 `pending_verification`; these 287 values are not A-070 `MANUAL_VERIFIED` provenance.
+
+
+## Follow-up audit — enrichment lineage and verification authority (2026-10-31)
+
+This follow-up inspected the canonical leaf loader, JSONB transformer, historical migrations and current production rows. All production queries were SELECT-only.
+
+### Confirmed application data-flow defect
+
+The canonical detail loader currently does all of the following:
+
+1. Reads posts.enrichment JSONB in getPostCoreData().
+2. Separately fetches the matching post_enrichments row through getPostEnrichmentData().
+3. Merges that row into an intermediate data object.
+4. Calls transformEnrichment(enrichmentJsonb) using only the JSONB object.
+5. Returns transformedEnrichment as the canonical post.enrichment.
+
+Therefore, the separate table's sourceVerificationStatus, sourceVerificationDate, extractionConfidence and other structured fields are not actually projected into the canonical enrichment object. The secondary table read is currently ineffective for those returned enrichment facts. This is a code-path defect, not just a difference in SQL reporting.
+
+### Historical status authority is also unsafe
+
+Migration 20261015000002_fix_enrichment_verification_for_decomposed_posts.sql sets post_enrichments.sourceVerificationStatus = 'VERIFIED' for PENDING records when the post has no matching FJA inventory record. It assigns confidence based on the presence of salary or vacancy values. Absence of an FJA inventory row is not evidence that an official notice was independently checked. This migration therefore cannot be treated as a valid source-verification event for the affected records.
+
+A production query found 2,965 VERIFIED, 433 UNVERIFIABLE and 9 PENDING rows in post_enrichments (all rows, not only the government-sector live subset). A further query found 2,756 VERIFIED rows sharing the same updated_at timestamp of 2026-10-15 11:43:30.211896+00; this is consistent with a bulk status operation and requires reconciliation against the migration and source evidence before any of these statuses are used as authoritative. Every row in the status distribution had a non-null sourceVerificationDate, but the date alone does not establish who verified what or against which official evidence.
+
+**Decision:** do not simply copy post_enrichments.sourceVerificationStatus into posts.enrichment, and do not wire the table's VERIFIED value into the page or JobPosting gate. The historical migration demonstrates that VERIFIED can mean “not found in FJA inventory”, not “independently verified against the issuing authority”. Until field-level evidence and verification provenance are available, these statuses are not safe to use as proof.
+
+### JSONB transformer manufactures a confidence score
+
+src/db/operations/enrichment-transformer.ts currently defaults missing sourceVerificationStatus to PENDING, which is conservative, but defaults missing extractionConfidence to 75 for any non-empty JSONB object. A production-wide SELECT found 4,932 non-empty posts.enrichment objects, but only one object contained an explicit extractionConfidence, and only one contained an explicit sourceVerificationStatus. Consequently, the current transformer can present a synthetic confidence value of 75 for thousands of records without stored confidence evidence.
+
+This default must be removed or changed to an explicit unknown/zero representation, with downstream consumers checked before implementation. Confidence must never be invented by a presentation transformer.
+
+### Current all-sector live snapshot (separate scope from the six-sector table above)
+
+A later SELECT across all live canonical posts (all sectors) returned 3,303 posts, of which 1,000 had a post_enrichments row and 2,503 had non-empty JSONB. Among the 1,000 table rows, 844 were VERIFIED, 155 UNVERIFIABLE and 1 PENDING. The difference from the earlier six-government-sector snapshot is expected from the wider sector scope and changing lifecycle inventory; these numbers must not be mixed.
+
+### Required remediation sequence
+
+1. Keep the current PR's conservative PENDING interpretation; do not promote table statuses into the canonical object.
+2. Audit every writer and migration that sets sourceVerificationStatus, especially the October 15 decomposed-post migration. Classify statuses as genuine source verification, heuristic/system-assigned, or unknown.
+3. Define verification evidence as a first-class contract: the exact official source URL, source identity, evidence location/quote or document reference, fields covered, verifier or process identity, verified timestamp, and evidence freshness. A single post-level status must not imply every extracted field is verified.
+4. Define the canonical enrichment storage contract and one authoritative read/write path. Until then, treat posts.enrichment as the display payload and the separate table as an untrusted legacy verification store; do not merge them implicitly.
+5. Remove the synthetic confidence default and add unit/contract tests for absent, pending, unverifiable and evidence-backed values.
+6. Re-run the live inventory audit and only then reconsider JobPosting eligibility. No bulk backfill or production mutation is approved by this audit.
+
+No database rows or schema were changed in this follow-up.
