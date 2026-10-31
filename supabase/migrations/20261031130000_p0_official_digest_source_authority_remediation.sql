@@ -103,7 +103,7 @@ SET verification_status = 'UNVERIFIABLE',
     updated_at = now()
 WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   AND (
-    verification_status = 'VERIFIED'
+    verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
     OR coalesce(metadata, '{}'::jsonb) ? 'source_provenance'
   );
 
