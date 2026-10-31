@@ -3,10 +3,16 @@
 -- The schema/write-guard migration must run first. This migration changes
 -- existing public provenance/status fields; it does not delete canonical rows.
 
+-- Discovery origin and link verification are separate facts. Do not erase
+-- a prior MANUAL_VERIFIED link decision solely because discovery began at an
+-- aggregator. The recruitment/fact review below still demotes unsupported
+-- aggregate verification and the public gate keeps the record hidden until
+-- issuer + fact evidence is reconciled.
 UPDATE public.recruitments
 SET official_link_source = 'UNVERIFIED'
 WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-  AND official_link_source IS DISTINCT FROM 'UNVERIFIED';
+  AND official_link_source IS DISTINCT FROM 'UNVERIFIED'
+  AND official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED';
 
 -- Backfill canonical JSONB fact arrays/objects from their child tables.
 -- Existing JSONB-only values are preserved when a child table has no rows.
