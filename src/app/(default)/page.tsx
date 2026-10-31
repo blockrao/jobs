@@ -1,4 +1,3 @@
-import OrganizationSchema from "@/components/structured-data/organization-schema";
 import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import {
