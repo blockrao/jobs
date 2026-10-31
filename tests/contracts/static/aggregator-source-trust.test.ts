@@ -155,6 +155,11 @@ describe("aggregator source trust gate", () => {
     expect(query).toContain('r.official_link_source AS "recruitmentOfficialLinkSource"');
     expect(query).toContain('r.metadata AS "recruitmentMetadata"');
     expect(query).toContain('post:${data.title}:${field}');
+    const recruitmentLoader = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
+    expect(recruitmentLoader).toContain('eq(eligibilities.status, "VERIFIED")');
+    expect(recruitmentLoader).toContain("isNotNull(eligibilities.verifiedAt)");
+    expect(recruitmentLoader).toContain("isNotNull(eligibilities.sourceRef)");
+    expect(recruitmentLoader).toContain("isNotNull(eligibilities.sourceLocator)");
   });
   it("withholds unverified aggregator records from recruitment hubs and live discovery listings", () => {
     const hubRoute = readFileSync(
@@ -198,6 +203,8 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("'education'");
     expect(migration).toContain("'experience'");
     expect(migration).toContain("sync_promoted_digest_review_state");
+    expect(migration).toContain("UPDATE public.eligibilities");
+    expect(migration).toContain("source_locator = v_review.fact_review_evidence");
     expect(migration).toContain("source_provenance");
     expect(migration).toContain("preserve_post_source_provenance");
     expect(migration).toContain("'confidence_score', pe.confidence_score");
