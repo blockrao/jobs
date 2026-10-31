@@ -367,18 +367,10 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     console.log(`[getRecruitmentWithPosts] Verified fact rows: ${allEligibilities.length} eligibility, ${allAgeRules.length} age-rule, ${allPostsVacancies.length} vacancy`);
 
-    // Step 4: Group vacancies, eligibilities, age rules, and posts vacancies by post ID (client-side)
-    const vacanciesByPostId = new Map<number, typeof allVacancies>();
+    // Step 4: Group verified eligibility, age and vacancy facts by post ID.
     const eligibilitiesByPostId = new Map<number, typeof allEligibilities>();
     const ageRulesByPostId = new Map<number, typeof allAgeRules>();
     const postsVacanciesByPostId = new Map<number, typeof allPostsVacancies>();
-
-    for (const vacancy of allVacancies) {
-      if (!vacanciesByPostId.has(vacancy.postId)) {
-        vacanciesByPostId.set(vacancy.postId, []);
-      }
-      vacanciesByPostId.get(vacancy.postId)!.push(vacancy);
-    }
 
     for (const eligibility of allEligibilities) {
       if (!eligibilitiesByPostId.has(eligibility.postId)) {
