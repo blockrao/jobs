@@ -120,3 +120,19 @@ The current branch now contains the first end-to-end protection slice:
 - The database migration includes production demotion statements. They must be reviewed with the row-level dry-run manifest before migration deployment.
 - This branch does not run production writes. It does not restore NIT Warangal eligibility or fee facts; those remain subject to official PDF verification.
 - CI, build and preview smoke checks remain pending until GitHub reports results. No passing result is claimed here.
+
+
+### Additional production source inventory (2026-10-31 06:20 UTC)
+
+A separate read-only production inventory identified three unverified extraction-origin values that must be treated together by the source-origin backfill and publication gate:
+
+| `enrichment_data.meta.source` | Recruitment rows | `meta.verified=false` | Globally VERIFIED/MANUALLY_VERIFIED |
+|---|---:|---:|---:|
+| `institutional_aggregation` | 4,002 | 4,002 | 536 |
+| `fja_html` | 1,265 | 1,265 | 6 |
+| `institution_aggregation` | 114 | 114 | 0 |
+| **Total** | **5,381** | **5,381** | **542** |
+
+3,130 of these rows have a NULL `official_link_source`, so discovery origin cannot be reconstructed from that field alone. Four `fja_html` records marked VERIFIED/MANUAL_VERIFIED point to the same UPSC Advt 12/2026 PDF while naming four different organisations and have no field-level `source_provenance`. They remain subject to issuer and fact review.
+
+The Stage 1 backfill, dry-run manifest and post-migration checks must cover all three exact source values. This is an expanded read-only audit; no production records were changed.
