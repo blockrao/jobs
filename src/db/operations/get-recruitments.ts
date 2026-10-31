@@ -206,6 +206,7 @@ export async function getRecruitmentWithPosts(slug: string) {
       sourceVerificationStatus: null as string | null,
       verificationStatus: null as string | null,
       officialLinkSource: null as string | null,
+      sourceDiscoveryOrigin: null as string | null,
       sourceListingPublishedDate: null as Date | string | null,
       sourceExtract: null as null | {
         title: string | null;
@@ -232,7 +233,8 @@ export async function getRecruitmentWithPosts(slug: string) {
       Promise.resolve([] as Array<Record<string, unknown>>),
       db.execute(sql`
         SELECT verification_status AS "verificationStatus",
-               official_link_source AS "officialLinkSource"
+               official_link_source AS "officialLinkSource",
+               source_discovery_origin AS "sourceDiscoveryOrigin"
         FROM recruitments
         WHERE id = ${recruitmentId}
         LIMIT 1
@@ -252,6 +254,9 @@ export async function getRecruitmentWithPosts(slug: string) {
         : null,
       officialLinkSource: typeof sourceAuthority?.officialLinkSource === "string"
         ? sourceAuthority.officialLinkSource
+        : null,
+      sourceDiscoveryOrigin: typeof sourceAuthority?.sourceDiscoveryOrigin === "string"
+        ? sourceAuthority.sourceDiscoveryOrigin
         : null,
       exam: rowsOf(examResult)[0] ?? null,
       sourceVerificationStatus:
@@ -570,9 +575,10 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     // Do not advertise aggregator-discovered records as current official jobs
     // until the issuer-source authority review has explicitly passed.
     sql`(
-      COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+      COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
       OR (
         r.verification_status = 'VERIFIED'
+        AND r.official_link_source = 'MANUAL_VERIFIED'
         AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
         AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
         AND r.application_end_date IS NOT NULL
