@@ -47,8 +47,8 @@ describe("FreeJobAlert research parser", () => {
       </main>`;
     const result = parseFjaResearchDetail(html, "https://www.freejobalert.com/articles/test-12348", "2026-10-27");
     expect(result.vacancy_count_candidate).toBeNull();
-    expect(result.facts.vacancies).toBeUndefined();
-    expect(result.review_reasons.some((reason) => reason.includes("Total recruitment vacancies were not extracted") || reason.includes("Vacancy field"))).toBe(true);
+    expect(result.facts.vacancies).toBe("1 (the notice does not print a number)");
+    expect(result.review_reasons).toContain("Vacancy text was captured, but no defensible numeric total can be derived; do not use it as a canonical vacancy count.");
   });
 
   it("does not mistake a later correction-window date for the application deadline", () => {
