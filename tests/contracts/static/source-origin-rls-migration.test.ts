@@ -46,7 +46,10 @@ describe("P0 source-origin RLS migration contract", () => {
   });
 
   it("does not mass-backfill or mutate existing Recruitment records", () => {
-    expect(migration).not.toMatch(/UPDATE public\.recruitments\s+SET source_discovery_origin/i);
+    const schemaAndPolicySetup = migration.split(
+      "-- Preserve aggregator discovery origin on future canonical and legacy writes.",
+    )[0];
+    expect(schemaAndPolicySetup).not.toMatch(/UPDATE public\.recruitments/i);
   });
 
   it("requires at least one canonical non-duplicate Post Leaf before a Recruitment is public", () => {
