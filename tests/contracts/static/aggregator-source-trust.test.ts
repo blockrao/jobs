@@ -298,6 +298,8 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("OLD.hub IS DISTINCT FROM NEW.hub OR OLD.posts IS DISTINCT FROM NEW.posts");
     expect(remediation).toContain("UPDATE public.posts_education e");
     expect(remediation).toContain("verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')");
+    expect(remediation).toContain("official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'");
+    expect(remediation).toContain("official_link_source IS DISTINCT FROM 'UNVERIFIED'");
     expect(remediation).toContain("UPDATE public.posts_experience e");
     expect(remediation).toContain("Refresh canonical JSONB after the child evidence has been cleared");
     expect(migration).not.toContain("SET official_link_source = 'UNVERIFIED'");
