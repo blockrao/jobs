@@ -353,17 +353,24 @@ LEFT JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE
   pe.post_id IS NOT NULL
   AND (
-    pe."sourceVerificationStatus" = 'VERIFIED'
-    OR pe."sourceVerificationDate" = pe.created_at
+    pe.updated_at = TIMESTAMPTZ '2026-10-15 11:43:30.211896+00'
+    OR (
+      (p.enrichment ? 'sourceVerificationStatus')
+      AND p.enrichment->>'sourceVerificationStatus'
+        IS DISTINCT FROM pe."sourceVerificationStatus"
+    )
     OR (
       pe."vacanciesTotal" IS NOT NULL
-      AND p.enrichment->>'vacanciesTotal' IS NOT NULL
-      AND pe."vacanciesTotal" <>
-        CASE
-          WHEN p.enrichment->>'vacanciesTotal' ~ '^-?[0-9]+$'
-          THEN (p.enrichment->>'vacanciesTotal')::integer
-          ELSE pe."vacanciesTotal"
-        END
+      AND p.enrichment->>'vacanciesTotal' ~ '^-?[0-9]+
+ORDER BY p.id;
+
+-- End of read-only dry-run queries. No writes are included in this file.
+
+      AND pe."vacanciesTotal" <> (p.enrichment->>'vacanciesTotal')::integer
+    )
+    OR (
+      pe."applicationClosingDate" IS NOT NULL
+      AND ABS(EXTRACT(EPOCH FROM (pe."applicationClosingDate" - pe.created_at))) <= 2
     )
   )
 ORDER BY p.id;
