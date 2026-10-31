@@ -34,6 +34,7 @@ export interface JobPostingData {
   /** Recruitment-level source authority; aggregator discovery is not official verification. */
   recruitmentVerificationStatus?: string | null;
   recruitmentOfficialLinkSource?: string | null;
+  recruitmentSourceDiscoveryOrigin?: string | null;
   recruitmentMetadata?: Record<string, unknown> | null;
   postSourceName?: string | null;
   sourcePostCode?: string | null;
