@@ -129,6 +129,28 @@ The next safe step is a dry-run source-evidence review for this 81-record cohort
 
 The direct PDF reader failed to fetch/parse the ten supplied notification URLs during this run (cache miss, inaccessible URL, or internal retrieval error). That is a tooling limitation, not evidence that the issuer documents are invalid or unavailable to users. A separate controlled document-fetch/OCR step is required to read the exact PDFs and extract individual post titles, vacancy counts, eligibility, dates and application instructions. No source facts should be invented from the Recruitment title.
 
+## Official issuer-page revalidation — 31 October 2026
+
+A second pass checked the current issuer careers/recruitment pages rather than relying only on earlier search snippets. This is still **page-level verification**; the PDF bytes were successfully fetched from the four issuer-hosted URLs, but the available document-reading path in this session did not expose their text for OCR. Do not treat successful binary retrieval as document-content review.
+
+| Recruitment ID | Issuer | Fresh official-page evidence | Updated disposition |
+|---:|---|---|---|
+| 7596 | Surat Municipal Corporation | The issuer's current Recruitment dashboard at https://www.suratmunicipal.gov.in/information/recruitment currently renders “No Jobs are available currently.” This conflicts with the earlier page-level indication of a 9–23 Nov application window. The official notification PDF URL was successfully retrieved, but its contents were not extracted in this session. | **Official-source conflict / hold.** Do not assert UPCOMING or ACTIVE from the earlier page-level result alone. Resolve the exact PDF notice identity and whether the current recruitment dashboard is stale or the notice has been withdrawn/changed. |
+| 7607 | Shaheed Mahendra Karma Vishwavidyalaya, Bastar | The issuer's official News & Announcements search result lists notice 3660, dated 14.10.2026, for direct recruitment to Class-III non-teaching technical posts. The official Career notices search result also lists notice 3660 separately from notices 3662 (other Class-III non-teaching), 3664 (Lab Attendant) and 3666 (Peon). Pages: https://smkvbastar.ac.in/en/page/News.aspx and https://www.smkvbastar.ac.in/en/Page/career-notices.aspx?tag=NzA%3D | **Strong exact notice/page match.** Keep the record scoped to notice 3660 only; do not combine the other separate advertisements. The stored PDF was retrieved, but post-level facts still await text extraction. |
+| 7619 | Digital University Kerala | The issuer's official Careers page search result lists a Project Intern under the Social Engagement Centre, last date 04.11.2026, and states that the deadline under notification KUDSIT/465/AD AIII/2026 dated 13.10.2026 was extended to 04.11.2026. Official page: https://duk.ac.in/careers/ | **Strong exact notice/page match. Critical lifecycle discrepancy confirmed:** database CLOSED conflicts with the issuer's open application window as at 31 Oct 2026. Treat as a correction candidate, but do not update production without a separate reviewed dry-run and approval. |
+| 7630 | Rajiv Gandhi National Aviation University | The issuer's official Careers search result explicitly lists “Recruitment of Teaching Positions (including backlog positions)” under advertisement RGNAU/5360/01/ADMIN/669 dated 22 Oct 2026, last date 22 Dec 2026. Official page: https://rgnau.ac.in/en/careers.html | **Strong exact notice/page match.** ACTIVE is directionally consistent with the issuer's published application window. The stored PDF was retrieved, but post-level facts still await text extraction. |
+
+### Revalidated pilot totals
+
+- **Strong exact issuer-page matches:** 3/10 (SMKV 7607, Digital University Kerala 7619, RGNAU 7630).
+- **Official-source conflict / hold:** 1/10 (SMC 7596; current recruitment dashboard says no jobs available, while earlier page-level evidence indicated a future window).
+- **Partial corroboration:** 1/10 (OUAT 7599).
+- **Not verified:** 5/10 (TISS, IIT Indore, APPSC, IIT Ropar, NIT Rourkela).
+- **Lifecycle correction candidate:** DUK 7619, stored CLOSED but official issuer page says deadline extended to 04 Nov 2026.
+- **No Post Leaves are approved.** Official page-level identity is now stronger for three records, but exact PDF extraction remains a hard gate for post titles, vacancies, eligibility and detailed dates.
+
+**Document retrieval note:** The four issuer-hosted PDF URLs (SMC 7596, SMKV 7607, DUK 7619, RGNAU 7630) were successfully downloaded into a temporary document-upload service (observed sizes: 1,585,287; 2,007,662; 484,833; and 775,891 bytes respectively). The browser PDF reader still returned internal/cache errors, and the local execution environment cannot retrieve public internet bytes. Therefore, no PDF text/OCR claims are made. This is a tooling/extraction limitation, not evidence that the notices are invalid or inaccessible to candidates.
+
 ## Aggregator URLs in fields labelled official
 
 A separate bounded URL-host scan checked persisted URL fields on Recruitments, canonical Posts and legacy Postings against the known aggregator/social/messaging host registry used for this audit.
