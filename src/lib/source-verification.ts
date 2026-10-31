@@ -5,7 +5,7 @@
  * records remain untrusted until a guarded human issuer + fact review has been
  * recorded in Recruitment.metadata.source_provenance.
  */
-type SourceTrustInput = {
+export type SourceTrustInput = {
   sourceDiscoveryOrigin?: unknown;
   officialLinkSource?: unknown;
   verificationStatus?: unknown;
@@ -115,7 +115,7 @@ export function isUnverifiedAggregatorSource(input: SourceTrustInput): boolean {
 }
 
 export function isManuallyVerifiedOfficialLink(value: unknown): boolean {
-  return typeof value === "string" && value.toUpperCase() === "MANUAL_VERIFIED";
+  return typeof value === "string" && value.trim().toUpperCase() === "MANUAL_VERIFIED";
 }
 
 /** Metadata states are advisory provenance; they never upgrade a record to verified. */
