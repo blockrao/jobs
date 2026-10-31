@@ -89,15 +89,19 @@ SELECT
 FROM public.posts p
 JOIN public.post_enrichments pe ON pe.post_id = p.id
 WHERE
-  (p.enrichment ? 'sourceVerificationStatus'
+  (
+    p.enrichment ? 'sourceVerificationStatus'
     AND p.enrichment->>'sourceVerificationStatus'
-      IS DISTINCT FROM pe."sourceVerificationStatus")
+      IS DISTINCT FROM pe."sourceVerificationStatus"
+  )
   OR
   (
-    p.enrichment->>'extractionConfidence' ~ '^-?[0-9]+
+    p.enrichment->>'extractionConfidence' ~ '^-?[0-9]+$'
+    AND (p.enrichment->>'extractionConfidence')::integer
+      IS DISTINCT FROM pe."extractionConfidence"
+  )
 ORDER BY p.id;
 
--- ---------------------------------------------------------------------------
 -- 4. Vacancy total comparison: JSONB vs post_enrichments
 -- ---------------------------------------------------------------------------
 WITH compared AS (
