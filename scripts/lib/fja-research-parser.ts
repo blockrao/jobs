@@ -36,6 +36,7 @@ export interface FjaResearchParse {
   post_table_candidates: Array<{ table_index: number; headers: string[]; rows: Array<{ row_index: number; values: Record<string, string> }> }>;
   open_status: "OPEN_AS_OF_CUTOFF" | "CLOSED_BY_CUTOFF" | "REVIEW_DATE_UNCLEAR" | "REVIEW_WALKIN_DATE_UNCLEAR";
   derived_close_date: string | null;
+  vacancy_count_candidate: number | null;
   review_reasons: string[];
   capture_quality: {
     status: "STRUCTURE_CAPTURED" | "CAPTURED_NEEDS_REVIEW" | "CAPTURE_REVIEW";
@@ -106,11 +107,26 @@ export function parseFjaDate(input: string): string | null {
 }
 
 function dateKind(label: string): "application_end" | "application_start" | "walk_in" | "notification" | "other" {
-  if (/walk[- ]?in|interview|reporting|document verification/i.test(label)) return "walk_in";
+  // A page can mention a separate correction/modification deadline after the
+  // actual application deadline. Do not treat that later date as the closing date.
+  if (/modification|correction|edit window|fee payment/i.test(label)) return "other";
   if (/last date|closing date|application end|apply by|application last/i.test(label)) return "application_end";
+  if (/walk[- ]?in|interview|reporting|document verification/i.test(label)) return "walk_in";
   if (/start date|commencement|opening date/i.test(label)) return "application_start";
   if (/notification|published|advertisement release|post date/i.test(label)) return "notification";
   return "other";
+}
+
+function parseVacancyCountCandidate(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const normalized = collapse(value);
+  if (/does not print a number|not stated|not specified|to be occurred|panel preparation|as per notification/i.test(normalized)) return null;
+  // Accept a leading count only; never pull a number out of prose or a category
+  // breakdown where the article explicitly says the total is unspecified.
+  const match = normalized.match(/^\s*(\d[\d,]*)\b/);
+  if (!match) return null;
+  const count = Number(match[1].replace(/,/g, ""));
+  return Number.isSafeInteger(count) && count >= 0 ? count : null;
 }
 
 function absoluteSourceLink(href: string, baseUrl: string): FjaResearchLink | null {
@@ -291,11 +307,13 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
   }
   if (!facts.organization) reviewReasons.push("Recruiting organization was not extracted from a recognized key/value row.");
   if (!facts.post_name) reviewReasons.push("A recruitment-level post name was not extracted; inspect post-wise tables and official notice.");
+  const vacancyCountCandidate = parseVacancyCountCandidate(facts.vacancies);
   if (!facts.vacancies) reviewReasons.push("Total recruitment vacancies were not extracted from a recognized key/value row.");
+  else if (vacancyCountCandidate === null) reviewReasons.push("Vacancy text was captured, but no defensible numeric total can be derived; do not use it as a canonical vacancy count.");
   if (!uniqueLinks.length) reviewReasons.push("No candidate official-source links were identified; inspect the source page manually.");
   for (const item of unparsedDateValues) reviewReasons.push("Date field “" + item.label + "” had a non-date value and was not accepted: “" + item.value + "”.");
   for (const item of unparsedVacancyValues) reviewReasons.push("Vacancy field “" + item.label + "” had no numeric count and was not accepted: “" + item.value + "”.");
-  if (!postTableCandidates.length) reviewReasons.push("No structured post-wise table was detected; leaf-level post data requires manual/official-source review.");
+  if (!postTableCandidates.length && !facts.post_name) reviewReasons.push("No structured post-wise table or single-post name was detected; leaf-level post data requires manual/official-source review.");
 
   const missingCoreFields = ["organization", "post_name", "vacancies", "application_end_date"].filter((field) => !facts[field]);
   const listItemCount = contentSections.reduce((count, section) =>
@@ -319,6 +337,7 @@ export function parseFjaResearchDetail(html: string, url: string, asOfDate: stri
     post_table_candidates: postTableCandidates,
     open_status: openStatus,
     derived_close_date: closeDate,
+    vacancy_count_candidate: vacancyCountCandidate,
     review_reasons: reviewReasons,
     capture_quality: {
       status: captureStatus,
