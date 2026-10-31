@@ -33,6 +33,7 @@ The previous read-only audit found:
 - These child facts were spread across multiple parent recruitment source labels, including `AGGREGATOR_DISCOVERED`, NULL, `GOA_GOV_IN` and `MANUAL_VERIFIED`; parent source labels alone therefore cannot safely gate them.
 - The `fja_post_inventory` table was empty at the time of the audit, so the surviving fact rows had no matching raw inventory record.
 - 19 `eligibilities` rows were marked VERIFIED without a complete issuer evidence chain: none had all of `source_type=OFFICIAL_NOTIFICATION`, `verified_at`, `source_ref` and `source_locator`.
+- 1,897 `post_enrichments` rows were marked VERIFIED while linked education/experience child facts included FJA-sourced rows with `verified_at IS NULL`; another 289 were already UNVERIFIABLE. The forward migration demotes the 1,897 aggregate records until the underlying facts are reviewed.
 - 472 posts across 421 recruitments shared an identical government-deputation education statement. This is a review cohort, not proof that all 472 are incorrect.
 - NIT Warangal recruitment 4855 / slug `org1460-2026-0004` contains four role leaves with cross-recruitment qualification contamination. These facts must be checked against the 2026 NITW/FR-2/2026 issuer notification before restoration.
 
