@@ -17,6 +17,7 @@
  */
 
 import { getDb } from "../src/db";
+import { writeFile } from "node:fs/promises";
 import { loadOrgIndex, resolveOrganization } from "../src/ingest/organization-resolution";
 import { writePostingsToDB } from "../src/db/operations/write-postings-v2";
 import type { DedupedPosting } from "../src/ingest/deduplicate";
@@ -496,6 +497,7 @@ async function main() {
   const orgIndex = await loadOrgIndex(db);
   const orgStats: Record<string, number> = { ALIAS: 0, EXISTING: 0, CANDIDATE: 0, NONE: 0 };
   const candidateOrgs: Array<{ externalId: string; orgName: string; reason: string }> = [];
+  const dryRunRecords: Array<Record<string, unknown>> = [];
 
   let officialUrlCount = 0;
   let missingOfficialUrlCount = 0;
@@ -505,15 +507,62 @@ async function main() {
     else missingOfficialUrlCount++;
     const resolution = resolveOrganization(orgIndex, row.organization_name);
     orgStats[resolution.kind]++;
+    const organizationReason = resolution.kind === "CANDIDATE"
+      ? resolution.reason
+      : resolution.kind === "NONE" ? "NO_ORG_NAME" : null;
     if (resolution.kind === "CANDIDATE" || resolution.kind === "NONE") {
       candidateOrgs.push({
         externalId: row.external_id,
         orgName: row.organization_name ?? "(none)",
-        reason: resolution.kind === "CANDIDATE" ? resolution.reason : "NO_ORG_NAME",
+        reason: organizationReason ?? "UNRESOLVED",
       });
     }
+    const preflightResult = !normalized.officialNotificationUrl
+      ? "HOLD_MISSING_RECOGNIZED_OFFICIAL_NOTIFICATION_URL"
+      : resolution.kind === "NONE"
+        ? "HOLD_ORGANIZATION_UNRESOLVED"
+        : resolution.kind === "CANDIDATE"
+          ? "REQUIRES_ORGANIZATION_REVIEW"
+          : "READY_FOR_CANONICAL_WRITER_PREFLIGHT";
+    dryRunRecords.push({
+      fja_external_id: row.external_id,
+      fja_title: row.title,
+      organization: row.organization_name,
+      fja_source_url: row.source_url,
+      official_notification_url: normalized.officialNotificationUrl ?? null,
+      application_url: normalized.applyUrl ?? null,
+      duplicate_check: {
+        result: "PASSED",
+        basis: "Selected only after normalized source URL checks against recruitments and postings and external ID check against postings",
+      },
+      source_status: row.source_status,
+      detail_status: row.detail_status,
+      organization_resolution: resolution.kind,
+      organization_resolution_reason: organizationReason,
+      preflight_result: preflightResult,
+    });
   }
 
+  if (DRY_RUN) {
+    const report = {
+      generated_at: new Date().toISOString(),
+      mode: "DRY_RUN_NO_DATABASE_WRITES",
+      scope: FULL_INVENTORY ? "eligible_inventory" : PILOT_IDS ? "pilot" : "unscoped_dry_run",
+      selected_after_dedup_and_limit: dryRunRecords.length,
+      counts: {
+        official_notification_url_recognized: officialUrlCount,
+        official_notification_url_missing: missingOfficialUrlCount,
+        organization_resolution: orgStats,
+      },
+      records: dryRunRecords,
+    };
+    const reportPath = "fja-canonical-promotion-dry-run.json";
+    await writeFile(reportPath, JSON.stringify(report, null, 2) + "\\n", "utf8");
+    console.log("Record-level dry-run report written to " + reportPath);
+    console.log("DRY_RUN_RECORD_REPORT_JSON_BEGIN");
+    console.log(JSON.stringify(report, null, 2));
+    console.log("DRY_RUN_RECORD_REPORT_JSON_END");
+  }
   console.log(`Org resolution preview:`);
   console.log(`  ALIAS    : ${orgStats.ALIAS}`);
   console.log(`  EXISTING : ${orgStats.EXISTING}`);
