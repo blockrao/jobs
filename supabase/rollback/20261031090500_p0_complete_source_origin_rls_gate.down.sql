@@ -19,6 +19,9 @@ DROP POLICY IF EXISTS "public read" ON public.posts;
 CREATE POLICY "public read" ON public.posts
   FOR SELECT TO public USING (true);
 
+-- Restore the original anonymous base-table grants removed by the migration.
+GRANT SELECT ON TABLE public.recruitments, public.posts TO anon;
+
 DROP POLICY IF EXISTS "public read" ON public.eligibilities;
 CREATE POLICY "public read" ON public.eligibilities
   FOR SELECT TO public USING (true);
@@ -40,11 +43,12 @@ DROP FUNCTION IF EXISTS private.legacy_posting_has_aggregator_origin_for_post(in
 DROP FUNCTION IF EXISTS private.propagate_legacy_posting_discovery_origin();
 DROP FUNCTION IF EXISTS private.is_post_publicly_trusted(integer);
 DROP FUNCTION IF EXISTS private.is_recruitment_publicly_trusted(integer);
+DROP FUNCTION IF EXISTS private.has_complete_issuer_authority_review(jsonb);
 DROP FUNCTION IF EXISTS private.has_complete_issuer_fact_review(jsonb);
 DROP FUNCTION IF EXISTS private.is_past_review_timestamp(text);
 DROP FUNCTION IF EXISTS private.recruitment_has_aggregator_origin(integer);
 DROP FUNCTION IF EXISTS private.is_aggregator_source_value(text);
-DROP FUNCTION IF EXISTS private.is_fja_url(text);
+DROP FUNCTION IF EXISTS private.is_aggregator_url(text);
 
 REVOKE USAGE ON SCHEMA private FROM anon, authenticated, service_role;
 
