@@ -204,6 +204,8 @@ export interface PostEnrichment {
     confidenceScore?: number;
     source?: string | null;
     verifiedAt?: Date;
+    sourceRef?: string | null;
+    sourceLocator?: string | null;
     factId?: number | string;
   }>;
 
@@ -217,6 +219,8 @@ export interface PostEnrichment {
     confidenceScore?: number;
     source?: string | null;
     verifiedAt?: Date;
+    sourceRef?: string | null;
+    sourceLocator?: string | null;
     factId?: number | string;
   }>;
 
