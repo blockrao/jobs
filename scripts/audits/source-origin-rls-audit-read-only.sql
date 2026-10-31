@@ -140,6 +140,11 @@ candidates AS (
            )
          )
      )
+  OR EXISTS (
+    SELECT 1
+    FROM aggregator_url_recruitments a
+    WHERE a.recruitment_id = r.id
+  )
 ),
 matched AS (
   SELECT c.*,
