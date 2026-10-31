@@ -46,6 +46,8 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
     post.recruitmentSourceDiscoveryOrigin,
     post.recruitmentVerificationStatus,
     post.recruitmentMetadata,
+    undefined,
+    post.recruitmentOfficialLinkSource,
   );
   const enrichment = unverifiedAggregator ? null : post.enrichment;
   const vacancies = unverifiedAggregator ? 0 : (resolvePostVacancy(post) ?? 0);
