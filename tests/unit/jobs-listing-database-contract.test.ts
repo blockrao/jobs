@@ -29,6 +29,10 @@ describe("canonical /jobs listing database contract", () => {
     expect(recruitmentQueries).toContain("r.notification_date IS NOT NULL");
     expect(recruitmentQueries).toContain("r.notification_date >= now() - interval '30 days'");
     expect(recruitmentQueries).toContain("r.notification_date <= now()");
+    expect(recruitmentQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
+    expect(recruitmentQueries).toContain("r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'");
+    expect(recruitmentQueries).toContain("'hub:notification_date'");
+    expect(jobsPage).toContain("No source-verified recruitment notifications are available from the last 30 days.");
     expect(recruitmentQueries).not.toContain("COALESCE(r.notification_date, r.created_at) >= now()");
     expect(recruitmentQueries).not.toContain("COALESCE(r.notification_date, r.created_at) DESC");
     expect(recruitmentQueries).not.toContain('r.created_at AS "createdAt"');
