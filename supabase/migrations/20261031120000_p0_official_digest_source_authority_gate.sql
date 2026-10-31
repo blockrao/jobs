@@ -390,6 +390,21 @@ BEGIN
       FROM public.posts p
       WHERE p.id = pe.post_id
         AND p.recruitment_id = NEW.id;
+
+      UPDATE public.eligibilities e
+      SET status = 'VERIFIED',
+          verified_at = v_review.fact_reviewed_at,
+          source_type = 'OFFICIAL_NOTIFICATION',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':eligibility'
+          ) ->> 'evidence_ref',
+          derivation = 'NORMALIZED',
+          updated_at = now()
+      FROM public.posts p
+      WHERE e.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':eligibility'];
     END IF;
   END IF;
 
@@ -673,6 +688,21 @@ BEGIN
       AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.eligibilities e
+    SET status = 'PENDING',
+        verified_at = NULL,
+        source_type = NULL,
+        source_ref = NULL,
+        source_locator = NULL,
+        derivation = NULL,
+        updated_at = now()
+    FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE e.post_id = p.id
+      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
   END IF;
 
   RETURN NEW;
@@ -895,6 +925,19 @@ SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
 )
 WHERE EXISTS (SELECT 1 FROM public.posts_education pe WHERE pe.post_id = p.id)
    OR EXISTS (SELECT 1 FROM public.posts_experience pex WHERE pex.post_id = p.id);
+
+-- Existing eligibility rows marked VERIFIED without issuer evidence are not verified facts.
+UPDATE public.eligibilities
+SET status = 'PENDING',
+    verified_at = NULL,
+    updated_at = now()
+WHERE status = 'VERIFIED'
+  AND (
+    source_type IS DISTINCT FROM 'OFFICIAL_NOTIFICATION'
+    OR verified_at IS NULL
+    OR source_ref IS NULL
+    OR source_locator IS NULL
+  );
 
 -- Correct the false VERIFIED state from the earlier document-only promotion.
 UPDATE public.recruitments
