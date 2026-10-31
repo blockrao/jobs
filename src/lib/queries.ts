@@ -482,9 +482,10 @@ const livePostCondition = sql`
 // until the issuing-authority review has explicitly upgraded verification.
 const issuerSourcePublicCondition = sql`
   (
-    COALESCE(${recruitments.officialLinkSource}, '') <> 'AGGREGATOR_DISCOVERED'
+    COALESCE(${recruitments.sourceDiscoveryOrigin}, '') <> 'AGGREGATOR_DISCOVERED'
     OR (
       ${recruitments}.verification_status = 'VERIFIED'
+      AND ${recruitments.officialLinkSource} = 'MANUAL_VERIFIED'
       AND ${recruitments}.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
       AND ${recruitments}.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
       AND ${recruitments.applicationEndDate} IS NOT NULL
