@@ -215,7 +215,7 @@ export default async function JobDetailPage({ params }: Props) {
           salaryRaw: post.fjaExtract?.salaryRaw,
         },
         // Phase 1 P0: Detail enrichment data
-        vacanciesByCategory: Array.isArray(enrichment?.vacancies) ? enrichment.vacancies.map((v: any) => ({
+        vacanciesByCategory: post.officialVacancyEvidenceAccepted === true && Array.isArray(enrichment?.vacancies) ? enrichment.vacancies.map((v: any) => ({
           category: v.category,
           total: v.count,
           location: v.location,
