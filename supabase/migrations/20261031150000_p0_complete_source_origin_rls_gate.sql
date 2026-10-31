@@ -164,7 +164,11 @@ AS $fn$
     AND private.is_past_review_timestamp(p_metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_at')
     AND nullif(btrim(p_metadata -> 'source_provenance' -> 'fact_review' ->> 'notes'), '') IS NOT NULL
     AND jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') = 'array'
-    AND jsonb_array_length(p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') > 0
+    AND CASE
+      WHEN jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') = 'array'
+        THEN jsonb_array_length(p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') > 0
+      ELSE false
+    END
     AND jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'evidence') = 'object'
     AND (p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') ? 'hub:notification_date'
     AND (p_metadata -> 'source_provenance' -> 'fact_review' -> 'evidence') ? 'hub:notification_date'
@@ -243,16 +247,20 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, public, private
 AS $fn$
 BEGIN
-  IF TG_OP = 'UPDATE'
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+       OR private.recruitment_has_aggregator_origin(OLD.id) THEN
+      NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
+    END IF;
+  END IF;
+
+  IF NEW.source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED'
      AND (
-       OLD.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-       OR private.recruitment_has_aggregator_origin(OLD.id)
+       private.is_aggregator_source_value(NEW.official_link_source)
+       OR private.is_aggregator_source_value(NEW.enrichment_data -> 'meta' ->> 'source')
+       OR private.is_aggregator_source_value(NEW.metadata -> 'source_provenance' ->> 'discovery_origin')
+       OR private.is_fja_url(NEW.source_url)
      ) THEN
-    NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
-  ELSIF private.is_aggregator_source_value(NEW.official_link_source)
-     OR private.is_aggregator_source_value(NEW.enrichment_data -> 'meta' ->> 'source')
-     OR private.is_aggregator_source_value(NEW.metadata -> 'source_provenance' ->> 'discovery_origin')
-     OR private.is_fja_url(NEW.source_url) THEN
     NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
   END IF;
   RETURN NEW;
@@ -272,17 +280,16 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, public, private
 AS $fn$
 BEGIN
-  IF TG_OP = 'UPDATE'
-     AND (
-       private.is_aggregator_source_value(OLD."sourceName")
+  IF TG_OP = 'UPDATE' THEN
+    IF private.is_aggregator_source_value(OLD."sourceName")
        OR private.is_fja_url(OLD."sourceReference")
        OR private.is_fja_url(OLD.original_recruitment_url)
-       OR private.is_fja_url(OLD."originalRecruitmentUrl")
-     ) THEN
-    UPDATE public.recruitments
-    SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-    WHERE id = OLD.recruitment_id
-      AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
+       OR private.is_fja_url(OLD."originalRecruitmentUrl") THEN
+      UPDATE public.recruitments
+      SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      WHERE id = OLD.recruitment_id
+        AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
+    END IF;
   END IF;
 
   IF private.is_aggregator_source_value(NEW."sourceName")
@@ -311,9 +318,8 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, public, private
 AS $fn$
 BEGIN
-  IF TG_OP = 'UPDATE'
-     AND (
-       private.is_aggregator_source_value(OLD.source)
+  IF TG_OP = 'UPDATE' THEN
+    IF private.is_aggregator_source_value(OLD.source)
        OR upper(btrim(coalesce(OLD.source_type, ''))) = 'AGGREGATOR'
        OR private.is_fja_url(OLD.source_url)
        OR EXISTS (
@@ -326,16 +332,16 @@ BEGIN
            END
          ) AS portal(value)
          WHERE private.is_aggregator_source_value(portal.value)
-       )
-     ) THEN
-    UPDATE public.recruitments r
-    SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-    WHERE r.id = OLD.inferred_recruitment_id
-       OR r.id = (
-         SELECT p.recruitment_id
-         FROM public.posts p
-         WHERE p.id = OLD.inferred_post_id
-       );
+       ) THEN
+      UPDATE public.recruitments r
+      SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      WHERE r.id = OLD.inferred_recruitment_id
+         OR r.id = (
+           SELECT p.recruitment_id
+           FROM public.posts p
+           WHERE p.id = OLD.inferred_post_id
+         );
+    END IF;
   END IF;
 
   IF private.is_aggregator_source_value(NEW.source)
