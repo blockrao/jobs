@@ -225,7 +225,7 @@ WHERE r.official_link_source = 'AGGREGATOR_DISCOVERED'
 ORDER BY r.id;
 
 
--- 9) Full institutional_aggregation cohort: origin, verification conflicts and contamination.
+-- 9) Full aggregator extraction cohort: origin, verification conflicts and contamination.
 -- This cohort is identified by immutable extraction provenance, not only by
 -- official_link_source (which is NULL on many affected records).
 SELECT
@@ -238,11 +238,11 @@ SELECT
        OR r.enrichment_data->'institution'->>'name' ILIKE '%UPPSC%'
   ) AS uppsc_contaminated
 FROM public.recruitments r
-WHERE r.enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+WHERE r.enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
 GROUP BY 1,2
 ORDER BY recruitments DESC, official_link_source, verification_status;
 
--- Exact frozen review manifest for every institutional_aggregation Recruitment.
+-- Exact frozen review manifest for all aggregator extraction Recruitments.
 SELECT
   r.id,
   r.slug,
@@ -267,5 +267,5 @@ SELECT
     ELSE 'SOURCE_AND_FACT_REVIEW_REQUIRED'
   END AS review_action
 FROM public.recruitments r
-WHERE r.enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+WHERE r.enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
 ORDER BY r.id;
