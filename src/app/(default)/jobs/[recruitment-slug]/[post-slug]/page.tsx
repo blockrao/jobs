@@ -194,6 +194,7 @@ export default async function JobDetailPage({ params }: Props) {
         employmentType: post.employmentType ?? null,
         qualificationText: eligibility.qualificationText,
         qualificationVerificationStatus: eligibility.verificationStatus,
+        enrichmentVerificationStatus: enrichment?.sourceVerificationStatus ?? null,
         experienceText: eligibility.experienceText,
         ageLimit: eligibility.ageText,
         selectionProcess: post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined),
