@@ -28,7 +28,7 @@ WITH legacy_posting_origin AS (
       'aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-    OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
@@ -47,9 +47,9 @@ post_origin AS (
   WHERE lower(coalesce(p."sourceName", '')) IN (
       'aggregator','freejobalert','aggregator_extracted','pilot_preliminary'
     )
-    OR lower(coalesce(p."sourceReference", '')) LIKE '%freejobalert.com%'
-    OR lower(coalesce(p.original_recruitment_url, '')) LIKE '%freejobalert.com%'
-    OR lower(coalesce(p."originalRecruitmentUrl", '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
 ),
 candidates AS (
   SELECT
@@ -88,7 +88,7 @@ candidates AS (
     OR lower(coalesce(r.official_link_source, '')) IN (
       'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
-    OR lower(coalesce(r.source_url, '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id)
     OR EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id)
 ),
@@ -144,7 +144,7 @@ WITH legacy_posting_origin AS (
       'aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-    OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
@@ -163,9 +163,9 @@ post_origin AS (
   WHERE lower(coalesce(p."sourceName", '')) IN (
       'aggregator','freejobalert','aggregator_extracted','pilot_preliminary'
     )
-    OR lower(coalesce(p."sourceReference", '')) LIKE '%freejobalert.com%'
-    OR lower(coalesce(p.original_recruitment_url, '')) LIKE '%freejobalert.com%'
-    OR lower(coalesce(p."originalRecruitmentUrl", '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
 ),
 candidates AS (
   SELECT
@@ -201,7 +201,7 @@ candidates AS (
     OR lower(coalesce(r.official_link_source, '')) IN (
       'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
-    OR lower(coalesce(r.source_url, '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id)
     OR EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id)
 ),
@@ -297,7 +297,7 @@ JOIN public.postings sp
 WHERE (
     lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-    OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
+    OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
@@ -336,9 +336,9 @@ SELECT
 FROM public.posts p
 JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE lower(coalesce(p."sourceName", '')) = 'pilot_preliminary'
-   OR lower(coalesce(p."sourceReference", '')) LIKE '%freejobalert.com%'
-   OR lower(coalesce(p.original_recruitment_url, '')) LIKE '%freejobalert.com%'
-   OR lower(coalesce(p."originalRecruitmentUrl", '')) LIKE '%freejobalert.com%'
+   OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+   OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+   OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
 ORDER BY r.id, p.id;
 
 COMMIT;
