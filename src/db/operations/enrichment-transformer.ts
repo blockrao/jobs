@@ -168,39 +168,30 @@ export function transformEnrichment(
       enrichment.experience = [];
     }
 
-    // Age rules - transform to PostEnrichment format
-    if (hasPostFactReview('age_rules') && rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object') {
+    // Age rules - only expose rows with complete issuer evidence.
+    const verifiedAgeRuleEntries = eligibleObjectEntries(rawEnrichment.age_rules, 'age_rules');
+    if (verifiedAgeRuleEntries.length > 0) {
       const ageRulesObject: Record<string, { min: number; max: number }> = {};
       const ageRulesArray: Array<{ category: string; min: number; max: number; maxAge?: number; relaxationYears?: number; ruleType?: string; note?: string }> = [];
 
-      Object.entries(rawEnrichment.age_rules).forEach(([category, rule]: [string, any]) => {
+      verifiedAgeRuleEntries.forEach(([category, rule]: [string, any]) => {
         if (rule && typeof rule === 'object') {
-          const ruleObj = {
-            min: rule.min || 0,
-            max: rule.max || 65,
-          };
-          ageRulesObject[category] = ruleObj;
-
-          // Also add to array format for page component
+          const maxAge = rule.max ?? rule.max_age ?? 65;
+          ageRulesObject[category] = { min: rule.min ?? 0, max: maxAge };
           ageRulesArray.push({
             category,
-            min: rule.min || 0,
-            max: rule.max || 65,
-            maxAge: rule.max || 65,
-            relaxationYears: rule.relaxation_years || rule.relaxationYears,
-            ruleType: rule.rule_type || rule.ruleType,
+            min: rule.min ?? 0,
+            max: maxAge,
+            maxAge,
+            relaxationYears: rule.relaxation_years ?? rule.relaxationYears,
+            ruleType: rule.rule_type ?? rule.ruleType,
             note: rule.note,
           });
         }
       });
 
-      if (Object.keys(ageRulesObject).length > 0) {
-        enrichment.ageRulesByCategory = ageRulesObject;
-        enrichment.ageRules = ageRulesArray; // Page component expects this
-      } else {
-        enrichment.ageRulesByCategory = {};
-        enrichment.ageRules = [];
-      }
+      enrichment.ageRulesByCategory = ageRulesObject;
+      enrichment.ageRules = ageRulesArray;
     } else {
       enrichment.ageRulesByCategory = {};
       enrichment.ageRules = [];
