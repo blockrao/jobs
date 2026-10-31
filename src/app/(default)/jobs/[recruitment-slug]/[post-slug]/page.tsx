@@ -9,7 +9,7 @@
  * - Error/empty states for missing data
  * - Related jobs section
  * - Dark mode support
- * - ISR: 1 day (posts stable)
+ * - ISR: 1 hour (job lifecycle and schema eligibility are time-sensitive)
  *
  * PHASE 2: Removed locale prefix. Canonical URL structure: /jobs/{recruitment-slug}/{post-slug}
  */
