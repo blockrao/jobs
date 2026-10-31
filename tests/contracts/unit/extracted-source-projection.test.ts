@@ -96,8 +96,10 @@ describe("extracted source projection", () => {
     // The renderer, not the schema builder, enforces official-link provenance.
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
     expect(renderer).toContain("const jobPostingSourceVerified = notificationLinkVerified && applicationLinkVerified;");
-    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified}");
+    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified && jobPostingContentEligible}");
     expect(renderer).toContain("isManuallyVerifiedOfficialLink(post.officialLinkSource)");
+    expect(renderer).toContain("jobPostingQuality.tier === \"A\" && post.qualificationVerificationStatus === \"VERIFIED\"");
+    expect(route).toContain("const eligibility = resolveEligibility(post);");
     // Existing legacy posting UI still labels pending enrichment facts as reported.
     const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
     expect(page).toContain("Vacancies (reported)");
@@ -107,7 +109,7 @@ describe("extracted source projection", () => {
   test("the leaf renderer requires lifecycle, indexability and verified source provenance for JobPosting", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
     expect(renderer).toMatch(/const emitJobPosting = lifecycle \? lifecycle\.isOpen : !isApplicationClosed;/);
-    expect(renderer).toContain("emitJobPosting && indexable && jobPostingSourceVerified");
+    expect(renderer).toContain("emitJobPosting && indexable && jobPostingSourceVerified && jobPostingContentEligible");
   });
 
   test("a recruitment hub is always canonical to itself and indexable (URL contract 2026-10-20)", () => {
