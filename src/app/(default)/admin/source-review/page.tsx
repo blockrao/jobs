@@ -357,6 +357,19 @@ export default async function SourceOriginReviewQueuePage({
                 <td className="whitespace-nowrap px-3 py-3 text-xs">
                   <div className="font-semibold">{row.valid_post_count} valid Post Leaves</div>
                   <div className="mt-1 text-neutral-500">Legacy mapping: {row.has_legacy_mapping ? "yes" : "no"}</div>
+                  <details className="mt-2 whitespace-normal">
+                    <summary className="cursor-pointer text-blue-700 underline">Inspect source evidence</summary>
+                    <div className="mt-2 space-y-3">
+                      <div>
+                        <p className="font-semibold">Canonical Post source fields</p>
+                        <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-all rounded bg-neutral-50 p-2 text-[10px]">{JSON.stringify(row.post_source_evidence ?? [], null, 2)}</pre>
+                      </div>
+                      <div>
+                        <p className="font-semibold">Legacy Posting / source document / observations</p>
+                        <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap break-all rounded bg-neutral-50 p-2 text-[10px]">{JSON.stringify(row.legacy_posting_evidence ?? [], null, 2)}</pre>
+                      </div>
+                    </div>
+                  </details>
                 </td>
               </tr>
             ))}
