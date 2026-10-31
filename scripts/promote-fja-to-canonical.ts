@@ -557,7 +557,7 @@ async function main() {
       records: dryRunRecords,
     };
     const reportPath = "fja-canonical-promotion-dry-run.json";
-    await writeFile(reportPath, JSON.stringify(report, null, 2) + "\\n", "utf8");
+    await writeFile(reportPath, JSON.stringify(report, null, 2) + "\n", "utf8");
     console.log("Record-level dry-run report written to " + reportPath);
     console.log("DRY_RUN_RECORD_REPORT_JSON_BEGIN");
     console.log(JSON.stringify(report, null, 2));
