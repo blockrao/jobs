@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
+import { resolvePostVacancy, resolveRecruitmentVacancy } from "@/lib/resolvers/fact-resolvers";
 
 type VacancyInput = Parameters<typeof resolvePostVacancy>[0];
 
@@ -79,8 +79,7 @@ describe("resolvePostVacancy trust gate", () => {
 
 describe("resolveRecruitmentVacancy trust gate", () => {
   it("requires explicit field-level issuer evidence", () => {
-    const { resolveRecruitmentVacancy } = require("@/lib/resolvers/fact-resolvers");
-    expect(resolveRecruitmentVacancy({ totalVacancies: 100, officialVacancyEvidenceAccepted: true })).toBe(100);
+        expect(resolveRecruitmentVacancy({ totalVacancies: 100, officialVacancyEvidenceAccepted: true })).toBe(100);
     expect(resolveRecruitmentVacancy({ totalVacancies: 100, officialVacancyEvidenceAccepted: false })).toBeNull();
     expect(resolveRecruitmentVacancy({ totalVacancies: 100 })).toBeNull();
   });
