@@ -306,75 +306,8 @@ async function getPostCoreData(
 }
 
 /**
- * REMOVED: Fetch FJA extraction data separately (can be lazy-loaded)
- * FJA inventory tables were dropped as part of Step 3 cleanup.
- * FJA data should be sourced from official recruiter APIs only.
- */
-async function getFjaExtractForPost(postId: number): Promise<any> {
-  // FJA extraction tables no longer exist in production schema.
-  // Return null to prevent breaking any remaining code paths.
-  console.warn(`[getFjaExtractForPost] FJA tables removed; returning null for post ${postId}`);
-  return null;
-}
-
-/**
- * Fetch post enrichment data from post_enrichments table
- * Returns all columns as-is from the database
- */
-async function getPostEnrichmentData(postId: number | string): Promise<any> {
-  const db = getDb();
-
-  try {
-    const result = await db.execute<any>(sql`
-      SELECT
-        *,
-        id AS "enrichmentId"
-      FROM post_enrichments
-      WHERE post_id = ${postId}
-      LIMIT 1
-    `);
-
-    if (result && result.length > 0) {
-      const enrichment = result[0];
-      // Convert date strings to Date objects for fields we know are dates
-      const dateFields = [
-        'ageReferenceDate',
-        'notificationDate',
-        'applicationOpenDate',
-        'applicationClosingDate',
-        'examDate',
-        'admitCardDate',
-        'resultDate',
-        'interviewScheduleDate',
-        'appointmentDate',
-        'sourceVerificationDate',
-        'created_at',
-        'updated_at'
-      ];
-
-      for (const field of dateFields) {
-        if (enrichment[field] && typeof enrichment[field] === 'string') {
-          try {
-            enrichment[field] = new Date(enrichment[field]);
-          } catch (e) {
-            // Leave as-is if date parsing fails
-          }
-        }
-      }
-
-      return enrichment;
-    }
-
-    return null;
-  } catch (err) {
-    console.warn("Error fetching enrichment data for post", postId, ":", err);
-    return null;
-  }
-}
-
-/**
  * Fetch enrichment detail tables for a post (vacancies, education, experience, etc.)
- * These are fetched in parallel with FJA data for Phase 1 P0 data unification
+ * Public leaf facts use posts.enrichment JSONB; these legacy detail tables remain a separate projection.
  */
 async function getPostDetailEnrichment(postId: number | string): Promise<any> {
   const db = getDb();
@@ -613,22 +546,10 @@ export async function getPostBySlug(
     // Extract enrichment from posts.enrichment column
     const enrichmentJsonb = coreData.enrichment || {};
 
-    // SECONDARY PATH: Fetch only FJA data in parallel
-    // Detail enrichment tables have been consolidated into posts.enrichment JSONB
-    const results = await Promise.allSettled([
-      getFjaExtractForPost(postId),
-      getPostEnrichmentData(postId),
-    ]);
-
-    const fjaData = results[0].status === 'fulfilled' ? results[0].value : null;
-    const enrichmentData = results[1].status === 'fulfilled' ? results[1].value : null;
-
-    // Merge results, handling null values safely
-    const data = {
-      ...coreData,
-      ...(fjaData || {}),
-      ...(enrichmentData || {}),
-    } as PostRow;
+    // Public leaf facts use canonical Post columns and posts.enrichment JSONB.
+    // Legacy post_enrichments contains conflicting vacancy and deadline values.
+    // FJA extraction fields are already projected by the core-data query.
+    const data = coreData as PostRow;
 
     // An external URL is not an official issuer link merely because an
     // aggregator discovered it or it is hosted on a government-looking domain.
