@@ -115,6 +115,8 @@ export interface PostEnrichment {
   vacanciesTotal: number;
   /** Array of vacancy objects for rendering */
   vacancies?: Array<{ category: string; count: number }>;
+  /** Verified vacancy counts grouped by location when available. */
+  vacanciesByLocation?: Record<string, number>;
 
   // Application Fee
   feesByCategory: Record<string, number | string>; // Can be "Exempted" etc.
