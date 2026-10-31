@@ -22,8 +22,9 @@ vi.mock("@/db", () => ({
       if (rows.fail) throw new Error("connection refused");
       const text = JSON.stringify(query);
       if (/FROM organizations o/.test(text)) return rows.orgs;
-      if (/FROM posts p/.test(text)) return rows.leaves;
+      // The hub query contains a nested FROM posts p; match the top-level FROM first.
       if (/FROM recruitments r/.test(text)) return rows.hubs;
+      if (/FROM posts p/.test(text)) return rows.leaves;
       if (/FROM exams/.test(text)) return [];
       throw new Error("unexpected sitemap query: " + text.slice(0, 120));
     },
