@@ -312,7 +312,7 @@ export default function JobDetailPageProduction({
       : { date: null, state: 'UNKNOWN' as const },
   };
 
-  const statusText = lifecycle?.state === 'upcoming'
+  const lifecycleStatusText = lifecycle?.state === 'upcoming'
     ? (applicationDeadline ? `Applications not open yet · last date ${formatDate(applicationDeadline)}` : 'Applications not open yet')
     : lifecycle?.state === 'results'
       ? 'Recruitment is in the results stage'
@@ -323,6 +323,9 @@ export default function JobDetailPageProduction({
           : applicationDeadline
             ? `Applications close on ${formatDate(applicationDeadline)}`
             : recruitmentClosed ? 'This recruitment is closed' : null;
+  const statusText = lifecycleStatusText && post.officialSourceVerified !== true
+    ? `Reported: ${lifecycleStatusText}`
+    : lifecycleStatusText;
 
   const hasRelated = Boolean(
     (relatedByOrg && relatedByOrg.length > 0) || (relatedByLocation && relatedByLocation.length > 0)
@@ -365,9 +368,9 @@ export default function JobDetailPageProduction({
                   <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
                 )}
               </p>
-              {post.officialSourceVerified !== true && (
+              {(post.officialSourceVerified !== true || post.officialApplicationVerified !== true) && (
                 <p className={styles.notice}>
-                  Official notification and application links have not been independently verified against the issuer registry. No application link is shown until the issuer destination is confirmed.
+                  Unverified notification or application links are hidden. Confirm the destination on the recruiting organisation's official website before applying.
                 </p>
               )}
               {notificationDate && (
