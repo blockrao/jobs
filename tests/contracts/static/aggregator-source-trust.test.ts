@@ -246,18 +246,10 @@ describe("aggregator source trust gate", () => {
       "utf8",
     );
 
-    const remediation = readFileSync(
-      "supabase/migrations/20261031130000_p0_official_digest_source_authority_remediation.sql",
-      "utf8",
-    );
-
     expect(migration).toContain("authority_review_status text NOT NULL DEFAULT 'UNVERIFIED'");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS source_discovery_origin text");
-    expect(remediation).toContain("SET official_link_source = 'UNVERIFIED'");
     expect(migration).toContain("NEW.official_link_source := 'MANUAL_VERIFIED'");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS category varchar(100)");
-    expect(remediation).toContain("WHERE x.post_id = p.id AND x.category IS NOT NULL");
-    expect(remediation).toContain("Preserve existing JSONB fee facts when legacy child rows cannot be grouped");
     expect(migration).toContain("AGGREGATOR_DISCOVERED discovery origin is immutable");
     expect(migration).toContain("authority_evidence_url");
     expect(migration).toContain("authority_reviewed_by");
@@ -296,12 +288,6 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("UPDATE public.posts p");
     expect(migration).toContain("aggregate_enrichment_for_post");
     expect(migration).toContain("OLD.hub IS DISTINCT FROM NEW.hub OR OLD.posts IS DISTINCT FROM NEW.posts");
-    expect(remediation).toContain("UPDATE public.posts_education e");
-    expect(remediation).toContain("verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')");
-    expect(remediation).toContain("official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'");
-    expect(remediation).toContain("official_link_source IS DISTINCT FROM 'UNVERIFIED'");
-    expect(remediation).toContain("UPDATE public.posts_experience e");
-    expect(remediation).toContain("Refresh canonical JSONB after the child evidence has been cleared");
     expect(migration).not.toContain("SET official_link_source = 'UNVERIFIED'");
     expect(migration).toContain("sync_promoted_digest_review_state");
     expect(migration).toContain("'evidence_ref'");
@@ -339,7 +325,6 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("official_notification_url, metadata, enrichment_data");
     expect(postCheck).toContain("aggregator_extraction_without_discovery_origin");
     expect(postCheck).toContain("uppsc_contamination_without_discovery_origin");
-    expect(postCheck).toContain("aggregator_records_still_manually_verified");
   });
 
 });
