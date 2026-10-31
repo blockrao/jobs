@@ -787,7 +787,7 @@ export async function getRelatedPostsForLeaf(
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
-          COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+          COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
           OR (
             r.verification_status = 'VERIFIED'
             AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -827,7 +827,7 @@ export async function getRelatedPostsForLeaf(
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
-          COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+          COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
           OR (
             r.verification_status = 'VERIFIED'
             AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -867,7 +867,7 @@ export async function getRelatedPostsForLeaf(
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
-          COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+          COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
           OR (
             r.verification_status = 'VERIFIED'
             AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -1007,7 +1007,7 @@ export async function getPostsByRecruitment(
         AND (r.application_end_date IS NULL OR r.application_end_date >= now())
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
         AND (
-          COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+          COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
           OR (
             r.verification_status = 'VERIFIED'
             AND r.official_link_source = 'MANUAL_VERIFIED'
