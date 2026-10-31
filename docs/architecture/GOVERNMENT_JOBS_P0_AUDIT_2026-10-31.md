@@ -29,6 +29,7 @@ Captured at `2026-10-31 00:01:44 UTC`. Counts are time-sensitive because lifecyc
 | Live posts with `MANUAL_VERIFIED` link provenance | 0 |
 | Live posts with `AGGREGATOR_DISCOVERED` provenance | 780 |
 | Live posts with no link-provenance value | 1,781 |
+| Live posts with non-standard/unknown legacy provenance values | 287 |
 | Live posts with sentinel deadline dates (year >= 2090) | 0 |
 | Live posts with description length >= 150 characters | 614 |
 | Live posts with positive vacancy count | 2,105 |
@@ -117,3 +118,6 @@ The canonical post-detail route used a 24-hour ISR interval, while the governmen
 https://github.com/blockrao/jobs/pull/190
 
 The PR is intentionally not merged or deployed until its CI checks and review are complete.
+
+
+Additional provenance breakdown: 273 `fja_official_link_extracted`, 6 `official_link_extracted`, 7 freeform portal labels and 1 `pending_verification`; these 287 values are not A-070 `MANUAL_VERIFIED` provenance.
