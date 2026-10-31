@@ -38,7 +38,7 @@ SELECT
   count(*),
   count(DISTINCT px.post_id),
   count(DISTINCT p.recruitment_id),
-  count(*) FILTER (WHERE px.verified_at IS NULL),
+  count(*),
   min(px.created_at),
   max(px.created_at)
 FROM public.posts_experience px
@@ -93,7 +93,6 @@ WHERE EXISTS (
   SELECT 1 FROM public.posts_experience x
   WHERE x.post_id = p.id
     AND x.source = 'fja_post_inventory'
-    AND x.verified_at IS NULL
 )
 GROUP BY 1
 ORDER BY enrichment_rows DESC;
@@ -110,7 +109,7 @@ SELECT
   (SELECT count(*) FROM public.posts_education e
     WHERE e.post_id = p.id AND e.source = 'fja_post_inventory' AND e.verified_at IS NULL) AS unverified_fja_education_rows,
   (SELECT count(*) FROM public.posts_experience x
-    WHERE x.post_id = p.id AND x.source = 'fja_post_inventory' AND x.verified_at IS NULL) AS unverified_fja_experience_rows,
+    WHERE x.post_id = p.id AND x.source = 'fja_post_inventory') AS unverified_fja_experience_rows,
   'ENRICHMENT_VERIFICATION_REVIEW_REQUIRED' AS review_action
 FROM public.post_enrichments pe
 JOIN public.posts p ON p.id = pe.post_id
@@ -200,10 +199,10 @@ SELECT
   px.id,
   px.experience_type,
   NULL::text,
-  px.description,
+  NULL::text,
   px.source,
   px.confidence_score,
-  px.verified_at,
+  NULL::timestamp,
   'EXPERIENCE_REVIEW_REQUIRED'
 FROM public.posts_experience px
 JOIN public.posts p ON p.id = px.post_id
