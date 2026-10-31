@@ -78,7 +78,7 @@ interface JobDetailPageProps {
     educationRequirements?: Array<{ degree: string; subject?: string; specialization?: string; minimumPercentage?: number; minimumMarks?: number; confidenceScore?: number }>;
     experienceRequirements?: Array<{ totalYears?: number; minYears?: number; type: string; confidenceScore?: number }>;
     selectionProcessStages?: Array<{ order: number; name: string; scheduledDate?: string; durationMinutes?: number; totalMarks?: number; minimumMarks?: number }>;
-    requiredDocuments?: Array<{ name: string; category: string; isRequired: boolean }>;
+    requiredDocuments?: Array<{ name: string; category: string; isRequired?: boolean | null }>;
     importantDates?: Array<{ type: string; date: string }>;
     ageRules?: Array<{ category: string; maxAge?: number | null; relaxationYears?: number; ruleType?: string; note?: string }>;
     applicationFees?: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string }>;
@@ -506,7 +506,7 @@ export default function JobDetailPageProduction({
               <Section id="documents" title="Documents required">
                 <ul className={styles.list}>
                   {post.requiredDocuments.map((d, i) => (
-                    <li key={i}>{d.name}{d.category ? ` (${d.category})` : ''}{d.isRequired ? '' : ' — if applicable'}</li>
+                    <li key={i}>{d.name}{d.category ? ` (${d.category})` : ''}{d.isRequired === true ? '' : d.isRequired === false ? ' — if applicable' : ' — requirement not stated'}</li>
                   ))}
                 </ul>
               </Section>
