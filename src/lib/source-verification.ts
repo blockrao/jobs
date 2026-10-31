@@ -95,12 +95,18 @@ function hasIssuerAndFactReview(metadata: unknown): boolean {
     !nonEmpty(facts.reviewed_by) ||
     !validPastTimestamp(facts.reviewed_at) ||
     !nonEmpty(facts.notes) ||
+    !Array.isArray(facts.required_fields) ||
+    facts.required_fields.length === 0 ||
     !Array.isArray(facts.reviewed_fields) ||
     facts.reviewed_fields.length === 0
   ) return false;
 
   const evidence = asRecord(facts.evidence);
-  if (!evidence || !facts.reviewed_fields.includes("hub:notification_date")) return false;
+  if (
+    !evidence ||
+    !facts.required_fields.includes("hub:notification_date") ||
+    !facts.required_fields.every((field) => nonEmpty(field) && facts.reviewed_fields.includes(field))
+  ) return false;
 
   return facts.reviewed_fields.every((field) => {
     if (!nonEmpty(field)) return false;
