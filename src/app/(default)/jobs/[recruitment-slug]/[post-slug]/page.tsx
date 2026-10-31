@@ -26,7 +26,6 @@ import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
 import { isUnverifiedAggregatorSource } from "@/lib/source-verification";
-import { isUnverifiedAggregatorSource } from "@/lib/source-verification";
 
 export const revalidate = 86400; // 1 day ISR
 
