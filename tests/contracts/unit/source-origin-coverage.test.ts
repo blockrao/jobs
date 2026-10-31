@@ -64,6 +64,7 @@ describe("complete persisted source-origin coverage", () => {
           reviewed_by: "reviewer",
           reviewed_at: reviewedAt,
           notes: "Required hub facts were checked against the notice.",
+          required_fields: ["hub:notification_date"],
           reviewed_fields: ["hub:notification_date"],
           evidence: {
             "hub:notification_date": {
@@ -99,6 +100,7 @@ describe("complete persisted source-origin coverage", () => {
           reviewed_by: "reviewer",
           reviewed_at: reviewedAt,
           notes: "Facts checked.",
+          required_fields: ["hub:notification_date"],
           reviewed_fields: ["hub:notification_date"],
           evidence: {},
         },
