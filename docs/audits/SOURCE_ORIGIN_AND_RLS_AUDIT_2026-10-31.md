@@ -132,7 +132,7 @@ The source-authority migration is not present in the production migration histor
 2. **Backfill and guard legacy posting writes.** When a source posting maps to an existing Recruitment through either `inferred_recruitment_id` or `inferred_post_id`, persist the aggregator discovery origin on the parent Recruitment. Preserve that origin immutably.
 3. **Enforce the canonical Recruitment → Post relationship.** The 81 legacy-posting-only Recruitments must be decomposed into correctly matched canonical Posts before source/fact promotion. Preserve existing Recruitment IDs and URLs.
 4. **Replace five public job-data RLS policies.** Gate Recruitments directly; gate Posts through their parent Recruitment; gate eligibilities, post_age_rules and vacancies through Post → Recruitment. Preserve public read for organizations and positions.
-5. **Rebuild the legacy review queue.** Use the expanded 6,365 cohort and 6,008 unmatched count, not the previous 5,026. Provide a deterministic path for the 6,001 records without an ingest batch.
+5. **Rebuild the legacy review queue.** Use the expanded 6,365 cohort and 6,010 unmatched count, not the previous 5,026. Provide a deterministic path for the 6,003 records without an ingest batch.
 6. **Test the direct REST boundary.** Anonymous SELECT must return only source-trusted rows on all five job-data tables. Test both unreviewed and reviewed sample records, including the 81 legacy-posting-only cases.
 7. **Keep the review non-destructive.** No bulk demotion, deletion, quarantine or re-ingestion until the frozen manifest, per-record review route, recovery and pilot are approved.
 
@@ -146,3 +146,30 @@ Reproduce the audit using `scripts/audits/source-origin-rls-audit-read-only.sql`
 - No records were suppressed or deleted.
 
 **Disposition:** source-origin coverage and public RLS audit complete. Provenance migration remains blocked pending the expanded origin predicate, five-table RLS gate, and a safe canonical Post/review path for the 81 additional records.
+
+
+## Expanded aggregator URL audit (2026-10-31)
+
+A second read-only audit compared persisted URL hosts against the complete known aggregator host registry in `src/lib/aggregators.ts`, not just FreeJobAlert. It covered Recruitment `source_url`, `official_notification_url`, `official_application_url`; Post source-reference, original-recruitment, official-source and application URL fields; and legacy Posting `source_url`.
+
+Known hosts checked included FreeJobAlert, SarkariResult, SarkariNaukri, IndiaSarkariNaukri, SahisarkariJobs, SarkariExam, Maru Gujarat, PDF Jobs Jankari, OnlineUpCar, RojgarResult, FreshersWorld, and social/messaging domains.
+
+Findings:
+
+- **67 distinct Recruitments** have at least one URL field pointing to a known aggregator host.
+- All 67 are already in the 6,365 expanded origin cohort; this URL audit adds **zero new Recruitment IDs** to the cohort.
+- **55 distinct Recruitments** have an aggregator URL stored specifically in `official_notification_url` and/or `official_application_url`.
+- Of those 55: **0** have `official_link_source = MANUAL_VERIFIED`; **0** have global `verification_status = VERIFIED`; 8 are ACTIVE, 2 UPCOMING and 45 CLOSED.
+- Domain/field counts include:
+  - Recruitment `official_notification_url`: Maru Gujarat 25, PDF Jobs Jankari 1, OnlineUpCar 1.
+  - Recruitment `official_application_url`: Maru Gujarat 26, PDF Jobs Jankari 2.
+  - Post `officialSourceUrl`: Maru Gujarat 36, PDF Jobs Jankari 2, OnlineUpCar 2.
+  - Post `applyPortalUrl`: Maru Gujarat 26, PDF Jobs Jankari 2.
+  - Post `application_url`: Maru Gujarat 11.
+  - FJA source-reference/original-recruitment fields and one legacy Posting source URL are also present.
+
+**Implementation consequence:** the source detector now uses a general `private.is_aggregator_url` predicate mirroring the application host registry. Recruitment trust requires a real HTTPS `official_notification_url` that is not an aggregator URL; a supplied `official_application_url` must also be HTTPS and non-aggregator. The issuer authority evidence URL is likewise rejected if it points to an aggregator. This prevents fields named “official” from being treated as official solely because of their column name or a manual status flag.
+
+## Anonymous REST boundary
+
+The production audit also confirmed that anonymous table-level SELECT currently exposes all columns of `recruitments` and `posts`, including internal source/provenance fields. The implementation therefore revokes anon/authenticated SELECT on those two base tables. The Next.js server reads through its server-side database role; anonymous reads of `eligibilities`, `post_age_rules` and `vacancies` remain governed by the same Post trust gate. Shared `organizations` and `positions` remain public. The post-migration check verifies this privilege boundary explicitly.
