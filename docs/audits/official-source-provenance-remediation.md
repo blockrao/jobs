@@ -58,7 +58,14 @@ These are the audit snapshot counts, not guaranteed current counts. Re-run the S
 
 Run `scripts/audits/official-source-provenance-dry-run.sql` with a read-only role. Export the detailed rows and reconcile every affected fact against that recruitment's own issuer notification. Do not bulk-delete or bulk-correct the cohort based only on shared text or source labels.
 
-After the forward migration is approved and applied, run `scripts/audits/official-source-provenance-post-migration-check.sql` with a read-only role. It checks that discovery origin remains `AGGREGATOR_DISCOVERED`, that no unreviewed record is promoted to `MANUAL_VERIFIED`, and that verified eligibility/fact rows retain evidence pointers.
+The release is deliberately staged:
+
+1. Apply `20261031120000_p0_official_digest_source_authority_gate.sql` first. It adds the schema, backfills only the discovery-origin column, and installs write guards; it does not demote the existing public cohort.
+2. Deploy and smoke-test the application source gates. The new code treats `source_discovery_origin = 'AGGREGATOR_DISCOVERED'` plus any link state other than `MANUAL_VERIFIED` as unverified, so hubs/leaves are noindex and discovery surfaces exclude them.
+3. Only after the application gate is live, apply `20261031130000_p0_official_digest_source_authority_remediation.sql`. It demotes the historical cohort, clears stale child-fact evidence markers, and refreshes JSONB projections.
+4. Run `scripts/audits/official-source-provenance-post-migration-check.sql` with a read-only role. It checks that discovery origin remains `AGGREGATOR_DISCOVERED`, that no unreviewed record is promoted to `MANUAL_VERIFIED`, and that verified eligibility/fact rows retain evidence pointers.
+
+Do not apply both migrations together before the application deploy. Once stage 2 has been applied, do not roll back to the pre-gate application: that code does not enforce the new provenance contract. If the application needs recovery after stage 2, use a forward-compatible hotfix or redeploy the gated build.
 
 ### P0-C — repair NIT Warangal
 
