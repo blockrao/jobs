@@ -57,7 +57,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
   ]);
-  const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
+  const metadataPosts = sourceUnverified ? [] : posts;
+  const hub = buildHubData(recruitment, metadataPosts, undefined, postingLocations, cutoffMarks);
   const { title, description } = hub;
 
   return {
