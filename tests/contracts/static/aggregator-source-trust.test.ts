@@ -254,6 +254,8 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("HAVING count(*) > 1");
     expect(migration).toContain("source_discovery_origin, official_notification_url, metadata");
     expect(migration).toContain("official_digest_required_fact_keys");
+    expect(migration).toContain("uq_official_digest_promote_batch_official_url");
+    expect(migration).toContain("'staging_row', v_review.rownum");
     expect(migration).toContain("ALTER TABLE public.posts_experience");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS source_ref text");
