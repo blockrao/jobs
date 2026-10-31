@@ -356,10 +356,14 @@ export default function JobDetailPageProduction({
                   <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">{notificationLinkLabel}</a>
                 )}
               </p>
-              {publishedDate && (
+              {(publishedDate || post.officialSourceUrl) && (
                 <p className={styles.notice}>
-                  Published <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>
-                  {post.officialSourceUrl ? '. Facts on this page are read from the official notification; confirm on the official site before applying.' : '.'}
+                  {publishedDate && <>Published <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>. </>}
+                  {post.officialSourceUrl
+                    ? notificationLinkVerified
+                      ? "The notification link has been manually verified as an official source. Confirm the latest details on the recruiting body's website before applying."
+                      : "The notification link has not been manually verified as an official source. Confirm the notice and all details on the recruiting body's official website before applying."
+                    : "The official notification link is not available in this record."}
                 </p>
               )}
             </header>
