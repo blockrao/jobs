@@ -37,6 +37,52 @@ The 81 records with a legacy mapping are candidates for a controlled canonical d
 
 The canonical rule remains unchanged: a Recruitment Hub must not be treated as a complete public opportunity without at least one correctly associated canonical Post Leaf.
 
+## Bounded manifest — 81 legacy-mapped / no-canonical-Post records
+
+**Manifest execution:** 31 October 2026, read-only, four small pages (25 / 25 / 25 / 6 rows). The cohort was selected from Recruitments with no canonical Post and a legacy Posting mapped by `inferred_recruitment_id`, with aggregator-origin signals on the legacy row.
+
+### Structural reconciliation
+
+| Check | Result |
+|---|---:|
+| Recruitment ↔ legacy Posting mapping rows | 81 |
+| Distinct Recruitments | 81 |
+| Distinct legacy Posting IDs | 81 |
+| Recruitments with multiple matching legacy mappings | 0 |
+| Inferred Recruitment ID matches Recruitment ID | 81 / 81 |
+| Inferred Post ID is null | 81 / 81 |
+| Exact Recruitment name ↔ legacy title matches | 81 / 81 |
+| Recruitment ↔ legacy organization ID matches | 81 / 81 |
+| Missing organization IDs | 0 |
+| Duplicate Recruitment slugs within the full Recruitment table | 0 |
+| Duplicate legacy external IDs within the full Posting table | 0 |
+
+This is a strong one-to-one **relationship and identity match**. It does not establish that the Recruitment facts, vacancy counts, deadlines, eligibility, or official source URLs are correct.
+
+### Lifecycle and quality flags
+
+| Recruitment status | Records | Verification |
+|---|---:|---|
+| ACTIVE | 28 | All UNVERIFIED |
+| CLOSED | 5 | All UNVERIFIED |
+| UPCOMING | 48 | All UNVERIFIED |
+| **Total** | **81** | **All UNVERIFIED** |
+
+Additional flags:
+- 9 records use an organization placeholder name beginning `Organization not identified`.
+- 1 title contains a zero-vacancy flag.
+- All 81 have a non-empty Recruitment slug in the reviewed manifest.
+- Every legacy row has a populated external ID; all 81 external IDs are distinct.
+- Every legacy row is marked `source = fja`, `source_type = UNKNOWN`, and `verification_status = UNVERIFIED` in the reviewed cohort.
+
+### Decision
+
+**Structural mapping eligibility: PASS (81/81). Canonical Post creation eligibility: NOT YET ESTABLISHED (0/81 approved).**
+
+The records can proceed to a second, source-grounded review because the legacy-to-Recruitment mapping is one-to-one and title/organization identifiers agree. They must not yet be decomposed into public Post Leaves: the cohort is unverified, and the current audit has not established issuer-owned notification/application URLs or post-level facts from official sources. The 9 placeholder organizations and zero-vacancy title flag require explicit resolution before any corresponding record is promoted.
+
+The next safe step is a dry-run source-evidence review for this 81-record cohort, retaining existing Recruitment IDs and proposing Post-level decomposition only where the official issuer source supports a distinct post title and the necessary facts. Keep CLOSED records out of active-job publication; do not infer a live opportunity from ACTIVE/UPCOMING status alone. No record changes are authorized by this manifest.
+
 ## Aggregator URLs in fields labelled official
 
 A separate bounded URL-host scan checked persisted URL fields on Recruitments, canonical Posts and legacy Postings against the known aggregator/social/messaging host registry used for this audit.
