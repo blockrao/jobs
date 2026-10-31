@@ -1,6 +1,15 @@
 import { getDb } from "../index";
 import { organizations, recruitments, exams, posts, positions } from "../schema";
-import { desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+
+const publiclyTrustedRecruitment = sql`
+  public.is_recruitment_source_trusted(
+    ${recruitments.sourceDiscoveryOrigin},
+    ${recruitments.officialLinkSource},
+    ${recruitments.verificationStatus},
+    ${recruitments.metadata}
+  )
+`;
 
 /**
  * Get organization by slug
@@ -31,7 +40,7 @@ export async function getOrganizationRecruitments(organizationId: number) {
     })
     .from(recruitments)
     .leftJoin(exams, eq(recruitments.examId, exams.id))
-    .where(eq(recruitments.organizationId, organizationId));
+     .where(and(eq(recruitments.organizationId, organizationId), publiclyTrustedRecruitment));
 
   return result;
 }
