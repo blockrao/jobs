@@ -81,7 +81,7 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce((
     SELECT
@@ -151,7 +151,7 @@ CREATE OR REPLACE FUNCTION private.has_complete_issuer_fact_review(p_metadata js
 RETURNS boolean
 LANGUAGE sql
 STABLE
-SET search_path = pg_catalog, private
+SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce(
     p_metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
@@ -203,7 +203,7 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce((
     SELECT
@@ -230,7 +230,7 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce((
     SELECT p.posting_status IS DISTINCT FROM 'DUPLICATE'
@@ -244,7 +244,7 @@ $fn$;
 CREATE OR REPLACE FUNCTION private.guard_recruitment_discovery_origin()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog
 AS $fn$
 BEGIN
   IF TG_OP = 'UPDATE' THEN
@@ -277,7 +277,7 @@ EXECUTE FUNCTION private.guard_recruitment_discovery_origin();
 CREATE OR REPLACE FUNCTION private.propagate_post_discovery_origin()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog
 AS $fn$
 BEGIN
   IF TG_OP = 'UPDATE' THEN
@@ -315,7 +315,7 @@ EXECUTE FUNCTION private.propagate_post_discovery_origin();
 CREATE OR REPLACE FUNCTION private.propagate_legacy_posting_discovery_origin()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public, private
+SET search_path = pg_catalog
 AS $fn$
 BEGIN
   IF TG_OP = 'UPDATE' THEN
