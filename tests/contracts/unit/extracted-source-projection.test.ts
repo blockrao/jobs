@@ -83,29 +83,25 @@ describe("extracted source projection", () => {
     expect(source).toContain("sourceFactsUnverified ? false : !lifecycle.isOpen");
     expect(source).toContain("sourceFactsUnverified || !lifecycle.isOpen ? null : lifecycle.daysLeft");
   });
-  test("Post Leaves emit JobPosting until the deadline closes, regardless of verification; frontend labels unverified facts as reported", () => {
-    // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
-    // Unverified posts are marked as "reported" on the UI for consumer transparency.
+  test("Post Leaves require a plausible source notification date before emitting JobPosting", () => {
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
-    // No verification-based schema suppression anywhere on the leaf path.
-    expect(route).not.toContain("suppressJobPostingSchema");
-    expect(route).not.toContain("sourceVerificationPending");
-    // Verification status is not a schema gate. JobPosting requires an open
-    // lifecycle and an indexable leaf; a CLOSED deadline also drops the node.
-    expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed || !emitJobPosting ? null : jobPosting, faqPage)");
-    expect(schema).toContain('const postingClosed = resolvedDeadline.state === "CLOSED";');
-    expect(schema).not.toMatch(/[vV]erif/);
-    // Frontend shows "reported" labels for consumer protection (verification notice banners)
-    const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
-    expect(page).toContain("Vacancies (reported)");
-    expect(page).toContain("verificationStatus");
+    expect(route).not.toContain("postedAt: post.postedAt");
+    expect(schema).toContain("const shouldEmitJobPosting = emitJobPosting && Boolean(datePostedIso);");
+    expect(schema).toContain("const candidateDatePosted = post.notificationPublicationDate");
+    expect(schema).toContain("candidateDatePosted.getTime() > 0");
+    expect(schema).toContain("candidateDatePosted.getTime() <= Date.now()");
+    expect(schema).not.toContain("post.postedAt");
+    expect(schema).toContain("postingClosed || !shouldEmitJobPosting ? null : jobPosting");
   });
 
-  test("the leaf renderer gates JobPosting on lifecycle only, never on verification status", () => {
+  test("the leaf renderer displays and passes only a plausible, non-future source notification date", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
-    expect(renderer).toMatch(/const emitJobPosting = lifecycle \? lifecycle\.isOpen : !isApplicationClosed;/);
-    expect(renderer).not.toMatch(/emitJobPosting[^\n]*[vV]erif/);
+    expect(renderer).toContain("const candidateNotificationDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
+    expect(renderer).toContain("candidateNotificationDate.getTime() > 0");
+    expect(renderer).toContain("candidateNotificationDate.getTime() <= Date.now()");
+    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && notificationDate !== null}");
+    expect(renderer).not.toContain("post.postedAt");
   });
 
   test("a recruitment hub is always canonical to itself and indexable (URL contract 2026-10-20)", () => {

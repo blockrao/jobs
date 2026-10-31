@@ -183,7 +183,6 @@ export default async function JobDetailPage({ params }: Props) {
         recruitmentSlug: post.recruitmentSlug,
         recruitmentName: post.recruitmentName,
         slug: post.slug,
-        postedAt: post.postedAt,
         updatedAt: post.updatedAt,
         notificationPublicationDate: post.notificationPublicationDate,
         officialSourceUrl: post.officialSourceUrl,
