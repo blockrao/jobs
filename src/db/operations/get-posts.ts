@@ -619,7 +619,7 @@ export async function getPostBySlug(
       recruitmentSlug: data.recruitmentSlug,
       examType: data.examType,
       examTypeSlug: data.examTypeSlug,
-      description: hasPostReview("description") ? data.description : null,
+      description: hasPostReview("description") ? (data.description ?? undefined) : undefined,
       employmentType: hasPostReview("employment_type") || hasHubReview("employment_type") ? (data.employmentType ?? null) : null,
       locationCity: hasHubReview("location_city") ? (data.locationCity ?? null) : null,
       locationState: hasHubReview("state_code") ? (data.locationState ?? null) : null,
@@ -627,9 +627,6 @@ export async function getPostBySlug(
       experienceLevel: isAggregatorDiscovered ? null : (data.experienceLevel ?? null),
       jobCategoryTags: isAggregatorDiscovered ? null : (data.jobCategoryTags ?? null),
       postingStatus: isAggregatorDiscovered && !data.recruitmentApplicationEndDate ? null : (data.postingStatus ?? null),
-      recruitmentVerificationStatus: data.recruitmentVerificationStatus ?? null,
-      recruitmentOfficialLinkSource: data.recruitmentOfficialLinkSource ?? null,
-      recruitmentMetadata: data.recruitmentMetadata ?? null,
       sourcePostCode: hasPostReview("post_code") ? (data.sourcePostCode ?? null) : null,
       applicationMethod: data.applicationMethod ?? null,
       applicationEmail: data.applicationEmail ?? null,
@@ -644,8 +641,8 @@ export async function getPostBySlug(
       isLive: !isAggregatorDiscovered || Boolean(data.recruitmentApplicationEndDate && hasHubReview("application_end_date")) ? data.isLive : false,
       postedAt: new Date(data.postedAt),
       updatedAt: new Date(data.updatedAt),
-      officialSourceUrl: authorityReviewVerified ? data.officialSourceUrl : null,
-      applyPortalUrl: hasHubReview("apply_url") ? data.applyPortalUrl : null,
+      officialSourceUrl: authorityReviewVerified ? (data.officialSourceUrl ?? undefined) : undefined,
+      applyPortalUrl: hasHubReview("apply_url") ? (data.applyPortalUrl ?? undefined) : undefined,
       // Preserve extracted source facts as a distinct, explicitly unverified projection.
       // Never pass these fields into canonical fact resolvers or official-link CTAs.
       fjaExtract: data.fjaInventoryPostId != null ? {
