@@ -1,7 +1,7 @@
 /**
  * API Route: Search Suggestions (autocomplete)
  *
- * Backs the suggestion dropdown in src/components/JobSearch.tsx. That
+ * Backs the suggestion dropdown in src/components/SearchExperience.tsx. That
  * dropdown's UI and state (suggestions/showSuggestions) already existed,
  * but there was no endpoint to populate them from — getSearchSuggestions()
  * in @/lib/search-queries was fully implemented but never called from
