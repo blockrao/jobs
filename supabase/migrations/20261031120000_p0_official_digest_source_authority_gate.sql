@@ -754,7 +754,8 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $preservepost$
 BEGIN
-  IF NEW."sourceName" IS DISTINCT FROM 'aggregator_extracted' THEN
+  IF NEW."sourceName" IS DISTINCT FROM 'aggregator_extracted'
+     AND NEW.enrichment ->> 'sourceVerificationStatus' IS DISTINCT FROM 'UNVERIFIABLE' THEN
     IF OLD.enrichment ? 'source_provenance'
        AND NOT (coalesce(NEW.enrichment, '{}'::jsonb) ? 'source_provenance') THEN
       NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb)
@@ -1159,7 +1160,7 @@ WHERE pe.post_id = p.id
   );
 
 UPDATE public.posts p
-SET enrichment = coalesce(p.enrichment, '{}'::jsonb)
+SET enrichment = (coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance')
   || jsonb_build_object(
     'sourceVerificationStatus', 'UNVERIFIABLE',
     'sourceVerificationDate', NULL
