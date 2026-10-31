@@ -569,7 +569,7 @@ BEGIN
         'verified_at', paf.verified_at,
         'source_ref', paf.source_ref,
         'source_locator', paf.source_locator
-      ) FILTER (WHERE paf.category IS NOT NULL))
+      )) FILTER (WHERE paf.category IS NOT NULL)
       FROM public.posts_application_fee paf
       WHERE paf.post_id = p_post_id),
       '{}'::jsonb
