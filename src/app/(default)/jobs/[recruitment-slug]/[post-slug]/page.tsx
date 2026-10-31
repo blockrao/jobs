@@ -190,7 +190,9 @@ export default async function JobDetailPage({ params }: Props) {
         notificationPublicationDate: post.notificationPublicationDate,
         officialSourceUrl: post.officialSourceUrl,
         officialLinkSource: post.officialLinkSource ?? null,
-        applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
+        // Use only the recruitment-owned official application URL; never fall back
+        // to a legacy posting URL whose provenance is not covered by A-070.
+        applyUrl: post.applyPortalUrl || post.recruitmentOfficialApplicationUrl,
         employmentType: post.employmentType ?? null,
         qualificationText: eligibility.qualificationText,
         qualificationVerificationStatus: eligibility.verificationStatus,
