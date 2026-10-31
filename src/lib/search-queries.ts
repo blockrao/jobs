@@ -526,8 +526,24 @@ async function searchPostingsHindi(
     return `$${params.length}`;
   };
 
-  // Open recruitments only: this path matches by extracted filters, not by text.
-  const conditions: string[] = ["NOT s.is_closed"];
+  // Never turn an unparsed Hindi/Hinglish query into an unfiltered browse.
+  // That would claim relevance while returning every open recruitment.
+  const hasExtractedConstraint =
+    extracted.exams.length > 0 ||
+    extracted.states.length > 0 ||
+    extracted.qualifications.length > 0 ||
+    Boolean(locationRegion || organizationId || announcementState || closingState);
+  if (query.trim() && !hasExtractedConstraint) return [];
+
+  // Match lifecycle filters consistently with the English path.
+  const conditions: string[] = [];
+  if (closingState === "EXPIRED") {
+    conditions.push("s.is_closed");
+  } else if (closingState) {
+    conditions.push("NOT s.is_closed", `s.closing_state = ${add(closingState)}`);
+  } else {
+    conditions.push("NOT s.is_closed");
+  }
 
   // Exam filters (match against exam names in the recruitment name)
   if (extracted.exams.length > 0) {
