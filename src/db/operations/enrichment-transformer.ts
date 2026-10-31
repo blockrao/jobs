@@ -292,7 +292,7 @@ export function transformEnrichment(
     enrichment.selectionProcess = verifiedSelectionStages.map((stage: any) => ({
       step: stage.step ?? stage.stage_order ?? 0,
       name: stage.name || stage.stage_name || '',
-      scheduledDate: stage.scheduled_date ? new Date(stage.scheduled_date) : undefined,
+      scheduledDate: stage.scheduled_date ? String(stage.scheduled_date) : undefined,
       totalMarks: stage.total_marks ?? stage.totalMarks,
       duration: stage.duration ?? (stage.duration_minutes != null ? `${stage.duration_minutes} minutes` : undefined),
       durationMinutes: stage.duration_minutes ?? undefined,
