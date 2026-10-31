@@ -15,9 +15,9 @@
  *     defaulted. A section renders only when it has data.
  *   - The FAQ list and the fact lines are computed once and handed to the
  *     structured-data component, so JSON-LD mirrors the visible page exactly.
- *   - JobPosting is gated on lifecycle only: a closed recruitment with no
- *     verifiable deadline emits no JobPosting (Google forbids live expired
- *     postings without a past validThrough).
+ *   - JobPosting requires an open application window and a plausible,
+ *     non-future source notification publication date. Ingestion time is
+ *     never used as a publication date.
  *   - Uses the recruitment hub's stylesheet so hub and leaf look identical.
  */
 
@@ -156,9 +156,10 @@ export default function JobDetailPageProduction({
   const isApplicationOpen = lifecycle ? lifecycle.isOpen : !(applicationDeadline && new Date() > applicationDeadline);
   const recruitmentClosed = lifecycle ? lifecycle.state === 'closed' || lifecycle.state === 'results' || lifecycle.state === 'archived' : false;
   const isApplicationClosed = !isApplicationOpen;
-  // JobPosting is only for an application that is currently open. The schema
-  // builder independently omits markup for a known expired deadline.
-  const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
+  // JobPosting is only for an open application window with a source-evidenced
+  // notification publication date. The schema builder enforces the same date
+  // requirement independently so callers cannot accidentally bypass it.
+  const emitJobPosting = (lifecycle ? lifecycle.isOpen : !isApplicationClosed);
   const deadlineStatusText = !applicationDeadline
     ? null
     : lifecycle?.state === 'upcoming'
@@ -172,7 +173,10 @@ export default function JobDetailPageProduction({
               ? `Applications closed on ${formatDate(applicationDeadline)}.`
               : 'Applications are closed.'
             : `The last date to apply is ${formatDate(applicationDeadline)}.`;
-  const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
+  const candidatePublishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);
+  const publishedDate = candidatePublishedDate && candidatePublishedDate.getTime() <= Date.now()
+    ? candidatePublishedDate
+    : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
   const qualificationText = post.qualificationText || post.fjaExtract?.qualificationRaw || null;
@@ -282,7 +286,6 @@ export default function JobDetailPageProduction({
       locationCity: post.locationCity,
       locationState: post.locationState,
       notificationPublicationDate: publishedDate,
-      postedAt: post.postedAt ? new Date(post.postedAt) : null,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
       officialSourceUrl: post.officialSourceUrl,
@@ -322,7 +325,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && publishedDate !== null} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
