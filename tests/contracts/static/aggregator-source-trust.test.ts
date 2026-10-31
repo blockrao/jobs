@@ -202,6 +202,7 @@ describe("aggregator source trust gate", () => {
       "src/app/(default)/jobs/[recruitment-slug]/page.tsx",
       "utf8",
     );
+    const hubComponent = readFileSync("src/components/recruitment/recruitment-hub.tsx", "utf8");
     const listingQueries = readFileSync("src/lib/queries.ts", "utf8");
     const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     const sitemap = readFileSync("src/app/sitemap.ts", "utf8");
@@ -211,6 +212,7 @@ describe("aggregator source trust gate", () => {
     expect(hubRoute).toContain("index: !safeInput.unverifiedAggregator");
     expect(hubRoute).toContain("hasPostReview(name, \"education\")");
     expect(hubRoute).toContain("hasPostReview(name, \"experience\")");
+    expect(hubComponent).toContain("recruitment.sourceDiscoveryOrigin === 'AGGREGATOR_DISCOVERED' && verified");
     expect(listingQueries).toContain("issuerSourcePublicCondition");
     expect(listingQueries).toContain("metadata -> 'source_provenance' -> 'fact_review'");
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
