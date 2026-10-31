@@ -655,6 +655,14 @@ DECLARE
   v_review public.official_digest_promote%ROWTYPE;
   v_review_ok boolean := false;
 BEGIN
+  -- Backward compatibility for the historical promotion function: it still
+  -- writes AGGREGATOR_DISCOVERED into official_link_source. Capture that as
+  -- immutable origin before applying the independent verification-state gate.
+  IF NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
+     AND NEW.source_discovery_origin IS NULL THEN
+    NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
+  END IF;
+
   -- Source origin is provenance, not a mutable verification label. Keep the
   -- original aggregator discovery origin even after a successful issuer review.
   -- Otherwise an alternate writer could relabel the record and bypass this gate.
