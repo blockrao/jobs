@@ -44,9 +44,10 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
+              AND r.official_link_source = 'MANUAL_VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
               AND r.application_end_date IS NOT NULL
@@ -74,9 +75,10 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
+              AND r.official_link_source = 'MANUAL_VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
               AND r.application_end_date IS NOT NULL
@@ -111,9 +113,10 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
+              AND r.official_link_source = 'MANUAL_VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
               AND r.application_end_date IS NOT NULL
