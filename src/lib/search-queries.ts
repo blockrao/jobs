@@ -75,7 +75,7 @@ const JOBS_CTE = `
           COALESCE(r.total_vacancies, p.total_vacancies) AS total_vacancies,
           p.is_expired AS posting_expired,
           COALESCE(p.valid_through, r.application_end_date) AS last_date,
-          COALESCE(p.created_at, r.created_at) AS announced_at,
+          r.notification_date::timestamptz AS announced_at,
           lp.live_posts,
           lp.only_post_slug
         FROM recruitments r
@@ -95,6 +95,7 @@ const JOBS_CTE = `
           WHERE po.recruitment_id = r.id AND po."isLive"
         ) lp ON TRUE
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND private.is_recruitment_publicly_trusted(r.id)
           AND (lp.live_posts > 0 OR p.id IS NOT NULL)
       ) b
     )`;
@@ -674,6 +675,10 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
           WHERE p.review_status = 'APPROVED'
             AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
             AND p.is_expired = FALSE
+            AND private.is_recruitment_publicly_trusted(
+              COALESCE(p.inferred_recruitment_id, (SELECT cp.recruitment_id FROM posts cp WHERE cp.id = p.inferred_post_id))
+            )
+            AND (p.inferred_post_id IS NULL OR private.is_post_publicly_trusted(p.inferred_post_id))
             AND o.name ILIKE $1
           UNION
           SELECT pos.name as suggestion
@@ -683,6 +688,10 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
           WHERE p.review_status = 'APPROVED'
             AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
             AND p.is_expired = FALSE
+            AND private.is_recruitment_publicly_trusted(
+              COALESCE(p.inferred_recruitment_id, pos_rel.recruitment_id)
+            )
+            AND (p.inferred_post_id IS NULL OR private.is_post_publicly_trusted(p.inferred_post_id))
             AND pos.name ILIKE $1
         ) suggestions
         LIMIT $2
