@@ -61,7 +61,7 @@ export async function generateMetadata({
     // Filter and search views are noindex and canonical to the unfiltered
     // listing (SEO-001 section 4).
     // A paginated view (page 2 and later) is treated as filtered: noindex, canonical to /jobs.
-    ...listingSeo("/jobs", { kind, q, page: parsePage(page) > 1 ? page : undefined }),
+    ...listingSeo("/jobs", { kind, q, filter, page: parsePage(page) > 1 ? page : undefined }),
   };
 }
 
