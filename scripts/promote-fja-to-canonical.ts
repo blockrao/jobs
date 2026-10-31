@@ -303,8 +303,13 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   // A future end_date is sufficient to conclude applications are open.
   const cat = (row.listing_category ?? "").toLowerCase();
   const now = new Date();
-  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date), { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
-  const endDate = sourceDeadline?.date ?? (row.application_end_date ? new Date(row.application_end_date) : null);
+  // FJA is an aggregator, not the issuing authority. Preserve its captured deadline text,
+  // but do not assume the issuer timezone from the aggregator or the India-focused inventory.
+  // The candidate remains UNKNOWN until issuer context is independently established.
+  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date)) : undefined;
+  // An unresolved aggregator timestamp is not an effective deadline and must not
+  // drive APPLICATION_OPEN/APPLICATION_CLOSED stage inference.
+  const endDate = sourceDeadline?.date ?? null;
   const startDate = row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) ?? null : null;
   const stage =
     cat.includes("result") ? "RESULT_OUT" :
@@ -349,11 +354,11 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     datePosted: row.published_date ? new Date(row.published_date) : facts.notification_date ? parseSourceDate(String(facts.notification_date)) : undefined,
     applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) : undefined,
     validThrough: sourceDeadline?.date ?? undefined,
-    validThroughPrecision: sourceDeadline?.precision,
-    validThroughSourceText: sourceDeadline?.sourceText,
+    validThroughPrecision: sourceDeadline?.precision ?? "UNKNOWN",
+    validThroughSourceText: sourceDeadline?.sourceText ?? (facts.application_end_date ? String(facts.application_end_date) : undefined),
     validThroughTimezone: sourceDeadline?.timezone ?? undefined,
-    validThroughTimezoneBasis: sourceDeadline?.timezoneBasis,
-    validThroughSourceLabel: sourceDeadline ? "FJA facts.application_end_date" : undefined,
+    validThroughTimezoneBasis: sourceDeadline?.timezoneBasis ?? "UNKNOWN",
+    validThroughSourceLabel: facts.application_end_date ? "FJA facts.application_end_date" : undefined,
     postTable,
     // Always create at least one post leaf; use the source title when no role line was extracted.
     postNames: postNames?.length ? postNames : [row.title],

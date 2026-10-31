@@ -63,7 +63,7 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
 
   const lastDate = metaDesc.match(/last date[:\s]+([^,]+)/i);
   const deadlineLabel = lastDate?.[1] || bag.find(/last date/i, /closing date/i, /application end/i);
-  const deadline = parseIndianDeadline(deadlineLabel, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
+  const deadline = parseIndianDeadline(deadlineLabel);
   const loc = metaDesc.match(/\(([^,)]+),\s*([^)]+)\)/);
   const qual = metaDesc.match(/\bfor\s+([A-Za-z0-9 ./&,+-]{3,60}?)(?:,|\.|$)/i);
 

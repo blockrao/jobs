@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { canonicalApplicationDeadline, canonicalDeadlineWriteValues, deadlineObservationFacts } from "../../src/ingest/deadline-authority";
+import { canonicalApplicationDeadline, canonicalDeadlineWriteValues, deadlineObservationFacts, canFillMissingCanonicalDeadline } from "../../src/ingest/deadline-authority";
 
 describe("canonical application deadline authority", () => {
-  const candidate = new Date("2026-11-30T18:29:59.999Z");
+  const candidate = new Date("2026-11-30T18:30:00.000Z");
 
   it("allows an explicitly official registry source to set a canonical deadline", () => {
     expect(canonicalApplicationDeadline("OFFICIAL", true, candidate)).toBe(candidate);
@@ -77,3 +77,26 @@ describe("deadline source observation provenance", () => {
     }).deadlineSourceUrl).toBeNull();
   });
 });
+
+
+describe("canonical deadline update safety", () => {
+  const existing = new Date("2026-11-30T10:00:00.000Z");
+  const laterCandidate = new Date("2026-12-15T18:30:00.000Z");
+
+  it("allows an authorised candidate to fill a missing canonical deadline", () => {
+    expect(canFillMissingCanonicalDeadline(null, laterCandidate)).toBe(true);
+  });
+
+  it("never auto-replaces an existing deadline with a later candidate", () => {
+    // The existing row has no queryable precision metadata. Do not assume
+    // the later candidate is equally or more precise.
+    expect(canFillMissingCanonicalDeadline(existing, laterCandidate)).toBe(false);
+  });
+
+  it("does not fill from a missing or invalid candidate", () => {
+    expect(canFillMissingCanonicalDeadline(null, null)).toBe(false);
+    expect(canFillMissingCanonicalDeadline(null, new Date("invalid"))).toBe(false);
+  });
+});
+
+

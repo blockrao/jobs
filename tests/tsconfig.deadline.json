@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "./contracts/unit/recruitment-deadline-persistence.test.ts",
+    "./contracts/unit/writer-deadline-provenance.test.ts",
+    "../next-env.d.ts"
+  ],
+  "exclude": []
+}
