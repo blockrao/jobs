@@ -108,7 +108,7 @@ describe("extracted source projection", () => {
     expect(renderer).not.toMatch(/emitJobPosting[^\n]*[vV]erif/);
   });
 
-  test("a recruitment hub is always canonical to itself and indexable (URL contract 2026-10-20)", () => {
+  test("a recruitment hub remains canonical and is indexable only when source and employer checks pass (URL contract 2026-10-20)", () => {
     // The single-post-leaf canonical exception (Oct 2026) was retired with the
     // URL contract: /jobs/{recruitment-slug} is the canonical unit, always.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/page.tsx"));
@@ -118,7 +118,7 @@ describe("extracted source projection", () => {
     expect(route).not.toContain("/posts/${roleSlugs[0]}");
     // Canonical and robots go through src/lib/seo (CAN-05): self-canonical, indexable.
     // Indexable unless the issuing organisation is still unidentified (placeholder org).
-    expect(route).toContain("pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) })");
+    expect(route).toContain("index: !safeInput.unverifiedAggregator && !isUnresolvedOrganization(recruitment.organizationSlug)");
     // Only a legacy slug (recruitment_slug_redirects) redirects; smart resolution renders in place.
     expect(route).toMatch(/if \(data\.resolutionMethod === "legacy-redirect"\) \{\s*permanentRedirect\(`\/jobs\/\$\{data\.recruitment\.slug\}`\);/);
     // Hub structured data keys its dates on source verification, never fabricating them.
