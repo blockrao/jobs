@@ -260,6 +260,12 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("fact_reviewed_fields text[] NOT NULL DEFAULT '{}'");
     expect(migration).toContain("fact_review_evidence jsonb NOT NULL DEFAULT '{}'::jsonb");
     expect(migration).toContain("official_digest_fact_review_complete");
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION public.is_publicly_verified_recruitment_source");
+    expect(migration).toContain('DROP POLICY IF EXISTS "public read" ON public.recruitments');
+    expect(migration).toContain('CREATE POLICY "public read" ON public.posts');
+    expect(migration).toContain('CREATE POLICY "public read" ON public.eligibilities');
+    expect(migration).toContain('CREATE POLICY "public read" ON public.post_age_rules');
+    expect(migration).not.toContain('CREATE POLICY "public read" ON public.recruitments FOR SELECT TO public USING (true)');
     expect(migration).toContain("jsonb_array_length(coalesce(p_posts, '[]'::jsonb)) > 0");
     expect(migration).toContain("guard_aggregator_eligibility_verification");
     expect(migration).toContain("HAVING count(*) > 1");
@@ -308,6 +314,8 @@ describe("aggregator source trust gate", () => {
     expect(rollback).toContain("CREATE OR REPLACE FUNCTION public.aggregate_enrichment_for_post(p_post_id integer)");
     expect(rollback).toContain("comments and any review evidence are retained");
     expect(rollback).toContain("Rollback blocked: source review decisions have been recorded");
+    expect(rollback).toContain('CREATE POLICY "public read" ON public.recruitments FOR SELECT TO public USING (true)');
+    expect(rollback).toContain("DROP FUNCTION IF EXISTS public.is_publicly_verified_recruitment_source");
   });
 
   it("keeps source verification independent from application deadline availability", () => {
