@@ -123,8 +123,8 @@ export function HomeContent({
             </p>
             <h1 className="text-[30px] font-extrabold leading-[1.08] tracking-tight text-white sm:text-[42px] lg:text-[48px]">
               {isHi
-                ? "हर खुली सरकारी रिक्ति — अंतिम तिथि और आधिकारिक आवेदन लिंक के साथ।"
-                : "Every open sarkari vacancy, with the last date and the official apply link."}
+                ? "वर्तमान सरकारी नौकरियां — स्पष्ट अंतिम तिथि और आधिकारिक आवेदन लिंक के साथ।"
+                : "Find current government jobs, with clear deadlines and official apply links."}
             </h1>
             <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
               {isHi
@@ -157,12 +157,12 @@ export function HomeContent({
               <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "रिक्तियां खुली" : "vacancies open now"}</span>
             </Link>
             <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
-              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{stats.liveRecruitments > 0 ? nf(stats.liveRecruitments) : "—"}</span>
-              <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "सक्रिय अधिसूचनाएं" : "live notifications"}</span>
+              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.liveRecruitments > 0 ? nf(stats.liveRecruitments) : "—"}</span>
+              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "सक्रिय अधिसूचनाएं" : "live notifications"}</span>
             </Link>
-            <Link href="/categories" className="flex flex-col gap-1 rounded-xl border border-black/8 bg-neutral-50 px-4 py-4 hover:border-black/20">
-              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{FEATURED_SECTORS.length}</span>
-              <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "श्रेणियां · UPSC व SSC" : "sectors · UPSC & SSC hubs"}</span>
+            <Link href="/categories" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
+              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{FEATURED_SECTORS.length</span>
+              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "श्रेणियां · UPSC व SSC" : "sectors · UPSC & SSC hubs"}</span>
             </Link>
           </div>
         </section>
