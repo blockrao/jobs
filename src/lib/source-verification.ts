@@ -15,8 +15,12 @@ export function isUnverifiedAggregatorSource(
   officialLinkSource: unknown,
   verificationStatus: unknown,
   metadata?: unknown,
+  postSourceName?: unknown,
 ): boolean {
-  if (officialLinkSource !== "AGGREGATOR_DISCOVERED") return false;
+  const aggregatorOrigin =
+    officialLinkSource === "AGGREGATOR_DISCOVERED" ||
+    (typeof postSourceName === "string" && postSourceName.trim().toLowerCase() === "aggregator");
+  if (!aggregatorOrigin) return false;
   if (verificationStatus !== "VERIFIED") return true;
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return true;
 
