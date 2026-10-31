@@ -9,6 +9,20 @@ ALTER TABLE public.recruitments
 COMMENT ON COLUMN public.recruitments.source_discovery_origin IS
   'Immutable discovery origin. AGGREGATOR_DISCOVERED records remain untrusted until issuer and field-level fact review is complete.';
 
+DO $constraint$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'recruitments_source_discovery_origin_check'
+      AND conrelid = 'public.recruitments'::regclass
+  ) THEN
+    ALTER TABLE public.recruitments
+      ADD CONSTRAINT recruitments_source_discovery_origin_check
+      CHECK (source_discovery_origin IS NULL OR source_discovery_origin = 'AGGREGATOR_DISCOVERED');
+  END IF;
+END;
+$constraint$;
+
 CREATE INDEX IF NOT EXISTS idx_recruitments_source_discovery_origin
   ON public.recruitments (source_discovery_origin)
   WHERE source_discovery_origin IS NOT NULL;
@@ -137,7 +151,6 @@ CREATE OR REPLACE FUNCTION private.has_complete_issuer_fact_review(p_metadata js
 RETURNS boolean
 LANGUAGE sql
 STABLE
-PARALLEL SAFE
 SET search_path = pg_catalog, private
 AS $fn$
   SELECT coalesce(
@@ -189,13 +202,20 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, private
 AS $fn$
   SELECT coalesce((
-    SELECT CASE
-      WHEN private.recruitment_has_aggregator_origin(r.id) THEN
-        r.verification_status = 'VERIFIED'
-        AND upper(btrim(coalesce(r.official_link_source, ''))) = 'MANUAL_VERIFIED'
-        AND private.has_complete_issuer_fact_review(r.metadata)
-      ELSE true
-    END
+    SELECT
+      EXISTS (
+        SELECT 1
+        FROM public.posts p
+        WHERE p.recruitment_id = r.id
+          AND p.posting_status IS DISTINCT FROM 'DUPLICATE'
+      )
+      AND CASE
+        WHEN private.recruitment_has_aggregator_origin(r.id) THEN
+          r.verification_status = 'VERIFIED'
+          AND upper(btrim(coalesce(r.official_link_source, ''))) = 'MANUAL_VERIFIED'
+          AND private.has_complete_issuer_fact_review(r.metadata)
+        ELSE true
+      END
     FROM public.recruitments r
     WHERE r.id = p_recruitment_id
   ), false);
@@ -209,7 +229,8 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, private
 AS $fn$
   SELECT coalesce((
-    SELECT private.is_recruitment_publicly_trusted(p.recruitment_id)
+    SELECT p.posting_status IS DISTINCT FROM 'DUPLICATE'
+      AND private.is_recruitment_publicly_trusted(p.recruitment_id)
     FROM public.posts p
     WHERE p.id = p_post_id
   ), false);
