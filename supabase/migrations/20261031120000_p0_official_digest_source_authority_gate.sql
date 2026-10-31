@@ -2,6 +2,28 @@
 -- This migration is forward-only. It does not edit the historical promotion migration.
 -- Existing aggregator-discovered rows are demoted to unverified; no records are deleted.
 
+-- Discovery origin and verification state are separate facts. Preserve the original
+-- aggregator discovery source while A-070 uses official_link_source for link verification.
+ALTER TABLE public.recruitments
+  ADD COLUMN IF NOT EXISTS source_discovery_origin text;
+
+UPDATE public.recruitments
+SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND source_discovery_origin IS NULL;
+
+UPDATE public.recruitments
+SET official_link_source = 'UNVERIFIED'
+WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+CREATE INDEX IF NOT EXISTS idx_recruitments_source_discovery_origin
+  ON public.recruitments(source_discovery_origin)
+  WHERE source_discovery_origin IS NOT NULL;
+
+COMMENT ON COLUMN public.recruitments.source_discovery_origin IS
+  'Immutable origin of recruitment discovery (for example AGGREGATOR_DISCOVERED); distinct from official_link_source verification state.';
+
 -- Education already had verified_at; add source pointers. Experience previously
 -- had no verification timestamp at all, so add the complete fact-level evidence fields.
 ALTER TABLE public.posts_education
@@ -101,7 +123,7 @@ COMMENT ON COLUMN public.official_digest_promote.authority_review_notes IS
 COMMENT ON COLUMN public.official_digest_promote.fact_review_status IS
   'Human review that the extracted recruitment/post facts were checked against the issuer notification.';
 COMMENT ON COLUMN public.official_digest_promote.fact_reviewed_fields IS
-  'Explicit field keys checked by the reviewer; use post:<post-slug>:<field> and hub:<field> keys.';
+  'Explicit field keys checked by the reviewer; use post:<post-name>:<field> and hub:<field> keys.';
 COMMENT ON COLUMN public.official_digest_promote.fact_review_evidence IS
   'JSON object keyed by fact_reviewed_fields; each value records the notification page and supporting excerpt.';
 COMMENT ON COLUMN public.official_digest_promote.fact_reviewed_by IS
@@ -614,13 +636,13 @@ BEGIN
   -- original aggregator discovery origin even after a successful issuer review.
   -- Otherwise an alternate writer could relabel the record and bypass this gate.
   IF TG_OP = 'UPDATE'
-     AND OLD.official_link_source = 'AGGREGATOR_DISCOVERED'
-     AND NEW.official_link_source IS DISTINCT FROM OLD.official_link_source THEN
+     AND OLD.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+     AND NEW.source_discovery_origin IS DISTINCT FROM OLD.source_discovery_origin THEN
     RAISE EXCEPTION
-      'AGGREGATOR_DISCOVERED source origin is immutable; record issuer verification separately';
+      'AGGREGATOR_DISCOVERED discovery origin is immutable; record link verification separately';
   END IF;
 
-  IF NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
+  IF NEW.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
      AND NEW.verification_status = 'VERIFIED' THEN
     SELECT d.* INTO v_review
     FROM public.official_digest_promote d
@@ -650,9 +672,11 @@ BEGIN
       );
 
     IF NOT v_review_ok THEN
+      NEW.official_link_source := 'UNVERIFIED';
       NEW.verification_status := 'UNVERIFIABLE';
       NEW.last_verified_at := NULL;
     ELSE
+      NEW.official_link_source := 'MANUAL_VERIFIED';
       NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) || jsonb_build_object(
         'source_provenance', jsonb_build_object(
           'authority_review', jsonb_build_object(
@@ -825,6 +849,10 @@ BEGIN
       FROM refreshed
       WHERE p.id = refreshed.id;
     END IF;
+  ELSIF NEW.source_discovery_origin = 'AGGREGATOR_DISCOVERED' THEN
+    -- A source discovered through an aggregator is never manually verified
+    -- merely because another writer changed official_link_source.
+    NEW.official_link_source := 'UNVERIFIED';
   END IF;
 
   RETURN NEW;
@@ -856,7 +884,7 @@ BEGIN
   INTO v_batch, v_official_url
   FROM public.recruitments r
   WHERE r.id = NEW.recruitment_id
-    AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   LIMIT 1;
 
   IF FOUND THEN
@@ -1005,7 +1033,7 @@ BEGIN
      AND d.hub ->> 'official_url' = r.official_notification_url
      AND d.status = 'PROMOTED'
     WHERE p.id = NEW.post_id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND public.official_digest_authority_review_complete(
         d.authority_review_status,
         d.authority_evidence_url,
@@ -1030,7 +1058,7 @@ BEGIN
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE p.id = NEW.post_id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   ) THEN
     NEW."sourceVerificationStatus" := 'UNVERIFIABLE';
   END IF;
@@ -1086,7 +1114,7 @@ BEGIN
     SET verification_status = 'VERIFIED',
         last_verified_at = NEW.fact_reviewed_at,
         updated_at = now()
-    WHERE official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND metadata ->> 'ingest_batch' = NEW.batch
       AND official_notification_url = NEW.hub ->> 'official_url';
   ELSE
@@ -1095,7 +1123,7 @@ BEGIN
         last_verified_at = NULL,
         metadata = coalesce(metadata, '{}'::jsonb) - 'source_provenance',
         updated_at = now()
-    WHERE official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND metadata ->> 'ingest_batch' = NEW.batch
       AND official_notification_url = NEW.hub ->> 'official_url';
 
@@ -1111,7 +1139,7 @@ BEGIN
         updated_at = now()
     FROM public.recruitments r
     WHERE r.id = p.recruitment_id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
@@ -1122,7 +1150,7 @@ BEGIN
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE pe.post_id = p.id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
@@ -1137,7 +1165,7 @@ BEGIN
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE e.post_id = p.id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
@@ -1148,7 +1176,7 @@ BEGIN
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE e.post_id = p.id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
@@ -1159,56 +1187,56 @@ BEGIN
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE x.post_id = p.id
-      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.posts_vacancies x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.posts_selection_process x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.posts_documents x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.posts_important_dates x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.post_age_rules x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.posts_application_fee x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
     UPDATE public.posts_official_links x
     SET verified_at = NULL, source_ref = NULL, source_locator = NULL
     FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
-    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+    WHERE x.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
@@ -1216,7 +1244,7 @@ BEGIN
       SELECT p.id, public.aggregate_enrichment_for_post(p.id) AS payload
       FROM public.posts p
       JOIN public.recruitments r ON r.id = p.recruitment_id
-      WHERE r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
         AND r.metadata ->> 'ingest_batch' = NEW.batch
         AND r.official_notification_url = NEW.hub ->> 'official_url'
     )
@@ -1343,7 +1371,7 @@ SET verification_status = 'UNVERIFIABLE',
     last_verified_at = NULL,
     metadata = coalesce(metadata, '{}'::jsonb) - 'source_provenance',
     updated_at = now()
-WHERE official_link_source = 'AGGREGATOR_DISCOVERED'
+WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   AND (
     verification_status = 'VERIFIED'
     OR coalesce(metadata, '{}'::jsonb) ? 'source_provenance'
@@ -1362,7 +1390,7 @@ SET "sourceName" = 'aggregator_extracted',
     updated_at = now()
 FROM public.recruitments r
 WHERE r.id = p.recruitment_id
-  AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+  AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   AND (
     p."sourceName" IS DISTINCT FROM 'aggregator_extracted'
     OR p."isOfficialSource" IS DISTINCT FROM false
@@ -1382,7 +1410,7 @@ SET "sourceVerificationStatus" = 'UNVERIFIABLE',
 FROM public.posts p
 JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE pe.post_id = p.id
-  AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+  AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   AND (
     pe."sourceVerificationStatus" IS DISTINCT FROM 'UNVERIFIABLE'
     OR pe."sourceVerificationDate" IS NOT NULL
