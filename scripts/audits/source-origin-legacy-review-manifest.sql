@@ -70,18 +70,21 @@ candidates AS (
     r.metadata ->> 'ingest_batch' AS ingest_batch,
     r.enrichment_data -> 'meta' ->> 'source' AS enrichment_source,
     r.enrichment_data -> 'meta' ->> 'verified' AS enrichment_meta_verified,
-    (r.enrichment_data -> 'meta' ->> 'source') IN (
+    lower(coalesce(r.enrichment_data -> 'meta' ->> 'source', '')) IN (
       'institutional_aggregation','institution_aggregation','fja_html'
     ) AS has_recruitment_metadata_signal,
+    lower(coalesce(r.metadata -> 'source_provenance' ->> 'discovery_origin', '')) = 'aggregator_discovered'
+      AS has_metadata_provenance_signal,
     lower(coalesce(r.official_link_source, '')) IN (
       'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     ) AS has_official_link_signal,
     EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id) AS has_post_signal,
     EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id) AS has_legacy_posting_signal
   FROM public.recruitments r
-  WHERE r.enrichment_data -> 'meta' ->> 'source' IN (
+  WHERE lower(coalesce(r.enrichment_data -> 'meta' ->> 'source', '')) IN (
       'institutional_aggregation','institution_aggregation','fja_html'
     )
+    OR lower(coalesce(r.metadata -> 'source_provenance' ->> 'discovery_origin', '')) = 'aggregator_discovered'
     OR lower(coalesce(r.official_link_source, '')) IN (
       'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
@@ -112,6 +115,7 @@ SELECT
   (SELECT count(*) FROM public.recruitments) AS total_recruitments,
   count(*) AS expanded_origin_candidates,
   count(*) FILTER (WHERE has_recruitment_metadata_signal) AS recruitment_metadata_signal,
+  count(*) FILTER (WHERE has_metadata_provenance_signal) AS metadata_provenance_signal,
   count(*) FILTER (WHERE has_official_link_signal) AS official_link_source_signal,
   count(*) FILTER (WHERE has_post_signal) AS canonical_post_signal,
   count(*) FILTER (WHERE has_legacy_posting_signal) AS legacy_posting_signal,
