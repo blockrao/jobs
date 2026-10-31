@@ -19,6 +19,12 @@ CREATE INDEX IF NOT EXISTS idx_recruitments_source_discovery_origin
 COMMENT ON COLUMN public.recruitments.source_discovery_origin IS
   'Immutable origin of recruitment discovery (for example AGGREGATOR_DISCOVERED); distinct from official_link_source verification state.';
 
+-- The promotion function links a recruitment to staging by batch + official URL.
+-- Enforce that this key is unambiguous before it can authorize fact review.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_official_digest_promote_batch_official_url
+  ON public.official_digest_promote (batch, (hub ->> 'official_url'))
+  WHERE nullif(btrim(hub ->> 'official_url'), '') IS NOT NULL;
+
 -- Education already had verified_at; add source pointers. Experience previously
 -- had no verification timestamp at all, so add the complete fact-level evidence fields.
 ALTER TABLE public.posts_education
@@ -710,6 +716,9 @@ BEGIN
       NEW.official_link_source := 'MANUAL_VERIFIED';
       NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) || jsonb_build_object(
         'source_provenance', jsonb_build_object(
+          'discovery_origin', 'AGGREGATOR_DISCOVERED',
+          'staging_batch', v_review.batch,
+          'staging_row', v_review.rownum,
           'authority_review', jsonb_build_object(
             'status', v_review.authority_review_status,
             'evidence_url', v_review.authority_evidence_url,
