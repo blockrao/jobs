@@ -99,6 +99,7 @@ describe("extracted source projection", () => {
     expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified && jobPostingContentEligible}");
     expect(renderer).toContain("isManuallyVerifiedOfficialLink(post.officialLinkSource)");
     expect(renderer).toContain("jobPostingQuality.tier === \"A\" && post.qualificationVerificationStatus === \"VERIFIED\"");
+    expect(renderer).toContain("!enrichmentFactsVerified && <p className={styles.muted}>{enrichmentFactsNote}</p>");
     expect(route).toContain("const eligibility = resolveEligibility(post);");
     // Existing legacy posting UI still labels pending enrichment facts as reported.
     const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
