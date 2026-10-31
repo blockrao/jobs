@@ -218,6 +218,8 @@ describe("aggregator source trust gate", () => {
     expect(hubRoute).toContain("hasPostReview(name, \"education\")");
     expect(hubRoute).toContain("hasPostReview(name, \"experience\")");
     expect(hubComponent).toContain("recruitment.sourceDiscoveryOrigin === 'AGGREGATOR_DISCOVERED' && verified");
+    expect(hubComponent).toContain(") && !recruitment.applicationEndDate");
+    expect(page).toContain('post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate');
     expect(listingQueries).toContain("issuerSourcePublicCondition");
     expect(listingQueries).toContain("metadata -> 'source_provenance' -> 'fact_review'");
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
