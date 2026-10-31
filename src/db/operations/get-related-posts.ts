@@ -5,6 +5,7 @@
 
 import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
+import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql } from "./recruitment-lifecycle-sql";
 
 export interface RelatedPost {
   id: string | number;
@@ -31,19 +32,22 @@ export async function getRelatedPostsGrouped(
 ): Promise<RelatedPostsGrouped> {
   const db = getDb();
 
+  const liveRecruitment = recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`);
+
   // Group 1: Same organization (3 posts)
   let byOrgData: RelatedPost[] = [];
   if (currentOrgId) {
     try {
       const byOrgResult = await db.execute(sql`
         SELECT p.id, p.title, p.slug, r.slug as recruitment_slug,
-               r.status, r.application_end_date
+               r.status, ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} AS application_end_date
         FROM posts p
         JOIN recruitments r ON r.id = p.recruitment_id
         WHERE r.organization_id = ${currentOrgId}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
+          AND ${liveRecruitment}
+        ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
       byOrgData = (Array.isArray(byOrgResult) ? byOrgResult : []) as RelatedPost[];
@@ -58,13 +62,14 @@ export async function getRelatedPostsGrouped(
     try {
       const byLocationResult = await db.execute(sql`
         SELECT p.id, p.title, p.slug, r.slug as recruitment_slug,
-               r.status, r.application_end_date
+               r.status, ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} AS application_end_date
         FROM posts p
         JOIN recruitments r ON r.id = p.recruitment_id
         WHERE p.location_state = ${currentLocation}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
+          AND ${liveRecruitment}
+        ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
       byLocationData = (Array.isArray(byLocationResult) ? byLocationResult : []) as RelatedPost[];
@@ -86,13 +91,14 @@ export async function getRelatedPostsGrouped(
     try {
       const byRoleResult = await db.execute(sql`
         SELECT p.id, p.title, p.slug, r.slug as recruitment_slug,
-               r.status, r.application_end_date
+               r.status, ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} AS application_end_date
         FROM posts p
         JOIN recruitments r ON r.id = p.recruitment_id
         WHERE LOWER(p.title) LIKE ${`%${roleKeywords}%`}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
+          AND ${liveRecruitment}
+        ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
       `);
       byRoleData = (Array.isArray(byRoleResult) ? byRoleResult : []) as RelatedPost[];

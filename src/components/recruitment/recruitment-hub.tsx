@@ -275,16 +275,18 @@ export function buildHubData(
     : recruitment.applicationStartDate;
   const appStart = formatDate(appStartRaw);
   const appEndRaw = sourceFactsUnverified
-    ? (recruitment.sourceExtract?.applicationEndDate ?? recruitment.applicationEndDate ?? null)
-    : (recruitment.applicationEndDate ?? null);
+    ? toPlausibleRecruitmentDate(recruitment.sourceExtract?.applicationEndDate ?? recruitment.applicationEndDate ?? null)
+    : toPlausibleRecruitmentDate(recruitment.applicationEndDate);
   const appEnd = formatDate(appEndRaw);
-  const appEndLabel = sourceFactsUnverified ? 'Application deadline (reported)' : 'Application closes';
 
   // ── Lifecycle (src/lib/lifecycle.ts is the only source of open/closed) ───
   const lifecycle = deriveLifecycle(recruitment.status, recruitment.applicationEndDate, now);
   const lifecycleState = sourceFactsUnverified ? null : lifecycle.state;
-  const closed = sourceFactsUnverified ? false : lifecycle.state === 'closed';
-  const daysLeft = sourceFactsUnverified ? null : lifecycle.daysLeft;
+  const closed = sourceFactsUnverified ? false : !lifecycle.isOpen;
+  const applicationWindowEnded = !sourceFactsUnverified && (lifecycle.state === 'closed' || lifecycle.state === 'results' || lifecycle.state === 'archived');
+  const deadlinePassed = lifecycle.deadline ? lifecycle.deadline.getTime() <= now.getTime() : false;
+  const appEndLabel = sourceFactsUnverified ? 'Application deadline (reported)' : applicationWindowEnded ? 'Application deadline' : 'Application closes';
+  const daysLeft = sourceFactsUnverified || !lifecycle.isOpen ? null : lifecycle.daysLeft;
   const updatedAtLabel = formatDate(recruitment.updatedAt);
 
   // ── Vacancies and post names ─────────────────────────────────────────────
@@ -306,7 +308,7 @@ export function buildHubData(
     year,
     totalVacancies,
     postNames,
-    lastDate: closed ? null : appEnd,
+    lastDate: applicationWindowEnded ? null : appEnd,
   });
 
   // ── Fee ──────────────────────────────────────────────────────────────────
@@ -532,8 +534,10 @@ export function buildHubData(
     ].filter(Boolean).join(' ');
     summarySentences.push(`${orgName} has notified ${what}${sourceFactsUnverified ? ' (as reported in the source listing)' : ''}.`);
   }
-  if (appStart && appEnd) summarySentences.push(`Applications open on ${appStart} and close on ${appEnd}.`);
-  else if (appEnd) summarySentences.push(closed ? `Applications closed on ${appEnd}.` : `Applications close on ${appEnd}.`);
+  if (appEnd && lifecycleState === 'upcoming') summarySentences.push(`Applications are not open yet; the stated last date to apply is ${appEnd}.`);
+  else if (appEnd && lifecycleState === 'closed') summarySentences.push(deadlinePassed ? `Applications closed on ${appEnd}.` : 'Applications are closed.');
+  else if (appStart && appEnd && !applicationWindowEnded) summarySentences.push(`Applications open on ${appStart} and close on ${appEnd}.`);
+  else if (appEnd && !applicationWindowEnded) summarySentences.push(`Applications close on ${appEnd}.`);
   const summary = summarySentences.length > 0 ? summarySentences.join(' ') : null;
 
   // ── Job type / mode / location ───────────────────────────────────────────
@@ -765,7 +769,7 @@ export function buildHubData(
     orgName: orgName ?? composed.heading.replace(/ Recruitment.*$/, ''),
     totalVacancies,
     postNames,
-    lastDate: closed ? null : appEnd,
+    lastDate: applicationWindowEnded ? null : appEnd,
     fee: feeSummary,
   });
 

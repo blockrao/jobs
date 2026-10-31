@@ -45,16 +45,16 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   const vacancies = resolvePostVacancy(post) ?? 0;
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
-  const deadlineRaw = post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null;
-  const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
-  const closed = deadline ? Date.now() > deadline.getTime() : false;
+  const lifecycle = deriveLifecycle(post.postingStatus, post.recruitmentApplicationEndDate);
+  const deadline = lifecycle.deadline;
+  const applicationWindowEnded = lifecycle.state === "closed" || lifecycle.state === "results" || lifecycle.state === "archived";
   const qualification = post.fjaExtract?.qualificationRaw ?? null;
 
   const titleParts = [post.title];
   if (post.organizationName) titleParts.push(`– ${post.organizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
   else if (post.recruitmentName) titleParts.push(`– ${post.recruitmentName}`);
   if (vacancies > 0) titleParts.push(`(${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "Post" : "Posts"})`);
-  if (deadline && !closed) titleParts.push(`– Apply by ${formatDate(deadline)}`);
+  if (deadline && !applicationWindowEnded) titleParts.push(`– Apply by ${formatDate(deadline)}`);
   const title = titleParts.join(" ");
 
   const bits: string[] = [];
@@ -63,7 +63,8 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
-  if (deadline) bits.push(closed ? `applications closed on ${formatDate(deadline)}` : `last date ${formatDate(deadline)}`);
+  if (deadline && lifecycle.state === "closed" && (lifecycle.daysLeft !== null && lifecycle.daysLeft <= 0)) bits.push(`applications closed on ${formatDate(deadline)}`);
+  else if (deadline && !applicationWindowEnded) bits.push(`last date ${formatDate(deadline)}`);
   const storedDescription = typeof post.description === "string" ? post.description.trim() : "";
   const fallbackDescription = `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
   const description = storedDescription || fallbackDescription;
@@ -123,7 +124,7 @@ export default async function JobDetailPage({ params }: Props) {
   // Lifecycle from the canonical recruitment: status + verified deadline.
   const lifecycle = deriveLifecycle(
     post.postingStatus,
-    post.recruitmentApplicationEndDate ?? post.enrichment?.applicationClosingDate ?? null,
+    post.recruitmentApplicationEndDate,
   );
 
   // Normalize salary data
@@ -200,7 +201,7 @@ export default async function JobDetailPage({ params }: Props) {
           max: salaryMax,
         },
         vacancies,
-        applicationDeadline: enrichment?.applicationClosingDate || post.recruitmentApplicationEndDate,
+        applicationDeadline: lifecycle.deadline,
         fjaExtract: {
           qualificationRaw: post.fjaExtract?.qualificationRaw,
           experienceRaw: post.fjaExtract?.experienceRaw,

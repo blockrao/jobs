@@ -24,6 +24,7 @@ import type { NormalizedPosting } from "../src/ingest/normalize";
 import { deterministicSlug, slugify } from "../src/ingest/normalize";
 import { sql } from "drizzle-orm";
 import { promotePending } from "../src/ingest/promotion";
+import { parseIndianDeadline } from "../src/ingest/adapters/util";
 
 const DRY_RUN = process.env.FJA_PROMOTE_DRY_RUN === "1";
 const PILOT_IDS = process.env.FJA_PROMOTE_EXTERNAL_IDS
@@ -221,12 +222,12 @@ function extractPostTable(
 // ---------------------------------------------------------------------------
 // Map one FJA inventory row to NormalizedPosting
 // ---------------------------------------------------------------------------
-function parseJsonRecord(value: unknown): Record<string, any> {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, any>;
+function parseJsonRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
   if (typeof value === "string") {
     try {
       const parsed: unknown = JSON.parse(value);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, any>;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
     } catch { /* keep empty record; malformed source capture must not crash ingestion */ }
   }
   return {};
@@ -302,7 +303,8 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
   // A future end_date is sufficient to conclude applications are open.
   const cat = (row.listing_category ?? "").toLowerCase();
   const now = new Date();
-  const endDate = row.application_end_date ? new Date(row.application_end_date) : facts.application_end_date ? parseSourceDate(String(facts.application_end_date)) ?? null : null;
+  const sourceDeadline = facts.application_end_date ? parseIndianDeadline(String(facts.application_end_date), { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
+  const endDate = sourceDeadline?.date ?? (row.application_end_date ? new Date(row.application_end_date) : null);
   const startDate = row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) ?? null : null;
   const stage =
     cat.includes("result") ? "RESULT_OUT" :
@@ -346,7 +348,12 @@ function toNormalized(row: FjaJobRow): NormalizedPosting {
     advertisementNumber: row.advertisement_number ?? undefined,
     datePosted: row.published_date ? new Date(row.published_date) : facts.notification_date ? parseSourceDate(String(facts.notification_date)) : undefined,
     applicationStartDate: row.application_start_date ? new Date(row.application_start_date) : facts.application_start_date ? parseSourceDate(String(facts.application_start_date)) : undefined,
-    validThrough: row.application_end_date ? new Date(row.application_end_date) : facts.application_end_date ? parseSourceDate(String(facts.application_end_date)) : undefined,
+    validThrough: sourceDeadline?.date ?? undefined,
+    validThroughPrecision: sourceDeadline?.precision,
+    validThroughSourceText: sourceDeadline?.sourceText,
+    validThroughTimezone: sourceDeadline?.timezone ?? undefined,
+    validThroughTimezoneBasis: sourceDeadline?.timezoneBasis,
+    validThroughSourceLabel: sourceDeadline ? "FJA facts.application_end_date" : undefined,
     postTable,
     // Always create at least one post leaf; use the source title when no role line was extracted.
     postNames: postNames?.length ? postNames : [row.title],
@@ -396,11 +403,6 @@ async function main() {
   if (FULL_INVENTORY) console.log(`Scope: FULL ELIGIBLE INVENTORY (only EXTRACTED + OPEN records pass selection)`);
   if (LIMIT) console.log(`Limit: ${LIMIT} rows`);
   console.log();
-
-  // Check for live-mapped rows (must never overwrite)
-  const liveMappedWarning = PILOT_IDS
-    ? `AND external_id = ANY(ARRAY[${PILOT_IDS.map((id) => `'${id.replace(/'/g, "''")}'`).join(",")}])`
-    : "";
 
   // Build query: only new, fully extracted FJA rows with an open application window.
   // Compare normalized source URLs against both canonical entity tables to prevent re-imports.

@@ -22,7 +22,7 @@ import type { RawPosting } from "../types";
 import { FACTS_ONLY_DESCRIPTION_MARKER } from "../../lib/content-quality/gate";
 import { parseFreeJobAlertArticle } from "@/enrich/freejobalert-article";
 import { mergeArticleFacts } from "../enrich-facts";
-import { collapse, parseIndianDate, scoreConfidence, extractVacancies } from "./util";
+import { collapse, parseIndianDate, parseIndianDeadline, scoreConfidence, extractVacancies } from "./util";
 
 const SOURCE = "ext-1";
 
@@ -177,7 +177,8 @@ export function recordToRaw(rec: FileRecord, nowForObservation?: Date): RawPosti
 
   const title = collapse(rec.title || rec.listTitle || "");
   const totalVacancies = vac ? extractVacancies(vac.value) ?? undefined : undefined;
-  const validThrough = last ? parseIndianDate(last.value) : undefined;
+  const deadline = last ? parseIndianDeadline(last.value, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" }) : undefined;
+  const validThrough = deadline?.date ?? undefined;
   const applicationStartDate = start ? parseIndianDate(start.value) : undefined;
   const published = rec.published ? new Date(rec.published) : undefined;
 
@@ -207,6 +208,11 @@ export function recordToRaw(rec: FileRecord, nowForObservation?: Date): RawPosti
     advertisementNumber: advt?.value,
     applicationStartDate,
     validThrough,
+    validThroughPrecision: deadline?.precision,
+    validThroughSourceText: deadline?.sourceText,
+    validThroughTimezone: deadline?.timezone ?? undefined,
+    validThroughTimezoneBasis: deadline?.timezoneBasis,
+    validThroughSourceLabel: last?.label,
     examDate: examDate ? parseIndianDate(examDate.value) : undefined,
     datePosted: published && !isNaN(published.getTime()) ? published : undefined,
     locationRegion: loc?.value,

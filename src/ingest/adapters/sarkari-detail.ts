@@ -5,6 +5,7 @@ import {
   collapse,
   extractVacancies,
   parseIndianDate,
+  parseIndianDeadline,
   parseSalary,
 } from "./util";
 
@@ -19,6 +20,10 @@ export type DetailFields = Partial<
   | "totalVacancies"
   | "datePosted"
   | "validThrough"
+    | "validThroughPrecision"
+    | "validThroughSourceText"
+    | "validThroughTimezone" | "validThroughTimezoneBasis"
+    | "validThroughSourceLabel"
   | "examDate"
   | "salaryMin"
   | "salaryMax"
@@ -106,14 +111,14 @@ function pickFields(
   const datePosted = parseIndianDate(
     bag.find(/post date/i, /update/i, /notification date/i),
   );
-  const validThrough = parseIndianDate(
-    bag.find(
-      /last date.*(apply|online|application|submission)/i,
-      /application end/i,
-      /closing date/i,
-      /^last date$/i,
-    ),
+  const deadlineLabel = bag.find(
+    /last date.*(apply|online|application|submission)/i,
+    /application end/i,
+    /closing date/i,
+    /^last date$/i,
   );
+  const deadline = parseIndianDeadline(deadlineLabel, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
+  const validThrough = deadline?.date ?? undefined;
   const examDate = parseIndianDate(
     bag.find(/exam date/i, /date of exam/i, /written exam/i, /tier.?i.*date/i),
   );
@@ -150,6 +155,11 @@ function pickFields(
     totalVacancies,
     datePosted,
     validThrough,
+    validThroughPrecision: deadline?.precision,
+    validThroughSourceText: deadline?.sourceText,
+    validThroughTimezone: deadline?.timezone ?? undefined,
+    validThroughTimezoneBasis: deadline?.timezoneBasis,
+    validThroughSourceLabel: deadlineLabel,
     examDate,
     salaryMin,
     salaryMax,

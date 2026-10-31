@@ -86,6 +86,11 @@ function build(item: ListItem, detail: DetailFields): RawPosting {
     stageHintText: title,
     datePosted: detail.datePosted,
     validThrough: detail.validThrough,
+    validThroughPrecision: detail.validThroughPrecision,
+    validThroughSourceText: detail.validThroughSourceText,
+    validThroughTimezone: detail.validThroughTimezone,
+    validThroughTimezoneBasis: detail.validThroughTimezoneBasis,
+    validThroughSourceLabel: detail.validThroughSourceLabel,
     examDate: detail.examDate,
   };
   p.confidence = scoreConfidence(p);

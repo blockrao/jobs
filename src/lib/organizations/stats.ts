@@ -120,19 +120,22 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
     `),
   ]);
 
-  const recruitments: OrgRecruitment[] = rowsOf<RecruitmentRow>(recResult).map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    name: r.name,
-    status: r.status,
-    notificationDate: toDate(r.notification_date),
-    applicationEndDate: toDate(r.application_end_date),
-    totalVacancies: r.total_vacancies,
-    postCount: r.post_count ?? 0,
-    examSlug: r.exam_slug,
-    examName: r.exam_name,
-    lifecycle: deriveLifecycle(r.status, r.application_end_date, now),
-  }));
+  const recruitments: OrgRecruitment[] = rowsOf<RecruitmentRow>(recResult).map((r) => {
+    const lifecycle = deriveLifecycle(r.status, r.application_end_date, now);
+    return {
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      status: r.status,
+      notificationDate: toDate(r.notification_date),
+      applicationEndDate: lifecycle.deadline,
+      totalVacancies: r.total_vacancies,
+      postCount: r.post_count ?? 0,
+      examSlug: r.exam_slug,
+      examName: r.exam_name,
+      lifecycle,
+    };
+  });
 
   const live = recruitments
     .filter((r) => r.lifecycle.isLive)

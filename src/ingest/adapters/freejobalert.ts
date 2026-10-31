@@ -9,6 +9,7 @@ import {
   logCrawlCap,
   mapPool,
   parseIndianDate,
+  parseIndianDeadline,
   parseSalary,
   scoreConfidence,
   sleep,
@@ -81,14 +82,14 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
   const datePosted = parseIndianDate(
     bag.find(/notification date/i, /application start/i, /start of online/i, /post date/i),
   );
-  const validThrough = parseIndianDate(
-    bag.find(
-      /last date to (apply|submit)/i,
-      /last date.*application/i,
-      /closing date/i,
-      /^last date$/i,
-    ),
+  const deadlineLabel = bag.find(
+    /last date to (apply|submit)/i,
+    /last date.*application/i,
+    /closing date/i,
+    /^last date$/i,
   );
+  const deadline = parseIndianDeadline(deadlineLabel, { defaultTimezone: "Asia/Kolkata", defaultTimezoneBasis: "INDIA_SOURCE_DEFAULT" });
+  const validThrough = deadline?.date ?? undefined;
   const examDate = parseIndianDate(bag.find(/exam date/i, /date of exam/i, /tier.?i.*date/i));
   const jobLocation = bag.find(/job location/i, /location/i, /place of posting/i);
   const eligibility = bag.findQualification(/qualification/i, /eligib/i, /educational/i);
@@ -104,6 +105,11 @@ function parseDetail(html: string, baseUrl: string): Partial<RawPosting> {
     totalVacancies: vacancies,
     datePosted,
     validThrough,
+    validThroughPrecision: deadline?.precision,
+    validThroughSourceText: deadline?.sourceText,
+    validThroughTimezone: deadline?.timezone ?? undefined,
+    validThroughTimezoneBasis: deadline?.timezoneBasis,
+    validThroughSourceLabel: deadlineLabel,
     examDate,
     eligibility,
     locationRegion: jobLocation,
@@ -150,6 +156,11 @@ function build(item: ListItem, detail: Partial<RawPosting>): RawPosting {
     stageHintText: title,
     datePosted: detail.datePosted,
     validThrough: detail.validThrough,
+    validThroughPrecision: detail.validThroughPrecision,
+    validThroughSourceText: detail.validThroughSourceText,
+    validThroughTimezone: detail.validThroughTimezone,
+    validThroughTimezoneBasis: detail.validThroughTimezoneBasis,
+    validThroughSourceLabel: detail.validThroughSourceLabel,
     examDate: detail.examDate,
     postNames: detail.postNames,
     applyUrl: detail.applyUrl,

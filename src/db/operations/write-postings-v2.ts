@@ -30,10 +30,11 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { publicLink } from "../../lib/aggregators";
 import { sanitizeForStorage } from "../../ingest/enrich-facts";
-import { loadOrgIndex, resolveOrganization, upsertCandidate, type OrgResolution } from "../../ingest/organization-resolution";
+import { loadOrgIndex, resolveOrganization, type OrgResolution } from "../../ingest/organization-resolution";
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
+import { canonicalDeadlineWriteValues, deadlineObservationFacts } from "../../ingest/deadline-authority";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -192,7 +193,7 @@ async function recordObservation(
     organization: norm.organizationName || null,
     organizationFromLabel: norm.organizationFromLabel ?? false,
     vacancies: norm.totalVacancies ?? null,
-    lastDate: iso(norm.validThrough),
+    ...deadlineObservationFacts(norm),
     startDate: iso(norm.applicationStartDate),
     examDate: iso(norm.examDate),
     notificationUrl: publicLink(norm.officialNotificationUrl),
@@ -414,6 +415,12 @@ export async function writePostingsToDB(
         }
       }
 
+      // Source authority is resolved from the registry, never inferred from the portal name or URL.
+      // Missing sources are created as AGGREGATED/non-official by getOrCreateSource(),
+      // so unknown and secondary sources fail closed for canonical deadlines.
+      const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
+      const deadlineWriteValues = canonicalDeadlineWriteValues(source.authority, source.isOfficial, norm.validThrough);
+
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
       // 3. Resolve onto the canonical entity layer (identity-key based).
@@ -437,7 +444,7 @@ export async function writePostingsToDB(
             officialNotificationNumber: normalizeAdvertisementNumber(norm.advertisementNumber),
             title: norm.title,
             applicationStartDate: norm.applicationStartDate ?? null,
-            applicationEndDate: norm.validThrough ?? null,
+            applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
           },
         );
       }
@@ -445,7 +452,7 @@ export async function writePostingsToDB(
       // A later sighting fills a missing start date or extends the end date on the recruitment.
       await refreshRecruitmentDates(db, recruitment.id, {
         applicationStartDate: norm.applicationStartDate ?? null,
-        applicationEndDate: norm.validThrough ?? null,
+        applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
       });
 
       let postId: number | null = existingPosting?.inferredPostId ?? null;
@@ -502,7 +509,6 @@ export async function writePostingsToDB(
 
       // 4. Provenance: persist the raw capture, not just a confidence score.
       const rawContent = [clean.title, clean.description, clean.eligibility].filter(Boolean).join("\n\n");
-      const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
       const sourceDocumentId = await getOrCreateSourceDocument(db, source.id, norm.externalId, norm.sourceUrl, rawContent);
 
       const baseConfidence = deduped.primary.confidence ?? 0;
@@ -528,7 +534,7 @@ export async function writePostingsToDB(
         applyUrl: clean.applyUrl,
         officialNotificationUrl: clean.officialNotificationUrl,
         currentStage,
-        validThrough: norm.validThrough ?? null,
+        validThrough: deadlineWriteValues.postingValidThrough,
         postNames: norm.postNames ?? null,
         isCanonical: true,
         canonicalSlug: null,
@@ -559,7 +565,7 @@ export async function writePostingsToDB(
         officialNotificationUrl: clean.officialNotificationUrl,
         applyUrl: clean.applyUrl,
         currentStage,
-        validThrough: norm.validThrough ?? null,
+        validThrough: deadlineWriteValues.postingValidThrough,
         examDate: norm.examDate ?? null,
         inferredRecruitmentId: recruitment.id,
         inferredPostId: postId,

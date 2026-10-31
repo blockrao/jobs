@@ -33,7 +33,9 @@ export function deriveLifecycle(
   now: Date = new Date(),
 ): Lifecycle {
   const deadline = toPlausibleRecruitmentDate(applicationEndDate);
-  const deadlinePassed = deadline ? deadline.getTime() < now.getTime() : false;
+  // Deadline values are exclusive cutoffs: at the stated closing instant, applications are closed.
+  // DATE_ONLY parser values use midnight immediately after the stated local calendar day.
+  const deadlinePassed = deadline ? deadline.getTime() <= now.getTime() : false;
   const daysLeft = deadline
     ? Math.ceil((deadline.getTime() - now.getTime()) / 86_400_000)
     : null;
