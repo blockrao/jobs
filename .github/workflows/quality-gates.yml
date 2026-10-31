@@ -2,12 +2,6 @@ name: JobOye PR Quality Gates
 
 on:
   workflow_dispatch:
-    inputs:
-      target_ref:
-        description: "Branch or commit to validate (for example fix/shared-lifecycle-sql-policy)"
-        required: true
-        default: "main"
-        type: string
   # PRs targeting main use pull_request; stacked feature PRs are checked on push
   # to their head branch so the same suite runs without duplicate executions.
   pull_request:
@@ -36,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -45,7 +39,7 @@ jobs:
       # The repository-wide lint command currently fails on hundreds of legacy
       # issues outside this change. Lint the files changed by this PR.
       - run: >-
-          npx eslint --rule '@typescript-eslint/no-explicit-any: warn' src/ingest/adapters/util.ts src/ingest/deadline-authority.ts src/db/operations/write-postings-v2.ts src/db/operations/recruitment-lifecycle-sql.ts src/db/operations/get-recruitments.ts src/db/operations/get-related-posts.ts src/db/operations/get-posts.ts src/lib/lifecycle.ts src/lib/queries.ts src/lib/states/queries.ts src/lib/organizations/stats.ts src/components/job-posting/job-detail-page-production.tsx src/components/recruitment/recruitment-hub.tsx "src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx" src/components/recruitment/structured-data/recruitment-hub-schema.tsx src/ingest/adapters/freejobalert-file.ts src/ingest/adapters/freejobalert.ts src/ingest/adapters/multi-source-file.ts src/ingest/adapters/sahisarkarijobs.ts src/ingest/adapters/sarkari-detail.ts src/ingest/adapters/sarkarinaukri.ts scripts/promote-fja-to-canonical.ts tests/unit/ingest-deadline-parser.test.ts tests/unit/deadline-authority.test.ts tests/unit/lifecycle-deadline-boundary.test.ts tests/unit/recruitment-lifecycle-sql.test.ts tests/unit/recruitment-lifecycle-contract.test.ts
+          npx eslint --rule '@typescript-eslint/no-explicit-any: warn' src/ingest/adapters/util.ts src/ingest/deadline-authority.ts src/db/operations/write-postings-v2.ts src/db/operations/recruitment-lifecycle-sql.ts src/db/operations/get-recruitments.ts src/db/operations/get-related-posts.ts src/db/operations/get-posts.ts src/lib/lifecycle.ts src/lib/queries.ts src/lib/states/queries.ts src/lib/organizations/stats.ts src/components/job-posting/job-detail-page-production.tsx src/components/recruitment/recruitment-hub.tsx "src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx" src/components/recruitment/structured-data/recruitment-hub-schema.tsx src/ingest/adapters/freejobalert-file.ts src/ingest/adapters/freejobalert.ts src/ingest/adapters/multi-source-file.ts src/ingest/adapters/sahisarkarijobs.ts src/ingest/adapters/sarkari-detail.ts src/ingest/adapters/sarkarinaukri.ts scripts/promote-fja-to-canonical.ts tests/unit/ingest-deadline-parser.test.ts tests/unit/deadline-authority.test.ts tests/unit/lifecycle-deadline-boundary.test.ts tests/unit/recruitment-lifecycle-sql.test.ts tests/unit/recruitment-lifecycle-contract.test.ts tests/contracts/unit/recruitment-deadline-persistence.test.ts tests/contracts/unit/writer-deadline-provenance.test.ts
 
   contract-tests:
     name: Architecture contract tests
@@ -54,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -63,20 +57,20 @@ jobs:
       - run: npm run test:contracts -- --reporter=dot
 
   contract-typecheck:
-    name: Vacancy-integrity test type-check
+    name: Contract test type-check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Type-check the existing vacancy-integrity test and the deadline authority contract.
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types vitest/globals tests/contracts/unit/vacancy-integrity.test.ts src/lib/vacancy-integrity.ts tests/unit/deadline-authority.test.ts src/ingest/deadline-authority.ts
+      # Type-check vacancy integrity plus the deadline authority, writer and persistence contracts.
+      - run: npx tsc --noEmit -p tests/tsconfig.deadline.json
 
   application-typecheck:
     name: Application type-check
@@ -85,7 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -100,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_ref != '' && inputs.target_ref || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22

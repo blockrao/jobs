@@ -34,7 +34,7 @@ import { loadOrgIndex, resolveOrganization, type OrgResolution } from "../../ing
 import { createUnverifiedOrganization } from "./ensure-organization";
 import { normalizeIdentityTitle, normalizeIdentityUrl } from "../../ingest/duplicate-identity";
 import { slugify } from "../../ingest/normalize";
-import { canonicalDeadlineWriteValues, deadlineObservationFacts } from "../../ingest/deadline-authority";
+import { canonicalDeadlineWriteValues, deadlineObservationFacts, hasResolvedDeadlineEvidence } from "../../ingest/deadline-authority";
 
 function hashContent(title: string, description: string): string {
   return crypto.createHash("sha256").update(`${title}|${description}`).digest("hex");
@@ -148,6 +148,8 @@ export interface RecordResult {
   recruitmentOrgMismatch?: boolean;
   /** Columns written by a re-ingest (diagnostic). */
   writtenFields?: string[];
+  deadlineReviewRequired?: boolean;
+  deadlineReviewReason?: string;
 }
 
 export interface WriteOptions {
@@ -419,7 +421,12 @@ export async function writePostingsToDB(
       // Missing sources are created as AGGREGATED/non-official by getOrCreateSource(),
       // so unknown and secondary sources fail closed for canonical deadlines.
       const source = await getOrCreateSource(db, sourcePortal, norm.sourceUrl);
-      const deadlineWriteValues = canonicalDeadlineWriteValues(source.authority, source.isOfficial, norm.validThrough);
+      const hasResolvedDeadline = hasResolvedDeadlineEvidence(norm);
+      const deadlineWriteValues = canonicalDeadlineWriteValues(
+        source.authority,
+        source.isOfficial,
+        hasResolvedDeadline ? norm.validThrough : null,
+      );
 
       const examId = norm.examSlug ? examSlugs.get(norm.examSlug) ?? null : null;
 
@@ -449,11 +456,25 @@ export async function writePostingsToDB(
         );
       }
 
-      // A later sighting fills a missing start date or extends the end date on the recruitment.
-      await refreshRecruitmentDates(db, recruitment.id, {
+      // New recruitments already receive their authorised deadline in resolveRecruitment.
+      // Existing recruitments use linked OFFICIAL observation evidence before any extension.
+      const deadlineRefresh = await refreshRecruitmentDates(db, recruitment.id, {
         applicationStartDate: norm.applicationStartDate ?? null,
-        applicationEndDate: deadlineWriteValues.recruitmentApplicationEndDate,
+        applicationEndDate: recruitment.created ? null : deadlineWriteValues.recruitmentApplicationEndDate,
+        deadlineEvidence: !recruitment.created && deadlineWriteValues.recruitmentApplicationEndDate
+          ? {
+              precision: norm.validThroughPrecision ?? "UNKNOWN",
+              sourceText: norm.validThroughSourceText ?? null,
+              timezone: norm.validThroughTimezone ?? null,
+              timezoneBasis: norm.validThroughTimezoneBasis ?? "UNKNOWN",
+            }
+          : null,
       });
+      const deadlineReviewReason = deadlineRefresh.deadlineReviewReason ?? null;
+      if (deadlineReviewReason) {
+        result.deadlineReviewRequired = true;
+        result.deadlineReviewReason = deadlineReviewReason;
+      }
 
       let postId: number | null = existingPosting?.inferredPostId ?? null;
       // Per-line Posts: only lines that pass the post-line classifier become Posts, and
@@ -605,7 +626,7 @@ export async function writePostingsToDB(
         result.action = "inserted";
         result.postingId = created.id;
         out.inserted++;
-        await setObservationOutcome(db, obs.id, "LOADED", null, created.id);
+        await setObservationOutcome(db, obs.id, "LOADED", deadlineReviewReason, created.id);
         continue;
       }
 
@@ -696,7 +717,7 @@ export async function writePostingsToDB(
           out.updated++;
         }
       }
-      await setObservationOutcome(db, obs.id, "LOADED", null, existingPosting.id);
+      await setObservationOutcome(db, obs.id, "LOADED", deadlineReviewReason, existingPosting.id);
     } catch (err) {
       result.action = "rejected";
       const cause = (err as { cause?: { message?: string } }).cause?.message;
