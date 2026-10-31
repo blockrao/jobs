@@ -33,7 +33,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 const FAQ = [
   {
     q: "Where can I find all current government job vacancies?",
-    a: "This page brings together open recruitment posts across central and state government departments, railways, banks, defence organisations and public-sector undertakings. Open each post to review available details and check the notification against the recruiting body's official website.",
+    a: "This page brings together open recruitment posts across central and state government departments, railways, banks, defence organisations and public-sector undertakings. Open each post to review available details and check the notification against the recruiting body&apos;s official website.",
   },
   {
     q: "How do I apply for a government job?",
@@ -111,7 +111,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">India-wide recruitment directory</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">All Government Jobs in India 2026</h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-neutral-600">
-          Explore current central and state government vacancies, railway recruitment, bank jobs, defence opportunities and PSU careers in one place. Compare post names, vacancy counts and application deadlines, then check the available notification and application links against the recruiting body's official website before applying.
+          Explore current central and state government vacancies, railway recruitment, bank jobs, defence opportunities and PSU careers in one place. Compare post names, vacancy counts and application deadlines, then check the available notification and application links against the recruiting body&apos;s official website before applying.
         </p>
         <p className="mt-3 text-sm text-neutral-600">
           {total.toLocaleString("en-IN")} listed posts · Page data refreshes hourly · Always confirm eligibility and dates in the official notification.
@@ -210,7 +210,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           <article><h3 className="font-semibold">1. Check eligibility first</h3><p className="mt-1 text-sm leading-6 text-neutral-600">Review age limits, educational qualifications, category relaxations, fees and required documents in the official notice.</p></article>
           <article><h3 className="font-semibold">2. Check the deadline</h3><p className="mt-1 text-sm leading-6 text-neutral-600">Prioritise posts closing soon. A deadline may change if the recruiting body publishes an extension or corrigendum.</p></article>
-          <article><h3 className="font-semibold">3. Apply through the recruiting body</h3><p className="mt-1 text-sm leading-6 text-neutral-600">Use the available notification and application links, and confirm each one on the recruiting body's official website. Never pay an intermediary to submit an application.</p></article>
+          <article><h3 className="font-semibold">3. Apply through the recruiting body</h3><p className="mt-1 text-sm leading-6 text-neutral-600">Use the available notification and application links, and confirm each one on the recruiting body&apos;s official website. Never pay an intermediary to submit an application.</p></article>
           <article><h3 className="font-semibold">4. Browse by recruitment sector</h3><p className="mt-1 text-sm leading-6 text-neutral-600">Use the category hubs above to focus on central government, state government, railways, banking, defence or PSU vacancies.</p></article>
         </div>
       </section>
