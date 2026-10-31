@@ -1390,3 +1390,31 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 **Tests.** tests/contracts/unit/descriptive-recruitment-slug.test.ts covers the two requested descriptive slugs, punctuation normalization and invalid titles.
 
 **Validation.** Production migration version `20261027061751` is recorded and the live constraint was checked read-only after application. Full CI must pass before the application code is merged.
+
+---
+
+## P0-SRC-001 — Separate discovery origin from official verification and gate aggregator-derived facts
+
+| Field | Value |
+| --- | --- |
+| Change ID | P0-SRC-001 |
+| Date | 2026-10-31 |
+| Wave | P0 data integrity / public trust |
+| Status | Draft PR #189; not merged or applied |
+| Scope | Recruitment source provenance, official-digest review, canonical Post fact provenance, public discovery gates |
+
+**Objective.** Prevent aggregator discovery or document extraction from being represented as issuer verification. Preserve immutable discovery origin separately from official-link verification, and require evidence-backed issuer and field review before aggregator-derived facts enter public discovery.
+
+**Files / implementation.** Adds recruitments.source_discovery_origin; issuer and fact review fields on official_digest_promote; field-level source pointers on canonical child fact tables; write guards for recruitment, Post, enrichment and eligibility verification; source-gated Recruitment Hub/Post Leaf payloads, live queries, related-job links and sitemaps; JobPosting date provenance guard; and read-only audit manifests. src/db/schema.ts is updated in the same change.
+
+**Migration.** supabase/migrations/20261031120000_p0_official_digest_source_authority_gate.sql is additive. It backfills only discovery origin for the three known extraction sources and installs write guards. It does not demote or rewrite the existing public cohort. The paired rollback is supabase/rollback/20261031120000_p0_official_digest_source_authority_gate.down.sql; it disables the guards and restores the prior aggregate_enrichment_for_post(integer) function while intentionally retaining additive columns/indexes and audit data.
+
+**Deferred destructive work.** Historical status demotion, child-fact marker clearing and JSONB projection rewrites are not part of this PR. They require a frozen pre-change snapshot, exact rollback/recovery and a deterministic legacy review path for 5,026 records without staging matches (issue #208). Preserve MANUAL_VERIFIED link states independently from aggregator discovery origin; do not overwrite them solely because discovery began at an aggregator.
+
+**SEO / discoverability impact.** Unreviewed aggregator-derived Recruitment Hubs and Post Leaves remain at canonical URLs but are excluded from indexable live discovery and sitemaps until issuer and field-level fact evidence passes. JobPosting JSON-LD additionally requires an open lifecycle, manually verified official notification/application links and a plausible, non-future, source-evidenced notification publication date. A missing application deadline does not by itself make a reviewed UPCOMING Recruitment Hub unpublishable.
+
+**Validation.** Read-only production audit identified 5,381 records across institutional_aggregation (4,002), fja_html (1,265) and institution_aggregation (114); 5,026 lack a matching official-digest staging row. CI on PR #189 must pass after current-main reconciliation. No production migration, data mutation or deployment is claimed.
+
+**Rollback.** Use the committed non-destructive rollback only after rolling back the gated application. It retains additive columns and audit evidence; destructive cleanup is a separate reviewed migration.
+
+**Open dependencies.** Legacy review queue #208; date/listing correction #202; provenance reconciliation #199/#206; current-main branch reconciliation and Vercel preview smoke test.
