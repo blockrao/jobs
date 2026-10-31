@@ -327,6 +327,7 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("official_notification_url, metadata, enrichment_data");
     expect(postCheck).toContain("aggregator_extraction_without_discovery_origin");
     expect(postCheck).toContain("uppsc_contamination_without_discovery_origin");
+    expect(postCheck).toContain("aggregator_records_still_manually_verified");
   });
 
 });
