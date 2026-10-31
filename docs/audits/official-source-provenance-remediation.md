@@ -29,7 +29,7 @@ The previous read-only audit found:
 
 - 542 posts created in the `official_digest_20261015` decomposition batch, across 362 recruitments.
 - All 362 recruitments had `official_link_source = 'AGGREGATOR_DISCOVERED'`; 30 were nevertheless marked `VERIFIED`.
-- 3,262 `posts_education` rows and 643 `posts_experience` rows labelled `source = 'fja_post_inventory'`; all had confidence 60 and `verified_at IS NULL`.
+- 3,262 `posts_education` rows and 643 `posts_experience` rows labelled `source = 'fja_post_inventory'`; education rows had confidence 60 and `verified_at IS NULL`. The experience table did not have a `verified_at` column at audit time, so it could not represent fact verification at all.
 - These child facts were spread across multiple parent recruitment source labels, including `AGGREGATOR_DISCOVERED`, NULL, `GOA_GOV_IN` and `MANUAL_VERIFIED`; parent source labels alone therefore cannot safely gate them.
 - The `fja_post_inventory` table was empty at the time of the audit, so the surviving fact rows had no matching raw inventory record.
 - 19 `eligibilities` rows were marked VERIFIED without a complete issuer evidence chain: none had all of `source_type=OFFICIAL_NOTIFICATION`, `verified_at`, `source_ref` and `source_locator`.
@@ -100,7 +100,7 @@ The current branch now contains the first end-to-end protection slice:
 - Recruitment hubs for the same cohort suppress extracted detail/link payloads, remain canonical at their existing URL, and receive noindex. Once verified, hub and post fields are still individually filtered against the persisted review-key manifest.
 - The `/jobs` list, sector-based live listings (including All Government Jobs), qualification live-post listings/counts and dynamic sitemap require persisted issuer and fact review metadata. Live listings additionally require a verified non-null application end date, so the legacy promotion function cannot make a no-deadline record appear open by default.
 - Drizzle schema now permits a null source-verification timestamp, matching the migration's truthful representation of unverified records.
-- The migration redefines `aggregate_enrichment_for_post` and backfills canonical education/experience JSONB from their child tables with `fact_id`, `source`, `confidence_score` and `verified_at`. This closes the provenance gap created when earlier consolidation dropped row-level metadata.
+- The migration adds missing `verified_at`, `source_ref` and `source_locator` fields to experience facts, adds source pointers to education facts, redefines `aggregate_enrichment_for_post`, and backfills canonical education/experience JSONB with `fact_id`, `source`, `confidence_score`, `verified_at`, `source_ref` and `source_locator`. This closes the provenance gap created when earlier consolidation dropped row-level metadata.
 - Education/experience facts sourced from `fja_post_inventory` (or lacking a verification timestamp) are hidden unless the exact per-post fact-review key is present, regardless of the parent recruitment's `official_link_source`. This is important because the read-only audit found FJA-derived child rows under both aggregator-discovered and NULL/other parent source labels.
 - Static contract tests cover the source helper, leaf/hub gates, live discovery queries, sitemap exclusion, migration gate and null-fee rendering.
 
