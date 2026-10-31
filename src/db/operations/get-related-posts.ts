@@ -44,7 +44,7 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
               AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -75,7 +75,7 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
               AND r.official_link_source = 'MANUAL_VERIFIED'
@@ -113,7 +113,7 @@ export async function getRelatedPostsGrouped(
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND (
-            COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+            COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
             OR (
               r.verification_status = 'VERIFIED'
               AND r.official_link_source = 'MANUAL_VERIFIED'
