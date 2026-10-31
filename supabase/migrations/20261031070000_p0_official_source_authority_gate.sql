@@ -816,6 +816,7 @@ BEGIN
       NEW.official_link_source := 'UNVERIFIED';
       NEW.verification_status := 'UNVERIFIABLE';
       NEW.last_verified_at := NULL;
+      NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) - 'source_provenance';
     ELSE
       NEW.official_link_source := 'MANUAL_VERIFIED';
       NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) || jsonb_build_object(
@@ -1040,6 +1041,7 @@ BEGIN
     -- A source discovered through an aggregator is never manually verified
     -- merely because another writer changed official_link_source.
     NEW.official_link_source := 'UNVERIFIED';
+    NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) - 'source_provenance';
   END IF;
 
   RETURN NEW;
@@ -1129,11 +1131,18 @@ BEGIN
       NEW."sourceName" := 'aggregator_extracted';
       NEW."isOfficialSource" := false;
       NEW.is_official_source := false;
+      NEW.enrichment := (coalesce(NEW.enrichment, '{}'::jsonb) - 'source_provenance')
+        || jsonb_build_object(
+          'sourceVerificationStatus', 'UNVERIFIABLE',
+          'sourceVerificationDate', NULL
+        );
     ELSE
       NEW."sourceName" := 'official_notification';
       NEW."isOfficialSource" := true;
       NEW.is_official_source := true;
       NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb) || jsonb_build_object(
+        'sourceVerificationStatus', 'VERIFIED',
+        'sourceVerificationDate', v_review.fact_reviewed_at,
         'source_provenance', jsonb_build_object(
           'authority_review', jsonb_build_object(
             'status', v_review.authority_review_status,
