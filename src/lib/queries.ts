@@ -542,7 +542,8 @@ export async function listLivePostsBySector(
     .orderBy(
       sql`CASE
         WHEN ${recruitments.applicationEndDate} IS NULL
-          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= 2090
+          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) < ${MIN_PLAUSIBLE_RECRUITMENT_YEAR}
+          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= ${SENTINEL_RECRUITMENT_YEAR}
         THEN NULL
         ELSE ${recruitments.applicationEndDate}
       END ASC NULLS LAST`,
