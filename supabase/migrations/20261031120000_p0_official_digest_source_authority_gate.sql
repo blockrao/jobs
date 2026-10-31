@@ -12,7 +12,11 @@ SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
 WHERE source_discovery_origin IS NULL
   AND (
     official_link_source = 'AGGREGATOR_DISCOVERED'
-    OR enrichment_data->'meta'->>'source' = 'institutional_aggregation'
+    OR enrichment_data->'meta'->>'source' IN (
+      'institutional_aggregation',
+      'institution_aggregation',
+      'fja_html'
+    )
   );
 
 CREATE INDEX IF NOT EXISTS idx_recruitments_source_discovery_origin
