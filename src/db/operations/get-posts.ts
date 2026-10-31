@@ -11,6 +11,7 @@ import { JobPostingData, PostEnrichment } from "@/types/job-posting";
 import { transformEnrichment } from "./enrichment-transformer";
 import { recruitmentIsLiveSql } from "./recruitment-lifecycle-sql";
 import { isVerifiedOfficialUrl } from "@/lib/official-source";
+import { hasHighConfidenceIssuerOrganizationMismatch } from "@/lib/organization-identity";
 
 type RawDate = string | Date | null;
 type FjaExtract = NonNullable<JobPostingData["fjaExtract"]>;
@@ -118,6 +119,8 @@ async function getPostCoreData(
         o.slug AS "organizationSlug",
         p.recruitment_id AS "recruitmentId",
         r.name AS "recruitmentName",
+        r.enrichment_data -> 'meta' ->> 'source' AS "recruitmentEnrichmentSource",
+        r.enrichment_data -> 'institution' ->> 'name' AS "recruitmentInstitutionName",
         r.slug AS "recruitmentSlug",
         o.sector AS "organizationSector",
         r.exam_id AS "examId",
@@ -637,6 +640,12 @@ export async function getPostBySlug(
     const officialApplicationVerified =
       data.officialApplicationEvidenceAccepted === true
       && isVerifiedOfficialUrl(data.applyPortalUrl, officialSourceRegistryUrl);
+    const organizationIdentityMismatch = hasHighConfidenceIssuerOrganizationMismatch({
+      source: data.recruitmentEnrichmentSource,
+      institutionName: data.recruitmentInstitutionName,
+      recruitmentName: data.recruitmentName,
+      organizationName: data.organizationName,
+    });
 
     // Transform raw JSONB enrichment to canonical EnrichmentSchema. Any
     // additional officialLinks must independently match the same registered
@@ -657,10 +666,13 @@ export async function getPostBySlug(
       slug: data.slug,
       positionId: (data as any).positionId ?? null,
       organizationId: data.organizationId,
-      organizationName: data.organizationName,
-      organizationSlug: data.organizationSlug ?? null,
+      organizationName: organizationIdentityMismatch ? null : data.organizationName,
+      organizationSlug: organizationIdentityMismatch ? null : data.organizationSlug ?? null,
       // org_sector; PRIVATE indicates unresolved organization (data quality signal).
-      organizationSector: (data.organizationSector ?? null) as string | null,
+      organizationSector: (organizationIdentityMismatch ? null : data.organizationSector ?? null) as string | null,
+      organizationIdentityMismatch,
+      recruitmentEnrichmentSource: data.recruitmentEnrichmentSource ?? null,
+      recruitmentInstitutionName: data.recruitmentInstitutionName ?? null,
       recruitmentId: data.recruitmentId,
       recruitmentName: data.recruitmentName,
       recruitmentSlug: data.recruitmentSlug,
