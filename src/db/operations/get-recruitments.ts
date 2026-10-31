@@ -281,6 +281,7 @@ export async function getRecruitmentWithPosts(slug: string) {
         eq(posts.recruitmentId, recruitmentId),
         // Duplicate legacy aggregator rows are retained for URL redirects/audit but must not render in canonical hub listings.
         sql`posts.posting_status IS DISTINCT FROM 'DUPLICATE'`,
+        sql`private.is_post_publicly_trusted(${posts.id})`,
       ));
 
     console.log(`[getRecruitmentWithPosts] Got ${postsResult.length} posts`);
