@@ -26,6 +26,7 @@ import { formatDate, formatCurrency } from '@/lib/formatting';
 import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf-schema';
 import type { LeafFaq, LeafFact } from '@/components/job-posting/structured-data/post-leaf-schema';
 import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
+import { isManuallyVerifiedOfficialLink } from '@/lib/source-verification';
 import styles from '@/components/recruitment/recruitment-hub.module.css';
 
 // Helper: Parse JSON strings safely
@@ -63,6 +64,8 @@ interface JobDetailPageProps {
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
+    /** A-070: only MANUAL_VERIFIED allows official-link claims or citations. */
+    officialLinkSource?: string | null;
     applyUrl?: string | null;
     employmentType?: string | null;
     qualificationText?: string | null;
@@ -158,7 +161,10 @@ export default function JobDetailPageProduction({
   const isApplicationClosed = !isApplicationOpen;
   // JobPosting is only for an application that is currently open. The schema
   // builder independently omits markup for a known expired deadline.
-  const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
+  const notificationLinkVerified = Boolean(post.officialSourceUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
+  const applicationLinkVerified = Boolean(post.applyUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
+  const emitJobPosting = (lifecycle ? lifecycle.isOpen : !isApplicationClosed)
+    && indexable && notificationLinkVerified && applicationLinkVerified;
   const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
@@ -194,9 +200,18 @@ export default function JobDetailPageProduction({
     seen.add(href);
     links.push({ label, href });
   };
-  if (!isApplicationClosed) pushLink('Apply online', post.applyUrl);
-  pushLink('Official notification', post.officialSourceUrl);
-  for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
+  const applicationLinkLabel = applicationLinkVerified ? 'Apply online' : 'Application link (not manually verified)';
+  const notificationLinkLabel = notificationLinkVerified ? 'Official notification' : 'Notification link (not manually verified)';
+  if (!isApplicationClosed) pushLink(applicationLinkLabel, post.applyUrl);
+  pushLink(notificationLinkLabel, post.officialSourceUrl);
+  for (const l of post.officialLinks ?? []) {
+    pushLink(
+      isManuallyVerifiedOfficialLink(l.source)
+        ? linkLabel(l)
+        : 'Reference link (not manually verified)',
+      l.url,
+    );
+  }
   if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
 
   // ── Intro (stored description or one sentence of known facts) ────────────
@@ -307,7 +322,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
@@ -326,7 +341,7 @@ export default function JobDetailPageProduction({
                 {statusText && (
                   <li className={`${styles.chip} ${isApplicationClosed ? styles.chipClosed : styles.chipOpen}`}>{statusText}</li>
                 )}
-                {post.officialSourceUrl && <li className={styles.chip}>From official notification</li>}
+                {post.officialSourceUrl && <li className={styles.chip}>{notificationLinkVerified ? "Official source manually verified" : "Notification source not manually verified"}</li>}
                 {modifiedDate && <li className={`${styles.chip} ${styles.chipMuted}`}>Updated {formatDate(modifiedDate)}</li>}
               </ul>
               <h1 className={styles.heroTitle}>
@@ -335,10 +350,10 @@ export default function JobDetailPageProduction({
               <p className={styles.lead}>{intro}</p>
               <p className={styles.actions}>
                 {post.applyUrl && !isApplicationClosed && (
-                  <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">Apply online</a>
+                  <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">{applicationLinkLabel}</a>
                 )}
                 {post.officialSourceUrl && (
-                  <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
+                  <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">{notificationLinkLabel}</a>
                 )}
               </p>
               {publishedDate && (
