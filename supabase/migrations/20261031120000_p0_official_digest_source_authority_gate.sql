@@ -42,6 +42,7 @@ ALTER TABLE public.post_age_rules
   ADD COLUMN IF NOT EXISTS source_locator text;
 
 ALTER TABLE public.posts_application_fee
+  ADD COLUMN IF NOT EXISTS category varchar(100),
   ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
   ADD COLUMN IF NOT EXISTS source_ref text,
   ADD COLUMN IF NOT EXISTS source_locator text;
