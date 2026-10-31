@@ -32,6 +32,9 @@ describe("canonical /jobs listing database contract", () => {
     expect(recruitmentQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
     expect(recruitmentQueries).toContain("r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'");
     expect(recruitmentQueries).toContain("'hub:notification_date'");
+    expect(recruitmentQueries).toContain("authority_review' ->> 'reviewed_by'");
+    expect(recruitmentQueries).toContain("fact_review' ->> 'reviewed_by'");
+    expect(recruitmentQueries).toContain("fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'excerpt'");
     expect(jobsPage).toContain("No source-verified recruitment notifications are available from the last 30 days.");
     expect(recruitmentQueries).not.toContain("COALESCE(r.notification_date, r.created_at) >= now()");
     expect(recruitmentQueries).not.toContain("COALESCE(r.notification_date, r.created_at) DESC");
