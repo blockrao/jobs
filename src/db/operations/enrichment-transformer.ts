@@ -65,11 +65,16 @@ export function transformEnrichment(
     if (typeof options.postName !== 'string' || !Array.isArray(reviewedFields)) return false;
     return reviewedFields.includes(`post:${options.postName}:${field}`);
   };
-  const hasPostFactReview = (field: string): boolean =>
-    !isAggregatorDiscovered || hasExplicitPostFactReview(field);
+  const trustedFactSources = new Set([
+    'OFFICIAL_NOTIFICATION',
+    'ISSUER_NOTIFICATION',
+    'ISSUER_API',
+    'ISSUER_CONTROLLED',
+    'GOA_GOV_IN',
+    'MANUAL_VERIFIED',
+  ]);
   const isFactRowEligible = (item: any, field: string): boolean => {
-    if (isAggregatorDiscovered) return hasExplicitPostFactReview(field);
-    const source = typeof item?.source === 'string' ? item.source : null;
+    const source = typeof item?.source === 'string' ? item.source.trim().toUpperCase() : null;
     const verifiedAt = item?.verified_at ?? item?.verifiedAt ?? null;
     const sourceRef = item?.source_ref ?? item?.sourceRef ?? null;
     const sourceLocator = item?.source_locator ?? item?.sourceLocator ?? null;
@@ -78,17 +83,22 @@ export function transformEnrichment(
       verifiedAt != null &&
       typeof sourceRef === 'string' && sourceRef.trim().length > 0 &&
       typeof sourceLocator === 'string' && sourceLocator.trim().length > 0;
-    if (
+    const requiresHumanReview =
       isAggregatorDiscovered ||
       !source ||
-      source === 'fja_post_inventory' ||
+      !trustedFactSources.has(source) ||
       !hasRowEvidence ||
-      verificationStatus === 'UNVERIFIABLE'
-    ) {
-      return hasExplicitPostFactReview(field) && hasRowEvidence;
-    }
-    return true;
+      verificationStatus === 'UNVERIFIABLE';
+    return requiresHumanReview
+      ? hasExplicitPostFactReview(field) && hasRowEvidence
+      : true;
   };
+  const eligibleRows = (items: any, field: string): any[] =>
+    Array.isArray(items) ? items.filter((item) => isFactRowEligible(item, field)) : [];
+  const eligibleObjectEntries = (items: any, field: string): Array<[string, any]> =>
+    items && typeof items === 'object' && !Array.isArray(items)
+      ? Object.entries(items).filter(([, item]) => isFactRowEligible(item, field))
+      : [];
 
   if (!rawEnrichment || typeof rawEnrichment !== 'object') {
     // Return minimal valid PostEnrichment
