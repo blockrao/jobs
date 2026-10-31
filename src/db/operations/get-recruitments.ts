@@ -575,7 +575,7 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     // Do not advertise aggregator-discovered records as current official jobs
     // until the issuer-source authority review has explicitly passed.
     sql`(
-      COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'
+      COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
       OR (
         r.verification_status = 'VERIFIED'
         AND r.official_link_source = 'MANUAL_VERIFIED'
