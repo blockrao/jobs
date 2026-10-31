@@ -286,7 +286,7 @@ export default async function SourceOriginReviewQueuePage({
           <h1 className="mt-1 text-2xl font-bold">Source-Origin Review Queue</h1>
           <p className="mt-2 max-w-3xl text-sm text-neutral-600">
             Review discovery provenance, canonical Post coverage and source evidence before any promotion or publication decision.
-            This screen does not change Recruitment, Post, URL, verification or publication records.
+            Origin identifies how a record was discovered; it does not prove that every fact is wrong. This screen is read-only and does not change Recruitment, Post, URL, verification or publication records.
           </p>
         </div>
         <Link href="/admin" className="text-sm text-blue-700 underline">Back to Admin</Link>
