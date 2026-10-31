@@ -27,7 +27,7 @@ describe("canonical /jobs listing database contract", () => {
 
   it("uses only source notification dates for recently notified discovery", () => {
     const start = recruitmentQueries.indexOf("export async function listRecruitments(");
-    const end = recruitmentQueries.indexOf("/**\\n * Get posting locations", start);
+    const end = recruitmentQueries.indexOf("/**\n * Get posting locations", start);
     const listingQuery = recruitmentQueries.slice(start, end);
     expect(listingQuery).toContain("r.notification_date IS NOT NULL");
     expect(listingQuery).toContain("r.notification_date <= now()");
