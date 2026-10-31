@@ -1200,6 +1200,11 @@ export const recruitments = pgTable(
     // Provenance of the official notification/apply link on this recruitment:
     // MANUAL_VERIFIED | AGGREGATOR_DISCOVERED. Null = no link. (A-070)
     officialLinkSource: varchar("official_link_source", { length: 40 }),
+    // Original discovery channel is immutable provenance, independent of whether
+    // the official notification/application link has subsequently been verified.
+    sourceDiscoveryOrigin: text("source_discovery_origin"),
+    // Recruitment-level verification state; the database write guard owns transitions.
+    verificationStatus: varchar("verification_status", { length: 50 }),
     // Official advertisement/notification number as printed in the notice,
     // e.g. "12/2026" for UPSC Advt. No. 12/2026. Used to build the hub-page
     // URL slug and breadcrumb. Nullable — not all sources capture it.
