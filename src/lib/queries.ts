@@ -1245,6 +1245,7 @@ export async function getHomepageStats(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
     `),
     db.execute(sql`
       SELECT
