@@ -278,6 +278,29 @@ AS $fact$
     p_status = 'VERIFIED'
     AND cardinality(coalesce(p_reviewed_fields, '{}'::text[])) > 0
     AND jsonb_typeof(coalesce(p_fact_evidence, '{}'::jsonb)) = 'object'
+    -- Field keys use post names. Reject missing or duplicate names so one
+    -- review key can never accidentally authorize two distinct canonical leaves.
+    AND NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(coalesce(p_posts, '[]'::jsonb)) = 'array' THEN coalesce(p_posts, '[]'::jsonb)
+          ELSE '[]'::jsonb
+        END
+      ) AS post_item(item)
+      WHERE nullif(btrim(post_item.item ->> 'name'), '') IS NULL
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(coalesce(p_posts, '[]'::jsonb)) = 'array' THEN coalesce(p_posts, '[]'::jsonb)
+          ELSE '[]'::jsonb
+        END
+      ) AS post_item(item)
+      GROUP BY lower(btrim(post_item.item ->> 'name'))
+      HAVING count(*) > 1
+    )
     AND NOT EXISTS (
       SELECT 1
       FROM unnest(coalesce(p_reviewed_fields, '{}'::text[])) AS reviewed(field_key)
