@@ -249,6 +249,7 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("fact_reviewed_fields text[] NOT NULL DEFAULT '{}'");
     expect(migration).toContain("fact_review_evidence jsonb NOT NULL DEFAULT '{}'::jsonb");
     expect(migration).toContain("official_digest_fact_review_complete");
+    expect(migration).toContain("jsonb_array_length(coalesce(p_posts, '[]'::jsonb)) > 0");
     expect(migration).toContain("guard_aggregator_eligibility_verification");
     expect(migration).toContain("HAVING count(*) > 1");
     expect(migration).toContain("source_discovery_origin, official_notification_url, metadata");
