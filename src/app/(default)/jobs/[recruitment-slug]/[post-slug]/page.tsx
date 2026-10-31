@@ -174,8 +174,8 @@ export default async function JobDetailPage({ params }: Props) {
     <JobDetailPageProduction
       post={{
         id: post.id,
-        title: post.title,
-        description: post.description,
+        title: stripAggregatorData(post.title) || "Job opportunity",
+        description: typeof post.description === "string" ? stripAggregatorData(post.description) || null : null,
         organizationName: post.organizationName,
         organizationType: post.organizationSector,
         organizationWebsite,
@@ -187,15 +187,11 @@ export default async function JobDetailPage({ params }: Props) {
         postedAt: post.postedAt,
         updatedAt: post.updatedAt,
         notificationPublicationDate: post.notificationPublicationDate,
-        officialSourceUrl: post.officialSourceUrl,
-        applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
+        officialSourceUrl: publicLink(post.recruitmentOfficialNotificationUrl),
+        applyUrl: publicLink(post.recruitmentOfficialApplicationUrl),
         employmentType: post.employmentType ?? null,
-        qualificationText:
-          post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
-        experienceText: post.fjaExtract?.experienceRaw,
-        ageLimit: post.fjaExtract?.ageLimitRaw,
-        selectionProcess: post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined),
-        howToApply: post.applicationMethod,
+        selectionProcess: stripAggregatorData(post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined)) || undefined,
+        howToApply: stripAggregatorData(post.applicationMethod) || undefined,
         applicationFee: undefined,
         salary: {
           min: salaryMin,
@@ -203,13 +199,6 @@ export default async function JobDetailPage({ params }: Props) {
         },
         vacancies,
         applicationDeadline: lifecycle.deadline,
-        fjaExtract: {
-          qualificationRaw: post.fjaExtract?.qualificationRaw,
-          experienceRaw: post.fjaExtract?.experienceRaw,
-          advertisementNumber: post.fjaExtract?.advertisementNumber,
-          ageRaw: post.fjaExtract?.ageLimitRaw,
-          salaryRaw: post.fjaExtract?.salaryRaw,
-        },
         // Phase 1 P0: Detail enrichment data
         vacanciesByCategory: Array.isArray(enrichment?.vacancies) ? enrichment.vacancies.map((v: any) => ({
           category: v.category,
