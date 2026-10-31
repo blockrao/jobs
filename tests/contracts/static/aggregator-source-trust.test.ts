@@ -276,7 +276,7 @@ describe("aggregator source trust gate", () => {
     expect(remediation).toContain("UPDATE public.posts_education e");
     expect(remediation).toContain("UPDATE public.posts_experience e");
     expect(remediation).toContain("Refresh canonical JSONB after the child evidence has been cleared");
-    expect(migration).not.toContain("UPDATE public.recruitments\\nSET official_link_source = 'UNVERIFIED'");
+    expect(migration).not.toContain("SET official_link_source = 'UNVERIFIED'");
     expect(migration).toContain("sync_promoted_digest_review_state");
     expect(migration).toContain("'evidence_ref'");
     expect(migration).toContain("'excerpt'");
