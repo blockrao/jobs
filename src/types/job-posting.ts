@@ -35,6 +35,7 @@ export interface JobPostingData {
   recruitmentVerificationStatus?: string | null;
   recruitmentOfficialLinkSource?: string | null;
   recruitmentMetadata?: Record<string, unknown> | null;
+  postSourceName?: string | null;
   sourcePostCode?: string | null;
 
   // Application contact/method fields
