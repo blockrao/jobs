@@ -1616,7 +1616,7 @@ export const postEnrichments = pgTable(
     benefits: text("benefits").array(),
     // Verification
     sourceVerificationStatus: varchar("source_verification_status", { length: 20 }).default("PENDING"),
-    sourceVerificationDate: timestamp("source_verification_date", { withTimezone: true }).notNull().defaultNow(),
+    sourceVerificationDate: timestamp("source_verification_date", { withTimezone: true }).defaultNow(),
     extractionConfidence: integer("extraction_confidence").default(0),
     dataGaps: text("data_gaps").array(),
     // Timestamps

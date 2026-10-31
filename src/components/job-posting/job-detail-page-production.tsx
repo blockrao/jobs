@@ -174,7 +174,7 @@ export default function JobDetailPageProduction({
 
   const feeRows = (post.applicationFees ?? []).map((f) => ({
     who: f.waivedFor ? `Waived for ${f.waivedFor}` : f.note ?? 'All candidates',
-    amount: f.amount != null ? inr(f.amount) : 'Nil',
+    amount: f.amount != null ? inr(f.amount) : 'Not stated',
     payment: f.paymentMethods ?? null,
   }));
   const feeText = feeRows.length > 0

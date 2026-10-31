@@ -197,6 +197,8 @@ export async function getRecruitmentWithPosts(slug: string) {
       organizationSlug: recruitmentResult[0].organizationSlug,
       organizationSector: recruitmentResult[0].organizationSector as string,
       sourceVerificationStatus: null as string | null,
+      verificationStatus: null as string | null,
+      officialLinkSource: null as string | null,
       sourceListingPublishedDate: null as Date | string | null,
       sourceExtract: null as null | {
         title: string | null;
@@ -214,13 +216,20 @@ export async function getRecruitmentWithPosts(slug: string) {
     const recruitmentId = recruitment.id;
 
     // Load complete linked entities for the recruitment hub's database coverage view.
-    const [organizationResult, examResult, sourceInventoryResult] = await Promise.all([
+    const [organizationResult, examResult, sourceInventoryResult, sourceAuthorityResult] = await Promise.all([
       db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
       // fja_job_inventory was dropped (aggregator data removed 2026-10-24).
       Promise.resolve([] as Array<Record<string, unknown>>),
+      db.execute(sql`
+        SELECT verification_status AS "verificationStatus",
+               official_link_source AS "officialLinkSource"
+        FROM recruitments
+        WHERE id = ${recruitmentId}
+        LIMIT 1
+      `),
     ]);
     const rowsOf = (result: unknown): Array<Record<string, unknown>> => {
       const value = result as { rows?: unknown[] };
@@ -228,8 +237,15 @@ export async function getRecruitmentWithPosts(slug: string) {
       return Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
     };
     const sourceInventory = rowsOf(sourceInventoryResult)[0] ?? null;
+    const sourceAuthority = rowsOf(sourceAuthorityResult)[0] ?? null;
     Object.assign(recruitment, {
       organization: rowsOf(organizationResult)[0] ?? null,
+      verificationStatus: typeof sourceAuthority?.verificationStatus === "string"
+        ? sourceAuthority.verificationStatus
+        : null,
+      officialLinkSource: typeof sourceAuthority?.officialLinkSource === "string"
+        ? sourceAuthority.officialLinkSource
+        : null,
       exam: rowsOf(examResult)[0] ?? null,
       sourceVerificationStatus:
         typeof sourceInventory?.source_verification_status === "string"
@@ -549,7 +565,20 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
   const db = getDb();
   // Quarantined recruitments (identity not established — see
   // claude/DATA_QUARANTINE_2026_10_20.md) are never public.
-  const conditions = [NOT_QUARANTINED_SQL];
+  const conditions = [
+    NOT_QUARANTINED_SQL,
+    // Do not advertise aggregator-discovered records as current official jobs
+    // until the issuer-source authority review has explicitly passed.
+    sql`(
+      COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'
+      OR (
+        r.verification_status = 'VERIFIED'
+        AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+        AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+        AND r.application_end_date IS NOT NULL
+      )
+    )`,
+  ];
 
   if (opts.kind === "PRIVATE") conditions.push(sql`o.sector = 'PRIVATE'`);
   else if (opts.kind === "GOVERNMENT") conditions.push(sql`o.sector IS DISTINCT FROM 'PRIVATE'`);

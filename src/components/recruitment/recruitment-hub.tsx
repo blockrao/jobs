@@ -282,9 +282,11 @@ export function buildHubData(
 
   // ── Lifecycle (src/lib/lifecycle.ts is the only source of open/closed) ───
   const lifecycle = deriveLifecycle(recruitment.status, recruitment.applicationEndDate, now);
-  const lifecycleState = sourceFactsUnverified ? null : lifecycle.state;
-  const closed = sourceFactsUnverified ? false : lifecycle.state === 'closed';
-  const daysLeft = sourceFactsUnverified ? null : lifecycle.daysLeft;
+  const lifecycleEvidenceMissing = recruitment.officialLinkSource === 'AGGREGATOR_DISCOVERED'
+    && !recruitment.applicationEndDate;
+  const lifecycleState = sourceFactsUnverified || lifecycleEvidenceMissing ? null : lifecycle.state;
+  const closed = sourceFactsUnverified || lifecycleEvidenceMissing ? false : lifecycle.state === 'closed';
+  const daysLeft = sourceFactsUnverified || lifecycleEvidenceMissing ? null : lifecycle.daysLeft;
   const updatedAtLabel = formatDate(recruitment.updatedAt);
 
   // ── Vacancies and post names ─────────────────────────────────────────────

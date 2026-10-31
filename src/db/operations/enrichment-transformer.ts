@@ -50,7 +50,38 @@ interface RawEnrichment {
  * This is called ONCE per request in getPostBySlug() and ensures
  * all downstream code gets consistent, properly-structured data.
  */
-export function transformEnrichment(rawEnrichment: any): PostEnrichment {
+export interface EnrichmentTransformOptions {
+  sourceOrigin?: string | null;
+  postName?: string | null;
+}
+
+export function transformEnrichment(
+  rawEnrichment: any,
+  options: EnrichmentTransformOptions = {},
+): PostEnrichment {
+  const isAggregatorDiscovered = options.sourceOrigin === 'AGGREGATOR_DISCOVERED';
+  const reviewedFields = rawEnrichment?.source_provenance?.fact_review?.reviewed_fields;
+  const hasExplicitPostFactReview = (field: string): boolean => {
+    if (typeof options.postName !== 'string' || !Array.isArray(reviewedFields)) return false;
+    return reviewedFields.includes(`post:${options.postName}:${field}`);
+  };
+  const hasPostFactReview = (field: string): boolean =>
+    !isAggregatorDiscovered || hasExplicitPostFactReview(field);
+  const isFactRowEligible = (item: any, field: string): boolean => {
+    if (isAggregatorDiscovered) return hasExplicitPostFactReview(field);
+    const source = typeof item?.source === 'string' ? item.source : null;
+    const verifiedAt = item?.verified_at ?? item?.verifiedAt ?? null;
+    const verificationStatus = item?.verification_status ?? item?.verificationStatus;
+    if (
+      source === 'fja_post_inventory' ||
+      verifiedAt == null ||
+      verificationStatus === 'UNVERIFIABLE'
+    ) {
+      return hasExplicitPostFactReview(field);
+    }
+    return true;
+  };
+
   if (!rawEnrichment || typeof rawEnrichment !== 'object') {
     // Return minimal valid PostEnrichment
     return {
@@ -76,34 +107,47 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
 
     // Transform education to array structure (as PostEnrichment expects)
     if (Array.isArray(rawEnrichment.education) && rawEnrichment.education.length > 0) {
-      enrichment.education = rawEnrichment.education.map((e: any) => ({
-        degree: e.degree || '',
-        subject: e.subject,
-        specialization: e.specialization,
-        university: e.university,
-        registration: e.registration,
-        minimumPercentage: e.minimum_percentage || e.minimumPercentage,
-        minimumMarks: e.minimum_marks || e.minimumMarks,
-        confidenceScore: e.confidence_score || e.confidenceScore,
-      }));
+      enrichment.education = rawEnrichment.education
+        .filter((e: any) => isFactRowEligible(e, 'education'))
+        .map((e: any) => ({
+          degree: e.degree || '',
+          subject: e.subject,
+          specialization: e.specialization,
+          university: e.university,
+          registration: e.registration,
+          minimumPercentage: e.minimum_percentage || e.minimumPercentage,
+          minimumMarks: e.minimum_marks || e.minimumMarks,
+          confidenceScore: e.confidence_score ?? e.confidenceScore,
+          source: e.source ?? null,
+          verifiedAt: e.verified_at ? new Date(e.verified_at) : (e.verifiedAt ? new Date(e.verifiedAt) : undefined),
+          factId: e.fact_id ?? e.factId,
+        }))
+        .filter((e: any) => e.degree.trim().length > 0);
     } else {
       enrichment.education = [];
     }
 
     // Transform experience to array structure (as PostEnrichment expects)
     if (Array.isArray(rawEnrichment.experience) && rawEnrichment.experience.length > 0) {
-      enrichment.experience = rawEnrichment.experience.map((exp: any) => ({
-        totalYears: exp.total_years || exp.totalYears,
-        minYears: exp.min_years || exp.minYears || 0,
-        maxYears: exp.max_years || exp.maxYears,
-        domains: Array.isArray(exp.domains) ? exp.domains : (exp.domain ? [exp.domain] : []),
-      }));
+      enrichment.experience = rawEnrichment.experience
+        .filter((exp: any) => isFactRowEligible(exp, 'experience'))
+        .map((exp: any) => ({
+          totalYears: exp.total_years ?? exp.totalYears,
+          minYears: exp.min_years ?? exp.minYears ?? 0,
+          maxYears: exp.max_years ?? exp.maxYears,
+          domains: Array.isArray(exp.domains) ? exp.domains : (exp.domain ? [exp.domain] : []),
+          experienceType: exp.type || exp.experience_type || exp.experienceType,
+          confidenceScore: exp.confidence_score ?? exp.confidenceScore,
+          source: exp.source ?? null,
+          verifiedAt: exp.verified_at ? new Date(exp.verified_at) : (exp.verifiedAt ? new Date(exp.verifiedAt) : undefined),
+          factId: exp.fact_id ?? exp.factId,
+        }));
     } else {
       enrichment.experience = [];
     }
 
     // Age rules - transform to PostEnrichment format
-    if (rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object') {
+    if (hasPostFactReview('age_rules') && rawEnrichment.age_rules && typeof rawEnrichment.age_rules === 'object') {
       const ageRulesObject: Record<string, { min: number; max: number }> = {};
       const ageRulesArray: Array<{ category: string; min: number; max: number; maxAge?: number; relaxationYears?: number; ruleType?: string; note?: string }> = [];
 
@@ -144,7 +188,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // TAB 2: VACANCY BREAKDOWN
     // ─────────────────────────────────────────────────────────────────
 
-    if (rawEnrichment.vacancies && typeof rawEnrichment.vacancies === 'object') {
+    if (hasPostFactReview('vacancies') && rawEnrichment.vacancies && typeof rawEnrichment.vacancies === 'object') {
       const vacanc = rawEnrichment.vacancies;
 
       // Transform categories to PostEnrichment format
@@ -178,7 +222,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // APPLICATION FEES
     // ─────────────────────────────────────────────────────────────────
 
-    if (rawEnrichment.application_fees && typeof rawEnrichment.application_fees === 'object') {
+    if (hasPostFactReview('application_fees') && rawEnrichment.application_fees && typeof rawEnrichment.application_fees === 'object') {
       const feesObject: Record<string, number | string> = {};
       const feesArray: Array<{ amount?: number | null; currency?: string; waivedFor?: string; paymentMethods?: string; note?: string; isExempted?: boolean; exemptionCategory?: string }> = [];
 
@@ -224,7 +268,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // TAB 4: REQUIRED DOCUMENTS
     // ─────────────────────────────────────────────────────────────────
 
-    if (Array.isArray(rawEnrichment.documents) && rawEnrichment.documents.length > 0) {
+    if (hasPostFactReview('documents') && Array.isArray(rawEnrichment.documents) && rawEnrichment.documents.length > 0) {
       enrichment.requiredDocuments = rawEnrichment.documents.map((doc: any) => ({
         name: doc.name || doc.document_name || '',
         category: doc.category,
@@ -238,7 +282,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // TAB 5: SELECTION PROCESS
     // ─────────────────────────────────────────────────────────────────
 
-    if (Array.isArray(rawEnrichment.selection_process) && rawEnrichment.selection_process.length > 0) {
+    if (hasPostFactReview('selection_process') && Array.isArray(rawEnrichment.selection_process) && rawEnrichment.selection_process.length > 0) {
       enrichment.selectionProcess = rawEnrichment.selection_process.map((stage: any) => ({
         step: stage.step || 0,
         name: stage.name || stage.stage_name || '',
@@ -264,7 +308,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // TAB 7: IMPORTANT DATES (In database but not currently mapped)
     // ─────────────────────────────────────────────────────────────────
 
-    if (Array.isArray(rawEnrichment.important_dates) && rawEnrichment.important_dates.length > 0) {
+    if (hasPostFactReview('important_dates') && Array.isArray(rawEnrichment.important_dates) && rawEnrichment.important_dates.length > 0) {
       // Create importantDates array for PostEnrichment
       enrichment.importantDates = rawEnrichment.important_dates.map((d: any) => ({
         label: d.label || d.description || '',
@@ -303,7 +347,7 @@ export function transformEnrichment(rawEnrichment: any): PostEnrichment {
     // TAB 8: OFFICIAL LINKS
     // ─────────────────────────────────────────────────────────────────
 
-    if (Array.isArray(rawEnrichment.official_links) && rawEnrichment.official_links.length > 0) {
+    if (hasPostFactReview('official_links') && Array.isArray(rawEnrichment.official_links) && rawEnrichment.official_links.length > 0) {
       enrichment.officialLinks = rawEnrichment.official_links.map((link: any) => ({
         type: link.type,
         url: link.url,

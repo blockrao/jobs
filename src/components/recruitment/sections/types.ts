@@ -32,6 +32,9 @@ export type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   feeReserved?: number | string | null;
   selectionProcesses?: unknown;
   sourceVerificationStatus?: string | null;
+  /** Recruitment-level source authority fields loaded from the live DB. */
+  verificationStatus?: string | null;
+  officialLinkSource?: string | null;
   sourceListingPublishedDate?: Date | string | null;
   sourceExtract?: {
     title?: string | null;

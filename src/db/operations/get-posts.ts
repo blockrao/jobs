@@ -40,6 +40,9 @@ type PostRow = Omit<
   > & {
     postedAt: string | Date;
     updatedAt: string | Date;
+    recruitmentVerificationStatus: string | null;
+    recruitmentOfficialLinkSource: string | null;
+    recruitmentMetadata: Record<string, unknown> | null;
     recruitmentApplicationStartDate: RawDate;
     recruitmentApplicationEndDate: RawDate;
     notificationPublicationDate: RawDate;
@@ -127,6 +130,9 @@ async function getPostCoreData(
         NULL AS "experienceLevel",
         NULL AS "jobCategoryTags",
         r.status AS "postingStatus",
+        r.verification_status AS "recruitmentVerificationStatus",
+        r.official_link_source AS "recruitmentOfficialLinkSource",
+        r.metadata AS "recruitmentMetadata",
         p.source_post_code AS "sourcePostCode",
         NULL AS "applicationMethod",
         NULL AS "applicationEmail",
@@ -570,9 +576,24 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    // Transform raw JSONB enrichment to canonical EnrichmentSchema
-    // This is the single source of truth for all enrichment transformations
-    const transformedEnrichment = transformEnrichment(enrichmentJsonb);
+    const isAggregatorDiscovered = data.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED";
+    const sourceProvenance = (data.recruitmentMetadata as any)?.source_provenance;
+    const reviewedFields: string[] = Array.isArray(sourceProvenance?.fact_review?.reviewed_fields)
+      ? sourceProvenance.fact_review.reviewed_fields
+      : [];
+    const hasPostReview = (field: string) => !isAggregatorDiscovered ||
+      reviewedFields.includes(`post:${data.title}:${field}`);
+    const hasHubReview = (field: string) => !isAggregatorDiscovered ||
+      reviewedFields.includes(`hub:${field}`);
+    const authorityReviewVerified = !isAggregatorDiscovered ||
+      sourceProvenance?.authority_review?.status === "VERIFIED";
+
+    // Transform raw JSONB enrichment to canonical EnrichmentSchema. The
+    // transformer also requires explicit per-post review keys for child facts.
+    const transformedEnrichment = transformEnrichment(enrichmentJsonb, {
+      sourceOrigin: data.recruitmentOfficialLinkSource,
+      postName: data.title,
+    });
 
     return {
       id: data.id,
@@ -589,30 +610,33 @@ export async function getPostBySlug(
       recruitmentSlug: data.recruitmentSlug,
       examType: data.examType,
       examTypeSlug: data.examTypeSlug,
-      description: data.description,
-      employmentType: data.employmentType ?? null,
-      locationCity: data.locationCity ?? null,
-      locationState: data.locationState ?? null,
-      locationCountry: data.locationCountry ?? null,
-      experienceLevel: data.experienceLevel ?? null,
-      jobCategoryTags: data.jobCategoryTags ?? null,
-      postingStatus: data.postingStatus ?? null,
-      sourcePostCode: data.sourcePostCode ?? null,
+      description: hasPostReview("description") ? data.description : null,
+      employmentType: hasPostReview("employment_type") || hasHubReview("employment_type") ? (data.employmentType ?? null) : null,
+      locationCity: hasHubReview("location_city") ? (data.locationCity ?? null) : null,
+      locationState: hasHubReview("state_code") ? (data.locationState ?? null) : null,
+      locationCountry: isAggregatorDiscovered ? null : (data.locationCountry ?? null),
+      experienceLevel: isAggregatorDiscovered ? null : (data.experienceLevel ?? null),
+      jobCategoryTags: isAggregatorDiscovered ? null : (data.jobCategoryTags ?? null),
+      postingStatus: isAggregatorDiscovered && !data.recruitmentApplicationEndDate ? null : (data.postingStatus ?? null),
+      recruitmentVerificationStatus: data.recruitmentVerificationStatus ?? null,
+      recruitmentOfficialLinkSource: data.recruitmentOfficialLinkSource ?? null,
+      recruitmentMetadata: data.recruitmentMetadata ?? null,
+      sourcePostCode: hasPostReview("post_code") ? (data.sourcePostCode ?? null) : null,
       applicationMethod: data.applicationMethod ?? null,
       applicationEmail: data.applicationEmail ?? null,
       applicationUrl: data.applicationUrl ?? null,
       contactDepartment: data.contactDepartment ?? null,
       contactPerson: data.contactPerson ?? null,
-      vacancyDetails: data.vacancyDetails ?? null,
-      payLevel: data.payLevel ?? null,
+      vacancyDetails: hasPostReview("vacancy_details") ? (data.vacancyDetails ?? null) : null,
+      payLevel: hasPostReview("pay_scale_text") || hasPostReview("salary") ? (data.payLevel ?? null) : null,
       keyDates: data.keyDates ?? null,
       requiredSkills: data.requiredSkills ?? null,
       applicationChecklist: data.applicationChecklist ?? null,
-      isLive: data.isLive,
+      isLive: !isAggregatorDiscovered || Boolean(data.recruitmentApplicationEndDate && hasHubReview("application_end_date")) ? data.isLive : false,
       postedAt: new Date(data.postedAt),
       updatedAt: new Date(data.updatedAt),
-      officialSourceUrl: data.officialSourceUrl,
-      applyPortalUrl: data.applyPortalUrl,
+      officialSourceUrl: authorityReviewVerified ? data.officialSourceUrl : null,
+      applyPortalUrl: hasHubReview("apply_url") ? data.applyPortalUrl : null,
       // Preserve extracted source facts as a distinct, explicitly unverified projection.
       // Never pass these fields into canonical fact resolvers or official-link CTAs.
       fjaExtract: data.fjaInventoryPostId != null ? {
@@ -644,21 +668,21 @@ export async function getPostBySlug(
         verificationStatus: data.fjaVerificationStatus ?? null,
       } : undefined,
       // Old-schema columns for resolver legacy fallback paths (Gate 4D bridge)
-      vacancyTotal: data.vacancyTotal ?? null,
-      legacySalaryMin: data.legacySalaryMin ?? null,
-      legacySalaryMax: data.legacySalaryMax ?? null,
+      vacancyTotal: hasPostReview("vacancy_total") || hasPostReview("vacancies") ? (data.vacancyTotal ?? null) : null,
+      legacySalaryMin: hasPostReview("salary_min") || hasPostReview("salary") ? (data.legacySalaryMin ?? null) : null,
+      legacySalaryMax: hasPostReview("salary_max") || hasPostReview("salary") ? (data.legacySalaryMax ?? null) : null,
       // Recruitment-level fields for resolvers
-      recruitmentVacancyTotal: data.recruitmentVacancyTotal ?? null,
-      recruitmentOfficialNotificationUrl: data.recruitmentOfficialNotificationUrl ?? null,
-      recruitmentOfficialApplicationUrl: data.recruitmentOfficialApplicationUrl ?? null,
-      recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
+      recruitmentVacancyTotal: hasHubReview("total_vacancies") ? (data.recruitmentVacancyTotal ?? null) : null,
+      recruitmentOfficialNotificationUrl: authorityReviewVerified ? (data.recruitmentOfficialNotificationUrl ?? null) : null,
+      recruitmentOfficialApplicationUrl: hasHubReview("apply_url") ? (data.recruitmentOfficialApplicationUrl ?? null) : null,
+      recruitmentApplicationEndDate: (hasHubReview("application_end_date") || hasHubReview("end_date_note")) && data.recruitmentApplicationEndDate
         ? new Date(data.recruitmentApplicationEndDate)
         : null,
-      recruitmentApplicationStartDate: data.recruitmentApplicationStartDate
+      recruitmentApplicationStartDate: hasHubReview("application_start_date") && data.recruitmentApplicationStartDate
         ? new Date(data.recruitmentApplicationStartDate)
         : null,
-      recruitmentSelectionProcess: data.recruitmentSelectionProcess ?? null,
-      notificationPublicationDate: data.notificationPublicationDate
+      recruitmentSelectionProcess: hasHubReview("selection_process") ? (data.recruitmentSelectionProcess ?? null) : null,
+      notificationPublicationDate: hasHubReview("notification_date") && data.notificationPublicationDate
         ? new Date(data.notificationPublicationDate)
         : null,
       // PHASE 2: Enrichment is now consolidated in posts.enrichment JSONB column

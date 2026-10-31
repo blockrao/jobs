@@ -25,6 +25,7 @@ import JobDetailPageProduction from "@/components/job-posting/job-detail-page-pr
 import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
+import { isUnverifiedAggregatorSource } from "@/lib/source-verification";
 
 export const revalidate = 86400; // 1 day ISR
 
@@ -41,14 +42,19 @@ interface Props {
  * The same strings are passed to the renderer so H1, <head> and JSON-LD agree.
  */
 function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
-  const enrichment = post.enrichment;
-  const vacancies = resolvePostVacancy(post) ?? 0;
-  const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
-  const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
-  const deadlineRaw = post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null;
+  const unverifiedAggregator = isUnverifiedAggregatorSource(
+    post.recruitmentOfficialLinkSource,
+    post.recruitmentVerificationStatus,
+    post.recruitmentMetadata,
+  );
+  const enrichment = unverifiedAggregator ? null : post.enrichment;
+  const vacancies = unverifiedAggregator ? 0 : (resolvePostVacancy(post) ?? 0);
+  const salaryMin = unverifiedAggregator ? null : (enrichment?.salaryMin ?? post.legacySalaryMin ?? null);
+  const salaryMax = unverifiedAggregator ? null : (enrichment?.salaryMax ?? post.legacySalaryMax ?? null);
+  const deadlineRaw = unverifiedAggregator ? null : (post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null);
   const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
   const closed = deadline ? Date.now() > deadline.getTime() : false;
-  const qualification = post.fjaExtract?.qualificationRaw ?? null;
+  const qualification = unverifiedAggregator ? null : (post.fjaExtract?.qualificationRaw ?? null);
 
   const titleParts = [post.title];
   if (post.organizationName) titleParts.push(`– ${post.organizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
@@ -64,8 +70,10 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
   if (deadline) bits.push(closed ? `applications closed on ${formatDate(deadline)}` : `last date ${formatDate(deadline)}`);
-  const storedDescription = typeof post.description === "string" ? post.description.trim() : "";
-  const fallbackDescription = `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
+  const storedDescription = !unverifiedAggregator && typeof post.description === "string" ? post.description.trim() : "";
+  const fallbackDescription = unverifiedAggregator
+    ? "Recruitment details are being checked against the issuing authority. Eligibility, fees and application details will be published after verification."
+    : `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
   const description = storedDescription || fallbackDescription;
 
   return { title, description };
@@ -91,7 +99,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: generateAlternates(post.recruitmentSlug, post.slug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) }),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, {
+      index: !unverifiedAggregator && !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug),
+    }),
   };
 }
 
@@ -120,17 +130,27 @@ export default async function JobDetailPage({ params }: Props) {
     permanentRedirect(`/jobs/${post.recruitmentSlug}/${post.slug}`);
   }
 
-  // Lifecycle from the canonical recruitment: status + verified deadline.
-  const lifecycle = deriveLifecycle(
-    post.postingStatus,
-    post.recruitmentApplicationEndDate ?? post.enrichment?.applicationClosingDate ?? null,
+  const unverifiedAggregator = isUnverifiedAggregatorSource(
+    post.recruitmentOfficialLinkSource,
+    post.recruitmentVerificationStatus,
+    post.recruitmentMetadata,
   );
 
-  // Normalize salary data
-  const enrichment = post.enrichment;
-  const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
-  const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
-  const vacancies = resolvePostVacancy(post) ?? 0;
+  // Lifecycle and fact resolvers must not treat aggregator-derived dates or
+  // statuses as authoritative while issuer-source verification is outstanding.
+  const lifecycle = unverifiedAggregator ||
+    (post.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate)
+    ? undefined
+    : deriveLifecycle(
+        post.postingStatus,
+        post.recruitmentApplicationEndDate ?? post.enrichment?.applicationClosingDate ?? null,
+      );
+
+  // Normalize only facts that are eligible for public display.
+  const enrichment = unverifiedAggregator ? null : post.enrichment;
+  const salaryMin = unverifiedAggregator ? null : (enrichment?.salaryMin ?? post.legacySalaryMin ?? null);
+  const salaryMax = unverifiedAggregator ? null : (enrichment?.salaryMax ?? post.legacySalaryMax ?? null);
+  const vacancies = unverifiedAggregator ? 0 : (resolvePostVacancy(post) ?? 0);
 
   // Fetch related posts (semantically grouped)
   const relatedPosts = await getRelatedPostsGrouped(
@@ -173,35 +193,38 @@ export default async function JobDetailPage({ params }: Props) {
       post={{
         id: post.id,
         title: post.title,
-        description: post.description,
+        description: unverifiedAggregator
+          ? "Recruitment details are being checked against the issuing authority. Eligibility, fees and application details will be published after verification."
+          : post.description,
         organizationName: post.organizationName,
         organizationType: post.organizationSector,
         organizationWebsite,
-        locationCity: post.locationCity,
-        locationState: post.locationState,
+        locationCity: unverifiedAggregator ? null : post.locationCity,
+        locationState: unverifiedAggregator ? null : post.locationState,
         recruitmentSlug: post.recruitmentSlug,
         recruitmentName: post.recruitmentName,
         slug: post.slug,
-        postedAt: post.postedAt,
+        postedAt: post.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED" ? null : post.postedAt,
         updatedAt: post.updatedAt,
-        notificationPublicationDate: post.notificationPublicationDate,
-        officialSourceUrl: post.officialSourceUrl,
-        applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
-        employmentType: post.employmentType ?? null,
-        qualificationText:
-          post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
-        experienceText: post.fjaExtract?.experienceRaw,
-        ageLimit: post.fjaExtract?.ageLimitRaw,
-        selectionProcess: post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined),
-        howToApply: post.applicationMethod,
+        notificationPublicationDate: unverifiedAggregator ? null : post.notificationPublicationDate,
+        officialSourceUrl: unverifiedAggregator ? null : post.officialSourceUrl,
+        applyUrl: unverifiedAggregator ? null : (post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl),
+        employmentType: unverifiedAggregator ? null : (post.employmentType ?? null),
+        qualificationText: unverifiedAggregator ? null : (
+          post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw
+        ),
+        experienceText: unverifiedAggregator ? null : post.fjaExtract?.experienceRaw,
+        ageLimit: unverifiedAggregator ? null : post.fjaExtract?.ageLimitRaw,
+        selectionProcess: unverifiedAggregator ? undefined : (post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined)),
+        howToApply: unverifiedAggregator ? undefined : post.applicationMethod,
         applicationFee: undefined,
-        salary: {
+        salary: unverifiedAggregator ? { min: null, max: null } : {
           min: salaryMin,
           max: salaryMax,
         },
-        vacancies,
-        applicationDeadline: enrichment?.applicationClosingDate || post.recruitmentApplicationEndDate,
-        fjaExtract: {
+        vacancies: unverifiedAggregator ? null : vacancies,
+        applicationDeadline: unverifiedAggregator ? null : (enrichment?.applicationClosingDate || post.recruitmentApplicationEndDate),
+        fjaExtract: unverifiedAggregator ? undefined : {
           qualificationRaw: post.fjaExtract?.qualificationRaw,
           experienceRaw: post.fjaExtract?.experienceRaw,
           advertisementNumber: post.fjaExtract?.advertisementNumber,
@@ -216,7 +239,7 @@ export default async function JobDetailPage({ params }: Props) {
           locationCount: v.locationCount,
           categoryCount: v.categoryCount,
         })) : [],
-        educationRequirements: Array.isArray(enrichment?.education) ? enrichment.education.map((e: any) => ({
+        educationRequirements: !unverifiedAggregator && Array.isArray(enrichment?.education) ? enrichment.education.map((e: any) => ({
           degree: e.degree,
           subject: e.subject,
           specialization: e.specialization,
@@ -224,13 +247,13 @@ export default async function JobDetailPage({ params }: Props) {
           minimumMarks: e.minimumMarks,
           confidenceScore: e.confidenceScore,
         })) : [],
-        experienceRequirements: Array.isArray(enrichment?.experience) ? enrichment.experience.map((e: any) => ({
+        experienceRequirements: !unverifiedAggregator && Array.isArray(enrichment?.experience) ? enrichment.experience.map((e: any) => ({
           totalYears: e.totalYears,
           minYears: e.minYears,
           type: e.experienceType,
           confidenceScore: e.confidenceScore,
         })) : [],
-        selectionProcessStages: Array.isArray(enrichment?.selectionProcessStages) ? enrichment.selectionProcessStages.map((s: any) => ({
+        selectionProcessStages: !unverifiedAggregator && Array.isArray(enrichment?.selectionProcessStages) ? enrichment.selectionProcessStages.map((s: any) => ({
           order: s.step,
           name: s.name,
           scheduledDate: s.scheduledDate,
@@ -245,23 +268,23 @@ export default async function JobDetailPage({ params }: Props) {
           totalMarks: s.totalMarks,
           minimumMarks: s.minQualifyingMarks,
         })) : []),
-        requiredDocuments: Array.isArray(enrichment?.requiredDocuments) ? enrichment.requiredDocuments.map((d: any) => ({
+        requiredDocuments: !unverifiedAggregator && Array.isArray(enrichment?.requiredDocuments) ? enrichment.requiredDocuments.map((d: any) => ({
           name: d.name,
           category: d.category,
           isRequired: d.required,
         })) : [],
-        importantDates: Array.isArray(enrichment?.importantDates) ? enrichment.importantDates.map((d: any) => ({
+        importantDates: !unverifiedAggregator && Array.isArray(enrichment?.importantDates) ? enrichment.importantDates.map((d: any) => ({
           type: d.label,
           date: d.date || d.dateStr,
         })) : [],
-        ageRules: Array.isArray(enrichment?.ageRules) ? enrichment.ageRules.map((a: any) => ({
+        ageRules: !unverifiedAggregator && Array.isArray(enrichment?.ageRules) ? enrichment.ageRules.map((a: any) => ({
           category: a.category,
           maxAge: a.max,
           relaxationYears: a.relaxationYears,
           ruleType: a.ruleType,
           note: a.note,
         })) : [],
-        applicationFees: Array.isArray(enrichment?.applicationFees) ? enrichment.applicationFees.map((f: any) => ({
+        applicationFees: !unverifiedAggregator && Array.isArray(enrichment?.applicationFees) ? enrichment.applicationFees.map((f: any) => ({
           amount: f.amount || null,
           currency: f.currency || "INR",
           waivedFor: f.waivedFor,
@@ -270,24 +293,24 @@ export default async function JobDetailPage({ params }: Props) {
           isExempted: f.isExempted,
           exemptionCategory: f.exemptionCategory,
         })) : [],
-        officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
+        officialLinks: !unverifiedAggregator && Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
           type: l.type,
           url: l.url,
           title: l.title,
           source: l.source,
         })) : [],
       }}
-      relatedByOrg={relatedPosts.byOrganization.map((p) => ({
+      relatedByOrg={unverifiedAggregator ? [] : relatedPosts.byOrganization.map((p) => ({
         title: p.title,
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
       }))}
-      relatedByLocation={relatedPosts.byLocation.map((p) => ({
+      relatedByLocation={unverifiedAggregator ? [] : relatedPosts.byLocation.map((p) => ({
         title: p.title,
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
       }))}
-      relatedByRole={relatedPosts.byRole.map((p) => ({
+      relatedByRole={unverifiedAggregator ? [] : relatedPosts.byRole.map((p) => ({
         title: p.title,
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
@@ -297,7 +320,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
+      indexable={!unverifiedAggregator && !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
     />
   );
 }

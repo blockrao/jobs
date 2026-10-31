@@ -478,6 +478,20 @@ const livePostCondition = sql`
   AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
 `;
 
+// Aggregator-discovered recruitments are withheld from public live-job lists
+// until the issuing-authority review has explicitly upgraded verification.
+const issuerSourcePublicCondition = sql`
+  (
+    COALESCE(${recruitments.officialLinkSource}, '') <> 'AGGREGATOR_DISCOVERED'
+    OR (
+      ${recruitments}.verification_status = 'VERIFIED'
+      AND ${recruitments}.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+      AND ${recruitments}.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+      AND ${recruitments.applicationEndDate} IS NOT NULL
+    )
+  )
+`;
+
 export interface SectorPostRow {
   postId: number;
   postName: string;
@@ -520,7 +534,11 @@ export async function listLivePostsBySector(
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
-    .where(and(inArray(organizations.sector, sectors as never), livePostCondition))
+    .where(and(
+      inArray(organizations.sector, sectors as never),
+      livePostCondition,
+      issuerSourcePublicCondition,
+    ))
     .orderBy(
       sql`${recruitments.applicationEndDate} ASC NULLS LAST`,
       desc(recruitments.updatedAt),
@@ -542,7 +560,7 @@ export const countLivePostsBySector = cache(async (): Promise<Record<string, num
     .from(posts)
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
-    .where(livePostCondition)
+    .where(and(livePostCondition, issuerSourcePublicCondition))
     .groupBy(organizations.sector);
   const out: Record<string, number> = {};
   for (const r of rows) out[r.sector] = r.count;
@@ -1847,6 +1865,7 @@ export async function listLivePostsByQualification(
     .where(
       and(
         livePostCondition,
+        issuerSourcePublicCondition,
         sql`${posts.name} ~* ${pattern}`,
       ),
     )
@@ -1872,6 +1891,7 @@ export async function countLivePostsByQualification(
     .where(
       and(
         livePostCondition,
+        issuerSourcePublicCondition,
         sql`${posts.name} ~* ${pattern}`,
       ),
     );
@@ -1898,6 +1918,7 @@ export async function countLivePostsByAllQualifications(
         .where(
           and(
             livePostCondition,
+            issuerSourcePublicCondition,
             sql`${posts.name} ~* ${q.namePattern}`,
           ),
         );

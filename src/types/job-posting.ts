@@ -31,6 +31,10 @@ export interface JobPostingData {
   experienceLevel?: string | null;
   jobCategoryTags?: string[] | null;
   postingStatus?: string | null;
+  /** Recruitment-level source authority; aggregator discovery is not official verification. */
+  recruitmentVerificationStatus?: string | null;
+  recruitmentOfficialLinkSource?: string | null;
+  recruitmentMetadata?: Record<string, unknown> | null;
   sourcePostCode?: string | null;
 
   // Application contact/method fields
@@ -198,6 +202,9 @@ export interface PostEnrichment {
     minimumPercentage?: number;
     minimumMarks?: number;
     confidenceScore?: number;
+    source?: string | null;
+    verifiedAt?: Date;
+    factId?: number | string;
   }>;
 
   experience?: Array<{
@@ -208,6 +215,9 @@ export interface PostEnrichment {
     experienceType?: string;
     countedFrom?: string;
     confidenceScore?: number;
+    source?: string | null;
+    verifiedAt?: Date;
+    factId?: number | string;
   }>;
 
   benefits?: string[];
