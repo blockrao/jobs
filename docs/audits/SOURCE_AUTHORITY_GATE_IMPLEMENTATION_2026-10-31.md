@@ -21,7 +21,7 @@ The SQL gate and TypeScript helper recognise:
 1. Recruitment `source_discovery_origin`, `official_link_source`, `enrichment_data.meta.source`, `metadata.source_provenance.discovery_origin`, and FJA `source_url`.
 2. Canonical Post `sourceName`, `sourceReference`, `original_recruitment_url`, and `originalRecruitmentUrl`.
 3. Legacy Posting `source`, `source_type`, `source_portals`, `source_url`, and both relationship paths: `inferred_recruitment_id` and `inferred_post_id -> posts.recruitment_id`.
-4. Preliminary origin label `pilot_preliminary` and the known `fja`, `freejobalert`, and `ext-1` through `ext-5` source labels.
+4. Preliminary origin label `pilot_preliminary` and the known `fja`, `freejobalert`, `ext-1` through `ext-5`, and preliminary/aggregator source labels. A fresh read-only production reconciliation using the expanded predicate reproduced **6,365 candidates, 355 staging matches, 6,010 unmatched, and 6,003 without batch**.
 
 FJA URL detection is host-based in the database helper; a lookalike host such as `freejobalert.com.evil.example` is not accepted.
 
