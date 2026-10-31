@@ -75,6 +75,7 @@ break `next build`.
 | IDX-04 | Sitemap holds only canonical URLs | unit | — |
 | IDX-05 | robots.txt blocks only private technical paths | unit | — |
 | IDX-06 | Every indexable entity type has a sitemap source | unit | after W1-B (see test comment) |
+| IDX-10 | Recruitment Hubs require a valid canonical Post Leaf for indexability and sitemap inclusion | unit | — |
 | SCH-01 | Live columns = `src/db/schema.ts` columns | db | W2 |
 | HTTP-01 | Unknown slug returns 404 | http | — |
 | HTTP-02 | `/en/` prefix redirects to the canonical URL | http | — |
