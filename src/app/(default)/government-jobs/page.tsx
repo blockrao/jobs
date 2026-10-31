@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageSeo } from "@/lib/seo";
+import { discoveryHubMetadata } from "@/lib/seo/discovery-hub-metadata";
 import { hasDb, listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
 import { deriveLifecycle, lifecycleLabel } from "@/lib/lifecycle";
 import { SECTORS, sectorHref } from "@/lib/sectors";
@@ -53,40 +53,20 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const { page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
   const suffix = page > 1 ? ` — Page ${page}` : "";
-  const path = page > 1 ? `/government-jobs?page=${page}` : "/government-jobs";
   const year = new Date().getFullYear();
-
   const title = `Government Jobs in India: Current & Upcoming Vacancies ${year}${suffix}`;
   const description =
     "Explore current and upcoming government jobs in India across central and state departments, railways, banks, defence and PSUs. Browse recruitment posts, vacancy details and application deadlines.";
-  const canonicalUrl = `${SITE_URL}${path}`;
 
-  return {
+  return discoveryHubMetadata({
     title,
     description,
-    ...pageSeo(path),
-    openGraph: {
-      title: `${title} | JobOye`,
-      description,
-      url: canonicalUrl,
-      type: "website",
-      siteName: "JobOye",
-      images: [
-        {
-          url: "/og-default.png",
-          width: 1200,
-          height: 630,
-          alt: `Government Jobs in India — Current and Upcoming Vacancies ${year}`,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${title} | JobOye`,
-      description,
-      images: ["/og-default.png"],
-    },
-  };
+    // Page-number query views are alternate representations of this discovery
+    // hub, not separate canonical entities.
+    canonicalPath: "/government-jobs",
+    indexable: page === 1,
+    ogImageAlt: `Government Jobs in India — Current and Upcoming Vacancies ${year}`,
+  });
 }
 
 export default async function AllGovernmentJobsPage({ searchParams }: Props) {
