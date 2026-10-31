@@ -368,6 +368,10 @@ BEGIN
        OR private.is_aggregator_url(OLD."sourceReference")
        OR private.is_aggregator_url(OLD.original_recruitment_url)
        OR private.is_aggregator_url(OLD."originalRecruitmentUrl")
+       OR private.is_aggregator_url(OLD."officialSourceUrl")
+       OR private.is_aggregator_url(OLD."applyPortalUrl")
+       OR private.is_aggregator_url(OLD.application_url)
+       OR private.is_aggregator_url(OLD."officialNotificationUrl")
        OR private.legacy_posting_has_aggregator_origin_for_post(OLD.id) THEN
       UPDATE public.recruitments
       SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
@@ -530,6 +534,12 @@ DROP POLICY IF EXISTS "public read" ON public.vacancies;
 CREATE POLICY "public read" ON public.vacancies
   FOR SELECT TO anon, authenticated
   USING (private.is_post_publicly_trusted(post_id));
+
+-- Raw source/provenance columns on these two base tables are not a public API.
+-- The Next.js server reads through its server-side database role; anonymous and
+-- authenticated REST clients must not be able to retrieve FJA/aggregator fields.
+REVOKE SELECT ON TABLE public.recruitments, public.posts FROM anon, authenticated;
+
 
 REVOKE ALL ON FUNCTION private.is_aggregator_url(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_aggregator_source_value(text) FROM PUBLIC, anon, authenticated;
