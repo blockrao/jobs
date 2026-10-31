@@ -953,15 +953,20 @@ WHERE status = 'VERIFIED'
 UPDATE public.recruitments
 SET verification_status = 'UNVERIFIABLE',
     last_verified_at = NULL,
+    metadata = coalesce(metadata, '{}'::jsonb) - 'source_provenance',
     updated_at = now()
 WHERE official_link_source = 'AGGREGATOR_DISCOVERED'
-  AND verification_status = 'VERIFIED';
+  AND (
+    verification_status = 'VERIFIED'
+    OR coalesce(metadata, '{}'::jsonb) ? 'source_provenance'
+  );
 
 -- Remove the false post-level official-source assertion from this same cohort.
 UPDATE public.posts p
 SET "sourceName" = 'aggregator_extracted',
     "isOfficialSource" = false,
     is_official_source = false,
+    enrichment = coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance',
     updated_at = now()
 FROM public.recruitments r
 WHERE r.id = p.recruitment_id
@@ -970,6 +975,7 @@ WHERE r.id = p.recruitment_id
     p."sourceName" IS DISTINCT FROM 'aggregator_extracted'
     OR p."isOfficialSource" IS DISTINCT FROM false
     OR p.is_official_source IS DISTINCT FROM false
+    OR coalesce(p.enrichment, '{}'::jsonb) ? 'source_provenance'
   );
 
 -- Existing post_enrichments sourceVerificationDate was NOT NULL. Make it nullable
@@ -991,8 +997,8 @@ WHERE pe.post_id = p.id
   );
 
 COMMENT ON FUNCTION public.guard_aggregator_discovered_recruitment_verification() IS
-  'Prevents aggregator-discovered recruitment rows from being VERIFIED without a matching, explicitly reviewed official-digest issuer-source record.';
+  'Prevents aggregator-discovered recruitment rows from being VERIFIED without a matching PROMOTED official-digest row with complete issuer-source and fact reviews.';
 COMMENT ON FUNCTION public.guard_aggregator_discovered_post_source() IS
-  'Prevents aggregator-discovered post rows from claiming official-notification provenance without a matching issuer-source review.';
+  'Prevents aggregator-discovered post rows from claiming official-notification provenance without a matching PROMOTED official-digest row with complete issuer-source and fact reviews.';
 COMMENT ON FUNCTION public.guard_aggregator_discovered_enrichment_verification() IS
-  'Prevents aggregator-discovered post enrichment from claiming VERIFIED without a matching issuer-source review.';
+  'Prevents aggregator-discovered post enrichment from claiming VERIFIED without a matching PROMOTED official-digest row with complete issuer-source and fact reviews.';
