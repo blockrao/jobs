@@ -347,6 +347,7 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("'fja_html'");
     expect(migration).toContain("'notification_date',\n      'application_start_date',\n      'application_end_date'");
     expect(migration).toContain("NEW.enrichment_data->'meta'->>'source' IN (");
+    expect(migration).toContain("Extraction metadata conflicts with source_discovery_origin");
     expect(migration).toContain("official_notification_url, metadata, enrichment_data");
     expect(postCheck).toContain("aggregator_extraction_without_discovery_origin");
     expect(postCheck).toContain("uppsc_contamination_without_discovery_origin");
