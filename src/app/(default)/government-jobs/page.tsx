@@ -145,7 +145,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
               </span>
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              Discover government recruitment opportunities across India. Browse central and state departments, railways, banks, defence organisations and PSUs, then review each post and confirm the latest details in the recruiting body's official notification.
+              Discover government recruitment opportunities across India. Browse central and state departments, railways, banks, defence organisations and PSUs, then review each post and confirm the latest details in the recruiting body&apos;s official notification.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/search" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-slate-950 shadow-sm transition hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
@@ -346,7 +346,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
               <ol className="mt-3 space-y-3 text-sm leading-6 text-slate-700">
                 <li><span className="mr-2 font-bold text-indigo-700">01</span>Read the latest recruitment notification.</li>
                 <li><span className="mr-2 font-bold text-indigo-700">02</span>Confirm eligibility, vacancies, fees and dates.</li>
-                <li><span className="mr-2 font-bold text-indigo-700">03</span>Apply through the recruiting body's official process.</li>
+                <li><span className="mr-2 font-bold text-indigo-700">03</span>Apply through the recruiting body&apos;s official process.</li>
               </ol>
               <p className="mt-4 border-t border-indigo-200/70 pt-3 text-xs leading-5 text-slate-600">
                 Official notices and corrigenda are the final authority. Details on listing pages are a starting point for your review.
