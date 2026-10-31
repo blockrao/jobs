@@ -25,6 +25,7 @@ describe("P0 source-origin RLS migration contract", () => {
       'p."originalRecruitmentUrl"',
       "sp.source",
       "sp.source_type",
+      "sp.enrichment_source",
       "sp.source_portals",
       "sp.source_url",
       "r.source_url",
