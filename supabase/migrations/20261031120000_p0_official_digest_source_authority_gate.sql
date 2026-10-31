@@ -769,6 +769,30 @@ BEGIN
       AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_education e
+    SET verified_at = NULL,
+        source_ref = NULL,
+        source_locator = NULL,
+        updated_at = now()
+    FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE e.post_id = p.id
+      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_experience x
+    SET verified_at = NULL,
+        source_ref = NULL,
+        source_locator = NULL,
+        updated_at = now()
+    FROM public.posts p
+    JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id
+      AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
   END IF;
 
   RETURN NEW;
