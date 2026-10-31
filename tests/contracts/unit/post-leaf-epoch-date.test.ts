@@ -41,10 +41,9 @@ describe("Post Leaf structured date placeholders", () => {
     expect(job?.datePosted).toBe("2026-10-08T12:00:00.000Z");
   });
 
-  test("omits datePosted when only the Unix epoch sentinel exists", () => {
-    const graph = renderGraph(new Date("1970-01-01T00:00:00.000Z"));
+  test("does not publish a future notification date as datePosted", () => {
+    const graph = renderGraph(new Date("2027-10-08T12:00:00.000Z"));
     const job = graph["@graph"].find((node) => node["@type"] === "JobPosting");
-    expect(job).toBeDefined();
-    expect(job).not.toHaveProperty("datePosted");
+    expect(job).toBeUndefined();
   });
 });
