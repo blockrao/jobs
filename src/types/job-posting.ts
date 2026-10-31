@@ -120,12 +120,12 @@ export interface PostEnrichment {
   feeNote?: string;
 
   // Age Limits
-  ageRulesByCategory: Record<string, { min: number; max: number }>;
+  ageRulesByCategory: Record<string, { min?: number | null; max?: number | null }>;
   ageNote?: string;
   ageRelaxationRules?: string;
   ageReferenceDate?: Date;
   /** Array of age rules for rendering */
-  ageRules?: Array<{ category: string; min: number; max: number; note?: string }>;
+  ageRules?: Array<{ category: string; min?: number | null; max?: number | null; maxAge?: number | null; relaxationYears?: number; ruleType?: string; note?: string }>;
 
   // Pay & Salary
   payScale?: string;
@@ -138,8 +138,13 @@ export interface PostEnrichment {
   selectionProcess: Array<{
     step: number;
     name: string;
-    totalMarks?: number;
+    scheduledDate?: Date;
     duration?: string;
+    durationMinutes?: number;
+    totalMarks?: number;
+    minimumMarks?: number;
+    passingMarks?: number;
+    isQualifying?: boolean;
     minQualifyingMarks?: Record<string, number>;
     description?: string;
   }>;
