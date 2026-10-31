@@ -45,6 +45,8 @@ describe("P0 source-origin RLS migration contract", () => {
     expect(migration).toContain("NEW.inferred_post_id");
     expect(migration).toContain("OLD.enrichment_source");
     expect(migration).toContain("NEW.enrichment_source");
+    expect(migration).toContain("private.legacy_posting_has_aggregator_origin_for_post");
+    expect(migration).toContain("OR DELETE");
   });
 
   it("does not mass-backfill or mutate existing Recruitment records", () => {
