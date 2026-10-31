@@ -19,6 +19,10 @@ describe("Post Leaf official link evidence query", () => {
     expect(source).toContain("legacy_posting.inferred_recruitment_id = r.id");
   });
 
+  test("does not publish enrichment links without their own accepted issuer observation", () => {
+    expect(source).toContain("officialLinks: []");
+  });
+
   test("requires the exact notification/application URL in the observation", () => {
     expect(source).toContain("so.source_url = r.official_notification_url");
     expect(source).toContain("observed_link.value ->> 'url' = r.official_notification_url");
