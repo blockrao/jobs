@@ -1426,6 +1426,11 @@ export const postAgeRules = pgTable("post_age_rules", {
   ruleType: varchar("rule_type", { length: 30 }),
   /** Human-readable condition for this rule (e.g. "Ex-serviceman with min 6 years service"). */
   conditionText: text("condition_text"),
+  source: varchar("source", { length: 100 }).notNull().default("legacy_unknown"),
+  extractedAt: timestamp("extracted_at", { withTimezone: false }),
+  verifiedAt: timestamp("verified_at", { withTimezone: false }),
+  sourceRef: text("source_ref"),
+  sourceLocator: text("source_locator"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
 
@@ -1648,6 +1653,10 @@ export const postsEducation = pgTable(
     minimumMarks: numeric("minimum_marks", { precision: 10, scale: 2 }),
     source: varchar("source", { length: 100 }),
     confidenceScore: smallint("confidence_score"),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1667,6 +1676,10 @@ export const postsVacancies = pgTable(
     locationCount: integer("location_count"),
     categoryCount: integer("category_count"),
     source: varchar("source", { length: 100 }),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1685,7 +1698,11 @@ export const postsOfficialLinks = pgTable(
     label: varchar("label", { length: 200 }),
     url: text("url").notNull(),
     isOfficial: boolean("is_official").default(true),
-    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    source: varchar("source", { length: 100 }),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1705,6 +1722,11 @@ export const postsApplicationFee = pgTable(
     currencyCode: varchar("currency_code", { length: 3 }).default("INR"),
     note: text("note"),
     paymentMode: varchar("payment_mode", { length: 100 }),
+    source: varchar("source", { length: 100 }),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1741,6 +1763,11 @@ export const postsDocuments = pgTable(
     isRequired: boolean("is_required").default(true),
     requiredForCategories: text("required_for_categories").array(),
     description: text("description"),
+    source: varchar("source", { length: 100 }),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1761,6 +1788,11 @@ export const postsSelectionProcess = pgTable(
     duration: varchar("duration", { length: 100 }),
     minQualifyingMarks: jsonb("min_qualifying_marks").$type<Record<string, number>>(),
     mode: varchar("mode", { length: 100 }),
+    source: varchar("source", { length: 100 }),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1777,6 +1809,11 @@ export const postsImportantDates = pgTable(
     dateType: varchar("date_type", { length: 100 }).notNull(), // notification, application_open, application_close, exam, etc.
     dateValue: timestamp("date_value", { withTimezone: true }),
     description: text("description"),
+    source: varchar("source", { length: 100 }),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1798,6 +1835,10 @@ export const postsExperience = pgTable(
     source: varchar("source", { length: 100 }),
     confidenceScore: smallint("confidence_score"),
     description: text("description"),
+    extractedAt: timestamp("extracted_at", { withTimezone: false }),
+    verifiedAt: timestamp("verified_at", { withTimezone: false }),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
