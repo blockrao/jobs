@@ -30,6 +30,10 @@ Captured at `2026-10-31 00:01:44 UTC`. Counts are time-sensitive because lifecyc
 | Live posts with `AGGREGATOR_DISCOVERED` provenance | 780 |
 | Live posts with no link-provenance value | 1,781 |
 | Live posts with sentinel deadline dates (year >= 2090) | 0 |
+| Live posts with description length >= 150 characters | 614 |
+| Live posts with positive vacancy count | 2,105 |
+| Live posts with a location in the audited post/recruitment fields | 300 |
+| Live posts with a recruitment application URL | 369 |
 
 A prior read-only query returned 2,951 posts. The later 2,848 result is the current snapshot; the inventory is not a fixed count and should be timestamped in reporting.
 
@@ -72,7 +76,7 @@ The canonical detail page labelled any populated notification URL as “Official
 
 The detail renderer previously gated `JobPosting` primarily on lifecycle and indexability. Google Search Central says JobPosting markup belongs on single-job detail pages, must describe a single open job, must not contain incomplete descriptions, and must include a way to apply. Google also instructs publishers to remove JobPosting markup when a job is no longer available.
 
-**Remediation in PR #190:** require an open lifecycle, an indexable leaf, and both manually verified notification and application links before emitting `JobPosting`. This is a conservative minimum gate, not a substitute for the canonical content-completeness audit.
+**Remediation in PR #190:** require an open lifecycle, an indexable leaf, both manually verified notification and application links, a Tier A result from the existing deterministic content-quality gate, and VERIFIED eligibility before emitting `JobPosting`. The leaf now resolves eligibility from canonical enrichment rather than relying on the removed FJA extraction-table path. This is a conservative baseline; responsibilities, experience and other field-level completeness still need a deeper audit.
 
 Google references:
 - https://developers.google.com/search/docs/appearance/structured-data/job-posting
@@ -94,7 +98,7 @@ The canonical post-detail route used a 24-hour ISR interval, while the governmen
 
 ## Next P0/P1 work
 
-1. Establish a canonical Post indexability/content-completeness gate. Do not reuse legacy `postings.index_tier` as if it were canonical `posts` policy.
+1. Establish and document the canonical Post indexability/content-completeness contract. The current Tier A reuse is only the first schema gate; do not reuse legacy `postings.index_tier` as if it were canonical `posts` policy.
 2. Reconcile official-link provenance and verify the current 1,062 notification URLs against issuing-body domains. Do not infer officialness from URL shape alone.
 3. Audit canonical post enrichment and field-level provenance, especially eligibility, duties, responsibilities, location and application mechanism.
 4. Reconcile live post/recruitment counts and document their entity definitions; expose timestamped counts.
