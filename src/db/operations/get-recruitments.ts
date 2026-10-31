@@ -559,6 +559,22 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
   } else if (opts.filter === "newly-added") {
     conditions.push(LIVE_RECRUITMENT_SQL);
     conditions.push(sql`r.notification_date IS NOT NULL AND r.notification_date >= now() - interval '30 days' AND r.notification_date <= now()`);
+    // A recent-notification claim requires field-level evidence for this date,
+    // not only a global VERIFIED flag or a syntactically valid URL.
+    conditions.push(sql`
+      r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+      AND r.official_link_source = 'MANUAL_VERIFIED'
+      AND r.official_notification_url ~ '^https?://'
+      AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+      AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'evidence_url' ~ '^https://'
+      AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_by', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_at', '') IS NOT NULL
+      AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+      AND (r.metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') ? 'hub:notification_date'
+      AND (r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence') ? 'hub:notification_date'
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'evidence_ref', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'excerpt', '') IS NOT NULL
+    `);
   } else if (!search) {
     // Browsing without a query shows current recruitments only. A text search
     // also matches closed ones, ordered after the open ones and labelled Closed.
