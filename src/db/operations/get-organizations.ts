@@ -112,7 +112,14 @@ export async function getRankedOrganizations() {
     .from(organizations)
     .leftJoin(
       recruitments,
-      sql`${recruitments.organizationId} = ${organizations.id} AND ${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'`,
+      sql`${recruitments.organizationId} = ${organizations.id}
+        AND ${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND public.is_recruitment_source_trusted(
+          ${recruitments.sourceDiscoveryOrigin},
+          ${recruitments.officialLinkSource},
+          ${recruitments.verificationStatus},
+          ${recruitments.metadata}
+        )`,
     )
     // Merged duplicates never list: their slug 301s to the survivor.
     .where(isNull(organizations.mergedIntoId))
