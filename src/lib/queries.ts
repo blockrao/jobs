@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
+import { MIN_PLAUSIBLE_RECRUITMENT_YEAR, SENTINEL_RECRUITMENT_YEAR } from "@/lib/recruitment-dates";
 import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 
 import { normalizeEducation, normalizeExperience, normalizeSelectionProcess, auditEnrichmentShape } from "@/lib/enrichment-normalization";
@@ -473,15 +474,16 @@ export async function getHomeStats(): Promise<HomeStats> {
 // ACTIVE/UPCOMING and application window not yet closed.
 
 // SQL equivalent of deriveLifecycle(...).isLive for canonical recruitment records.
-// Placeholder dates (year >= 2090) are unknown facts: retain the status-derived
-// lifecycle but expose them as NULL to callers so they are never shown as real deadlines.
+// Implausible dates outside recruitment-dates.ts' 1900–2089 range are unknown
+// facts: retain the status-derived lifecycle but expose them as NULL to callers.
 // Quarantined recruitments are excluded consistently with canonical detail/hub loaders.
 const livePostCondition = sql`
   ${recruitments.status} IN ('ACTIVE', 'UPCOMING')
   AND (
     ${recruitments.applicationEndDate} IS NULL
     OR ${recruitments.applicationEndDate} >= NOW()
-    OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= 2090
+    OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) < ${MIN_PLAUSIBLE_RECRUITMENT_YEAR}
+    OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= ${SENTINEL_RECRUITMENT_YEAR}
   )
   AND ${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'
   AND ${posts.slug} IS NOT NULL
@@ -523,7 +525,8 @@ export async function listLivePostsBySector(
       recruitmentStatus: recruitments.status,
       applicationEndDate: sql<Date | null>`CASE
         WHEN ${recruitments.applicationEndDate} IS NULL
-          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= 2090
+          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) < ${MIN_PLAUSIBLE_RECRUITMENT_YEAR}
+          OR EXTRACT(YEAR FROM ${recruitments.applicationEndDate}) >= ${SENTINEL_RECRUITMENT_YEAR}
         THEN NULL
         ELSE ${recruitments.applicationEndDate}
       END`,
