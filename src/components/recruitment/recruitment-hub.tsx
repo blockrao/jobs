@@ -380,8 +380,9 @@ export function buildHubData(
     // Only a resolver-produced count with an explicitly verified source may
     // be presented as authoritative. Raw legacy columns and extracted strings
     // are not evidence and must not be used as fallbacks.
-    const vacancies = post.resolvedVacancyCount != null
-      && post.fjaExtract?.verificationStatus === 'VERIFIED'
+    const vacancySourceVerified = post.fjaExtract?.verificationStatus === 'VERIFIED'
+      || (recruitment.sourceDiscoveryOrigin === 'AGGREGATOR_DISCOVERED' && verified);
+    const vacancies = post.resolvedVacancyCount != null && vacancySourceVerified
       ? post.resolvedVacancyCount
       : null;
     const vacanciesVerified = vacancies !== null;
