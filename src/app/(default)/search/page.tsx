@@ -9,6 +9,7 @@
  * P1 #11-12: Search as first-class feature + strong job filters
  */
 
+import Link from "next/link";
 import { pageSeo } from "@/lib/seo";
 import { Metadata } from "next";
 import { SearchExperience, type SearchInitialState } from "@/components/SearchExperience";
