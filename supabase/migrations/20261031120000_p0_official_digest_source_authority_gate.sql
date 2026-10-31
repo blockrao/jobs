@@ -83,6 +83,55 @@ ALTER TABLE public.posts_official_links
   ADD COLUMN IF NOT EXISTS source_ref text,
   ADD COLUMN IF NOT EXISTS source_locator text;
 
+
+-- RLS helper: public table reads must obey the same issuer/fact gate as the
+-- server-rendered routes. The legacy public-read policies otherwise allow
+-- direct Supabase REST reads to bypass application-level filtering.
+CREATE OR REPLACE FUNCTION public.is_publicly_verified_recruitment_source(
+  p_source_discovery_origin text,
+  p_official_link_source text,
+  p_verification_status text,
+  p_metadata jsonb,
+  p_enrichment_data jsonb
+) RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = public
+AS $public_source$
+  SELECT CASE
+    WHEN p_source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      OR p_official_link_source = 'AGGREGATOR_DISCOVERED'
+      OR p_enrichment_data->'meta'->>'source' IN (
+        'institutional_aggregation',
+        'institution_aggregation',
+        'fja_html'
+      )
+    THEN COALESCE(
+      p_verification_status = 'VERIFIED'
+      AND p_official_link_source = 'MANUAL_VERIFIED'
+      AND p_metadata->'source_provenance'->'authority_review'->>'status' = 'VERIFIED'
+      AND p_metadata->'source_provenance'->'authority_review'->>'evidence_url' ~* '^https://'
+      AND nullif(p_metadata->'source_provenance'->'authority_review'->>'reviewed_by', '') IS NOT NULL
+      AND nullif(p_metadata->'source_provenance'->'authority_review'->>'reviewed_at', '') IS NOT NULL
+      AND nullif(p_metadata->'source_provenance'->'authority_review'->>'notes', '') IS NOT NULL
+      AND p_metadata->'source_provenance'->'fact_review'->>'status' = 'VERIFIED'
+      AND jsonb_typeof(p_metadata->'source_provenance'->'fact_review'->'reviewed_fields') = 'array'
+      AND jsonb_array_length(p_metadata->'source_provenance'->'fact_review'->'reviewed_fields') > 0
+      AND jsonb_typeof(p_metadata->'source_provenance'->'fact_review'->'evidence') = 'object'
+      AND (p_metadata->'source_provenance'->'fact_review'->'reviewed_fields') ? 'hub:notification_date'
+      AND (p_metadata->'source_provenance'->'fact_review'->'evidence') ? 'hub:notification_date'
+      AND nullif(p_metadata->'source_provenance'->'fact_review'->'evidence'->'hub:notification_date'->>'evidence_ref', '') IS NOT NULL
+      AND nullif(p_metadata->'source_provenance'->'fact_review'->'evidence'->'hub:notification_date'->>'excerpt', '') IS NOT NULL
+      AND nullif(p_metadata->'source_provenance'->'fact_review'->>'reviewed_by', '') IS NOT NULL
+      AND nullif(p_metadata->'source_provenance'->'fact_review'->>'reviewed_at', '') IS NOT NULL
+      AND nullif(p_metadata->'source_provenance'->'fact_review'->>'notes', '') IS NOT NULL,
+      false
+    )
+    ELSE true
+  END;
+$public_source$;
+
 -- Revoking a source/fact review must be able to clear the prior verification
 -- timestamp. The Drizzle model already treats this column as nullable.
 ALTER TABLE public.post_enrichments
@@ -1512,3 +1561,74 @@ AFTER UPDATE OF
 ON public.official_digest_promote
 FOR EACH ROW
 EXECUTE FUNCTION public.sync_promoted_digest_review_state();
+
+
+-- Replace unrestricted public table reads with the shared source/fact gate.
+-- Server-side service-role/Postgres queries still apply their explicit SQL
+-- predicates; this additionally prevents direct anon Supabase REST bypass.
+DROP POLICY IF EXISTS "public read" ON public.recruitments;
+CREATE POLICY "public read" ON public.recruitments
+  FOR SELECT TO public
+  USING (public.is_publicly_verified_recruitment_source(
+    source_discovery_origin,
+    official_link_source,
+    verification_status,
+    metadata,
+    enrichment_data
+  ));
+
+DROP POLICY IF EXISTS "public read" ON public.posts;
+CREATE POLICY "public read" ON public.posts
+  FOR SELECT TO public
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.recruitments r
+      WHERE r.id = posts.recruitment_id
+        AND public.is_publicly_verified_recruitment_source(
+          r.source_discovery_origin,
+          r.official_link_source,
+          r.verification_status,
+          r.metadata,
+          r.enrichment_data
+        )
+    )
+  );
+
+DROP POLICY IF EXISTS "public read" ON public.eligibilities;
+CREATE POLICY "public read" ON public.eligibilities
+  FOR SELECT TO public
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.posts p
+      JOIN public.recruitments r ON r.id = p.recruitment_id
+      WHERE p.id = eligibilities.post_id
+        AND public.is_publicly_verified_recruitment_source(
+          r.source_discovery_origin,
+          r.official_link_source,
+          r.verification_status,
+          r.metadata,
+          r.enrichment_data
+        )
+    )
+  );
+
+DROP POLICY IF EXISTS "public read" ON public.post_age_rules;
+CREATE POLICY "public read" ON public.post_age_rules
+  FOR SELECT TO public
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.posts p
+      JOIN public.recruitments r ON r.id = p.recruitment_id
+      WHERE p.id = post_age_rules.post_id
+        AND public.is_publicly_verified_recruitment_source(
+          r.source_discovery_origin,
+          r.official_link_source,
+          r.verification_status,
+          r.metadata,
+          r.enrichment_data
+        )
+    )
+  );
