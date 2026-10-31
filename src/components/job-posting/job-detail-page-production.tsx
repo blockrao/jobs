@@ -361,7 +361,7 @@ export default function JobDetailPageProduction({
               </p>
               {publishedDate && (
                 <p className={styles.notice}>
-                  Published <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>
+                  Notification date <time dateTime={publishedDate.toISOString()}>{formatDate(publishedDate)}</time>
                   {post.officialSourceUrl ? '. Facts on this page are read from the official notification; confirm on the official site before applying.' : '.'}
                 </p>
               )}
