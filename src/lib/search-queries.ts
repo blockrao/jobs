@@ -85,6 +85,11 @@ const JOBS_CTE = `
                  p.is_expired, p.valid_through, p.created_at, p.id
           FROM postings p
           WHERE p.inferred_recruitment_id = r.id
+            AND p.inferred_post_id IS NOT NULL
+            AND private.is_post_publicly_trusted(p.inferred_post_id)
+            AND (p.inferred_recruitment_id IS NULL OR p.inferred_recruitment_id = (
+              SELECT canonical_post.recruitment_id FROM posts canonical_post WHERE canonical_post.id = p.inferred_post_id
+            ))
             AND ${PUBLIC_POSTING}
           ORDER BY (p.is_expired IS TRUE) ASC, p.created_at DESC, p.id DESC
           LIMIT 1
@@ -93,6 +98,7 @@ const JOBS_CTE = `
           SELECT count(*)::int AS live_posts, min(po.slug) AS only_post_slug
           FROM posts po
           WHERE po.recruitment_id = r.id AND po."isLive"
+            AND private.is_post_publicly_trusted(po.id)
         ) lp ON TRUE
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
           AND private.is_recruitment_publicly_trusted(r.id)
@@ -675,10 +681,11 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
           WHERE p.review_status = 'APPROVED'
             AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
             AND p.is_expired = FALSE
-            AND private.is_recruitment_publicly_trusted(
-              COALESCE(p.inferred_recruitment_id, (SELECT cp.recruitment_id FROM posts cp WHERE cp.id = p.inferred_post_id))
-            )
-            AND (p.inferred_post_id IS NULL OR private.is_post_publicly_trusted(p.inferred_post_id))
+            AND p.inferred_post_id IS NOT NULL
+            AND private.is_post_publicly_trusted(p.inferred_post_id)
+            AND (p.inferred_recruitment_id IS NULL OR p.inferred_recruitment_id = (
+              SELECT cp.recruitment_id FROM posts cp WHERE cp.id = p.inferred_post_id
+            ))
             AND o.name ILIKE $1
           UNION
           SELECT pos.name as suggestion
@@ -688,10 +695,9 @@ export async function getSearchSuggestions(prefix: string, limit = 10): Promise<
           WHERE p.review_status = 'APPROVED'
             AND p.publishing_status IN ('AUTOMATED_VALIDATION_PASS', 'PUBLISHED')
             AND p.is_expired = FALSE
-            AND private.is_recruitment_publicly_trusted(
-              COALESCE(p.inferred_recruitment_id, pos_rel.recruitment_id)
-            )
-            AND (p.inferred_post_id IS NULL OR private.is_post_publicly_trusted(p.inferred_post_id))
+            AND p.inferred_post_id IS NOT NULL
+            AND private.is_post_publicly_trusted(p.inferred_post_id)
+            AND (p.inferred_recruitment_id IS NULL OR p.inferred_recruitment_id = pos_rel.recruitment_id)
             AND pos.name ILIKE $1
         ) suggestions
         LIMIT $2
