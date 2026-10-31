@@ -173,7 +173,7 @@ $fn$;
 CREATE OR REPLACE FUNCTION private.has_complete_issuer_authority_review(p_metadata jsonb)
 RETURNS boolean
 LANGUAGE sql
-IMMUTABLE
+STABLE
 SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce(
