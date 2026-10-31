@@ -32,17 +32,37 @@ CREATE SCHEMA IF NOT EXISTS private;
 REVOKE ALL ON SCHEMA private FROM PUBLIC;
 GRANT USAGE ON SCHEMA private TO anon, authenticated, service_role;
 
-CREATE OR REPLACE FUNCTION private.is_fja_url(p_value text)
+CREATE OR REPLACE FUNCTION private.is_aggregator_url(p_value text)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE
 PARALLEL SAFE
 SET search_path = pg_catalog
 AS $fn$
-  SELECT coalesce(
-    lower(btrim(p_value)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)',
-    false
-  );
+  SELECT coalesce((
+    SELECT host = ANY (ARRAY[
+      'freejobalert.com','sarkariresult.com','sarkarinaukri.com',
+      'indiasarkarinaukri.com','sahisarkarijobs.com','sarkariexam.com',
+      't.me','telegram.me','whatsapp.com','arattai.in','wa.me','telegram.org',
+      'facebook.com','twitter.com','x.com','instagram.com','youtube.com',
+      'marugujarat.co.in','pdfjobsjankari.com','onlineupcar.com',
+      'rojgarresult.com','freshersworld.com'
+    ]::text[])
+    OR host LIKE ANY (ARRAY[
+      '%.freejobalert.com','%.sarkariresult.com','%.sarkarinaukri.com',
+      '%.indiasarkarinaukri.com','%.sahisarkarijobs.com','%.sarkariexam.com',
+      '%.t.me','%.telegram.me','%.whatsapp.com','%.arattai.in','%.wa.me','%.telegram.org',
+      '%.facebook.com','%.twitter.com','%.x.com','%.instagram.com','%.youtube.com',
+      '%.marugujarat.co.in','%.pdfjobsjankari.com','%.onlineupcar.com',
+      '%.rojgarresult.com','%.freshersworld.com'
+    ]::text[])
+    FROM (
+      SELECT lower((regexp_match(
+        btrim(p_value),
+        '^(?:(?:https?:)?//)?([^/:?#]+)'
+      ))[1]) AS host
+    ) parsed
+  ), false);
 $fn$;
 
 CREATE OR REPLACE FUNCTION private.is_aggregator_source_value(p_value text)
@@ -56,7 +76,14 @@ AS $fn$
     'fja', 'freejobalert', 'ext-1', 'ext-2', 'ext-3', 'ext-4', 'ext-5',
     'aggregator', 'aggregator_extracted', 'pilot_preliminary',
     'institutional_aggregation', 'institution_aggregation', 'fja_html',
-    'aggregator_discovered', 'fja_official_link_extracted', 'official_link_extracted'
+    'aggregator_discovered', 'fja_official_link_extracted', 'official_link_extracted',
+    'sarkariresult', 'sarkarinaukri', 'indiasarkarinaukri', 'sahisarkarijobs',
+    'sarkariexam', 'marugujarat', 'marugujarat.co.in', 'pdfjobsjankari',
+    'pdfjobsjankari.com', 'onlineupcar', 'onlineupcar.com', 'rojgarresult',
+    'rojgarresult.com', 'freshersworld', 'freshersworld.com', 'telegram',
+    'telegram.me', 'telegram.org', 't.me', 'whatsapp', 'whatsapp.com',
+    'wa.me', 'arattai', 'arattai.in', 'facebook', 'facebook.com', 'twitter',
+    'twitter.com', 'x.com', 'instagram', 'instagram.com', 'youtube', 'youtube.com'
   );
 $fn$;
 
@@ -78,16 +105,22 @@ AS $fn$
       OR private.is_aggregator_source_value(r.official_link_source)
       OR private.is_aggregator_source_value(r.enrichment_data -> 'meta' ->> 'source')
       OR private.is_aggregator_source_value(r.metadata -> 'source_provenance' ->> 'discovery_origin')
-      OR private.is_fja_url(r.source_url)
+      OR private.is_aggregator_url(r.source_url)
+      OR private.is_aggregator_url(r.official_notification_url)
+      OR private.is_aggregator_url(r.official_application_url)
       OR EXISTS (
         SELECT 1
         FROM public.posts p
         WHERE p.recruitment_id = r.id
           AND (
             private.is_aggregator_source_value(p."sourceName")
-            OR private.is_fja_url(p."sourceReference")
-            OR private.is_fja_url(p.original_recruitment_url)
-            OR private.is_fja_url(p."originalRecruitmentUrl")
+            OR private.is_aggregator_url(p."sourceReference")
+            OR private.is_aggregator_url(p.original_recruitment_url)
+            OR private.is_aggregator_url(p."originalRecruitmentUrl")
+            OR private.is_aggregator_url(p."officialSourceUrl")
+            OR private.is_aggregator_url(p."applyPortalUrl")
+            OR private.is_aggregator_url(p.application_url)
+            OR private.is_aggregator_url(p."officialNotificationUrl")
           )
       )
       OR EXISTS (
@@ -100,7 +133,7 @@ AS $fn$
           private.is_aggregator_source_value(sp.source)
           OR private.is_aggregator_source_value(sp.enrichment_source)
           OR upper(btrim(coalesce(sp.source_type, ''))) = 'AGGREGATOR'
-          OR private.is_fja_url(sp.source_url)
+          OR private.is_aggregator_url(sp.source_url)
           OR EXISTS (
             SELECT 1
             FROM jsonb_array_elements_text(
@@ -259,7 +292,7 @@ BEGIN
        private.is_aggregator_source_value(NEW.official_link_source)
        OR private.is_aggregator_source_value(NEW.enrichment_data -> 'meta' ->> 'source')
        OR private.is_aggregator_source_value(NEW.metadata -> 'source_provenance' ->> 'discovery_origin')
-       OR private.is_fja_url(NEW.source_url)
+       OR private.is_aggregator_url(NEW.source_url)
      ) THEN
     NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
   END IF;
@@ -289,7 +322,7 @@ AS $fn$
         private.is_aggregator_source_value(sp.source)
         OR private.is_aggregator_source_value(sp.enrichment_source)
         OR upper(btrim(coalesce(sp.source_type, ''))) = 'AGGREGATOR'
-        OR private.is_fja_url(sp.source_url)
+        OR private.is_aggregator_url(sp.source_url)
         OR EXISTS (
           SELECT 1
           FROM jsonb_array_elements_text(
@@ -314,9 +347,13 @@ AS $fn$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     IF private.is_aggregator_source_value(OLD."sourceName")
-       OR private.is_fja_url(OLD."sourceReference")
-       OR private.is_fja_url(OLD.original_recruitment_url)
-       OR private.is_fja_url(OLD."originalRecruitmentUrl")
+       OR private.is_aggregator_url(OLD."sourceReference")
+       OR private.is_aggregator_url(OLD.original_recruitment_url)
+       OR private.is_aggregator_url(OLD."originalRecruitmentUrl")
+       OR private.is_aggregator_url(OLD."officialSourceUrl")
+       OR private.is_aggregator_url(OLD."applyPortalUrl")
+       OR private.is_aggregator_url(OLD.application_url)
+       OR private.is_aggregator_url(OLD."officialNotificationUrl")
        OR private.legacy_posting_has_aggregator_origin_for_post(OLD.id) THEN
       UPDATE public.recruitments
       SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
@@ -328,9 +365,9 @@ BEGIN
 
   IF TG_OP = 'UPDATE' THEN
     IF private.is_aggregator_source_value(OLD."sourceName")
-       OR private.is_fja_url(OLD."sourceReference")
-       OR private.is_fja_url(OLD.original_recruitment_url)
-       OR private.is_fja_url(OLD."originalRecruitmentUrl")
+       OR private.is_aggregator_url(OLD."sourceReference")
+       OR private.is_aggregator_url(OLD.original_recruitment_url)
+       OR private.is_aggregator_url(OLD."originalRecruitmentUrl")
        OR private.legacy_posting_has_aggregator_origin_for_post(OLD.id) THEN
       UPDATE public.recruitments
       SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
@@ -340,9 +377,13 @@ BEGIN
   END IF;
 
   IF private.is_aggregator_source_value(NEW."sourceName")
-     OR private.is_fja_url(NEW."sourceReference")
-     OR private.is_fja_url(NEW.original_recruitment_url)
-     OR private.is_fja_url(NEW."originalRecruitmentUrl")
+     OR private.is_aggregator_url(NEW."sourceReference")
+     OR private.is_aggregator_url(NEW.original_recruitment_url)
+     OR private.is_aggregator_url(NEW."originalRecruitmentUrl")
+     OR private.is_aggregator_url(NEW."officialSourceUrl")
+     OR private.is_aggregator_url(NEW."applyPortalUrl")
+     OR private.is_aggregator_url(NEW.application_url)
+     OR private.is_aggregator_url(NEW."officialNotificationUrl")
      OR private.legacy_posting_has_aggregator_origin_for_post(NEW.id) THEN
     UPDATE public.recruitments
     SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
@@ -371,7 +412,7 @@ BEGIN
     IF private.is_aggregator_source_value(OLD.source)
        OR private.is_aggregator_source_value(OLD.enrichment_source)
        OR upper(btrim(coalesce(OLD.source_type, ''))) = 'AGGREGATOR'
-       OR private.is_fja_url(OLD.source_url)
+       OR private.is_aggregator_url(OLD.source_url)
        OR EXISTS (
          SELECT 1
          FROM jsonb_array_elements_text(
@@ -399,7 +440,7 @@ BEGIN
     IF private.is_aggregator_source_value(OLD.source)
        OR private.is_aggregator_source_value(OLD.enrichment_source)
        OR upper(btrim(coalesce(OLD.source_type, ''))) = 'AGGREGATOR'
-       OR private.is_fja_url(OLD.source_url)
+       OR private.is_aggregator_url(OLD.source_url)
        OR EXISTS (
          SELECT 1
          FROM jsonb_array_elements_text(
@@ -425,7 +466,7 @@ BEGIN
   IF private.is_aggregator_source_value(NEW.source)
      OR private.is_aggregator_source_value(NEW.enrichment_source)
      OR upper(btrim(coalesce(NEW.source_type, ''))) = 'AGGREGATOR'
-     OR private.is_fja_url(NEW.source_url)
+     OR private.is_aggregator_url(NEW.source_url)
      OR EXISTS (
        SELECT 1
        FROM jsonb_array_elements_text(
@@ -490,7 +531,7 @@ CREATE POLICY "public read" ON public.vacancies
   FOR SELECT TO anon, authenticated
   USING (private.is_post_publicly_trusted(post_id));
 
-REVOKE ALL ON FUNCTION private.is_fja_url(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.is_aggregator_url(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_aggregator_source_value(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.recruitment_has_aggregator_origin(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_past_review_timestamp(text) FROM PUBLIC, anon, authenticated;
