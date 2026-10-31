@@ -169,6 +169,7 @@ async function getPostCoreData(
           )
         )
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
         AND (
           r.slug = ${recruitmentSlug}
           OR r.id IN (
@@ -512,6 +513,7 @@ export async function getDuplicatePostRecruitmentSlug(
     WHERE p.slug = ${postSlug}
       AND p.posting_status = 'DUPLICATE'
       AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
       AND (
         r.slug = ${recruitmentSlug}
         OR r.id IN (
@@ -752,6 +754,7 @@ export async function getRelatedPostsForLeaf(
         AND p.id != ${postId}
         AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 6
     `);
@@ -781,6 +784,7 @@ export async function getRelatedPostsForLeaf(
         AND p.id != ALL(${excludeIds})
         AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 5
     `);
@@ -810,6 +814,7 @@ export async function getRelatedPostsForLeaf(
         AND p.id != ALL(${excludeIds})
         AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
       ORDER BY p."postedAt" DESC NULLS LAST
       LIMIT 4
     `);
@@ -939,6 +944,7 @@ export async function getPostsByRecruitment(
         )
         AND ${recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`)}
         AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
       ORDER BY p."postedAt" DESC
       LIMIT ${limit}
       OFFSET ${offset}
