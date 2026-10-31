@@ -101,12 +101,12 @@ The host set checked includes FreeJobAlert, SarkariResult, SarkariNaukri, IndiaS
 1. **Origin is not a verdict on every fact.** The 6,365 candidates have aggregator/preliminary discovery signals. Some fields may subsequently have been independently verified. The count must not be described as 6,365 incorrect records.
 2. **A staging match is not verification.** The 355 exact staging matches only indicate a reconciliation link.
 3. **The URL scan is not a full internet provenance audit.** It scans known persisted columns and the listed host set. It does not resolve redirect chains, classify previously unknown domains, inspect the content of each destination, or independently establish issuer ownership.
-4. **No record-level output was required for this stage.** The next review should produce small, paginated manifests for only the affected cohorts (first the 81 legacy-mapped records), not export all 6,365 records.
+4. **The 81-record manifest is now complete.** It was read in four small pages. The structural mapping checks passed 81/81, but all 81 remain unverified and none is approved for canonical Post creation. Do not export all 6,365 records.
 5. **No public visibility change is authorized by this audit.** Do not apply RLS, suppress records, alter verification statuses, modify official URLs, re-ingest, or change Recruitment/Post relationships based solely on these aggregate counts.
 
 ## Next bounded action
 
-Prepare a read-only, paginated manifest for the **81 legacy-mapped / no-canonical-Post Recruitments**. It should show only the fields needed to decide whether an existing legacy Posting can be safely decomposed into a canonical Post using the existing Recruitment ID. Validate mapping uniqueness and title/organization correspondence before proposing any write. Keep the 1,445 unmapped records out of that first batch.
+Run a read-only, source-evidence dry-run for the **same 81 records**. Verify issuer-owned notification/application destinations and extract only post-level facts supported by the official issuer source. Keep existing Recruitment IDs; propose a canonical Post only when the official evidence supports a distinct post title and the required facts. Explicitly resolve the 9 placeholder organizations and the one zero-vacancy title flag. Keep the 1,445 unmapped records out of this pass. No Post creation, verification update, URL correction, or publication-status change is authorized without a separately reviewed dry-run and explicit approval.
 
 ## Safety record
 
