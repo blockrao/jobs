@@ -463,6 +463,7 @@ async function searchPostingsEnglish(
                  row_number() OVER (ORDER BY (${postClauses.map((c) => `(CASE WHEN ${c} THEN 1 ELSE 0 END)`).join(" + ")}) DESC, po.id) AS rn
           FROM posts po
           WHERE po.recruitment_id = t.id AND po."isLive"
+            AND private.is_post_publicly_trusted(po.id)
             AND (${postClauses.join(" OR ")})
         ) x
       ) mp ON TRUE`
