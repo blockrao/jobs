@@ -276,7 +276,7 @@ export default async function JobDetailPage({ params }: Props) {
         })) : []),
         requiredDocuments: !unverifiedAggregator && Array.isArray(enrichment?.requiredDocuments) ? enrichment.requiredDocuments.map((d: any) => ({
           name: d.name,
-          category: d.category,
+          category: d.category ?? "",
           isRequired: d.required,
         })) : [],
         importantDates: !unverifiedAggregator && Array.isArray(enrichment?.importantDates) ? enrichment.importantDates.map((d: any) => ({
