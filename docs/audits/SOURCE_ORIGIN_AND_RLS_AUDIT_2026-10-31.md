@@ -61,17 +61,17 @@ The current TypeScript and SQL source predicates do not include `pilot_prelimina
 
 ### 1.3 Legacy staging coverage is now outdated
 
-The expanded cohort was reconciled against `official_digest_promote` using the existing `metadata.ingest_batch + official_notification_url` key.
+The expanded cohort (including the 81 legacy-posting-only and two preliminary-source records) was reconciled against `official_digest_promote` using the existing `metadata.ingest_batch + official_notification_url` key.
 
 | Measure | Records |
 |---|---:|
 | Expanded source-origin candidates | 6,365 |
 | With `metadata.ingest_batch` | 362 |
 | Matching staging row | 355 |
-| Without staging match | **6,008** |
-| Without `metadata.ingest_batch` | **6,001** |
+| Without staging match | **6,010** |
+| Without `metadata.ingest_batch` | **6,003** |
 
-The prior #208 figure of 5,026 unmatched records is outdated. The legacy review design must be recalculated against the expanded 6,365-record cohort. The 81 legacy-posting-only records and two preliminary-source records have no safe staging-based review path until their origin and canonical Post relationships are reconciled.
+The prior #208 figure of 5,026 unmatched records is outdated. The legacy review design must be recalculated against the expanded 6,365-record cohort. The 83 newly identified records (81 legacy-posting-only plus two preliminary-source records) have no ingest batch and no staging match, so they have no safe staging-based review path until their origin and canonical entity relationships are reconciled.
 
 The 3,447 legacy posting rows with both `inferred_recruitment_id` and `inferred_post_id` were checked: all 3,447 point to the same Recruitment; no conflicting Recruitment ID mapping was found in that subset.
 
