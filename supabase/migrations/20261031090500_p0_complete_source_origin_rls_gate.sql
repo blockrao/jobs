@@ -270,6 +270,19 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog
 AS $fn$
 BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF private.is_aggregator_source_value(OLD."sourceName")
+       OR private.is_fja_url(OLD."sourceReference")
+       OR private.is_fja_url(OLD.original_recruitment_url)
+       OR private.is_fja_url(OLD."originalRecruitmentUrl") THEN
+      UPDATE public.recruitments
+      SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      WHERE id = OLD.recruitment_id
+        AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
+    END IF;
+    RETURN OLD;
+  END IF;
+
   IF TG_OP = 'UPDATE' THEN
     IF private.is_aggregator_source_value(OLD."sourceName")
        OR private.is_fja_url(OLD."sourceReference")
@@ -297,7 +310,7 @@ $fn$;
 
 DROP TRIGGER IF EXISTS trg_propagate_post_discovery_origin ON public.posts;
 CREATE TRIGGER trg_propagate_post_discovery_origin
-AFTER INSERT OR UPDATE OF recruitment_id, "sourceName", "sourceReference", original_recruitment_url, "originalRecruitmentUrl"
+AFTER INSERT OR UPDATE OF recruitment_id, "sourceName", "sourceReference", original_recruitment_url, "originalRecruitmentUrl" OR DELETE
 ON public.posts
 FOR EACH ROW
 EXECUTE FUNCTION private.propagate_post_discovery_origin();
@@ -308,6 +321,34 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog
 AS $fn$
 BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF private.is_aggregator_source_value(OLD.source)
+       OR private.is_aggregator_source_value(OLD.enrichment_source)
+       OR upper(btrim(coalesce(OLD.source_type, ''))) = 'AGGREGATOR'
+       OR private.is_fja_url(OLD.source_url)
+       OR EXISTS (
+         SELECT 1
+         FROM jsonb_array_elements_text(
+           CASE
+             WHEN jsonb_typeof(coalesce(OLD.source_portals, '[]'::jsonb)) = 'array'
+               THEN OLD.source_portals
+             ELSE '[]'::jsonb
+           END
+         ) AS portal(value)
+         WHERE private.is_aggregator_source_value(portal.value)
+       ) THEN
+      UPDATE public.recruitments r
+      SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      WHERE r.id = OLD.inferred_recruitment_id
+         OR r.id = (
+           SELECT p.recruitment_id
+           FROM public.posts p
+           WHERE p.id = OLD.inferred_post_id
+         );
+    END IF;
+    RETURN OLD;
+  END IF;
+
   IF TG_OP = 'UPDATE' THEN
     IF private.is_aggregator_source_value(OLD.source)
        OR private.is_aggregator_source_value(OLD.enrichment_source)
@@ -365,7 +406,7 @@ $fn$;
 
 DROP TRIGGER IF EXISTS trg_propagate_legacy_posting_discovery_origin ON public.postings;
 CREATE TRIGGER trg_propagate_legacy_posting_discovery_origin
-AFTER INSERT OR UPDATE OF inferred_recruitment_id, inferred_post_id, source, source_type, source_portals, source_url, enrichment_source
+AFTER INSERT OR UPDATE OF inferred_recruitment_id, inferred_post_id, source, source_type, source_portals, source_url, enrichment_source OR DELETE
 ON public.postings
 FOR EACH ROW
 EXECUTE FUNCTION private.propagate_legacy_posting_discovery_origin();
