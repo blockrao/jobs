@@ -144,6 +144,7 @@ function publicHubInput(recruitment: any, posts: any[]) {
     return {
       ...post,
       enrichment: null,
+      postEnrichment: null,
       description: hasPostReview(name, "description") ? post.description : null,
       salaryMin: hasPostReview(name, "salary_min") || hasPostReview(name, "salary") ? post.salaryMin : null,
       salaryMax: hasPostReview(name, "salary_max") || hasPostReview(name, "salary") ? post.salaryMax : null,
