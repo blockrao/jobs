@@ -18,6 +18,8 @@ describe("complete persisted source-origin coverage", () => {
     ["FJA Recruitment source URL", { recruitmentSourceUrl: "https://jobs.freejobalert.com/example/" }],
     ["legacy postings.source", { legacyPostingSource: "fja" }],
     ["legacy postings.source_type", { legacyPostingSourceType: "AGGREGATOR" }],
+    ["legacy postings.enrichment_source", { legacyPostingEnrichmentSource: "aggregator" }],
+    ["legacy postings.source_url", { legacyPostingSourceUrl: "https://www.freejobalert.com/example/" }],
     ["legacy postings.source_portals", { legacyPostingSourcePortals: ["fja"] }],
     ["external aggregator portal", { legacyPostingSourcePortals: ["ext-5"] }],
   ])("detects %s", (_label, input) => {
