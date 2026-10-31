@@ -44,12 +44,14 @@ export function isUnverifiedAggregatorSource(
   verificationStatus: unknown,
   metadata?: unknown,
   postSourceName?: unknown,
+  officialLinkVerificationStatus?: unknown,
 ): boolean {
   const aggregatorOrigin =
     sourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" ||
     (typeof postSourceName === "string" && postSourceName.trim().toLowerCase() === "aggregator");
   if (!aggregatorOrigin) return false;
   if (verificationStatus !== "VERIFIED") return true;
+  if (!isManuallyVerifiedOfficialLink(officialLinkVerificationStatus)) return true;
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return true;
 
   const provenance = (metadata as Record<string, any>).source_provenance;
