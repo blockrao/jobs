@@ -534,8 +534,16 @@ export interface RecruitmentListRow {
   updatedAt: Date | null;
 }
 
-/** Recruitments whose organisation/identity could not be established are hidden everywhere. */
-export const NOT_QUARANTINED_SQL = sql`r.verification_status IS DISTINCT FROM 'QUARANTINED'`;
+/** Public listing gate: quarantined entities and unreviewed aggregator-origin records are excluded. */
+export const PUBLIC_RECRUITMENT_SOURCE_SQL = sql`
+  r.verification_status IS DISTINCT FROM 'QUARANTINED'
+  AND public.is_recruitment_source_trusted(
+    r.source_discovery_origin,
+    r.official_link_source,
+    r.verification_status,
+    r.metadata
+  )
+`;
 
 const LIVE_RECRUITMENT_SQL = recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`);
 const OPEN_RECRUITMENT_SQL = recruitmentIsOpenSql(sql`r.status`, sql`r.application_end_date`);
@@ -544,7 +552,7 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
   const db = getDb();
   // Quarantined recruitments (identity not established — see
   // claude/DATA_QUARANTINE_2026_10_20.md) are never public.
-  const conditions = [NOT_QUARANTINED_SQL];
+  const conditions = [PUBLIC_RECRUITMENT_SOURCE_SQL];
 
   if (opts.kind === "PRIVATE") conditions.push(sql`o.sector = 'PRIVATE'`);
   else if (opts.kind === "GOVERNMENT") conditions.push(sql`o.sector IS DISTINCT FROM 'PRIVATE'`);
@@ -592,7 +600,14 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
       o.sector::text AS "organizationSector",
       r.location_state_code AS "locationStateCode",
       CASE
-        WHEN r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+        WHEN public.is_recruitment_source_trusted(
+          r.source_discovery_origin,
+          r.official_link_source,
+          r.verification_status,
+          r.metadata
+        )
+          AND r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+          AND r.official_link_source = 'MANUAL_VERIFIED'
           AND r.official_notification_url ~ '^https?://'
           AND r.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
         THEN r.total_vacancies
