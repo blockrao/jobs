@@ -119,9 +119,11 @@ export default async function JobsListPage({ searchParams }: Props) {
     open: isHi ? "आवेदन खुले" : "Applications Open",
     showing: (n: number) =>
       isHi ? `${n} नौकरियां दिखाई जा रही हैं` : `Showing ${n} job${n !== 1 ? "s" : ""}`,
-    noResults: isHi
-      ? (q ? `“${q}” से मेल खाने वाली नौकरी नहीं मिली। खोज बदलें या फ़िल्टर हटाएं।` : "अभी कोई वर्तमान या आगामी नौकरी उपलब्ध नहीं है। कृपया बाद में फिर देखें।")
-      : (q ? `No jobs match “${q}”. Try a broader search or clear your filters.` : "No current or upcoming jobs are available in this listing right now. Please check back soon."),
+    noResults: validFilter === "newly-added"
+      ? (isHi ? "पिछले 30 दिनों में कोई स्रोत-सत्यापित भर्ती अधिसूचना उपलब्ध नहीं है।" : "No source-verified recruitment notifications are available from the last 30 days.")
+      : isHi
+        ? (q ? `“${q}” से मेल खाने वाली नौकरी नहीं मिली। खोज बदलें या फ़िल्टर हटाएं।` : "अभी कोई वर्तमान या आगामी नौकरी उपलब्ध नहीं है। कृपया बाद में फिर देखें।")
+        : (q ? `No jobs match “${q}”. Try a broader search or clear your filters.` : "No current or upcoming jobs are available in this listing right now. Please check back soon."),
     clearFilters: isHi ? "खोज और फ़िल्टर हटाएं" : "Clear search and filters",
     browseGovernment: isHi ? "सभी सरकारी नौकरियां देखें" : "Browse all government jobs",
     notification: isHi ? "अधिसूचना" : "Notification",
