@@ -86,6 +86,34 @@ FROM public.eligibilities
 GROUP BY status, source_type
 ORDER BY rows DESC;
 
+-- Exact eligibility rows whose VERIFIED label lacks the required issuer evidence chain.
+SELECT
+  r.id AS recruitment_id,
+  r.slug AS recruitment_slug,
+  r.name AS recruitment_name,
+  p.id AS post_id,
+  p.name AS post_name,
+  e.id AS eligibility_id,
+  e.status,
+  e.source_type,
+  e.source_ref,
+  e.source_locator,
+  e.verified_at,
+  e.qualification_text,
+  e.experience_text,
+  'ELIGIBILITY_REVIEW_REQUIRED' AS review_action
+FROM public.eligibilities e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.status = 'VERIFIED'
+  AND (
+    e.source_type IS DISTINCT FROM 'OFFICIAL_NOTIFICATION'
+    OR e.verified_at IS NULL
+    OR e.source_ref IS NULL
+    OR e.source_locator IS NULL
+  )
+ORDER BY r.id, p.id, e.id;
+
 -- 5) Row-level remediation manifest. Review every row against its own issuer notice;
 -- repeated text is a risk signal, not proof that an individual fact is incorrect.
 SELECT
