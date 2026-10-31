@@ -279,10 +279,12 @@ export default async function JobDetailPage({ params }: Props) {
           category: d.category ?? "",
           isRequired: d.required,
         })) : [],
-        importantDates: !unverifiedAggregator && Array.isArray(enrichment?.importantDates) ? enrichment.importantDates.map((d: any) => ({
-          type: d.label,
-          date: d.date || d.dateStr,
-        })) : [],
+        importantDates: !unverifiedAggregator && Array.isArray(enrichment?.importantDates) ? enrichment.importantDates
+          .filter((d: any) => d.date || d.dateStr)
+          .map((d: any) => ({
+            type: d.label,
+            date: d.date instanceof Date ? d.date.toISOString() : (d.dateStr || d.date),
+          })) : [],
         ageRules: !unverifiedAggregator && Array.isArray(enrichment?.ageRules) ? enrichment.ageRules.map((a: any) => ({
           category: a.category,
           maxAge: a.max,
