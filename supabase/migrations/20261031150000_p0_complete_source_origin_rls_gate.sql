@@ -109,6 +109,7 @@ AS $fn$
            OR linked_post.recruitment_id = r.id)
         AND (
           private.is_aggregator_source_value(sp.source)
+          OR private.is_aggregator_source_value(sp.enrichment_source)
           OR upper(btrim(coalesce(sp.source_type, ''))) = 'AGGREGATOR'
           OR private.is_fja_url(sp.source_url)
           OR EXISTS (
@@ -345,6 +346,7 @@ BEGIN
   END IF;
 
   IF private.is_aggregator_source_value(NEW.source)
+     OR private.is_aggregator_source_value(NEW.enrichment_source)
      OR upper(btrim(coalesce(NEW.source_type, ''))) = 'AGGREGATOR'
      OR private.is_fja_url(NEW.source_url)
      OR EXISTS (
@@ -373,7 +375,7 @@ $fn$;
 
 DROP TRIGGER IF EXISTS trg_propagate_legacy_posting_discovery_origin ON public.postings;
 CREATE TRIGGER trg_propagate_legacy_posting_discovery_origin
-AFTER INSERT OR UPDATE OF inferred_recruitment_id, inferred_post_id, source, source_type, source_portals, source_url
+AFTER INSERT OR UPDATE OF inferred_recruitment_id, inferred_post_id, source, source_type, source_portals, source_url, enrichment_source
 ON public.postings
 FOR EACH ROW
 EXECUTE FUNCTION private.propagate_legacy_posting_discovery_origin();
