@@ -1412,7 +1412,11 @@ export async function getDailyDigestJobs(opts: {
       rn.last_date::text AS last_date,
       rn.official_pdf_url,
       rn.apply_url,
-      rn.source_url,
+      CASE
+        WHEN lower(btrim(rn.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
+          THEN NULL
+        ELSE rn.source_url
+      END AS source_url,
       rn.category,
       rn.states,
       rn.qualification_text,
