@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
   ]);
-  const hub = buildHubData(recruitment, publicPosts, undefined, postingLocations, cutoffMarks);
+  const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
   const { title, description } = hub;
 
   return {
@@ -102,7 +102,7 @@ export default async function RecruitmentHubPage({ params }: Props) {
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
   ]);
-  const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
+  const hub = buildHubData(recruitment, publicPosts, undefined, postingLocations, cutoffMarks);
   const sanitizedHub = toPlainJSON(hub) as typeof hub;
 
   return (
