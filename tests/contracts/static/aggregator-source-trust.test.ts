@@ -206,6 +206,8 @@ describe("aggregator source trust gate", () => {
     const listingQueries = readFileSync("src/lib/queries.ts", "utf8");
     const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     const sitemap = readFileSync("src/app/sitemap.ts", "utf8");
+    const relatedQueries = readFileSync("src/db/operations/get-related-posts.ts", "utf8");
+    const leafComponent = readFileSync("src/components/job-posting/job-detail-page-production.tsx", "utf8");
 
     expect(hubRoute).toContain("publicHubInput(recruitment, posts)");
     expect(hubRoute).toContain("posts: []");
@@ -217,6 +219,12 @@ describe("aggregator source trust gate", () => {
     expect(listingQueries).toContain("metadata -> 'source_provenance' -> 'fact_review'");
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
     expect(recruitmentQueries).toContain("'AGGREGATOR_DISCOVERED'");
+    expect(recruitmentQueries).toContain("r.source_discovery_origin");
+    expect(recruitmentQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
+    expect(relatedQueries).toContain("r.source_discovery_origin");
+    expect(relatedQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
+    expect(leafComponent).toContain("notificationLinkVerified && applicationLinkVerified");
+    expect(leafComponent).toContain("isManuallyVerifiedOfficialLink(post.officialLinkSource)");
     expect(sitemap).toContain("COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'");
     expect(sitemap).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
     expect(sitemap).toContain("r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'");
