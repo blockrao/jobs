@@ -8,7 +8,7 @@ import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql, recruitmentIsOpe
 
 // Recruitments quarantined by the data-integrity process are not public pages.
 // (verification_status is a live DB column not yet mirrored in the Drizzle schema.)
-const notQuarantined = sql`${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED'`;
+const notQuarantined = sql`${recruitments}.verification_status IS DISTINCT FROM 'QUARANTINED' AND private.is_recruitment_publicly_trusted(${recruitments}.id)`;
 
 /**
  * Get recruitment by slug
@@ -534,7 +534,7 @@ export interface RecruitmentListRow {
 }
 
 /** Recruitments whose organisation/identity could not be established are hidden everywhere. */
-export const NOT_QUARANTINED_SQL = sql`r.verification_status IS DISTINCT FROM 'QUARANTINED'`;
+export const NOT_QUARANTINED_SQL = sql`r.verification_status IS DISTINCT FROM 'QUARANTINED' AND private.is_recruitment_publicly_trusted(r.id)`;
 
 const LIVE_RECRUITMENT_SQL = recruitmentIsLiveSql(sql`r.status`, sql`r.application_end_date`);
 const OPEN_RECRUITMENT_SQL = recruitmentIsOpenSql(sql`r.status`, sql`r.application_end_date`);
