@@ -16,6 +16,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { deriveLifecycle, type Lifecycle } from "@/lib/lifecycle";
+import { hasHighConfidenceIssuerOrganizationMismatch } from "@/lib/organization-identity";
 
 /** Every organization is indexable regardless of recruitment count. */
 export const ORG_INDEX_MIN_RECRUITMENTS = 0;
@@ -74,6 +75,9 @@ type RecruitmentRow = {
   post_count: number;
   exam_slug: string | null;
   exam_name: string | null;
+  organisation_name: string;
+  enrichment_source: string | null;
+  institution_name: string | null;
 };
 
 type RoleRow = { name: string; recruitment_count: number; salary_min: number | null; salary_max: number | null };
@@ -93,34 +97,51 @@ function toDate(v: Date | string | null | undefined): Date | null {
 export async function getOrganizationStats(organizationId: number, now = new Date()): Promise<OrganizationStats> {
   const db = getDb();
 
-  const [recResult, roleResult] = await Promise.all([
-    db.execute(sql`
-      SELECT r.id, r.slug, r.name, r.status, r.notification_date, r.application_end_date,
-             r.total_vacancies,
-             (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count,
-             e.slug AS exam_slug, e.label AS exam_name
-      FROM recruitments r
-      LEFT JOIN exams e ON e.id = r.exam_id
-      WHERE r.organization_id = ${organizationId}
-        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-      ORDER BY r.application_end_date DESC NULLS LAST, r.notification_date DESC NULLS LAST, r.id DESC
-    `),
-    db.execute(sql`
-      SELECT p.name,
-             count(DISTINCT p.recruitment_id)::int AS recruitment_count,
-             min(p.salary_min)::int AS salary_min,
-             max(p.salary_max)::int AS salary_max
-      FROM posts p
-      JOIN recruitments r ON r.id = p.recruitment_id
-      WHERE r.organization_id = ${organizationId}
-        AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-      GROUP BY p.name
-      ORDER BY recruitment_count DESC, p.name ASC
-      LIMIT 60
-    `),
-  ]);
+  const recResult = await db.execute(sql`
+    SELECT r.id, r.slug, r.name, r.status, r.notification_date, r.application_end_date,
+           r.total_vacancies,
+           (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count,
+           e.slug AS exam_slug, e.label AS exam_name,
+           o.name AS organisation_name,
+           r.enrichment_data -> 'meta' ->> 'source' AS enrichment_source,
+           r.enrichment_data -> 'institution' ->> 'name' AS institution_name
+    FROM recruitments r
+    JOIN organizations o ON o.id = r.organization_id
+    LEFT JOIN exams e ON e.id = r.exam_id
+    WHERE r.organization_id = ${organizationId}
+      AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+    ORDER BY r.application_end_date DESC NULLS LAST, r.notification_date DESC NULLS LAST, r.id DESC
+  `);
 
-  const recruitments: OrgRecruitment[] = rowsOf<RecruitmentRow>(recResult).map((r) => {
+  // A source-captured issuer name that conflicts with the linked organisation
+  // is not attributed to this organisation until the relationship is reviewed.
+  const eligibleRows = rowsOf<RecruitmentRow>(recResult).filter((r) =>
+    !hasHighConfidenceIssuerOrganizationMismatch({
+      source: r.enrichment_source,
+      institutionName: r.institution_name,
+      recruitmentName: r.name,
+      organizationName: r.organisation_name,
+    })
+  );
+  const eligibleIds = eligibleRows.map((r) => r.id);
+  const roleResult = eligibleIds.length > 0
+    ? await db.execute(sql`
+        SELECT p.name,
+               count(DISTINCT p.recruitment_id)::int AS recruitment_count,
+               min(p.salary_min)::int AS salary_min,
+               max(p.salary_max)::int AS salary_max
+        FROM posts p
+        JOIN recruitments r ON r.id = p.recruitment_id
+        WHERE r.organization_id = ${organizationId}
+          AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND r.id IN (${sql.join(eligibleIds.map((id) => sql`${id}`), sql`, `)})
+        GROUP BY p.name
+        ORDER BY recruitment_count DESC, p.name ASC
+        LIMIT 60
+      `)
+    : [];
+
+  const recruitments: OrgRecruitment[] = eligibleRows.map((r) => {
     const lifecycle = deriveLifecycle(r.status, r.application_end_date, now);
     return {
       id: r.id,
@@ -136,6 +157,13 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
       lifecycle,
     };
   });
+
+  const roles: OrgPostRole[] = rowsOf<RoleRow>(roleResult).map((r) => ({
+    name: r.name,
+    recruitmentCount: r.recruitment_count,
+    salaryMin: r.salary_min,
+    salaryMax: r.salary_max,
+  }));
 
   const live = recruitments
     .filter((r) => r.lifecycle.isLive)
@@ -157,13 +185,6 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
     .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
   const nextDeadline = live.find((r) => r.lifecycle.deadline)?.lifecycle.deadline ?? null;
-
-  const roles: OrgPostRole[] = rowsOf<RoleRow>(roleResult).map((r) => ({
-    name: r.name,
-    recruitmentCount: r.recruitment_count,
-    salaryMin: r.salary_min,
-    salaryMax: r.salary_max,
-  }));
 
   const examMap = new Map<string, OrgExam>();
   for (const r of recruitments) {

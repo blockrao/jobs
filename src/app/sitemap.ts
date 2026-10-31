@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { ORG_INDEX_MIN_RECRUITMENTS } from "@/lib/organizations/stats";
 import { UNRESOLVED_ORG_NAME, UNRESOLVED_ORG_SLUG } from "@/lib/organizations/unresolved";
+import { hasHighConfidenceIssuerOrganizationMismatch } from "@/lib/organization-identity";
 import { getAllHubs } from "@/data/hubs-metadata";
 import { QUALIFICATIONS } from "@/lib/qualifications";
 import { STATES } from "@/lib/states/states";
@@ -28,7 +29,7 @@ import { STATES } from "@/lib/states/states";
 // configured runtime connection and never publishes a partial build-time snapshot.
 export const dynamic = "force-dynamic";
 
-type HubRow = { slug: string; status: string; application_end_date: Date | string | null; updated_at: Date | string | null };
+type HubRow = { slug: string; status: string; application_end_date: Date | string | null; updated_at: Date | string | null; recruitment_name: string; organisation_name: string | null; institution_name: string | null; enrichment_source: string | null };
 type LeafRow = HubRow & { post_slug: string; post_updated_at: Date | string | null };
 
 function toDate(v: Date | string | null | undefined): Date {
@@ -103,7 +104,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const db = getDb();
     const [hubResult, leafResult, orgResult, examResult] = await Promise.all([
       db.execute(sql`
-        SELECT r.slug, r.status::text AS status, r.application_end_date, r.updated_at
+        SELECT r.slug, r.status::text AS status, r.application_end_date, r.updated_at,
+               r.name AS recruitment_name, ro.name AS organisation_name,
+               r.enrichment_data -> 'institution' ->> 'name' AS institution_name,
+               r.enrichment_data -> 'meta' ->> 'source' AS enrichment_source
         FROM recruitments r
         JOIN organizations ro ON ro.id = r.organization_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
@@ -120,6 +124,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       `),
       db.execute(sql`
         SELECT r.slug, r.status::text AS status, r.application_end_date, r.updated_at,
+               r.name AS recruitment_name, ro.name AS organisation_name,
+               r.enrichment_data -> 'institution' ->> 'name' AS institution_name,
+               r.enrichment_data -> 'meta' ->> 'source' AS enrichment_source,
                p.slug AS post_slug, p.updated_at AS post_updated_at
         FROM posts p
         INNER JOIN recruitments r ON r.id = p.recruitment_id
@@ -145,7 +152,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       db.execute(sql`SELECT slug, created_at FROM exams ORDER BY id`),
     ]);
 
-    const hubs = rowsOf<HubRow>(hubResult).map((h) => {
+    const hubs = rowsOf<HubRow>(hubResult)
+      .filter((h) => !hasHighConfidenceIssuerOrganizationMismatch({
+        source: h.enrichment_source,
+        institutionName: h.institution_name,
+        recruitmentName: h.recruitment_name,
+        organizationName: h.organisation_name,
+      }))
+      .map((h) => {
       const live = deriveLifecycle(h.status, h.application_end_date).isLive;
       return {
         url: `${SITE_URL}/jobs/${h.slug}`,
@@ -155,7 +169,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-    const leaves = rowsOf<LeafRow>(leafResult).map((l) => {
+    const leaves = rowsOf<LeafRow>(leafResult)
+      .filter((l) => !hasHighConfidenceIssuerOrganizationMismatch({
+        source: l.enrichment_source,
+        institutionName: l.institution_name,
+        recruitmentName: l.recruitment_name,
+        organizationName: l.organisation_name,
+      }))
+      .map((l) => {
       const live = deriveLifecycle(l.status, l.application_end_date).isLive;
       return {
         url: `${SITE_URL}/jobs/${l.slug}/${l.post_slug}`,

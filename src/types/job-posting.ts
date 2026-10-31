@@ -13,7 +13,7 @@ export interface JobPostingData {
   /** DB position_id — used for position hub linking. */
   positionId?: number | null;
   organizationId: string;
-  organizationName: string;
+  organizationName: string | null;
   /** Canonical organization slug; null when the recruitment has no resolved organization. */
   organizationSlug?: string | null;
   /** org_sector of the issuing body; PRIVATE = unresolved (data quality signal). */
@@ -59,6 +59,9 @@ export interface JobPostingData {
   officialSourceRegistryUrl?: string | null;
   officialSourceVerified?: boolean;
   officialApplicationVerified?: boolean;
+  recruitmentEnrichmentSource?: string | null;
+  recruitmentInstitutionName?: string | null;
+  organizationIdentityMismatch?: boolean;
 
   // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
   vacancyTotal?: number | null;

@@ -50,7 +50,7 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   const applicationWindowEnded = lifecycle.state === "closed" || lifecycle.state === "results" || lifecycle.state === "archived";
   const qualification = post.fjaExtract?.qualificationRaw ?? null;
 
-  const displayOrganizationName = isUnresolvedOrganization(post.organizationName) ? null : post.organizationName;
+  const displayOrganizationName = post.organizationIdentityMismatch === true || isUnresolvedOrganization(post.organizationName) ? null : post.organizationName;
   const titleParts = [post.title];
   if (displayOrganizationName) titleParts.push(`– ${displayOrganizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
   else if (post.recruitmentName) titleParts.push(`– ${post.recruitmentName}`);
@@ -93,7 +93,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: generateAlternates(post.recruitmentSlug, post.slug),
     openGraph: { title, description, type: "article" },
     twitter: { card: "summary", title, description },
-    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) }),
+    ...pageSeo(`/jobs/${post.recruitmentSlug}/${post.slug}`, { index: post.organizationIdentityMismatch !== true && !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug) }),
   };
 }
 
@@ -139,7 +139,7 @@ export default async function JobDetailPage({ params }: Props) {
     String(post.recruitmentId),
     post.slug,
     post.title,
-    post.organizationId ? String(post.organizationId) : undefined,
+    post.organizationIdentityMismatch === true || !post.organizationId ? undefined : String(post.organizationId),
     post.locationState ?? undefined,
     3
   );
@@ -151,7 +151,7 @@ export default async function JobDetailPage({ params }: Props) {
   // Fetch pillar slug for organization (Phase 2)
   let pillarSlug: string | null = null;
   let organizationWebsite: string | null = null;
-  if (post.organizationId) {
+  if (post.organizationId && post.organizationIdentityMismatch !== true) {
     try {
       const { getDb } = await import("@/db");
       const { eq } = await import("drizzle-orm");
@@ -176,9 +176,9 @@ export default async function JobDetailPage({ params }: Props) {
         id: post.id,
         title: post.title,
         description: post.description,
-        organizationName: isUnresolvedOrganization(post.organizationName) ? null : post.organizationName,
-        organizationType: post.organizationSector,
-        organizationWebsite,
+        organizationName: post.organizationIdentityMismatch === true || isUnresolvedOrganization(post.organizationName) ? null : post.organizationName,
+        organizationType: post.organizationIdentityMismatch === true ? null : post.organizationSector,
+        organizationWebsite: post.organizationIdentityMismatch === true ? null : organizationWebsite,
         locationCity: post.locationCity,
         locationState: post.locationState,
         recruitmentSlug: post.recruitmentSlug,
@@ -302,7 +302,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
+      indexable={post.organizationIdentityMismatch !== true && !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
     />
   );
 }

@@ -115,7 +115,7 @@ describe("extracted source projection", () => {
     // Canonical and robots go through src/lib/seo (CAN-05): self-canonical, indexable.
     // Indexable unless the issuing organisation is still unidentified (placeholder org).
     expect(route).toContain("const hasCanonicalPostLeaf = posts.some(");
-    expect(route).toContain("index: hasCanonicalPostLeaf && !isUnresolvedOrganization(recruitment.organizationSlug)");
+    expect(route).toContain("index: hasCanonicalPostLeaf && recruitment.organizationIdentityMismatch !== true && !isUnresolvedOrganization(recruitment.organizationSlug)");
     expect(route).toContain("pageSeo(`/jobs/${recruitment.slug}`");
     // Only a legacy slug (recruitment_slug_redirects) redirects; smart resolution renders in place.
     expect(route).toMatch(/if \(data\.resolutionMethod === "legacy-redirect"\) \{\s*permanentRedirect\(`\/jobs\/\$\{data\.recruitment\.slug\}`\);/);
