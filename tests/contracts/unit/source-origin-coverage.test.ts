@@ -114,4 +114,40 @@ describe("complete persisted source-origin coverage", () => {
       metadata,
     })).toBe(false);
   });
+  it("rejects a review that omits a declared required fact key", () => {
+    const reviewedAt = new Date(Date.now() - 60_000).toISOString();
+    const metadata = {
+      source_provenance: {
+        authority_review: {
+          status: "VERIFIED",
+          evidence_url: "https://official.example.gov/notice",
+          reviewed_by: "reviewer",
+          reviewed_at: reviewedAt,
+          notes: "Issuer checked.",
+        },
+        fact_review: {
+          status: "VERIFIED",
+          reviewed_by: "reviewer",
+          reviewed_at: reviewedAt,
+          notes: "Facts checked.",
+          required_fields: ["hub:notification_date", "hub:application_end_date"],
+          reviewed_fields: ["hub:notification_date"],
+          evidence: {
+            "hub:notification_date": {
+              evidence_ref: "https://official.example.gov/notice#page-1",
+              excerpt: "Notification published on the stated date.",
+            },
+          },
+        },
+      },
+    };
+
+    expect(isRecruitmentSourceTrusted({
+      sourceDiscoveryOrigin: "AGGREGATOR_DISCOVERED",
+      verificationStatus: "VERIFIED",
+      officialLinkSource: "MANUAL_VERIFIED",
+      metadata,
+    })).toBe(false);
+  });
+
 });
