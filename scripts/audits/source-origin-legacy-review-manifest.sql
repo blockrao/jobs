@@ -119,6 +119,99 @@ SELECT
 FROM manifest;
 
 -- 2) Recruitment-level review manifest. Deterministic one-row-per-hub queue.
+WITH legacy_posting_origin AS (
+  SELECT DISTINCT r.id AS recruitment_id
+  FROM public.recruitments r
+  JOIN public.postings sp
+    ON sp.inferred_recruitment_id = r.id
+    OR EXISTS (
+      SELECT 1
+      FROM public.posts mapped_post
+      WHERE mapped_post.id = sp.inferred_post_id
+        AND mapped_post.recruitment_id = r.id
+    )
+  WHERE lower(coalesce(sp.source, '')) IN (
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+    )
+    OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
+    OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
+    OR EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements_text(
+        CASE
+          WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
+            THEN sp.source_portals
+          ELSE '[]'::jsonb
+        END
+      ) AS portal(value)
+      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+    )
+),
+post_origin AS (
+  SELECT DISTINCT p.recruitment_id
+  FROM public.posts p
+  WHERE lower(coalesce(p."sourceName", '')) IN (
+      'aggregator','freejobalert','aggregator_extracted','pilot_preliminary'
+    )
+    OR lower(coalesce(p."sourceReference", '')) LIKE '%freejobalert.com%'
+    OR lower(coalesce(p.original_recruitment_url, '')) LIKE '%freejobalert.com%'
+    OR lower(coalesce(p."originalRecruitmentUrl", '')) LIKE '%freejobalert.com%'
+),
+candidates AS (
+  SELECT
+    r.id,
+    r.slug,
+    r.name,
+    r.organization_id,
+    r.status::text AS lifecycle_status,
+    r.year,
+    r.verification_status,
+    r.official_link_source,
+    r.official_notification_url,
+    r.official_application_url,
+    r.source_url,
+    r.notification_date,
+    r.application_start_date,
+    r.application_end_date,
+    r.metadata ->> 'ingest_batch' AS ingest_batch,
+    r.enrichment_data -> 'meta' ->> 'source' AS enrichment_source,
+    r.enrichment_data -> 'meta' ->> 'verified' AS enrichment_meta_verified,
+    (r.enrichment_data -> 'meta' ->> 'source') IN (
+      'institutional_aggregation','institution_aggregation','fja_html'
+    ) AS has_recruitment_metadata_signal,
+    lower(coalesce(r.official_link_source, '')) IN (
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+    ) AS has_official_link_signal,
+    EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id) AS has_post_signal,
+    EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id) AS has_legacy_posting_signal
+  FROM public.recruitments r
+  WHERE r.enrichment_data -> 'meta' ->> 'source' IN (
+      'institutional_aggregation','institution_aggregation','fja_html'
+    )
+    OR lower(coalesce(r.official_link_source, '')) IN (
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+    )
+    OR lower(coalesce(r.source_url, '')) LIKE '%freejobalert.com%'
+    OR EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id)
+    OR EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id)
+),
+manifest AS (
+  SELECT
+    c.*,
+    EXISTS (
+      SELECT 1
+      FROM public.official_digest_promote d
+      WHERE d.batch = c.ingest_batch
+        AND d.hub ->> 'official_url' = c.official_notification_url
+    ) AS has_staging_match,
+    (SELECT count(*) FROM public.posts p
+      WHERE p.recruitment_id = c.id
+        AND p.posting_status IS DISTINCT FROM 'DUPLICATE') AS canonical_post_count,
+    (SELECT count(*) FROM public.posts p
+      WHERE p.recruitment_id = c.id) AS all_post_rows
+  FROM candidates c
+)
+
 SELECT
   id AS recruitment_id,
   slug AS recruitment_slug,
