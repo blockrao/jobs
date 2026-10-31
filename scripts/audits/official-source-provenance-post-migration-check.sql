@@ -51,24 +51,97 @@ FROM public.eligibilities e
 JOIN public.posts p ON p.id = e.post_id
 JOIN public.recruitments r ON r.id = p.recruitment_id;
 
--- This count must be zero for each fact family after an approved review.
+-- This count must be zero for unreviewed aggregator records. Approved records
+-- may retain evidence only when both reviews and the manual link state are VERIFIED.
 SELECT
   'education' AS fact_family,
-  count(*) AS rows_missing_evidence
+  count(*) AS stale_evidence_rows
 FROM public.posts_education e
 JOIN public.posts p ON p.id = e.post_id
 JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-  AND e.verified_at IS NOT NULL
-  AND (e.source_ref IS NULL OR e.source_locator IS NULL)
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
 UNION ALL
-SELECT
-  'experience',
-  count(*)
+SELECT 'experience', count(*)
 FROM public.posts_experience e
 JOIN public.posts p ON p.id = e.post_id
 JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-  AND e.verified_at IS NOT NULL
-  AND (e.source_ref IS NULL OR e.source_locator IS NULL)
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'vacancies', count(*)
+FROM public.posts_vacancies e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'selection_process', count(*)
+FROM public.posts_selection_process e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'documents', count(*)
+FROM public.posts_documents e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'important_dates', count(*)
+FROM public.posts_important_dates e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'age_rules', count(*)
+FROM public.post_age_rules e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'application_fees', count(*)
+FROM public.posts_application_fee e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
+UNION ALL
+SELECT 'official_links', count(*)
+FROM public.posts_official_links e
+JOIN public.posts p ON p.id = e.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND (r.verification_status IS DISTINCT FROM 'VERIFIED'
+    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED')
+  AND (e.verified_at IS NOT NULL OR e.source_ref IS NOT NULL OR e.source_locator IS NOT NULL)
 ORDER BY fact_family;
