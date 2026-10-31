@@ -505,10 +505,13 @@ export function buildHubData(
   const applyCandidate = publicLink(str(recruitment.officialApplicationUrl) ?? str(recruitment.applyUrl));
   const applyUrl = applyCandidate && applyCandidate !== notificationUrl ? applyCandidate : null;
   const officialWebsiteUrl = orgWebsite && orgWebsite !== notificationUrl && orgWebsite !== applyUrl ? orgWebsite : null;
+  const officialLinksVerified = isManuallyVerifiedOfficialLink(recruitment.officialLinkSource);
+  const applicationLinkLabel = officialLinksVerified ? 'Apply online' : 'Application link (not manually verified)';
+  const notificationLinkLabel = officialLinksVerified ? 'Official notification' : 'Notification link (not manually verified)';
 
   const links: LinkRow[] = [];
-  if (applyUrl && !closed) links.push({ label: 'Apply online', href: applyUrl });
-  if (notificationUrl) links.push({ label: 'Notification PDF', href: notificationUrl });
+  if (applyUrl && !closed) links.push({ label: applicationLinkLabel, href: applyUrl });
+  if (notificationUrl) links.push({ label: notificationLinkLabel, href: notificationUrl });
   if (officialWebsiteUrl) links.push({ label: 'Official website', href: officialWebsiteUrl });
 
   const waText = encodeURIComponent(
@@ -579,10 +582,10 @@ export function buildHubData(
   const officialApplicationUrlValue = publicLink(str(recruitment.officialApplicationUrl));
   if (officialApplicationUrlValue && officialApplicationUrlValue !== notificationUrl) {
     glance.push({
-      label: 'Official portal',
+      label: officialLinksVerified ? 'Official portal' : 'Application portal (not manually verified)',
       value: officialApplicationUrlValue,
       href: officialApplicationUrlValue,
-      verificationNote: recruitment.officialLinkSource === 'MANUAL_VERIFIED' ? 'verified' : undefined,
+      verificationNote: officialLinksVerified ? 'verified' : 'not manually verified',
     });
   }
 
@@ -622,12 +625,14 @@ export function buildHubData(
   const hasTimeline = timeline.some((t) => t.date);
 
   // ── Source & verification ────────────────────────────────────────────────
-  const verificationLine = verified
-    ? 'Verified against the official notification PDF.'
-    : sourceFactsUnverified
-    ? 'Facts marked "reported" come from the source listing and have not been verified against the official notification.'
+  const verificationLine = sourceFactsUnverified
+    ? 'Recruitment details are under verification; unverified source-listing facts are not presented as confirmed.'
+    : notificationUrl && officialLinksVerified
+    ? verified
+      ? 'Facts reviewed against a manually verified official notification.'
+      : 'The notification link is manually verified; individual fact fields may still be incomplete.'
     : notificationUrl
-    ? 'Facts read from the official notification. Not yet independently verified.'
+    ? 'A notification link is available, but it has not been manually verified as an issuing-authority source.'
     : 'Official notification link not on record for this recruitment.';
   const discoverySourceUrl = publicLink(recruitment.sourceExtract?.sourceUrl ?? null);
 
