@@ -319,22 +319,11 @@ export async function getRecruitmentWithPosts(slug: string) {
     const postIds = postsResult.map((r) => r.post.id);
     console.log(`[getRecruitmentWithPosts] Extracted ${postIds.length} post IDs: ${postIds.join(", ")}`);
 
-    // Step 3: Fetch ALL vacancies, eligibilities, and age rules in parallel, not per-post
-    // This eliminates N+1 queries: one query for all vacancies, one for all eligibilities, one for all age rules, one for posts vacancies
-    console.log(`[getRecruitmentWithPosts] About to fetch related data (vacancies, eligibilities, age rules) for ${postIds.length} posts`);
-    console.log(`[getRecruitmentWithPosts] Starting Promise.all for: vacancies, eligibilities, age rules, posts_vacancies, source_inventory...`);
-    const [allVacancies, allEligibilities, allAgeRules, allPostsVacancies, sourcePostInventoryResult] = await Promise.all([
+    // Step 3: Fetch only fact rows with explicit issuer evidence.
+    // The legacy vacancies table has no provenance fields and is not publishable.
+    console.log(`[getRecruitmentWithPosts] Fetching verified eligibility, age and vacancy facts for ${postIds.length} posts`);
+    const [allEligibilities, allAgeRules, allPostsVacancies, sourcePostInventoryResult] = await Promise.all([
       (async () => {
-        console.log(`[getRecruitmentWithPosts] Fetching vacancies...`);
-        const result = await db
-          .select()
-          .from(vacancies)
-          .where(inArray(vacancies.postId, postIds));
-        console.log(`[getRecruitmentWithPosts] Vacancies fetch complete: ${result.length} records`);
-        return result;
-      })(),
-      (async () => {
-        console.log(`[getRecruitmentWithPosts] Fetching eligibilities...`);
         const result = await db
           .select()
           .from(eligibilities)
@@ -346,32 +335,37 @@ export async function getRecruitmentWithPosts(slug: string) {
             isNotNull(eligibilities.sourceRef),
             isNotNull(eligibilities.sourceLocator),
           ));
-        console.log(`[getRecruitmentWithPosts] Eligibilities fetch complete: ${result.length} records`);
         return result;
       })(),
       (async () => {
-        console.log(`[getRecruitmentWithPosts] Fetching age rules...`);
         const result = await db
           .select()
           .from(postAgeRules)
-          .where(inArray(postAgeRules.postId, postIds));
-        console.log(`[getRecruitmentWithPosts] Age rules fetch complete: ${result.length} records`);
+          .where(and(
+            inArray(postAgeRules.postId, postIds),
+            isNotNull(postAgeRules.verifiedAt),
+            isNotNull(postAgeRules.sourceRef),
+            isNotNull(postAgeRules.sourceLocator),
+          ));
         return result;
       })(),
       (async () => {
-        console.log(`[getRecruitmentWithPosts] Fetching posts_vacancies...`);
         const result = await db
           .select()
           .from(postsVacancies)
-          .where(inArray(postsVacancies.postId, postIds));
-        console.log(`[getRecruitmentWithPosts] Posts_vacancies fetch complete: ${result.length} records`);
+          .where(and(
+            inArray(postsVacancies.postId, postIds),
+            isNotNull(postsVacancies.verifiedAt),
+            isNotNull(postsVacancies.sourceRef),
+            isNotNull(postsVacancies.sourceLocator),
+          ));
         return result;
       })(),
       // fja_post_inventory was dropped (aggregator data removed 2026-10-24).
       Promise.resolve([] as Array<Record<string, unknown>>),
     ]);
 
-    console.log(`[getRecruitmentWithPosts] Successfully fetched: ${allVacancies.length} vacancies, ${allEligibilities.length} eligibilities, ${allAgeRules.length} age rules`);
+    console.log(`[getRecruitmentWithPosts] Verified fact rows: ${allEligibilities.length} eligibility, ${allAgeRules.length} age-rule, ${allPostsVacancies.length} vacancy`);
 
     // Step 4: Group vacancies, eligibilities, age rules, and posts vacancies by post ID (client-side)
     const vacanciesByPostId = new Map<number, typeof allVacancies>();
