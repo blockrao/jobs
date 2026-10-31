@@ -583,7 +583,7 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    const isAggregatorDiscovered = data.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED";
+    const isAggregatorDiscovered = data.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" || (data.recruitmentSourceDiscoveryOrigin == null && data.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED");
     const sourceProvenance = (data.recruitmentMetadata as any)?.source_provenance;
     const reviewedFields: string[] = Array.isArray(sourceProvenance?.fact_review?.reviewed_fields)
       ? sourceProvenance.fact_review.reviewed_fields
@@ -598,7 +598,7 @@ export async function getPostBySlug(
     // Transform raw JSONB enrichment to canonical EnrichmentSchema. The
     // transformer also requires explicit per-post review keys for child facts.
     const transformedEnrichment = transformEnrichment(enrichmentJsonb, {
-      sourceOrigin: data.recruitmentSourceDiscoveryOrigin,
+      sourceOrigin: data.recruitmentSourceDiscoveryOrigin ?? (data.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED" ? "AGGREGATOR_DISCOVERED" : null),
       postName: data.title,
     });
 
