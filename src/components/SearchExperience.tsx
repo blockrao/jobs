@@ -157,10 +157,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
 
   useEffect(() => {
     suggestionController.current?.abort();
-    setSuggestions([]);
-    setActiveSuggestion(-1);
     if (query.trim().length < 3) {
-      setSuggestions([]);
       return;
     }
     const controller = new AbortController();
@@ -216,7 +213,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
               id="job-search-query"
               type="search"
               value={query}
-              onChange={(event) => { setQuery(event.target.value); setSuggestionsOpen(true); setActiveSuggestion(-1); }}
+              onChange={(event) => { setQuery(event.target.value); setSuggestions([]); setSuggestionsOpen(true); setActiveSuggestion(-1); }}
               onFocus={() => setSuggestionsOpen(true)}
               onKeyDown={onQueryKeyDown}
               placeholder="Try “SSC CGL”, “B.Tech jobs in Haryana”, “Railway clerk”…"
