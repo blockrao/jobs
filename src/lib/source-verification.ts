@@ -51,9 +51,10 @@ function isHttpsUrl(value: unknown): boolean {
 function isFjaUrl(value: unknown): boolean {
   if (!nonEmpty(value)) return false;
   try {
-    const normalized = value.startsWith("//") ? `https:${value}`
-      : /^https?:\/\//i.test(value) ? value
-      : `https://${value}`;
+    const candidate = value.trim();
+    const normalized = candidate.startsWith("//") ? `https:${candidate}`
+      : /^https?:\/\//i.test(candidate) ? candidate
+      : `https://${candidate}`;
     const url = new URL(normalized);
     return (url.protocol === "https:" || url.protocol === "http:")
       && (url.hostname === "freejobalert.com" || url.hostname.endsWith(".freejobalert.com"));
