@@ -119,7 +119,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
   };
 
   return (
-    <main className="bg-slate-50/70">
+    <div className="bg-slate-50/70">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
 
@@ -398,6 +398,6 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }
