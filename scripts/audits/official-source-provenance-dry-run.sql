@@ -9,7 +9,7 @@ WITH digest_posts AS (
   WHERE p.decomposition_source = 'official_digest_20261015'
 ),
 digest_recruitments AS (
-  SELECT DISTINCT r.id, r.slug, r.verification_status, r.official_link_source
+  SELECT DISTINCT r.id, r.slug, r.verification_status, r.source_discovery_origin, r.official_link_source
   FROM public.recruitments r
   JOIN digest_posts dp ON dp.recruitment_id = r.id
 )
@@ -18,7 +18,8 @@ SELECT
   (SELECT count(*) FROM digest_recruitments) AS digest_recruitments,
   (SELECT count(*) FROM digest_recruitments
     WHERE verification_status = 'VERIFIED'
-      AND official_link_source = 'AGGREGATOR_DISCOVERED') AS contradictory_verified_recruitments;
+      AND source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      AND official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED') AS contradictory_verified_recruitments;
 
 -- 2) Education/experience observations sourced from the now-empty legacy inventory.
 SELECT
@@ -49,7 +50,8 @@ WHERE px.source = 'fja_post_inventory';
 -- This demonstrates why the parent recruitment source label alone is insufficient.
 SELECT
   'education' AS fact_type,
-  COALESCE(r.official_link_source, 'NULL') AS recruitment_source,
+  COALESCE(r.source_discovery_origin, 'NULL') AS recruitment_discovery_origin,
+  COALESCE(r.official_link_source, 'NULL') AS official_link_verification_state,
   COALESCE(r.verification_status, 'NULL') AS recruitment_verification_status,
   count(*) AS fact_rows,
   count(DISTINCT p.id) AS posts,
@@ -62,6 +64,7 @@ GROUP BY 1,2,3
 UNION ALL
 SELECT
   'experience',
+  COALESCE(r.source_discovery_origin, 'NULL'),
   COALESCE(r.official_link_source, 'NULL'),
   COALESCE(r.verification_status, 'NULL'),
   count(*),
@@ -215,11 +218,13 @@ SELECT
   r.slug,
   r.name,
   r.official_notification_url,
+  r.source_discovery_origin,
   r.official_link_source,
   r.verification_status,
   r.last_verified_at,
   r.metadata
 FROM public.recruitments r
-WHERE r.official_link_source = 'AGGREGATOR_DISCOVERED'
+WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   AND r.verification_status = 'VERIFIED'
+  AND r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
 ORDER BY r.id;
