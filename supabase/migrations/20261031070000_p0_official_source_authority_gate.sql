@@ -1429,6 +1429,7 @@ BEGIN
       AND public.official_digest_posts_match_recruitment(
         r.id, d.post_ids, d.posts
       )
+      AND NEW."sourceVerificationDate" = d.fact_reviewed_at
   ) INTO v_review_ok;
 
   IF NOT v_review_ok AND EXISTS (
@@ -1439,6 +1440,7 @@ BEGIN
       AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
   ) THEN
     NEW."sourceVerificationStatus" := 'UNVERIFIABLE';
+    NEW."sourceVerificationDate" := NULL;
   END IF;
 
   RETURN NEW;
@@ -1448,7 +1450,7 @@ $$;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_enrichment_verification
   ON public.post_enrichments;
 CREATE TRIGGER trg_guard_aggregator_discovered_enrichment_verification
-BEFORE INSERT OR UPDATE OF post_id, "sourceVerificationStatus"
+BEFORE INSERT OR UPDATE OF post_id, "sourceVerificationStatus", "sourceVerificationDate"
 ON public.post_enrichments
 FOR EACH ROW
 EXECUTE FUNCTION public.guard_aggregator_discovered_enrichment_verification();
@@ -1517,6 +1519,7 @@ BEGIN
         AND nullif(btrim(v_expected_locator), '') IS NOT NULL
         AND NEW.source_type = 'OFFICIAL_NOTIFICATION'
         AND NEW.verified_at IS NOT NULL
+        AND NEW.verified_at = v_review.fact_reviewed_at
         AND NEW.source_ref = v_review.authority_evidence_url
         AND NEW.source_locator = v_expected_locator;
 
