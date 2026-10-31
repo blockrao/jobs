@@ -430,6 +430,30 @@ BEGIN
       WHERE e.post_id = p.id
         AND p.recruitment_id = NEW.id
         AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':eligibility'];
+
+      UPDATE public.posts_education e
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':education'
+          ) ->> 'evidence_ref',
+          updated_at = now()
+      FROM public.posts p
+      WHERE e.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':education'];
+
+      UPDATE public.posts_experience x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':experience'
+          ) ->> 'evidence_ref',
+          updated_at = now()
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':experience'];
     END IF;
   END IF;
 
