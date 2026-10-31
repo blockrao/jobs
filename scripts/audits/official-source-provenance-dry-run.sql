@@ -45,7 +45,36 @@ FROM public.posts_experience px
 JOIN public.posts p ON p.id = px.post_id
 WHERE px.source = 'fja_post_inventory';
 
--- 3) Row-level remediation manifest. Review every row against its own issuer notice;
+-- 3) Parent source/status distribution for FJA-derived child facts.
+-- This demonstrates why the parent recruitment source label alone is insufficient.
+SELECT
+  'education' AS fact_type,
+  COALESCE(r.official_link_source, 'NULL') AS recruitment_source,
+  COALESCE(r.verification_status, 'NULL') AS recruitment_verification_status,
+  count(*) AS fact_rows,
+  count(DISTINCT p.id) AS posts,
+  count(DISTINCT r.id) AS recruitments
+FROM public.posts_education pe
+JOIN public.posts p ON p.id = pe.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE pe.source = 'fja_post_inventory'
+GROUP BY 1,2,3
+UNION ALL
+SELECT
+  'experience',
+  COALESCE(r.official_link_source, 'NULL'),
+  COALESCE(r.verification_status, 'NULL'),
+  count(*),
+  count(DISTINCT p.id),
+  count(DISTINCT r.id)
+FROM public.posts_experience px
+JOIN public.posts p ON p.id = px.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE px.source = 'fja_post_inventory'
+GROUP BY 1,2,3
+ORDER BY fact_type, fact_rows DESC;
+
+-- 4) Row-level remediation manifest. Review every row against its own issuer notice;
 -- repeated text is a risk signal, not proof that an individual fact is incorrect.
 SELECT
   r.id AS recruitment_id,
@@ -88,7 +117,7 @@ JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE px.source = 'fja_post_inventory'
 ORDER BY recruitment_id, post_id, review_action, fact_id;
 
--- 4) Recruitment-level verification contradictions for individual review.
+-- 5) Recruitment-level verification contradictions for individual review.
 SELECT
   r.id,
   r.slug,
