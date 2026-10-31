@@ -92,7 +92,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const unverifiedAggregator = isUnverifiedAggregatorSource(
-    post.recruitmentOfficialLinkSource,
+    post.recruitmentSourceDiscoveryOrigin,
     post.recruitmentVerificationStatus,
     post.recruitmentMetadata,
   );
@@ -136,7 +136,7 @@ export default async function JobDetailPage({ params }: Props) {
   }
 
   const unverifiedAggregator = isUnverifiedAggregatorSource(
-    post.recruitmentOfficialLinkSource,
+    post.recruitmentSourceDiscoveryOrigin,
     post.recruitmentVerificationStatus,
     post.recruitmentMetadata,
   );
@@ -144,7 +144,7 @@ export default async function JobDetailPage({ params }: Props) {
   // Lifecycle and fact resolvers must not treat aggregator-derived dates or
   // statuses as authoritative while issuer-source verification is outstanding.
   const lifecycle = unverifiedAggregator ||
-    (post.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate)
+    (post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate)
     ? undefined
     : deriveLifecycle(
         post.postingStatus,
