@@ -15,11 +15,13 @@ describe("aggregator source trust gate", () => {
           evidence_url: "https://issuer.example/recruitment",
           reviewed_by: "reviewer",
           reviewed_at: "2026-10-31T10:00:00Z",
+          notes: "Issuer page cross-checked against the notice",
         },
         fact_review: {
           status: "VERIFIED",
           reviewed_by: "reviewer",
           reviewed_at: "2026-10-31T10:00:00Z",
+          notes: "All populated fields checked against the notice",
           reviewed_fields: ["hub:official_url"],
           evidence: { "hub:official_url": { evidence_ref: "PDF p.1", excerpt: "Official notice" } },
         },
@@ -27,6 +29,16 @@ describe("aggregator source trust gate", () => {
     };
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED")).toBe(true);
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", reviewedMetadata)).toBe(false);
+    const incompleteEvidence = {
+      source_provenance: {
+        ...reviewedMetadata.source_provenance,
+        fact_review: {
+          ...reviewedMetadata.source_provenance.fact_review,
+          evidence: {},
+        },
+      },
+    };
+    expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", incompleteEvidence)).toBe(true);
   });
 
   it("hides aggregator education and experience unless their individual fact keys were reviewed", () => {
