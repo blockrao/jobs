@@ -117,6 +117,11 @@ describe("sitemap", () => {
     expect(src).toMatch(/btrim\(p\.slug\) <> ''/);
   });
 
+  test("IDX-04i recruitment hubs require a valid non-duplicate canonical Post Leaf", async () => {
+    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
+    expect(src).toMatch(/AND EXISTS \\(\\s*SELECT 1\\s+FROM posts p\\s+WHERE p\\.recruitment_id = r\\.id\\s+AND p\\.posting_status IS DISTINCT FROM 'DUPLICATE'\\s+AND p\\.slug IS NOT NULL\\s+AND btrim\\(p\\.slug\\) <> ''\\s*\\)/);
+  });
+
   test("IDX-04g the organization query applies the same exclusions as the entity page (merged, quarantined, threshold)", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
     expect(src).toMatch(/merged_into_id IS NULL/);
