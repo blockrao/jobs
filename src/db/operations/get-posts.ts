@@ -43,6 +43,7 @@ type PostRow = Omit<
     recruitmentVerificationStatus: string | null;
     recruitmentOfficialLinkSource: string | null;
     recruitmentMetadata: Record<string, unknown> | null;
+    postSourceName: string | null;
     recruitmentApplicationStartDate: RawDate;
     recruitmentApplicationEndDate: RawDate;
     notificationPublicationDate: RawDate;
@@ -110,6 +111,7 @@ async function getPostCoreData(
       SELECT
         p.id,
         p.name AS title,
+        p."sourceName" AS "postSourceName",
         p.slug,
         p.position_id AS "positionId",
         r.organization_id AS "organizationId",
@@ -613,6 +615,7 @@ export async function getPostBySlug(
       recruitmentVerificationStatus: data.recruitmentVerificationStatus ?? null,
       recruitmentOfficialLinkSource: data.recruitmentOfficialLinkSource ?? null,
       recruitmentMetadata: data.recruitmentMetadata ?? null,
+      postSourceName: data.postSourceName ?? null,
       recruitmentSlug: data.recruitmentSlug,
       examType: data.examType,
       examTypeSlug: data.examTypeSlug,
