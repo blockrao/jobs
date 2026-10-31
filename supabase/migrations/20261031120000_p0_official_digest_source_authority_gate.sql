@@ -1305,8 +1305,14 @@ SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
     ELSE COALESCE(fact_rows.enrichment -> 'age_rules', '{}'::jsonb)
   END,
   'application_fees', CASE
-    WHEN EXISTS (SELECT 1 FROM public.posts_application_fee x WHERE x.post_id = p.id)
-      THEN fact_rows.payload -> 'application_fees'
+    -- category did not exist in the production schema before this migration.
+    -- Preserve existing JSONB fee facts when legacy child rows cannot be
+    -- grouped without inventing a category; the transformer will keep them
+    -- hidden until field-level evidence exists.
+    WHEN EXISTS (
+      SELECT 1 FROM public.posts_application_fee x
+      WHERE x.post_id = p.id AND x.category IS NOT NULL
+    ) THEN fact_rows.payload -> 'application_fees'
     ELSE COALESCE(fact_rows.enrichment -> 'application_fees', '{}'::jsonb)
   END,
   'official_links', CASE
