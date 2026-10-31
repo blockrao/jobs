@@ -188,9 +188,16 @@ WHERE (
   AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
 
 
--- Legacy MANUALLY_VERIFIED states without the new authority/fact evidence chain
--- must not survive the remediation as a conflicting public verification label.
-SELECT count(*) AS aggregator_records_still_manually_verified
+-- Diagnostic only: legacy manual-link states can exist without the new
+-- authority/fact evidence chain. The application gate must keep these rows
+-- non-public until the entity and fact review is complete. Do not expect zero
+-- until the legacy review queue (#208) is processed.
+SELECT count(*) AS aggregator_manual_link_states_pending_fact_review
 FROM public.recruitments
 WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-  AND verification_status = 'MANUALLY_VERIFIED';
+  AND official_link_source = 'MANUAL_VERIFIED'
+  AND (
+    verification_status IS DISTINCT FROM 'VERIFIED'
+    OR metadata -> 'source_provenance' -> 'authority_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
+    OR metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
+  );
