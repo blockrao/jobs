@@ -229,6 +229,7 @@ describe("aggregator source trust gate", () => {
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
     expect(recruitmentQueries).toContain("'AGGREGATOR_DISCOVERED'");
     expect(recruitmentQueries).toContain("r.source_discovery_origin");
+    expect(recruitmentQueries).toContain("COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'");
     expect(recruitmentQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
     expect(relatedQueries).toContain("r.source_discovery_origin");
     expect(relatedQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
