@@ -171,6 +171,7 @@ export function resolvePostVacancy(
   post: Pick<JobPostingData, "enrichment"> & {
     vacancyTotal?: number | null; // posts.vacancy_total (old schema)
     recruitmentVacancyTotal?: number | null; // recruitments.total_vacancies, for scope check
+    officialVacancyEvidenceAccepted?: boolean;
   }
 ): number | null {
   const enrichment = post.enrichment;
@@ -184,8 +185,8 @@ export function resolvePostVacancy(
     } = enrichment;
 
     const sourceVerified = sourceVerificationStatus === "VERIFIED";
-    const sourcePending = sourceVerificationStatus === "PENDING";
-    const sourceAccepted = sourceVerified || sourcePending; // Accept both VERIFIED and PENDING
+    // Global enrichment status/confidence is not field-level issuer evidence.
+    const sourceAccepted = sourceVerified && post.officialVacancyEvidenceAccepted === true;
     const extractionValid = extractionConfidence >= 70;
 
     // Entity scope: if the enrichment vacancy total equals the recruitment-level
@@ -227,8 +228,9 @@ export function resolvePostVacancy(
  */
 export function resolveRecruitmentVacancy(recruitment: {
   totalVacancies?: number | null; // recruitments.total_vacancies
+  officialVacancyEvidenceAccepted?: boolean;
 }): number | null {
-  if (recruitment.totalVacancies != null && recruitment.totalVacancies > 0) {
+  if (recruitment.officialVacancyEvidenceAccepted === true && recruitment.totalVacancies != null && recruitment.totalVacancies > 0) {
     return recruitment.totalVacancies;
   }
   return null;
