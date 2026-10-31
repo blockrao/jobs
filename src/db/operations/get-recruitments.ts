@@ -581,7 +581,6 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
         AND r.official_link_source = 'MANUAL_VERIFIED'
         AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
         AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-        AND r.application_end_date IS NOT NULL
       )
     )`,
   ];
