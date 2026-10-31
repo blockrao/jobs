@@ -22,12 +22,14 @@ A further production read-only check found only **4** records with `verification
 
 The SQL gate and TypeScript helper recognise:
 
-1. Recruitment `source_discovery_origin`, `official_link_source`, `enrichment_data.meta.source`, `metadata.source_provenance.discovery_origin`, and FJA `source_url`.
-2. Canonical Post `sourceName`, `sourceReference`, `original_recruitment_url`, and `originalRecruitmentUrl`.
+1. Recruitment `source_discovery_origin`, `official_link_source`, `enrichment_data.meta.source`, `metadata.source_provenance.discovery_origin`, `source_url`, `official_notification_url`, and `official_application_url`.
+2. Canonical Post `sourceName`, `sourceReference`, `original_recruitment_url`, `originalRecruitmentUrl`, `officialSourceUrl`, `applyPortalUrl`, `application_url`, and `officialNotificationUrl`.
 3. Legacy Posting `source`, `source_type`, `source_portals`, `source_url`, and both relationship paths: `inferred_recruitment_id` and `inferred_post_id -> posts.recruitment_id`.
-4. Preliminary origin label `pilot_preliminary` and the known `fja`, `freejobalert`, `ext-1` through `ext-5`, and preliminary/aggregator source labels. A fresh read-only production reconciliation using the expanded predicate reproduced **6,365 candidates, 355 staging matches, 6,010 unmatched, and 6,003 without batch**.
+4. Preliminary origin label `pilot_preliminary` and known aggregator source labels.
 
-FJA URL detection is host-based in the database helper; a lookalike host such as `freejobalert.com.evil.example` is not accepted.
+The database URL predicate mirrors the full host registry in `src/lib/aggregators.ts`: FreeJobAlert, SarkariResult, SarkariNaukri, IndiaSarkariNaukri, SahisarkariJobs, SarkariExam, Maru Gujarat, PDF Jobs Jankari, OnlineUpCar, RojgarResult, FreshersWorld and the known social/messaging hosts. Host-boundary matching rejects lookalikes such as `freejobalert.com.evil.example`.
+
+A further read-only URL audit found **67 distinct Recruitments** with at least one known aggregator URL across Recruitment, Post and legacy Posting fields. All 67 are already in the 6,365 candidate cohort, so this adds zero IDs. **55** have an aggregator URL in `official_notification_url` and/or `official_application_url`; 0 have MANUAL_VERIFIED link source and 0 have global VERIFIED status.
 
 ## Publication and trust contract
 
@@ -41,7 +43,7 @@ An aggregator-origin Recruitment is publicly trusted only when all of the follow
 - Every reviewed field has its own non-empty evidence reference and excerpt.
 - The required set includes `hub:notification_date`.
 
-A generic VERIFIED status, populated HTTPS URL, or aggregator extraction alone cannot pass this gate.
+A generic VERIFIED status, populated HTTPS URL, or aggregator extraction alone cannot pass this gate. The Recruitment must also carry an HTTPS `official_notification_url` on a non-aggregator host; if `official_application_url` is populated, it must also be HTTPS and non-aggregator. Authority evidence URLs on aggregator hosts are rejected.
 
 A Recruitment must also have at least one non-duplicate canonical Post Leaf. Duplicate Post rows are excluded from direct anonymous reads. This prevents the 81 legacy-only records from appearing as complete Recruitment Hubs before canonical Post decomposition is reviewed.
 
@@ -56,6 +58,8 @@ The migration replaces permissive SELECT policies on exactly these five source-s
 - `vacancies`
 
 Child rows inherit the trust decision through their canonical Post. The helper functions are SECURITY DEFINER with a locked `pg_catalog` search path; only the two boolean policy entry points are executable by `anon` and `authenticated`. The helper schema is not exposed through the Data API.
+
+Because `recruitments` and `posts` contain internal source/provenance columns (including source references and enrichment JSON), the migration also revokes anon/authenticated table SELECT on those two base tables. The Next.js server reads through its server-side database role; anonymous child-table reads remain subject to the same trust predicates. This prevents direct Supabase REST access from exposing internal aggregator references even for rows that later pass review.
 
 The migration intentionally does not change policies or grants for `organizations` or `positions`, and does not grant anonymous access to `postings`, `exams`, `locations`, `qualifications`, `evidence`, or `recruitment_fees`.
 
@@ -84,7 +88,7 @@ The public Post Leaf renderer no longer uses raw FJA extraction as a fallback fo
 
 1. Run the expanded read-only manifest against production and reconcile the expected 6,365 / 355 / 6,010 / 6,003 counts. Resolve any drift before migration approval.
 2. Apply the migration only after explicit review/approval. It performs DDL, policy changes and future-write trigger installation; it does not perform a historical bulk backfill.
-3. Run `scripts/audits/source-origin-rls-post-migration-check.sql` as a read-only verification. Confirm dynamic origin detection, all five RLS policies, and direct `anon` visibility.
+3. Run `scripts/audits/source-origin-rls-post-migration-check.sql` as a read-only verification. Confirm dynamic origin detection, all five RLS policies, no anon/authenticated SELECT privilege on `recruitments` and `posts`, and trust-filtered anon visibility on the three child tables.
 4. Confirm `organizations` and `positions` remain readable and the adjacent restricted tables remain unexposed.
 5. Benchmark query plans and REST latency for the SECURITY DEFINER predicates. The migration adds a partial index for the new origin field and reuses the existing Post/legacy relationship indexes. Production query plans and REST latency must still be measured before release.
 6. Apply the migration before deploying application code that calls `private.is_recruitment_publicly_trusted`. Do not merge/deploy the application code ahead of the database function.
