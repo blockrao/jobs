@@ -28,7 +28,7 @@ describe("aggregator source trust gate", () => {
       },
     };
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED")).toBe(true);
-    expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", reviewedMetadata)).toBe(false);
+    expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", reviewedMetadata, undefined, "MANUAL_VERIFIED")).toBe(false);
     const incompleteEvidence = {
       source_provenance: {
         ...reviewedMetadata.source_provenance,
@@ -38,7 +38,7 @@ describe("aggregator source trust gate", () => {
         },
       },
     };
-    expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", incompleteEvidence)).toBe(true);
+    expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", incompleteEvidence, undefined, "MANUAL_VERIFIED")).toBe(true);
   });
 
   it("hides aggregator education and experience unless their individual fact keys were reviewed", () => {
