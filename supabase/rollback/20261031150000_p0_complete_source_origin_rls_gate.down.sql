@@ -45,7 +45,7 @@ DROP FUNCTION IF EXISTS private.recruitment_has_aggregator_origin(integer);
 DROP FUNCTION IF EXISTS private.is_aggregator_source_value(text);
 DROP FUNCTION IF EXISTS private.is_fja_url(text);
 
-REVOKE USAGE ON SCHEMA private FROM anon, authenticated;
+REVOKE USAGE ON SCHEMA private FROM anon, authenticated, service_role;
 
 -- Do not drop the private schema, discovery-origin column, constraint or indexes.
 -- They are non-destructive and may contain future reviewed provenance.
