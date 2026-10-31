@@ -60,10 +60,12 @@ Run `scripts/audits/official-source-provenance-dry-run.sql` with a read-only rol
 
 The release is deliberately staged:
 
-1. Apply `20261031120000_p0_official_digest_source_authority_gate.sql` first. It adds the schema, backfills only the discovery-origin column, and installs write guards; it does not demote the existing public cohort.
-2. Deploy and smoke-test the application source gates. The new code treats `source_discovery_origin = 'AGGREGATOR_DISCOVERED'` plus any link state other than `MANUAL_VERIFIED` as unverified, so hubs/leaves are noindex and discovery surfaces exclude them.
-3. Only after the application gate is live, apply `20261031130000_p0_official_digest_source_authority_remediation.sql`. It demotes the historical cohort, clears stale child-fact evidence markers, and refreshes JSONB projections.
-4. Run `scripts/audits/official-source-provenance-post-migration-check.sql` with a read-only role. It checks that discovery origin remains `AGGREGATOR_DISCOVERED`, that no unreviewed record is promoted to `MANUAL_VERIFIED`, and that verified eligibility/fact rows retain evidence pointers.
+1. Retain the read-only manifest from scripts/audits/official-source-provenance-dry-run.sql and review the public-discovery impact before rollout.
+2. Apply only 20261031120000_p0_official_digest_source_authority_gate.sql through the recorded migration path. It adds schema, backfills discovery origin for the three known extraction sources, and installs write guards; it does not demote or rewrite the existing cohort.
+3. Deploy and smoke-test the application source gates. Unreviewed aggregator-derived hubs/leaves remain canonical and resolvable but are excluded from indexable live discovery and sitemaps. Reviewed UPCOMING hubs are not excluded solely for lacking an application deadline.
+4. Run scripts/audits/official-source-provenance-post-migration-check.sql read-only and reconcile origin coverage, pending manual-link review states and outstanding fact evidence.
+
+**Historical destructive remediation is deferred.** The Stage 2 migration was removed from PR #189. Do not demote global verification, overwrite link states, clear child-fact evidence or rewrite JSONB projections until issue #208 provides a deterministic review path for all 5,026 legacy records without staging matches and a frozen snapshot with exact rollback/recovery. Preserve MANUAL_VERIFIED link decisions independently of discovery origin; the public gate still requires issuer and field-level fact evidence.
 
 Do not apply both migrations together before the application deploy. Once stage 2 has been applied, do not roll back to the pre-gate application: that code does not enforce the new provenance contract. If the application needs recovery after stage 2, use a forward-compatible hotfix or redeploy the gated build.
 
@@ -105,7 +107,7 @@ The current branch now contains the first end-to-end protection slice:
 - Canonical `eligibilities` rows are exposed only when status is VERIFIED and `verified_at`, `source_ref` and `source_locator` are all present. The digest review sync writes these fields from the issuer URL and the per-post eligibility evidence reference; revoking review returns the rows to PENDING.
 - The read-only audit found 19 eligibility rows marked VERIFIED without a complete evidence chain (11 had no source type; the remaining 8 lacked a complete reference/locator/timestamp combination). The migration demotes rows missing any required provenance and the hub loader excludes them.
 - Updating review fields on an already-promoted staging row automatically synchronizes the associated recruitment and child records: complete reviews upgrade them; incomplete or revoked reviews demote them and remove active provenance.
-- The migration demotes existing aggregator-discovered VERIFIED recruitment rows, clears their last-verified timestamps, removes the false post-level official flags and marks linked post enrichment UNVERIFIABLE. It does not delete records. These statements are migration code only and have **not** been run against production.
+- The additive gate migration does not demote existing recruitment or Post records. The application gate suppresses unreviewed aggregator-derived facts from public/indexable surfaces while retaining canonical URLs. Historical status demotion and child-fact evidence clearing are deferred to a separately reviewed migration after #208 and an exact rollback plan.
 - The post-leaf loader now reads recruitment-level verification status, source origin and persisted review metadata. Unverified aggregator-discovered leaves suppress extracted eligibility, experience, fees, dates, salary, vacancies, application links and official-source claims; they receive noindex and no JobPosting structured data. Even after recruitment review, child fact families remain hidden unless their own review keys are present.
 - Recruitment hubs for the same cohort suppress extracted detail/link payloads, remain canonical at their existing URL, and receive noindex. Once verified, hub and post fields are still individually filtered against the persisted review-key manifest.
 - The `/jobs` list, sector-based live listings (including All Government Jobs), qualification live-post listings/counts and dynamic sitemap require persisted issuer and fact review metadata. Live listings additionally require a verified non-null application end date, so the legacy promotion function cannot make a no-deadline record appear open by default.
@@ -117,9 +119,9 @@ The current branch now contains the first end-to-end protection slice:
 ### Review and rollout notes
 
 - The source-authority review is intentionally manual. The reviewer must open the issuing authority's own recruitment page and confirm that it publishes or links to the notification. A document being parsed, an HTTPS URL existing, or a discovery source finding the link is not sufficient.
-- The database migration includes production demotion statements. They must be reviewed with the row-level dry-run manifest before migration deployment.
+- The additive migration contains only schema/origin backfill/write-guard changes. Historical production demotion statements are deliberately excluded from PR #189.
 - This branch does not run production writes. It does not restore NIT Warangal eligibility or fee facts; those remain subject to official PDF verification.
-- CI, build and preview smoke checks remain pending until GitHub reports results. No passing result is claimed here.
+- CI has passed lint, importer type-check and vacancy-integrity test type-check on an earlier head; application type-check and architecture contracts are being rerun after date-provenance fixes. Current-main reconciliation and preview smoke tests remain outstanding.
 
 
 ### Additional production source inventory (2026-10-31 06:20 UTC)
