@@ -27,6 +27,7 @@ import JobPostingSchema from '@/components/job-posting/structured-data/post-leaf
 import type { LeafFaq, LeafFact } from '@/components/job-posting/structured-data/post-leaf-schema';
 import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
 import { isManuallyVerifiedOfficialLink } from '@/lib/source-verification';
+import { evaluateContentQuality } from '@/lib/content-quality/gate';
 import styles from '@/components/recruitment/recruitment-hub.module.css';
 
 // Helper: Parse JSON strings safely
@@ -69,6 +70,7 @@ interface JobDetailPageProps {
     applyUrl?: string | null;
     employmentType?: string | null;
     qualificationText?: string | null;
+    qualificationVerificationStatus?: "VERIFIED" | "PENDING";
     experienceText?: string | null;
     ageLimit?: string | null;
     selectionProcess?: string | null;
@@ -179,6 +181,24 @@ export default function JobDetailPageProduction({
   const notificationLinkVerified = Boolean(post.officialSourceUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
   const applicationLinkVerified = Boolean(post.applyUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
   const jobPostingSourceVerified = notificationLinkVerified && applicationLinkVerified;
+  const jobPostingQuality = evaluateContentQuality({
+    title: post.title,
+    totalVacancies: vacancies > 0 ? vacancies : null,
+    eligibility: qualificationText,
+    description: post.description ?? null,
+    locationCity: post.locationCity ?? null,
+    locationRegion: post.locationState ?? null,
+    applyUrl: applicationLinkVerified ? post.applyUrl ?? null : null,
+    officialNotificationUrl: notificationLinkVerified ? post.officialSourceUrl ?? null : null,
+    currentStage: isApplicationOpen ? "APPLICATION_OPEN" : lifecycle?.state === "upcoming" ? "NOTIFICATION_OUT" : "CLOSED",
+    validThrough: applicationDeadline,
+    postNames: [post.title],
+    isCanonical: true,
+    canonicalSlug: post.slug,
+    slug: post.slug,
+  });
+  const jobPostingContentEligible =
+    jobPostingQuality.tier === "A" && post.qualificationVerificationStatus === "VERIFIED";
   const notificationLinkLabel = notificationLinkVerified
     ? "Official notification"
     : "Notification link (not manually verified)";
@@ -331,7 +351,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified && jobPostingContentEligible} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
