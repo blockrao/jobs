@@ -302,7 +302,7 @@ export default async function JobDetailPage({ params }: Props) {
       pageTitle={seo.title}
       pageDescription={seo.description}
       lifecycle={lifecycle}
-      indexable={!isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
+      indexable={post.organizationIdentityMismatch !== true && !isUnresolvedOrganization(post.organizationName) && !isUnresolvedOrganization(post.organizationSlug)}
     />
   );
 }
