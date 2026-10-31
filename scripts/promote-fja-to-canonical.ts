@@ -462,11 +462,6 @@ async function main() {
   }
   console.log(`Fetched ${inventory.length} FJA inventory rows passing detail_status=EXTRACTED, source_status=OPEN, and canonical dedup checks`);
 
-  if (inventory.length === 0) {
-    console.log("Nothing to promote. Exiting.");
-    return;
-  }
-
   // Preserve stable source records that were already mapped by an earlier workflow.
   const liveMapped = inventory.filter(
     (r) => r.other_info_raw && (r.other_info_raw as Record<string, unknown>)["canonical_recruitment_id"]
@@ -587,6 +582,11 @@ async function main() {
 
   if (DRY_RUN) {
     console.log("DRY RUN — no rows written. Set FJA_PROMOTE_DRY_RUN=0 to write.");
+    return;
+  }
+
+  if (toProcess.length === 0) {
+    console.log("No records passed the source-status and canonical dedup preflight. No writes performed.");
     return;
   }
 
