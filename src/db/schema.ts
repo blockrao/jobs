@@ -1410,20 +1410,15 @@ export const postAgeRules = pgTable("post_age_rules", {
   maxAge: smallint("max_age"),
   relaxationYears: smallint("relaxation_years"),
   note: text("note"),
-  // ELIG-001 additions (2026-10-07).
-  /**
-   * Machine-readable classification of this age rule.
-   * ARITHMETIC     = base + relaxation_years = effective max
-   * GOVT_ORDER     = "as per Govt. rules" — no arithmetic; requires external lookup
-   * NO_UPPER_LIMIT = explicitly no upper age limit
-   * ABSOLUTE_CEILING = maximum that cannot be exceeded even with relaxation
-   */
   ruleType: varchar("rule_type", { length: 30 }),
-  /** Human-readable condition for this rule (e.g. "Ex-serviceman with min 6 years service"). */
   conditionText: text("condition_text"),
+  source: varchar("source", { length: 100 }).notNull().default("legacy_unknown"),
+  extractedAt: timestamp("extracted_at"),
+  verifiedAt: timestamp("verified_at"),
+  sourceRef: text("source_ref"),
+  sourceLocator: text("source_locator"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }).enableRLS();
-
 /** Category-wise application fee for a Recruitment (General, OBC, SC/ST, EWS, PwBD, All). */
 export const recruitmentFees = pgTable("recruitment_fees", {
   id: serial("id").primaryKey(),
@@ -1662,11 +1657,16 @@ export const postsVacancies = pgTable(
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
     totalVacancies: integer("total_vacancies"),
-    category: varchar("category", { length: 100 }),
     location: varchar("location", { length: 200 }),
+    state: varchar("state", { length: 100 }),
     locationCount: integer("location_count"),
+    category: varchar("category", { length: 100 }),
     categoryCount: integer("category_count"),
-    source: varchar("source", { length: 100 }),
+    source: varchar("source", { length: 100 }).notNull(),
+    extractedAt: timestamp("extracted_at"),
+    verifiedAt: timestamp("verified_at"),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1674,18 +1674,20 @@ export const postsVacancies = pgTable(
     index("idx_posts_vacancies_category").on(table.category),
   ],
 ).enableRLS();
-
 /** Official links (notification, apply, admit card, etc.) */
 export const postsOfficialLinks = pgTable(
   "posts_official_links",
   {
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-    linkType: varchar("link_type", { length: 50 }).notNull(), // apply, notification, admit_card, result, etc.
-    label: varchar("label", { length: 200 }),
-    url: text("url").notNull(),
-    isOfficial: boolean("is_official").default(true),
-    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    linkLabel: text("link_label"),
+    linkUrl: text("link_url"),
+    linkType: varchar("link_type", { length: 50 }),
+    source: varchar("source", { length: 100 }).notNull(),
+    extractedAt: timestamp("extracted_at"),
+    verifiedAt: timestamp("verified_at"),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1693,7 +1695,6 @@ export const postsOfficialLinks = pgTable(
     index("idx_posts_official_links_type").on(table.linkType),
   ],
 ).enableRLS();
-
 /** Application fee breakdown by category. */
 export const postsApplicationFee = pgTable(
   "posts_application_fee",
@@ -1701,10 +1702,15 @@ export const postsApplicationFee = pgTable(
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
     category: varchar("category", { length: 100 }),
-    amount: integer("amount"),
-    currencyCode: varchar("currency_code", { length: 3 }).default("INR"),
-    note: text("note"),
-    paymentMode: varchar("payment_mode", { length: 100 }),
+    feeAmount: numeric("fee_amount", { precision: 10, scale: 2 }),
+    feeCurrency: varchar("fee_currency", { length: 3 }),
+    feeWaivedFor: text("fee_waived_for").array(),
+    paymentMethods: text("payment_methods").array(),
+    source: varchar("source", { length: 100 }).notNull(),
+    extractedAt: timestamp("extracted_at"),
+    verifiedAt: timestamp("verified_at"),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1712,7 +1718,6 @@ export const postsApplicationFee = pgTable(
     index("idx_posts_application_fee_category").on(table.category),
   ],
 ).enableRLS();
-
 /** How to apply instructions. */
 export const postsHowToApply = pgTable(
   "posts_how_to_apply",
@@ -1736,47 +1741,61 @@ export const postsDocuments = pgTable(
   {
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-    documentName: varchar("document_name", { length: 200 }),
     documentCategory: varchar("document_category", { length: 100 }),
+    documentName: varchar("document_name", { length: 200 }),
     isRequired: boolean("is_required").default(true),
     requiredForCategories: text("required_for_categories").array(),
-    description: text("description"),
+    source: varchar("source", { length: 100 }).notNull(),
+    extractedAt: timestamp("extracted_at"),
+    verifiedAt: timestamp("verified_at"),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("idx_posts_documents_post_id").on(table.postId),
   ],
 ).enableRLS();
-
 /** Selection process stages. */
 export const postsSelectionProcess = pgTable(
   "posts_selection_process",
   {
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    stageOrder: integer("stage_order"),
     stageName: varchar("stage_name", { length: 200 }),
-    stageOrder: smallint("stage_order"),
-    description: text("description"),
-    marks: integer("marks"),
-    duration: varchar("duration", { length: 100 }),
-    minQualifyingMarks: jsonb("min_qualifying_marks").$type<Record<string, number>>(),
+    scheduledDate: timestamp("scheduled_date"),
+    durationMinutes: integer("duration_minutes"),
+    totalMarks: integer("total_marks"),
+    minimumMarks: integer("minimum_marks"),
+    passingMarks: integer("passing_marks"),
     mode: varchar("mode", { length: 100 }),
+    isQualifying: boolean("is_qualifying"),
+    source: varchar("source", { length: 100 }).notNull(),
+    extractedAt: timestamp("extracted_at"),
+    verifiedAt: timestamp("verified_at"),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("idx_posts_selection_process_post_id").on(table.postId),
   ],
 ).enableRLS();
-
 /** Important dates (notification, application, exam, result, etc.). */
 export const postsImportantDates = pgTable(
   "posts_important_dates",
   {
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-    dateType: varchar("date_type", { length: 100 }).notNull(), // notification, application_open, application_close, exam, etc.
-    dateValue: timestamp("date_value", { withTimezone: true }),
-    description: text("description"),
+    dateType: varchar("date_type", { length: 100 }).notNull(),
+    dateValue: timestamp("date_value"),
+    notes: text("notes"),
+    source: varchar("source", { length: 100 }).notNull(),
+    extractedAt: timestamp("extracted_at"),
+    verifiedAt: timestamp("verified_at"),
+    sourceRef: text("source_ref"),
+    sourceLocator: text("source_locator"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -1784,7 +1803,6 @@ export const postsImportantDates = pgTable(
     index("idx_posts_important_dates_type").on(table.dateType),
   ],
 ).enableRLS();
-
 /** Experience requirements for a post. */
 export const postsExperience = pgTable(
   "posts_experience",
