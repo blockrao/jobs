@@ -18,7 +18,7 @@ describe("admin source-origin review queue", () => {
   test("review queue is an authenticated admin route and is noindex", () => {
     const source = read("src/app/(default)/admin/source-review/page.tsx");
     const proxy = read("src/proxy.ts");
-    expect(source).toContain('robots: { index: false, follow: false');
+    expect(source).toContain('pageSeo("/admin/source-review", { index: false })');
     expect(proxy).toContain('pathname.startsWith("/admin")');
   });
 
