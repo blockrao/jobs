@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { stripAggregatorData } from "@/lib/aggregators";
+import { hasHighConfidenceIssuerOrganizationMismatch } from "@/lib/organization-identity";
 import { getDb } from "../index";
 import { MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
@@ -191,13 +192,25 @@ export async function getRecruitmentWithPosts(slug: string) {
       return null;
     }
 
+    const rawEnrichmentData = recruitmentResult[0].enrichmentData as {
+      meta?: { source?: string };
+      institution?: { name?: string };
+    } | null;
+    const organizationIdentityMismatch = hasHighConfidenceIssuerOrganizationMismatch({
+      source: rawEnrichmentData?.meta?.source,
+      institutionName: rawEnrichmentData?.institution?.name,
+      recruitmentName: recruitmentResult[0].recruitment.name,
+      organizationName: recruitmentResult[0].organizationName,
+    });
     const recruitment = {
       ...stripAggregatorData(recruitmentResult[0].recruitment),
       // Aggregator provenance never reaches the page payload.
       enrichmentData: stripAggregatorData(recruitmentResult[0].enrichmentData),
-      organizationName: recruitmentResult[0].organizationName,
-      organizationSlug: recruitmentResult[0].organizationSlug,
-      organizationSector: recruitmentResult[0].organizationSector as string,
+      // Conflicting issuer/organisation identity is not published as employer data.
+      organizationName: organizationIdentityMismatch ? null : recruitmentResult[0].organizationName,
+      organizationSlug: organizationIdentityMismatch ? null : recruitmentResult[0].organizationSlug,
+      organizationSector: organizationIdentityMismatch ? null : recruitmentResult[0].organizationSector as string,
+      organizationIdentityMismatch,
       sourceVerificationStatus: null as string | null,
       sourceListingPublishedDate: null as Date | string | null,
       sourceExtract: null as null | {
@@ -217,7 +230,9 @@ export async function getRecruitmentWithPosts(slug: string) {
 
     // Load complete linked entities for the recruitment hub's database coverage view.
     const [organizationResult, examResult, sourceInventoryResult] = await Promise.all([
-      db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
+      organizationIdentityMismatch
+        ? Promise.resolve([])
+        : db.execute(sql`SELECT * FROM organizations WHERE id = ${recruitment.organizationId} LIMIT 1`),
       recruitment.examId
         ? db.execute(sql`SELECT * FROM exams WHERE id = ${recruitment.examId} LIMIT 1`)
         : Promise.resolve([]),
@@ -231,7 +246,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     };
     const sourceInventory = rowsOf(sourceInventoryResult)[0] ?? null;
     Object.assign(recruitment, {
-      organization: rowsOf(organizationResult)[0] ?? null,
+      organization: organizationIdentityMismatch ? null : rowsOf(organizationResult)[0] ?? null,
       exam: rowsOf(examResult)[0] ?? null,
       sourceVerificationStatus:
         typeof sourceInventory?.source_verification_status === "string"
