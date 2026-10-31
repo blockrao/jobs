@@ -261,6 +261,9 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("fact_review_evidence jsonb NOT NULL DEFAULT '{}'::jsonb");
     expect(migration).toContain("official_digest_fact_review_complete");
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.is_publicly_verified_recruitment_source");
+    expect(migration).toContain("p_official_link_source = 'AGGREGATOR_DISCOVERED'");
+    expect(migration).toContain("p_enrichment_data->'meta'->>'source' IN (");
+    expect(migration).toContain("p_metadata->'source_provenance'->'fact_review'->>'status' = 'VERIFIED'");
     expect(migration).toContain('DROP POLICY IF EXISTS "public read" ON public.recruitments');
     expect(migration).toContain('CREATE POLICY "public read" ON public.posts');
     expect(migration).toContain('CREATE POLICY "public read" ON public.eligibilities');
