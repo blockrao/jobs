@@ -83,7 +83,7 @@ The sitemap therefore cannot advertise a record that the application-level sourc
 2. Apply the migration only after explicit review/approval. It performs DDL, policy changes and future-write trigger installation; it does not perform a historical bulk backfill.
 3. Run `scripts/audits/source-origin-rls-post-migration-check.sql` as a read-only verification. Confirm dynamic origin detection, all five RLS policies, and direct `anon` visibility.
 4. Confirm `organizations` and `positions` remain readable and the adjacent restricted tables remain unexposed.
-5. Benchmark query plans and REST latency for the SECURITY DEFINER predicates. The migration adds supporting indexes, but production performance must be measured before release.
+5. Benchmark query plans and REST latency for the SECURITY DEFINER predicates. The migration adds a partial index for the new origin field and reuses the existing Post/legacy relationship indexes. Production query plans and REST latency must still be measured before release.
 6. Apply the migration before deploying application code that calls `private.is_recruitment_publicly_trusted`. Do not merge/deploy the application code ahead of the database function.
 7. Preview/production verification is still required. A green CI run is not evidence that the live RLS behavior or sitemap has been verified.
 8. Review and approve any later backfill or remediation as a separate change. The 81 legacy-mapped and 1,445 unmapped no-Post Recruitments require separate reviewed decomposition manifests before any write.
