@@ -31,7 +31,13 @@ describe("aggregator source trust gate", () => {
 
   it("hides aggregator education and experience unless their individual fact keys were reviewed", () => {
     const raw = {
-      education: [{ degree: "Relevant degree" }],
+      education: [{
+        degree: "Relevant degree",
+        source: "fja_post_inventory",
+        verified_at: "2026-10-30T10:00:00Z",
+        source_ref: "https://issuer.example/notice.pdf",
+        source_locator: "PDF page 2, education section",
+      }],
       experience: [{ total_years: 5 }],
       source_provenance: {
         fact_review: {
@@ -86,12 +92,16 @@ describe("aggregator source trust gate", () => {
         source: "issuer_notification",
         confidence_score: 95,
         verified_at: "2026-10-30T10:00:00Z",
+        source_ref: "https://issuer.example/notice.pdf",
+        source_locator: "PDF page 2, education section",
       }],
       experience: [{
         type: "Verified experience",
         source: "issuer_notification",
         confidence_score: 95,
         verified_at: "2026-10-30T10:00:00Z",
+        source_ref: "https://issuer.example/notice.pdf",
+        source_locator: "PDF page 3, experience section",
       }],
     }, {
       sourceOrigin: "ISSUER_CONTROLLED",
