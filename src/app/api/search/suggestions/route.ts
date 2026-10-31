@@ -1,7 +1,7 @@
 /**
  * API Route: Search Suggestions (autocomplete)
  *
- * Backs the suggestion dropdown in src/components/JobSearch.tsx. That
+ * Backs the suggestion dropdown in src/components/SearchExperience.tsx. That
  * dropdown's UI and state (suggestions/showSuggestions) already existed,
  * but there was no endpoint to populate them from — getSearchSuggestions()
  * in @/lib/search-queries was fully implemented but never called from
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const prefix = searchParams.get("q")?.trim() || "";
+    const prefix = searchParams.get("q")?.trim().slice(0, 100) || "";
 
     if (prefix.length < 3) {
       return NextResponse.json({ success: true, data: [] });
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: "Suggestions failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: "Suggestions are temporarily unavailable. You can still submit your search.",
         data: [],
       },
       { status: 500 }

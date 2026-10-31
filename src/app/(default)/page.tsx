@@ -1,4 +1,3 @@
-import OrganizationSchema from "@/components/structured-data/organization-schema";
 import type { Metadata } from "next";
 import { pageSeo } from "@/lib/seo";
 import {
@@ -16,7 +15,7 @@ export const revalidate = 86400; // Phase 1: daily revalidation
 
 // The home page is an English page at "/" (SEO-001 D3).
 export const metadata: Metadata = {
-  title: "Government Jobs 2026 — Every open sarkari vacancy with last date | JobOye",
+  title: "Latest Government Jobs in India | JobOye",
   description:
     "Live government job notifications ranked by vacancies and closing date. Facts from the official notification: vacancies, eligibility, fee, last date and the official apply link.",
   ...pageSeo("/"),
