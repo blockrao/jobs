@@ -27,6 +27,7 @@ import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitm
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
+import { isUnverifiedAggregatorSource } from "@/lib/source-verification";
 
 // Recruitment hubs need request-time rendering while resolving database-backed
 // canonical entities. Calling noStore() conditionally for individual slugs inside
@@ -46,18 +47,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Recruitment not found", ...pageSeo(`/jobs/${slug}`, { index: false }) };
   }
   const { recruitment, posts } = data;
+  const sourceUnverified = isUnverifiedAggregatorSource({
+    sourceDiscoveryOrigin: recruitment.sourceDiscoveryOrigin,
+    officialLinkSource: recruitment.officialLinkSource,
+    verificationStatus: recruitment.verificationStatus,
+    metadata: recruitment.metadata,
+  });
   const [postingLocations, cutoffMarks] = await Promise.all([
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
   ]);
-  const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
+  const hub = buildHubData(recruitment, publicPosts, undefined, postingLocations, cutoffMarks);
   const { title, description } = hub;
 
   return {
     title,
     description,
     // Recruitments whose issuing organisation is not identified yet stay out of the index.
-    ...pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) }),
+    ...pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) && !sourceUnverified }),
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
   };
@@ -84,6 +91,13 @@ export default async function RecruitmentHubPage({ params }: Props) {
   }
 
   const { recruitment, posts } = data;
+  const sourceUnverified = isUnverifiedAggregatorSource({
+    sourceDiscoveryOrigin: recruitment.sourceDiscoveryOrigin,
+    officialLinkSource: recruitment.officialLinkSource,
+    verificationStatus: recruitment.verificationStatus,
+    metadata: recruitment.metadata,
+  });
+  const publicPosts = sourceUnverified ? [] : posts;
   const [postingLocations, cutoffMarks] = await Promise.all([
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
