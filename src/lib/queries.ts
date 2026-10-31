@@ -509,6 +509,7 @@ export async function getHomeStats(): Promise<HomeStats> {
 const livePostCondition = sql`
   ${recruitmentIsLiveSql(recruitments.status, recruitments.applicationEndDate)}
   AND ${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL
+  AND private.is_recruitment_publicly_trusted(${recruitments.id})
 `;
 
 export interface SectorPostRow {
@@ -778,6 +779,7 @@ export async function getPostBySlug(recruitmentSlug: string, postSlug: string) {
     where: and(
       eq(posts.recruitmentId, recruitmentData.id),
       eq(posts.slug, postSlug),
+      sql`private.is_recruitment_publicly_trusted(${posts.recruitmentId})`,
     ),
     with: {
       position: true,
@@ -850,7 +852,7 @@ export async function getPostsForRecruitment(recruitmentId: number) {
   if (!hasDb()) return [];
   const db = getDb();
   return db.query.posts.findMany({
-    where: and(eq(posts.recruitmentId, recruitmentId), sql`private.is_recruitment_publicly_trusted(${recruitments.id})`),
+    where: and(eq(posts.recruitmentId, recruitmentId), sql`private.is_recruitment_publicly_trusted(${posts.recruitmentId})`),
     with: {
       position: true,
       ageRules: true,
@@ -1556,7 +1558,6 @@ export async function getAllPostsWithEnrichment(limit: number = 100, offset: num
     JOIN public.recruitments r ON r.id = p.recruitment_id
     LEFT JOIN public.post_enrichments e ON p.id = e.post_id
     WHERE p."isLive" = true
-      AND private.is_recruitment_publicly_trusted(r.id)
       AND private.is_recruitment_publicly_trusted(r.id)
     ORDER BY
       CASE WHEN e.post_id IS NOT NULL THEN 0 ELSE 1 END ASC,
