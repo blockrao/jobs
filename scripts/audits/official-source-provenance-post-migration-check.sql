@@ -17,9 +17,9 @@ ORDER BY 3,2;
 SELECT count(*) AS aggregator_recruitments_verified_without_manual_link_state
 FROM public.recruitments r
 WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND r.verification_status = 'VERIFIED'
   AND (
-    r.verification_status IS DISTINCT FROM 'VERIFIED'
-    OR r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
+    r.official_link_source IS DISTINCT FROM 'MANUAL_VERIFIED'
     OR r.last_verified_at IS NULL
     OR r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
     OR r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
