@@ -15,7 +15,7 @@ import { ChevronRight } from "lucide-react";
 // legacy `postings` table is never used here: its one-segment slugs did not
 // resolve to any route (audit P0 #2). Hindi UI labels follow the NEXT_LOCALE
 // cookie; the URL never changes by language.
-export const revalidate = 86400; // Phase 1: daily revalidation
+export const revalidate = 3600; // Keep the current-jobs listing fresh hourly.
 
 type Props = {
   searchParams: Promise<{
@@ -83,19 +83,17 @@ export default async function JobsListPage({ searchParams }: Props) {
       ? (filterParam as "newly-added" | "open")
       : undefined;
 
-  let results: Awaited<ReturnType<typeof listRecruitments>> = [];
-  try {
-    results = await listRecruitments({
-      kind: validKind,
-      filter: validFilter,
-      search: q,
-      // One extra row tells us whether a next page exists.
-      limit: JOBS_PAGE_SIZE + 1,
-      offset: (page - 1) * JOBS_PAGE_SIZE,
-    });
-  } catch {
-    results = [];
-  }
+  // Do not turn a database/query failure into a false "No jobs found" state.
+  // Let Next.js render the route error boundary; empty results now mean a real
+  // successful query returned no matching recruitment records.
+  let results = await listRecruitments({
+    kind: validKind,
+    filter: validFilter,
+    search: q,
+    // One extra row tells us whether a next page exists.
+    limit: JOBS_PAGE_SIZE + 1,
+    offset: (page - 1) * JOBS_PAGE_SIZE,
+  });
 
   const hasNext = results.length > JOBS_PAGE_SIZE;
   if (hasNext) results = results.slice(0, JOBS_PAGE_SIZE);
@@ -122,8 +120,10 @@ export default async function JobsListPage({ searchParams }: Props) {
     showing: (n: number) =>
       isHi ? `${n} नौकरियां दिखाई जा रही हैं` : `Showing ${n} job${n !== 1 ? "s" : ""}`,
     noResults: isHi
-      ? "कोई नौकरी नहीं मिली। कोई और खोज आज़माएं।"
-      : "No jobs found. Try a different search.",
+      ? (q ? `“${q}” से मेल खाने वाली नौकरी नहीं मिली। खोज बदलें या फ़िल्टर हटाएं।` : "अभी कोई वर्तमान या आगामी नौकरी उपलब्ध नहीं है। कृपया बाद में फिर देखें।")
+      : (q ? `No jobs match “${q}”. Try a broader search or clear your filters.` : "No current or upcoming jobs are available in this listing right now. Please check back soon."),
+    clearFilters: isHi ? "खोज और फ़िल्टर हटाएं" : "Clear search and filters",
+    browseGovernment: isHi ? "सभी सरकारी नौकरियां देखें" : "Browse all government jobs",
     posted: isHi ? "प्रकाशित" : "Posted",
     verified: isHi ? "सत्यापित" : "Verified",
     examOn: isHi ? "परीक्षा" : "Exam",
@@ -131,12 +131,12 @@ export default async function JobsListPage({ searchParams }: Props) {
     previous: isHi ? "पिछला" : "Previous",
     next: isHi ? "अगला" : "Next",
     pageOf: (p: number) => isHi ? `पृष्ठ ${p}` : `Page ${p}`,
-    liveJobs: isHi ? "लाइव नौकरियां" : "Live Jobs",
+    liveJobs: isHi ? "भारत में नौकरी खोज" : "JOB DISCOVERY · INDIA",
     heroSubtitle: isHi
-      ? "सरकारी और सार्वजनिक क्षेत्र की नौकरियों की आधिकारिक अधिसूचनाएं, एक ही जगह।"
-      : "Official notifications for government and public-sector openings, all in one place.",
+      ? "सरकारी विभागों, PSU, बैंक, रेलवे, रक्षा संगठनों और निजी नियोक्ताओं की वर्तमान और आगामी भर्तियां देखें।"
+      : "Browse current and upcoming recruitment notices from government departments, PSUs, banks, railways, defence organisations and private employers.",
     vacancies: isHi ? "पद" : "posts",
-    jobsUnit: isHi ? "नौकरियां" : "jobs",
+    jobsUnit: isHi ? "इस पृष्ठ पर नौकरियां" : "jobs on this page",
   };
 
   // Heading: combine kind + filter
@@ -167,64 +167,68 @@ export default async function JobsListPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="bg-slate-50/70">
+      <div className="mx-auto max-w-7xl px-4 pb-14 pt-4 sm:px-6 sm:pt-5 lg:px-8">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <Link href="/" className="transition hover:text-indigo-700">Home</Link>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page" className="text-slate-700">{pageHeading()}</span>
+        </nav>
 
-      {/* ── Hero strip ───────────────────────────────────────────────────── */}
-      <div className="mb-8 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white px-6 py-7 sm:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              {/* live pulse dot */}
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-600 opacity-60" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-indigo-600" />
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-widest text-indigo-600">
+        {/* Match the shared JobOye discovery-hub visual system. */}
+        <header className="relative isolate mt-5 overflow-hidden rounded-[2rem] bg-slate-950 px-6 py-8 text-white shadow-xl shadow-slate-900/10 sm:px-10 sm:py-10 lg:px-12">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-32 -z-10 h-96 w-96 rounded-full bg-indigo-500/25 blur-3xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 right-1/3 -z-10 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+            <div className="max-w-3xl">
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 {L.liveJobs}
-              </span>
+              </p>
+              <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+                {pageHeading()}
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                {L.heroSubtitle}
+              </p>
+              <form className="mt-7 flex max-w-2xl flex-col gap-2 rounded-2xl border border-white/15 bg-white p-2 shadow-lg shadow-black/20 sm:flex-row" action="/jobs" method="get">
+                {validKind && <input type="hidden" name="kind" value={validKind} />}
+                {validFilter && <input type="hidden" name="filter" value={validFilter} />}
+                <label htmlFor="jobs-q" className="sr-only">{L.search}</label>
+                <input
+                  id="jobs-q"
+                  type="search"
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder={L.searchPlaceholder}
+                  className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 px-4 text-base text-slate-950 outline-none placeholder:text-slate-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                />
+                <button
+                  type="submit"
+                  className="h-12 shrink-0 rounded-xl bg-indigo-700 px-7 text-base font-extrabold text-white transition hover:bg-indigo-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
+                >
+                  {L.search}
+                </button>
+              </form>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link href="/government-jobs" className="inline-flex min-h-10 items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
+                  {L.browseGovernment}
+                </Link>
+                <Link href="/closing-soon" className="inline-flex min-h-10 items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
+                  {isHi ? "जल्द बंद होने वाली नौकरियां" : "Closing soon"}
+                </Link>
+              </div>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">
-              {pageHeading()}
-            </h1>
-            <p className="mt-1 max-w-xl text-sm text-neutral-500">
-              {L.heroSubtitle}
-            </p>
-          </div>
-          {/* Stat chip */}
-          <div className="shrink-0">
-            <div className="inline-flex flex-col items-center rounded-xl border border-indigo-100 bg-white px-5 py-3 shadow-sm">
-              <span className="text-2xl font-bold text-indigo-600">
-                {results.length}{hasNext ? "+" : ""}
-              </span>
-              <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500">
-                {L.jobsUnit}
-              </span>
+            <div className="rounded-2xl border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
+              <p className="text-4xl font-bold tracking-tight tabular-nums text-white">{results.length}</p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">{L.jobsUnit}</p>
+              <p className="mt-4 border-t border-white/10 pt-3 text-xs text-slate-400">{L.pageOf(page)}</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ── Search bar ───────────────────────────────────────────────────── */}
-      <form className="flex gap-2" action="/jobs" method="get">
-        {validKind && <input type="hidden" name="kind" value={validKind} />}
-        {validFilter && <input type="hidden" name="filter" value={validFilter} />}
-        <input
-          type="search"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder={L.searchPlaceholder}
-          className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm shadow-sm placeholder:text-neutral-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-        />
-        <button
-          type="submit"
-          className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600/40 active:scale-95 transition-all"
-        >
-          {L.search}
-        </button>
-      </form>
+        </header>
 
       {/* ── Kind filter row ───────────────────────────────────────────────── */}
-      <div className="mt-4 flex flex-wrap gap-2 text-sm">
+      <div className="mt-8 flex flex-wrap gap-2 text-sm">
         <Link
           href={kindHref(undefined)}
           className={
@@ -258,7 +262,7 @@ export default async function JobsListPage({ searchParams }: Props) {
       </div>
 
       {/* ── Status / time filter pills ────────────────────────────────────── */}
-      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
         <Link
           href={filterHref(undefined)}
           className={
@@ -369,11 +373,21 @@ export default async function JobsListPage({ searchParams }: Props) {
           })}
 
           {results.length === 0 && (
-            <li className="py-16 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-2xl">
+            <li className="px-6 py-16 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-2xl text-indigo-700">
                 🔍
               </div>
-              <p className="text-sm font-medium text-neutral-600">{L.noResults}</p>
+              <p className="text-base font-semibold text-slate-900">{L.noResults}</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
+                {(q || validKind || validFilter) && (
+                  <Link href="/jobs" className="inline-flex min-h-10 items-center rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-800">
+                    {L.clearFilters}
+                  </Link>
+                )}
+                <Link href="/government-jobs" className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-700">
+                  {L.browseGovernment}
+                </Link>
+              </div>
             </li>
           )}
         </ul>
@@ -415,6 +429,7 @@ export default async function JobsListPage({ searchParams }: Props) {
 
       {/* ── SEO / AEO / GEO internal link grid ─────────────────────────── */}
       <SeoFooterLinks />
+      </div>
     </div>
   );
 }
