@@ -55,10 +55,10 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   return discoveryHubMetadata({
     title,
     description,
-    // Page-number query views are alternate representations of this discovery
-    // hub, not separate canonical entities.
-    canonicalPath: "/government-jobs",
-    indexable: page === 1,
+    // Each paginated result set has a distinct URL and its own canonical.
+    // Unlike filters/sort variants, page N contains a different set of posts.
+    canonicalPath: page > 1 ? `/government-jobs?page=${page}` : "/government-jobs",
+    indexable: true,
     ogImageAlt: `Government Jobs in India — Current and Upcoming Vacancies ${year}`,
   });
 }
@@ -238,7 +238,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                         statusLabel={urgent ? "Closing soon" : statusText}
                         urgent={urgent}
                         vacancyTotal={post.vacancyTotal}
-                        deadlineLabel={deadline}
+                        deadlineLabel={deadline ?? "Not listed"}
                         daysLeft={lifecycle.daysLeft}
                       />
                     </li>
