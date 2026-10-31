@@ -645,9 +645,9 @@ export async function getPostBySlug(
     const transformedEnrichment = transformed
       ? {
           ...transformed,
-          officialLinks: (transformed.officialLinks ?? []).filter((link) =>
-            isVerifiedOfficialUrl(link.url, officialSourceRegistryUrl)
-          ),
+          // JSONB links do not yet have per-link accepted issuer observations.
+          // Do not expose them as official until each destination is evidenced.
+          officialLinks: [],
         }
       : transformed;
 
