@@ -97,6 +97,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     post.recruitmentSourceDiscoveryOrigin,
     post.recruitmentVerificationStatus,
     post.recruitmentMetadata,
+    undefined,
+    post.recruitmentOfficialLinkSource,
   );
   const { title, description } = composeLeafSeo(post);
 
@@ -141,6 +143,8 @@ export default async function JobDetailPage({ params }: Props) {
     post.recruitmentSourceDiscoveryOrigin,
     post.recruitmentVerificationStatus,
     post.recruitmentMetadata,
+    undefined,
+    post.recruitmentOfficialLinkSource,
   );
 
   // Lifecycle and fact resolvers must not treat aggregator-derived dates or
