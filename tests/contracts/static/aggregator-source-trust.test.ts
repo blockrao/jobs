@@ -168,6 +168,8 @@ describe("aggregator source trust gate", () => {
     const transformer = readFileSync("src/db/operations/enrichment-transformer.ts", "utf8");
     expect(transformer).toContain("source === 'fja_post_inventory'");
     expect(transformer).toContain("verifiedAt == null");
+    expect(transformer).toContain("sourceRef");
+    expect(transformer).toContain("sourceLocator");
     const recruitmentLoader = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     expect(recruitmentLoader).toContain('eq(eligibilities.status, "VERIFIED")');
     expect(recruitmentLoader).toContain("isNotNull(eligibilities.verifiedAt)");
@@ -211,6 +213,10 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("fact_review_evidence jsonb NOT NULL DEFAULT '{}'::jsonb");
     expect(migration).toContain("official_digest_fact_review_complete");
     expect(migration).toContain("official_digest_required_fact_keys");
+    expect(migration).toContain("ALTER TABLE public.posts_experience");
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone");
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS source_ref text");
+    expect(migration).toContain("ADD COLUMN IF NOT EXISTS source_locator text");
     expect(migration).toContain("'application_start_date'");
     expect(migration).toContain("'application_end_date'");
     expect(migration).toContain("'education'");
