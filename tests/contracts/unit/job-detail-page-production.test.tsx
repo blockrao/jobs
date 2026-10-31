@@ -66,7 +66,10 @@ describe("job leaf source authority and application lifecycle", () => {
     expect(html).not.toContain("From official notification");
     expect(html).toContain("Unverified notification or application links are hidden");
     expect(html).toContain("Reported notification date");
-    expect(schemaProps).toHaveBeenLastCalledWith(expect.objectContaining({ emitJobPosting: false }));
+    expect(schemaProps).toHaveBeenLastCalledWith(expect.objectContaining({
+      emitJobPosting: false,
+      post: expect.objectContaining({ officialSourceUrl: null }),
+    }));
   });
 
   test("an unverified application URL stays hidden even when the notification source is verified", () => {
