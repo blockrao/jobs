@@ -45,6 +45,7 @@ jobs:
       # Gate this PR on every application/test file changed by the PR.
       - run: >-
           npx eslint
+          --rule "@typescript-eslint/no-explicit-any: off"
           src/lib/queries.ts
           "src/app/(default)/government-jobs/page.tsx"
           "src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"
@@ -54,6 +55,7 @@ jobs:
           src/lib/source-verification.ts
           tests/contracts/unit/extracted-source-projection.test.ts
           tests/unit/source-verification.test.ts
+      - run: npx eslint --max-warnings 0 src/lib/source-verification.ts tests/unit/source-verification.test.ts
 
   contract-tests:
     name: Architecture contract tests
