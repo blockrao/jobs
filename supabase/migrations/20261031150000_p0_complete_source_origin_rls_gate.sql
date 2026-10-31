@@ -37,7 +37,7 @@ PARALLEL SAFE
 SET search_path = pg_catalog
 AS $fn$
   SELECT coalesce(
-    lower(btrim(p_value)) ~ '^https?://([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)',
+    lower(btrim(p_value)) ~ '^https?://([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)',
     false
   );
 $fn$;
@@ -91,8 +91,8 @@ AS $fn$
         SELECT 1
         FROM public.postings sp
         LEFT JOIN public.posts linked_post ON linked_post.id = sp.inferred_post_id
-        WHERE sp.inferred_recruitment_id = r.id
-           OR linked_post.recruitment_id = r.id
+        WHERE (sp.inferred_recruitment_id = r.id
+           OR linked_post.recruitment_id = r.id)
         AND (
           private.is_aggregator_source_value(sp.source)
           OR upper(btrim(coalesce(sp.source_type, ''))) = 'AGGREGATOR'
