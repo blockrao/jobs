@@ -394,7 +394,7 @@ CREATE POLICY "public read" ON public.recruitments
 DROP POLICY IF EXISTS "public read" ON public.posts;
 CREATE POLICY "public read" ON public.posts
   FOR SELECT TO anon, authenticated
-  USING (private.is_recruitment_publicly_trusted(recruitment_id));
+  USING (private.is_post_publicly_trusted(id));
 
 DROP POLICY IF EXISTS "public read" ON public.eligibilities;
 CREATE POLICY "public read" ON public.eligibilities
