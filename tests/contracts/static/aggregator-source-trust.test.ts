@@ -233,6 +233,9 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("fact_reviewed_fields text[] NOT NULL DEFAULT '{}'");
     expect(migration).toContain("fact_review_evidence jsonb NOT NULL DEFAULT '{}'::jsonb");
     expect(migration).toContain("official_digest_fact_review_complete");
+    expect(migration).toContain("guard_aggregator_eligibility_verification");
+    expect(migration).toContain("HAVING count(*) > 1");
+    expect(migration).toContain("source_discovery_origin, official_notification_url, metadata");
     expect(migration).toContain("official_digest_required_fact_keys");
     expect(migration).toContain("ALTER TABLE public.posts_experience");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone");
