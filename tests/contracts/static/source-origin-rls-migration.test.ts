@@ -29,6 +29,12 @@ describe("P0 source-origin RLS migration contract", () => {
       "sp.source_portals",
       "sp.source_url",
       "r.source_url",
+      "r.official_notification_url",
+      "r.official_application_url",
+      'p."officialSourceUrl"',
+      'p."applyPortalUrl"',
+      "p.application_url",
+      'p."officialNotificationUrl"',
       "sp.inferred_recruitment_id",
       "sp.inferred_post_id",
       "'pilot_preliminary'",
@@ -54,6 +60,16 @@ describe("P0 source-origin RLS migration contract", () => {
       "-- Preserve aggregator discovery origin on future canonical and legacy writes.",
     )[0];
     expect(schemaAndPolicySetup).not.toMatch(/UPDATE public\.recruitments/i);
+  });
+
+  it("recognizes all known aggregator URL hosts and requires a clean issuer URL", () => {
+    expect(migration).toContain("private.is_aggregator_url");
+    for (const host of ["marugujarat.co.in", "pdfjobsjankari.com", "onlineupcar.com", "freejobalert.com", "sarkariresult.com"]) {
+      expect(migration).toContain(host);
+    }
+    expect(migration).toContain("private.has_complete_issuer_authority_review");
+    expect(migration).toContain("r.official_notification_url ~ '^https://'");
+    expect(migration).toContain("REVOKE SELECT ON TABLE public.recruitments, public.posts FROM anon, authenticated");
   });
 
   it("requires at least one canonical non-duplicate Post Leaf before a Recruitment is public", () => {
