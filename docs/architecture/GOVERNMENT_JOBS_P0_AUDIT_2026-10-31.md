@@ -76,7 +76,7 @@ The canonical detail page labelled any populated notification URL as “Official
 
 The detail renderer previously gated `JobPosting` primarily on lifecycle and indexability. Google Search Central says JobPosting markup belongs on single-job detail pages, must describe a single open job, must not contain incomplete descriptions, and must include a way to apply. Google also instructs publishers to remove JobPosting markup when a job is no longer available.
 
-**Remediation in PR #190:** require an open lifecycle, an indexable leaf, both manually verified notification and application links, a Tier A result from the existing deterministic content-quality gate, and VERIFIED eligibility before emitting `JobPosting`. The leaf now resolves eligibility from canonical enrichment rather than relying on the removed FJA extraction-table path. This is a conservative baseline; responsibilities, experience and other field-level completeness still need a deeper audit.
+**Remediation in PR #190:** require an open lifecycle, an indexable leaf, both manually verified notification and application links, a Tier A result from the existing deterministic content-quality gate, and VERIFIED eligibility before emitting `JobPosting`. The leaf now resolves eligibility from canonical enrichment rather than relying on the removed FJA extraction-table path, and labels non-VERIFIED eligibility/experience/age extracts as reported rather than confirmed. This is a conservative baseline; responsibilities, experience and other field-level completeness still need a deeper audit.
 
 Google references:
 - https://developers.google.com/search/docs/appearance/structured-data/job-posting
