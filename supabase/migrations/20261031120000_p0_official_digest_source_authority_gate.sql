@@ -452,6 +452,21 @@ BEGIN
       WHERE x.post_id = p.id
         AND p.recruitment_id = NEW.id
         AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':experience'];
+
+      WITH refreshed AS (
+        SELECT p.id, public.aggregate_enrichment_for_post(p.id) AS payload
+        FROM public.posts p
+        WHERE p.recruitment_id = NEW.id
+      )
+      UPDATE public.posts p
+      SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
+        'education', refreshed.payload -> 'education',
+        'experience', refreshed.payload -> 'experience',
+        'sourceVerificationStatus', 'VERIFIED',
+        'sourceVerificationDate', v_review.fact_reviewed_at
+      )
+      FROM refreshed
+      WHERE p.id = refreshed.id;
     END IF;
   END IF;
 
@@ -789,6 +804,25 @@ BEGIN
       AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    WITH refreshed AS (
+      SELECT p.id, public.aggregate_enrichment_for_post(p.id) AS payload
+      FROM public.posts p
+      JOIN public.recruitments r ON r.id = p.recruitment_id
+      WHERE r.official_link_source = 'AGGREGATOR_DISCOVERED'
+        AND r.metadata ->> 'ingest_batch' = NEW.batch
+        AND r.official_notification_url = NEW.hub ->> 'official_url'
+    )
+    UPDATE public.posts p
+    SET enrichment = (coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance')
+      || jsonb_build_object(
+        'education', refreshed.payload -> 'education',
+        'experience', refreshed.payload -> 'experience',
+        'sourceVerificationStatus', 'UNVERIFIABLE',
+        'sourceVerificationDate', NULL
+      )
+    FROM refreshed
+    WHERE p.id = refreshed.id;
   END IF;
 
   RETURN NEW;
