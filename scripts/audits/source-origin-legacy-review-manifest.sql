@@ -22,10 +22,10 @@ WITH legacy_posting_origin AS (
         AND mapped_post.recruitment_id = r.id
     )
   WHERE lower(coalesce(sp.source, '')) IN (
-      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
-      'aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+      'aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
@@ -38,14 +38,14 @@ WITH legacy_posting_origin AS (
           ELSE '[]'::jsonb
         END
       ) AS portal(value)
-      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
     )
 ),
 post_origin AS (
   SELECT DISTINCT p.recruitment_id
   FROM public.posts p
   WHERE lower(coalesce(p."sourceName", '')) IN (
-      'aggregator','freejobalert','aggregator_extracted','pilot_preliminary'
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
@@ -150,10 +150,10 @@ WITH legacy_posting_origin AS (
         AND mapped_post.recruitment_id = r.id
     )
   WHERE lower(coalesce(sp.source, '')) IN (
-      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
-      'aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+      'aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
@@ -166,14 +166,14 @@ WITH legacy_posting_origin AS (
           ELSE '[]'::jsonb
         END
       ) AS portal(value)
-      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
     )
 ),
 post_origin AS (
   SELECT DISTINCT p.recruitment_id
   FROM public.posts p
   WHERE lower(coalesce(p."sourceName", '')) IN (
-      'aggregator','freejobalert','aggregator_extracted','pilot_preliminary'
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
@@ -323,7 +323,7 @@ JOIN public.postings sp
       AND mapped_post.recruitment_id = r.id
   )
 WHERE (
-    lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+    lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
@@ -335,7 +335,7 @@ WHERE (
           ELSE '[]'::jsonb
         END
       ) AS portal(value)
-      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
     )
   )
   AND NOT EXISTS (
@@ -376,7 +376,7 @@ WHERE (
       SELECT 1 FROM public.posts p
       WHERE p.recruitment_id = r.id
         AND (
-          lower(coalesce(p."sourceName", '')) IN ('aggregator','freejobalert','aggregator_extracted','pilot_preliminary')
+          lower(coalesce(p."sourceName", '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
           OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
           OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
           OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
@@ -387,8 +387,8 @@ WHERE (
       LEFT JOIN public.posts mapped_post ON mapped_post.id = sp.inferred_post_id
       WHERE (sp.inferred_recruitment_id = r.id OR mapped_post.recruitment_id = r.id)
         AND (
-          lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
-          OR lower(coalesce(sp.enrichment_source, '')) IN ('aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+          lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+          OR lower(coalesce(sp.enrichment_source, '')) IN ('aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
           OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
           OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
           OR EXISTS (
@@ -396,7 +396,7 @@ WHERE (
               CASE WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
                 THEN sp.source_portals ELSE '[]'::jsonb END
             ) portal(value)
-            WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+            WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
           )
         )
     )
