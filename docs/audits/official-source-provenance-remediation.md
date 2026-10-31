@@ -58,6 +58,8 @@ These are the audit snapshot counts, not guaranteed current counts. Re-run the S
 
 Run `scripts/audits/official-source-provenance-dry-run.sql` with a read-only role. Export the detailed rows and reconcile every affected fact against that recruitment's own issuer notification. Do not bulk-delete or bulk-correct the cohort based only on shared text or source labels.
 
+After the forward migration is approved and applied, run `scripts/audits/official-source-provenance-post-migration-check.sql` with a read-only role. It checks that discovery origin remains `AGGREGATOR_DISCOVERED`, that no unreviewed record is promoted to `MANUAL_VERIFIED`, and that verified eligibility/fact rows retain evidence pointers.
+
 ### P0-C — repair NIT Warangal
 
 - Treat the NITW faculty recruitment as a separate evidence-led case.
