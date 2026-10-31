@@ -799,9 +799,14 @@ BEGIN
         'degree', pe.degree,
         'subject', pe.subject,
         'specialization', pe.specialization,
+        'minimum_percentage', pe.minimum_percentage,
+        'minimum_marks', pe.minimum_marks,
         'source', pe.source,
         'confidence_score', pe.confidence_score,
-        'verified_at', pe.verified_at
+        'extracted_at', pe.extracted_at,
+        'verified_at', pe.verified_at,
+        'source_ref', pe.source_ref,
+        'source_locator', pe.source_locator
       ) ORDER BY pe.id)
       FROM public.posts_education pe
       WHERE pe.post_id = p_post_id),
@@ -814,11 +819,16 @@ BEGIN
     COALESCE(
       (SELECT jsonb_agg(jsonb_build_object(
         'fact_id', pex.id,
+        'total_years', pex.total_years,
+        'min_years', pex.min_years,
         'type', pex.experience_type,
+        'experience_type', pex.experience_type,
         'source', pex.source,
         'confidence_score', pex.confidence_score,
+        'extracted_at', pex.extracted_at,
         'verified_at', pex.verified_at,
-        'description', pex.description
+        'source_ref', pex.source_ref,
+        'source_locator', pex.source_locator
       ) ORDER BY pex.id)
       FROM public.posts_experience pex
       WHERE pex.post_id = p_post_id),
@@ -938,11 +948,16 @@ SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
     (SELECT jsonb_agg(jsonb_build_object(
       'fact_id', pe.id,
       'degree', pe.degree,
-      'subject', pe.subject,
-      'specialization', pe.specialization,
-      'source', pe.source,
-      'confidence_score', pe.confidence_score,
-      'verified_at', pe.verified_at
+        'subject', pe.subject,
+        'specialization', pe.specialization,
+        'minimum_percentage', pe.minimum_percentage,
+        'minimum_marks', pe.minimum_marks,
+        'source', pe.source,
+        'confidence_score', pe.confidence_score,
+        'extracted_at', pe.extracted_at,
+        'verified_at', pe.verified_at,
+        'source_ref', pe.source_ref,
+        'source_locator', pe.source_locator
     ) ORDER BY pe.id)
     FROM public.posts_education pe
     WHERE pe.post_id = p.id),
@@ -953,11 +968,16 @@ SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
   COALESCE(
     (SELECT jsonb_agg(jsonb_build_object(
       'fact_id', pex.id,
-      'type', pex.experience_type,
-      'source', pex.source,
-      'confidence_score', pex.confidence_score,
-      'verified_at', pex.verified_at,
-      'description', pex.description
+        'total_years', pex.total_years,
+        'min_years', pex.min_years,
+        'type', pex.experience_type,
+        'experience_type', pex.experience_type,
+        'source', pex.source,
+        'confidence_score', pex.confidence_score,
+        'extracted_at', pex.extracted_at,
+        'verified_at', pex.verified_at,
+        'source_ref', pex.source_ref,
+        'source_locator', pex.source_locator
     ) ORDER BY pex.id)
     FROM public.posts_experience pex
     WHERE pex.post_id = p.id),
