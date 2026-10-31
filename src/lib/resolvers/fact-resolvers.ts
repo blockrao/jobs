@@ -209,8 +209,8 @@ export function resolvePostVacancy(
   }
 
   // Do not fall back to an unverified enrichment value. A plausible positive
-  // number is not authoritative without accepted source status and extraction
-  // confidence; this rule is shared by visible UI, metadata, and structured data.
+  // number is not authoritative without field-level issuer evidence, accepted
+  // verification status and extraction confidence.
   return null;
 }
 
@@ -219,7 +219,8 @@ export function resolvePostVacancy(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the officially stated Recruitment total vacancy count, or null.
+ * Returns the Recruitment total vacancy count only when an accepted official
+ * observation explicitly supports the recruitment-scoped vacancy field.
  *
  * Hard rule: NEVER derived by summing resolvePostVacancy() across Posts.
  * The Post dataset may be incomplete (BPSC TRE-4.0 has 5,682 vacancies
