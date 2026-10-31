@@ -12,6 +12,9 @@ export type JobOpportunityCardProps = {
   vacancyTotal?: number | null;
   deadlineLabel: string;
   daysLeft?: number | null;
+  vacanciesLabel?: string;
+  deadlineTitle?: string;
+  viewDetailsLabel?: string;
 };
 
 function organizationInitials(name: string): string {
@@ -44,11 +47,14 @@ export function JobOpportunityCard({
   vacancyTotal,
   deadlineLabel,
   daysLeft,
+  vacanciesLabel = "vacancies",
+  deadlineTitle = "Deadline",
+  viewDetailsLabel = "View job details",
 }: JobOpportunityCardProps) {
   const initials = organizationInitials(organizationName);
 
   return (
-    <article className="group overflow-hidden rounded-[1.35rem] border border-slate-200/90 bg-white p-3.5 shadow-sm shadow-slate-900/[0.025] transition duration-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-900/[0.06] sm:rounded-2xl sm:p-5">
+    <article className="group overflow-hidden rounded-2xl border border-slate-300 bg-white p-4 shadow-sm shadow-slate-900/[0.04] transition duration-200 hover:border-indigo-300 hover:shadow-lg hover:shadow-slate-900/[0.06] sm:p-5">
       <div className="min-w-0">
         <div className="flex items-center gap-2.5 sm:gap-4">
           <span
@@ -66,14 +72,14 @@ export function JobOpportunityCard({
             </span>
             {vacancyTotal != null && vacancyTotal > 0 && (
               <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                {vacancyTotal.toLocaleString("en-IN")} vacancies
+                {vacancyTotal.toLocaleString("en-IN")} {vacanciesLabel}
               </span>
             )}
           </div>
         </div>
 
         <div className="mt-3 min-w-0 sm:mt-2">
-          <h3 className="text-lg font-bold leading-6 tracking-tight text-slate-950">
+          <h3 className="text-xl font-extrabold leading-7 tracking-tight text-slate-950 sm:text-[1.35rem]">
             <Link
               href={detailHref}
               className="rounded-sm decoration-2 underline-offset-4 transition group-hover:text-indigo-700 group-hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -110,7 +116,7 @@ export function JobOpportunityCard({
               href={detailHref}
               className="flex min-h-11 w-full items-center justify-center gap-1 rounded-xl bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:w-auto sm:justify-start sm:bg-transparent sm:px-2 sm:py-1 sm:hover:bg-indigo-50"
             >
-              View job details <span aria-hidden="true" className="transition group-hover:translate-x-0.5">→</span>
+              {viewDetailsLabel} <span aria-hidden="true" className="transition group-hover:translate-x-0.5">→</span>
             </Link>
           </div>
         </div>
