@@ -11,7 +11,7 @@ on:
         options:
           - pilot
           - eligible_inventory
-        default: pilot
+        default: eligible_inventory
       external_ids:
         description: "Comma-separated FJA external IDs (required for pilot; leave empty for eligible_inventory)"
         required: false
@@ -106,3 +106,11 @@ jobs:
             test -n "$FJA_PROMOTE_EXTERNAL_IDS" || { echo "Missing external_ids allowlist; promotion stopped."; exit 1; }
           fi
           npx tsx scripts/promote-fja-to-canonical.ts
+      - name: Upload record-level dry-run report
+        if: always() && hashFiles('fja-canonical-promotion-dry-run.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-canonical-promotion-dry-run
+          path: fja-canonical-promotion-dry-run.json
+          if-no-files-found: error
+          retention-days: 14
