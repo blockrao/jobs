@@ -59,7 +59,7 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   const title = titleParts.join(" ");
 
   const bits: string[] = [];
-  if (post.organizationName) bits.push(`${post.organizationName} recruitment for ${post.title}`);
+  if (displayOrganizationName) bits.push(`${displayOrganizationName} recruitment for ${post.title}`);
   else bits.push(`${post.title} recruitment`);
   if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
