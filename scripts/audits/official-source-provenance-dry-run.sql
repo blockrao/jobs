@@ -252,6 +252,13 @@ SELECT
   r.official_link_source,
   r.official_notification_url,
   r.official_application_url,
+  r.metadata->>'ingest_batch' AS ingest_batch,
+  (
+    SELECT count(*)
+    FROM public.official_digest_promote d
+    WHERE d.batch = r.metadata->>'ingest_batch'
+      AND d.hub->>'official_url' = r.official_notification_url
+  ) AS staging_match_count,
   r.last_verified_at,
   r.enrichment_data->'meta'->>'source' AS enrichment_source,
   r.enrichment_data->'meta'->>'verified' AS enrichment_verified,
@@ -260,6 +267,8 @@ SELECT
   r.enrichment_data->'institution'->>'name' AS enrichment_institution,
   (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = r.id) AS canonical_post_count,
   (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = r.id AND p."isLive" IS TRUE) AS live_post_count,
+  (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = r.id AND (coalesce(p."isOfficialSource", false) OR coalesce(p.is_official_source, false))) AS posts_claiming_official,
+  (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = r.id AND p.enrichment->>'sourceVerificationStatus' = 'VERIFIED') AS posts_with_verified_enrichment,
   (
     SELECT jsonb_agg(jsonb_build_object(
       'post_id', p.id,
@@ -268,12 +277,28 @@ SELECT
       'is_live', p."isLive",
       'source_name', p."sourceName",
       'is_official_source', p."isOfficialSource",
-      'source_verification_status', p.enrichment->>'sourceVerificationStatus'
+      'source_verification_status', p.enrichment->>'sourceVerificationStatus',
+      'education_rows', (SELECT count(*) FROM public.posts_education x WHERE x.post_id = p.id),
+      'experience_rows', (SELECT count(*) FROM public.posts_experience x WHERE x.post_id = p.id),
+      'vacancy_rows', (SELECT count(*) FROM public.posts_vacancies x WHERE x.post_id = p.id),
+      'selection_process_rows', (SELECT count(*) FROM public.posts_selection_process x WHERE x.post_id = p.id),
+      'document_rows', (SELECT count(*) FROM public.posts_documents x WHERE x.post_id = p.id),
+      'important_date_rows', (SELECT count(*) FROM public.posts_important_dates x WHERE x.post_id = p.id),
+      'age_rule_rows', (SELECT count(*) FROM public.post_age_rules x WHERE x.post_id = p.id),
+      'application_fee_rows', (SELECT count(*) FROM public.posts_application_fee x WHERE x.post_id = p.id),
+      'official_link_rows', (SELECT count(*) FROM public.posts_official_links x WHERE x.post_id = p.id),
+      'eligibility_rows', (SELECT count(*) FROM public.eligibilities x WHERE x.post_id = p.id)
     ) ORDER BY p.id)
     FROM public.posts p
     WHERE p.recruitment_id = r.id
   ) AS canonical_posts,
   CASE
+    WHEN (
+      SELECT count(*)
+      FROM public.official_digest_promote d
+      WHERE d.batch = r.metadata->>'ingest_batch'
+        AND d.hub->>'official_url' = r.official_notification_url
+    ) = 0 THEN 'LEGACY_REVIEW_QUEUE_REQUIRED'
     WHEN r.enrichment_data->'reference'->>'source' ILIKE '%UPPSC%'
       OR r.enrichment_data->'institution'->>'name' ILIKE '%UPPSC%'
     THEN 'ENTITY_CONTAMINATION_REVIEW_REQUIRED'
