@@ -389,7 +389,11 @@ BEGIN
           "isOfficialSource" = true,
           is_official_source = true,
           enrichment = coalesce(enrichment, '{}'::jsonb)
-            || jsonb_build_object('source_provenance', NEW.metadata -> 'source_provenance'),
+            || jsonb_build_object(
+              'source_provenance', NEW.metadata -> 'source_provenance',
+              'sourceVerificationStatus', 'VERIFIED',
+              'sourceVerificationDate', v_review.fact_reviewed_at
+            ),
           updated_at = now()
       WHERE recruitment_id = NEW.id;
 
@@ -693,7 +697,11 @@ BEGIN
     SET "sourceName" = 'aggregator_extracted',
         "isOfficialSource" = false,
         is_official_source = false,
-        enrichment = coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance',
+        enrichment = (coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance')
+          || jsonb_build_object(
+            'sourceVerificationStatus', 'UNVERIFIABLE',
+            'sourceVerificationDate', NULL
+          ),
         updated_at = now()
     FROM public.recruitments r
     WHERE r.id = p.recruitment_id
@@ -979,7 +987,11 @@ UPDATE public.posts p
 SET "sourceName" = 'aggregator_extracted',
     "isOfficialSource" = false,
     is_official_source = false,
-    enrichment = coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance',
+    enrichment = (coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance')
+      || jsonb_build_object(
+        'sourceVerificationStatus', 'UNVERIFIABLE',
+        'sourceVerificationDate', NULL
+      ),
     updated_at = now()
 FROM public.recruitments r
 WHERE r.id = p.recruitment_id
