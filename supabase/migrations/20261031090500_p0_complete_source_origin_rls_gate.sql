@@ -153,6 +153,15 @@ AS $fn$
     AND nullif(btrim(p_metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_by'), '') IS NOT NULL
     AND private.is_past_review_timestamp(p_metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_at')
     AND nullif(btrim(p_metadata -> 'source_provenance' -> 'fact_review' ->> 'notes'), '') IS NOT NULL
+    AND jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'required_fields') = 'array'
+    AND CASE
+      WHEN jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'required_fields') = 'array'
+        THEN jsonb_array_length(p_metadata -> 'source_provenance' -> 'fact_review' -> 'required_fields') > 0
+      ELSE false
+    END
+    AND (p_metadata -> 'source_provenance' -> 'fact_review' -> 'required_fields') ? 'hub:notification_date'
+    AND (p_metadata -> 'source_provenance' -> 'fact_review' -> 'required_fields')
+      <@ (p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields')
     AND jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') = 'array'
     AND CASE
       WHEN jsonb_typeof(p_metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') = 'array'
