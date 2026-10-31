@@ -14,6 +14,10 @@ The older source-authority implementation is not safe to merge unchanged. The re
 
 The resulting reconciliation is **6,365 candidates, 355 staging matches, 6,010 without a staging match, and 6,003 without an ingest batch**. These are discovery-origin candidates, not a declaration that every fact is wrong.
 
+A separate canonical-leaf audit found **4,839 Recruitments with at least one non-duplicate Post Leaf and 1,526 without one**. Of the 1,526 incomplete hubs, 81 have a legacy Posting relationship that needs careful reconciliation and 1,445 have no legacy Posting relationship. The no-leaf cohort includes 1,355 UPCOMING, 124 ACTIVE, 43 CLOSED and 4 ARCHIVED Recruitments.
+
+A further production read-only check found only **4** records with `verification_status = VERIFIED` and `official_link_source = MANUAL_VERIFIED`; **0** have a complete issuer review, **0** have a complete fact review, and **0** meet the minimum source-trust gate. Therefore, applying this RLS gate to the current snapshot before completing reviews would make the entire 6,365-record source-origin cohort unavailable to anonymous readers. This is a material product/discovery impact and a **stop-ship condition**, not an incidental implementation detail.
+
 ## Origin signals covered
 
 The SQL gate and TypeScript helper recognise:
@@ -73,6 +77,8 @@ The sitemap therefore cannot advertise a record that the application-level sourc
 
 ## Rollout and verification gates
 
+**Stop-ship:** Do not apply this migration to production until the review workflow and canonical Post decomposition plan have been completed and the expected public-visible inventory has been explicitly approved. The current snapshot has zero source-origin records meeting the minimum trust gate, so an immediate rollout would hide the whole current job inventory from anonymous access.
+
 1. Run the expanded read-only manifest against production and reconcile the expected 6,365 / 355 / 6,010 / 6,003 counts. Resolve any drift before migration approval.
 2. Apply the migration only after explicit review/approval. It performs DDL, policy changes and future-write trigger installation; it does not perform a historical bulk backfill.
 3. Run `scripts/audits/source-origin-rls-post-migration-check.sql` as a read-only verification. Confirm dynamic origin detection, all five RLS policies, and direct `anon` visibility.
@@ -80,7 +86,7 @@ The sitemap therefore cannot advertise a record that the application-level sourc
 5. Benchmark query plans and REST latency for the SECURITY DEFINER predicates. The migration adds supporting indexes, but production performance must be measured before release.
 6. Apply the migration before deploying application code that calls `private.is_recruitment_publicly_trusted`. Do not merge/deploy the application code ahead of the database function.
 7. Preview/production verification is still required. A green CI run is not evidence that the live RLS behavior or sitemap has been verified.
-8. Review and approve any later backfill or remediation as a separate change. The 81 missing canonical Post Leaves require a reviewed decomposition manifest before any write.
+8. Review and approve any later backfill or remediation as a separate change. The 81 legacy-mapped and 1,445 unmapped no-Post Recruitments require separate reviewed decomposition manifests before any write.
 
 ## Rollback
 
@@ -94,3 +100,4 @@ The paired rollback file is emergency-only. It restores unrestricted public-read
 - No Post Leaf was created or remapped.
 - No URL, slug, canonical ID or sitemap entry was changed in production.
 - No preview or production deployment was verified as part of this implementation work.
+- The migration is not approved for production rollout while the zero-visible-inventory condition remains.
