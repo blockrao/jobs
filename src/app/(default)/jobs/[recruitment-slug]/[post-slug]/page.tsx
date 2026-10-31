@@ -24,7 +24,7 @@ import { getRelatedPostsGrouped } from "@/db/operations/get-related-posts";
 import JobDetailPageProduction from "@/components/job-posting/job-detail-page-production";
 import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
-import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
+import { resolveEligibility, resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
 
 // Job lifecycle and JobPosting eligibility are time-sensitive; keep the detail
 // page's stale window aligned with the hourly live-job inventory refresh.
@@ -45,6 +45,7 @@ interface Props {
 function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
   const enrichment = post.enrichment;
   const vacancies = resolvePostVacancy(post) ?? 0;
+  const eligibility = resolveEligibility(post);
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const deadlineRaw = post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null;
@@ -191,10 +192,10 @@ export default async function JobDetailPage({ params }: Props) {
         officialLinkSource: post.officialLinkSource ?? null,
         applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
         employmentType: post.employmentType ?? null,
-        qualificationText:
-          post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,
-        experienceText: post.fjaExtract?.experienceRaw,
-        ageLimit: post.fjaExtract?.ageLimitRaw,
+        qualificationText: eligibility.qualificationText,
+        qualificationVerificationStatus: eligibility.verificationStatus,
+        experienceText: eligibility.experienceText,
+        ageLimit: eligibility.ageText,
         selectionProcess: post.recruitmentSelectionProcess || (Array.isArray(enrichment?.selectionProcess) ? enrichment.selectionProcess.map((s: any) => s.name).join("; ") : undefined),
         howToApply: post.applicationMethod,
         applicationFee: undefined,
