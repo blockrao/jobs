@@ -59,7 +59,6 @@ interface JobDetailPageProps {
     recruitmentSlug: string;
     recruitmentName?: string | null;
     slug: string;
-    postedAt?: Date | string | null;
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
