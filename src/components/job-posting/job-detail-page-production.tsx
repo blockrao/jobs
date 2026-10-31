@@ -370,7 +370,7 @@ export default function JobDetailPageProduction({
               </p>
               {(post.officialSourceVerified !== true || post.officialApplicationVerified !== true) && (
                 <p className={styles.notice}>
-                  Unverified notification or application links are hidden. Confirm the destination on the recruiting organisation's official website before applying.
+                  Unverified notification or application links are hidden. Confirm the destination on the recruiting organisation&apos;s official website before applying.
                 </p>
               )}
               {notificationDate && (
