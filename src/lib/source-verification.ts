@@ -13,6 +13,12 @@ export type SourceTrustInput = {
   sourceReference?: unknown;
   originalRecruitmentUrl?: unknown;
   recruitmentSourceUrl?: unknown;
+  officialNotificationUrl?: unknown;
+  officialApplicationUrl?: unknown;
+  postOfficialSourceUrl?: unknown;
+  postApplyPortalUrl?: unknown;
+  postApplicationUrl?: unknown;
+  postOfficialNotificationUrl?: unknown;
   enrichmentData?: unknown;
   metadata?: unknown;
   legacyPostingSource?: unknown;
@@ -49,26 +55,18 @@ function isHttpsUrl(value: unknown): boolean {
   }
 }
 
-function isFjaUrl(value: unknown): boolean {
-  if (!nonEmpty(value)) return false;
-  try {
-    const candidate = value.trim();
-    const normalized = candidate.startsWith("//") ? `https:${candidate}`
-      : /^https?:\/\//i.test(candidate) ? candidate
-      : `https://${candidate}`;
-    const url = new URL(normalized);
-    return (url.protocol === "https:" || url.protocol === "http:")
-      && (url.hostname === "freejobalert.com" || url.hostname.endsWith(".freejobalert.com"));
-  } catch {
-    return false;
-  }
-}
-
 const AGGREGATOR_SOURCE_VALUES = new Set([
   "fja", "freejobalert", "ext-1", "ext-2", "ext-3", "ext-4", "ext-5",
   "aggregator", "aggregator_extracted", "pilot_preliminary",
   "institutional_aggregation", "institution_aggregation", "fja_html",
   "aggregator_discovered", "fja_official_link_extracted", "official_link_extracted",
+  "sarkariresult", "sarkarinaukri", "indiasarkarinaukri", "sahisarkarijobs",
+  "sarkariexam", "marugujarat", "marugujarat.co.in", "pdfjobsjankari",
+  "pdfjobsjankari.com", "onlineupcar", "onlineupcar.com", "rojgarresult",
+  "rojgarresult.com", "freshersworld", "freshersworld.com", "telegram",
+  "telegram.me", "telegram.org", "t.me", "whatsapp", "whatsapp.com",
+  "wa.me", "arattai", "arattai.in", "facebook", "facebook.com", "twitter",
+  "twitter.com", "x.com", "instagram", "instagram.com", "youtube", "youtube.com",
 ]);
 
 function isAggregatorSourceValue(value: unknown): boolean {
@@ -86,6 +84,7 @@ function hasIssuerAndFactReview(metadata: unknown): boolean {
   if (
     authority.status !== "VERIFIED" ||
     !isHttpsUrl(authority.evidence_url) ||
+    isAggregatorUrl(authority.evidence_url) ||
     !nonEmpty(authority.reviewed_by) ||
     !validPastTimestamp(authority.reviewed_at) ||
     !nonEmpty(authority.notes)
@@ -138,13 +137,19 @@ export function isAggregatorDiscoveredSource(input: SourceTrustInput): boolean {
     isAggregatorSourceValue(input.sourceName) ||
     isAggregatorSourceValue(input.legacyPostingSource) ||
     isAggregatorSourceValue(input.legacyPostingEnrichmentSource) ||
-    isFjaUrl(input.legacyPostingSourceUrl) ||
+    isAggregatorUrl(input.legacyPostingSourceUrl) ||
     (typeof input.legacyPostingSourceType === "string"
       && input.legacyPostingSourceType.trim().toUpperCase() === "AGGREGATOR") ||
     portals.some(isAggregatorSourceValue) ||
-    isFjaUrl(input.sourceReference) ||
-    isFjaUrl(input.originalRecruitmentUrl) ||
-    isFjaUrl(input.recruitmentSourceUrl);
+    isAggregatorUrl(input.sourceReference) ||
+    isAggregatorUrl(input.originalRecruitmentUrl) ||
+    isAggregatorUrl(input.recruitmentSourceUrl) ||
+    isAggregatorUrl(input.officialNotificationUrl) ||
+    isAggregatorUrl(input.officialApplicationUrl) ||
+    isAggregatorUrl(input.postOfficialSourceUrl) ||
+    isAggregatorUrl(input.postApplyPortalUrl) ||
+    isAggregatorUrl(input.postApplicationUrl) ||
+    isAggregatorUrl(input.postOfficialNotificationUrl);
 }
 
 export function isRecruitmentSourceTrusted(input: SourceTrustInput): boolean {
@@ -159,6 +164,10 @@ export function isRecruitmentSourceTrusted(input: SourceTrustInput): boolean {
 
   return status === "VERIFIED"
     && linkSource === "MANUAL_VERIFIED"
+    && isHttpsUrl(input.officialNotificationUrl)
+    && !isAggregatorUrl(input.officialNotificationUrl)
+    && (!nonEmpty(input.officialApplicationUrl)
+      || (isHttpsUrl(input.officialApplicationUrl) && !isAggregatorUrl(input.officialApplicationUrl)))
     && hasIssuerAndFactReview(input.metadata);
 }
 
