@@ -564,12 +564,16 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     conditions.push(sql`
       r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
       AND r.official_link_source = 'MANUAL_VERIFIED'
-      AND r.official_notification_url ~ '^https?://'
+      AND r.official_notification_url ~* '^https?://'
       AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
-      AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'evidence_url' ~ '^https://'
+      AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'evidence_url' ~* '^https://'
       AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_by', '') IS NOT NULL
       AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_at', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'notes', '') IS NOT NULL
       AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_by', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_at', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' ->> 'notes', '') IS NOT NULL
       AND (r.metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') ? 'hub:notification_date'
       AND (r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence') ? 'hub:notification_date'
       AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'evidence_ref', '') IS NOT NULL
