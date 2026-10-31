@@ -138,7 +138,7 @@ async function main(){
     open_as_of_cutoff:eligible.length,closed_by_cutoff:records.filter(r=>r.open_status==="CLOSED_BY_CUTOFF").length,
     review_date_unclear:records.filter(r=>String(r.open_status).startsWith("REVIEW")).length,
     records_with_organization:records.filter(r=>Boolean(r.facts?.organization)).length,
-    records_with_numeric_vacancy_fact:records.filter(r=>Boolean(r.facts?.vacancies)&&/\d/.test(String(r.facts?.vacancies))).length,
+    records_with_numeric_vacancy_fact:records.filter(r=>typeof r.vacancy_count_candidate==="number").length,
     records_with_post_table_candidates:records.filter(r=>Array.isArray(r.post_table_candidates)&&r.post_table_candidates.length>0).length,
     records_with_official_link_candidates:records.filter(r=>Array.isArray(r.official_link_candidates)&&r.official_link_candidates.length>0).length,
     records_with_page_hash:records.filter(r=>typeof r.page_sha256==="string"&&r.page_sha256.length===64).length,
