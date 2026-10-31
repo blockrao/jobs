@@ -72,7 +72,6 @@ export interface PostLeafSchemaProps {
     locationCity?: string | null;
     locationState?: string | null;
     notificationPublicationDate?: Date | null;
-    postedAt?: Date | null;
     updatedAt?: Date | null;
     qualificationText?: string | null;
     experienceText?: string | null;
@@ -184,7 +183,7 @@ export default function PostLeafStructuredData({
   };
 
   // ── Dates ────────────────────────────────────────────────────────────────
-  const datePostedIso = toIso(post.notificationPublicationDate) ?? toIso(post.postedAt);
+  const datePostedIso = toIso(post.notificationPublicationDate);
   const dateModifiedIso = toIso(post.updatedAt);
 
   // ── WebPage ──────────────────────────────────────────────────────────────
