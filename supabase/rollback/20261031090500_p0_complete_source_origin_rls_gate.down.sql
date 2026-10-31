@@ -36,6 +36,7 @@ REVOKE ALL ON FUNCTION private.is_post_publicly_trusted(integer) FROM PUBLIC, an
 
 DROP FUNCTION IF EXISTS private.guard_recruitment_discovery_origin();
 DROP FUNCTION IF EXISTS private.propagate_post_discovery_origin();
+DROP FUNCTION IF EXISTS private.legacy_posting_has_aggregator_origin_for_post(integer);
 DROP FUNCTION IF EXISTS private.propagate_legacy_posting_discovery_origin();
 DROP FUNCTION IF EXISTS private.is_post_publicly_trusted(integer);
 DROP FUNCTION IF EXISTS private.is_recruitment_publicly_trusted(integer);
