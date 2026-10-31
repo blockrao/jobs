@@ -115,16 +115,18 @@ export default async function JobsListPage({ searchParams }: Props) {
     all: isHi ? "सभी" : "All",
     government: isHi ? "सरकारी" : "Government",
     private: isHi ? "निजी" : "Private",
-    newlyAdded: isHi ? "नई नौकरियां" : "Newly Added",
+    newlyAdded: isHi ? "हाल की अधिसूचनाएं" : "Recent Notifications",
     open: isHi ? "आवेदन खुले" : "Applications Open",
     showing: (n: number) =>
       isHi ? `${n} नौकरियां दिखाई जा रही हैं` : `Showing ${n} job${n !== 1 ? "s" : ""}`,
-    noResults: isHi
-      ? (q ? `“${q}” से मेल खाने वाली नौकरी नहीं मिली। खोज बदलें या फ़िल्टर हटाएं।` : "अभी कोई वर्तमान या आगामी नौकरी उपलब्ध नहीं है। कृपया बाद में फिर देखें।")
-      : (q ? `No jobs match “${q}”. Try a broader search or clear your filters.` : "No current or upcoming jobs are available in this listing right now. Please check back soon."),
+    noResults: validFilter === "newly-added"
+      ? (isHi ? "पिछले 30 दिनों में कोई स्रोत-सत्यापित भर्ती अधिसूचना उपलब्ध नहीं है।" : "No source-verified recruitment notifications are available from the last 30 days.")
+      : isHi
+        ? (q ? `“${q}” से मेल खाने वाली नौकरी नहीं मिली। खोज बदलें या फ़िल्टर हटाएं।` : "अभी कोई वर्तमान या आगामी नौकरी उपलब्ध नहीं है। कृपया बाद में फिर देखें।")
+        : (q ? `No jobs match “${q}”. Try a broader search or clear your filters.` : "No current or upcoming jobs are available in this listing right now. Please check back soon."),
     clearFilters: isHi ? "खोज और फ़िल्टर हटाएं" : "Clear search and filters",
     browseGovernment: isHi ? "सभी सरकारी नौकरियां देखें" : "Browse all government jobs",
-    posted: isHi ? "प्रकाशित" : "Posted",
+    notification: isHi ? "अधिसूचना" : "Notification",
     verified: isHi ? "सत्यापित" : "Verified",
     examOn: isHi ? "परीक्षा" : "Exam",
     daysLeft: (n: number) => isHi ? `${n} दिन बचे` : `${n}d left`,
@@ -304,7 +306,7 @@ export default async function JobsListPage({ searchParams }: Props) {
             const detailHref = `/jobs/${r.slug}`;
             const closingSoon = lifecycle.isOpen && lifecycle.daysLeft !== null && lifecycle.daysLeft >= 0 && lifecycle.daysLeft <= 7;
             const badgeColor = LIFECYCLE_COLORS[lifecycle.state] ?? LIFECYCLE_COLORS.closed;
-            const postedOn = r.notificationDate ?? r.createdAt;
+            const notificationOn = r.notificationDate;
 
             return (
               <li key={r.id} className="group relative">
@@ -351,7 +353,7 @@ export default async function JobsListPage({ searchParams }: Props) {
                     </div>
 
                     <p className="mt-2 text-xs text-neutral-400 leading-relaxed">
-                      {postedOn && <>{L.posted} {formatDate(postedOn, dateLocale)}</>}
+                      {notificationOn && <>{L.notification} {formatDate(notificationOn, dateLocale)}</>}
                       {lifecycle.deadline && (
                         <> · {isHi ? "अंतिम तिथि" : "Last date"}: {formatDate(lifecycle.deadline, dateLocale)}</>
                       )}

@@ -530,7 +530,6 @@ export interface RecruitmentListRow {
   applicationEndDate: Date | null;
   examDate: Date | null;
   lastVerifiedAt: Date | null;
-  createdAt: Date | null;
   updatedAt: Date | null;
 }
 
@@ -559,7 +558,27 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     conditions.push(OPEN_RECRUITMENT_SQL);
   } else if (opts.filter === "newly-added") {
     conditions.push(LIVE_RECRUITMENT_SQL);
-    conditions.push(sql`COALESCE(r.notification_date, r.created_at) >= now() - interval '30 days'`);
+    conditions.push(sql`r.notification_date IS NOT NULL AND r.notification_date >= now() - interval '30 days' AND r.notification_date <= now()`);
+    // A recent-notification claim requires field-level evidence for this date,
+    // not only a global VERIFIED flag or a syntactically valid URL.
+    conditions.push(sql`
+      r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
+      AND r.official_link_source = 'MANUAL_VERIFIED'
+      AND r.official_notification_url ~* '^https?://'
+      AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+      AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'evidence_url' ~* '^https://'
+      AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_by', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_at', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'authority_review' ->> 'notes', '') IS NOT NULL
+      AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_by', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' ->> 'reviewed_at', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' ->> 'notes', '') IS NOT NULL
+      AND (r.metadata -> 'source_provenance' -> 'fact_review' -> 'reviewed_fields') ? 'hub:notification_date'
+      AND (r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence') ? 'hub:notification_date'
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'evidence_ref', '') IS NOT NULL
+      AND nullif(r.metadata -> 'source_provenance' -> 'fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'excerpt', '') IS NOT NULL
+    `);
   } else if (!search) {
     // Browsing without a query shows current recruitments only. A text search
     // also matches closed ones, ordered after the open ones and labelled Closed.
@@ -571,13 +590,14 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     : sql``;
 
   const orderBy = opts.filter === "newly-added"
-    ? sql`COALESCE(r.notification_date, r.created_at) DESC, r.id DESC`
+    ? sql`r.notification_date DESC, r.id DESC`
     : sql`
         (CASE WHEN ${OPEN_RECRUITMENT_SQL} THEN 0
               WHEN ${LIVE_RECRUITMENT_SQL} THEN 1
               ELSE 2 END),
         ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} ASC NULLS LAST,
-        COALESCE(r.notification_date, r.created_at) DESC,
+        r.notification_date DESC NULLS LAST,
+        r.created_at DESC,
         r.id DESC`;
 
   const rows = await db.execute<Record<string, unknown>>(sql`
@@ -604,7 +624,6 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
       r.application_end_date AS "applicationEndDate",
       r.exam_date AS "examDate",
       r.last_verified_at AS "lastVerifiedAt",
-      r.created_at AS "createdAt",
       r.updated_at AS "updatedAt"
     FROM recruitments r
     LEFT JOIN organizations o ON o.id = r.organization_id

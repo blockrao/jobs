@@ -25,6 +25,25 @@ describe("canonical /jobs listing database contract", () => {
     expect(listingQuery).not.toContain("r.source_verification_status");
   });
 
+  it("uses source notification dates only for the recent-notifications filter and display", () => {
+    expect(recruitmentQueries).toContain("r.notification_date IS NOT NULL");
+    expect(recruitmentQueries).toContain("r.notification_date >= now() - interval '30 days'");
+    expect(recruitmentQueries).toContain("r.notification_date <= now()");
+    expect(recruitmentQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
+    expect(recruitmentQueries).toContain("r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'");
+    expect(recruitmentQueries).toContain("'hub:notification_date'");
+    expect(recruitmentQueries).toContain("authority_review' ->> 'reviewed_by'");
+    expect(recruitmentQueries).toContain("fact_review' ->> 'reviewed_by'");
+    expect(recruitmentQueries).toContain("fact_review' -> 'evidence' -> 'hub:notification_date' ->> 'excerpt'");
+    expect(jobsPage).toContain("No source-verified recruitment notifications are available from the last 30 days.");
+    expect(recruitmentQueries).not.toContain("COALESCE(r.notification_date, r.created_at) >= now()");
+    expect(recruitmentQueries).not.toContain("COALESCE(r.notification_date, r.created_at) DESC");
+    expect(recruitmentQueries).not.toContain('r.created_at AS "createdAt"');
+    expect(jobsPage).toContain("const notificationOn = r.notificationDate;");
+    expect(jobsPage).not.toContain("r.notificationDate ?? r.createdAt");
+    expect(jobsPage).toContain("Recent Notifications");
+  });
+
   it("does not disguise a database failure as a genuine empty result", () => {
     expect(jobsPage).toContain("Do not turn a database/query failure into a false");
     expect(jobsPage).not.toMatch(/catch\s*\{\s*results\s*=\s*\[\]/);
