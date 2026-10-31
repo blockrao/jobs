@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_postings_inferred_post_id_source_gate
 -- The helper schema is not exposed through the Supabase Data API.
 CREATE SCHEMA IF NOT EXISTS private;
 REVOKE ALL ON SCHEMA private FROM PUBLIC;
-GRANT USAGE ON SCHEMA private TO anon, authenticated;
+GRANT USAGE ON SCHEMA private TO anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION private.is_fja_url(p_value text)
 RETURNS boolean
@@ -424,8 +424,8 @@ REVOKE ALL ON FUNCTION private.guard_recruitment_discovery_origin() FROM PUBLIC,
 REVOKE ALL ON FUNCTION private.propagate_post_discovery_origin() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.propagate_legacy_posting_discovery_origin() FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION private.is_recruitment_publicly_trusted(integer) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION private.is_post_publicly_trusted(integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.is_recruitment_publicly_trusted(integer) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.is_post_publicly_trusted(integer) TO anon, authenticated, service_role;
 
 -- Intentional: no GRANT is added to postings, exams, locations, qualifications,
 -- evidence, or recruitment_fees. organizations and positions retain their
