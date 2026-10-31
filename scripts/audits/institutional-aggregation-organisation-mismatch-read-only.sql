@@ -86,8 +86,8 @@ candidates AS (
 )
 -- 1) Summary: 4,002 cohort, 51 mismatch candidates, 45 already unresolved,
 --    6 resolved-organisation candidates requiring publication suppression.
-SELECT count(*) AS cohort_records,
-       count(*) FILTER (WHERE true) AS mismatch_candidates,
+SELECT (SELECT count(*) FROM base) AS cohort_records,
+       count(*) AS mismatch_candidates,
        count(*) FILTER (WHERE already_unresolved) AS already_noindex_placeholder,
        count(*) FILTER (WHERE NOT already_unresolved) AS resolved_organisation_mismatches,
        count(*) FILTER (WHERE NOT already_unresolved AND valid_post_leaves > 0) AS resolved_mismatches_with_valid_post_leaves,
