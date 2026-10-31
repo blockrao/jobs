@@ -181,7 +181,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const safeInput = publicHubInput(recruitment, posts);
   const suppressUnreviewedSupplementaryFacts =
     safeInput.unverifiedAggregator ||
-    recruitment.officialLinkSource === "AGGREGATOR_DISCOVERED";
+    recruitment.sourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED";
   const [postingLocations, cutoffMarks] = suppressUnreviewedSupplementaryFacts
     ? [[], []]
     : await Promise.all([
