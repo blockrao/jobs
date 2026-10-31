@@ -228,7 +228,7 @@ describe("aggregator source trust gate", () => {
     expect(relatedQueries).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
     expect(leafComponent).toContain("notificationLinkVerified && applicationLinkVerified");
     expect(leafComponent).toContain("isManuallyVerifiedOfficialLink(post.officialLinkSource)");
-    expect(sitemap).toContain("COALESCE(r.source_discovery_origin, '') <> 'AGGREGATOR_DISCOVERED'");
+    expect(sitemap).toContain("COALESCE(r.source_discovery_origin, r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'");
     expect(sitemap).toContain("r.official_link_source = 'MANUAL_VERIFIED'");
     expect(sitemap).toContain("r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'");
   });
