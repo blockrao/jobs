@@ -1048,6 +1048,27 @@ WHERE pe.post_id = p.id
     )
   );
 
+UPDATE public.posts p
+SET enrichment = coalesce(p.enrichment, '{}'::jsonb)
+  || jsonb_build_object(
+    'sourceVerificationStatus', 'UNVERIFIABLE',
+    'sourceVerificationDate', NULL
+  ),
+  updated_at = now()
+WHERE EXISTS (
+  SELECT 1
+  FROM public.posts_education e
+  WHERE e.post_id = p.id
+    AND e.source = 'fja_post_inventory'
+    AND e.verified_at IS NULL
+) OR EXISTS (
+  SELECT 1
+  FROM public.posts_experience x
+  WHERE x.post_id = p.id
+    AND x.source = 'fja_post_inventory'
+    AND x.verified_at IS NULL
+);
+
 COMMENT ON FUNCTION public.guard_aggregator_discovered_recruitment_verification() IS
   'Prevents aggregator-discovered recruitment rows from being VERIFIED without a matching PROMOTED official-digest row with complete issuer-source and fact reviews.';
 COMMENT ON FUNCTION public.guard_aggregator_discovered_post_source() IS
