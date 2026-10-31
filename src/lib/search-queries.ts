@@ -31,6 +31,7 @@ import { getDbV2 } from "@/db";
 import { detectLanguage, normalizeHinglishPhonetics } from "@/lib/query-engine/language-detector";
 import { extractFilters } from "@/lib/query-engine/filter-extractor";
 import { analyzeQuery, latinizeKnownAbbreviations, type QueryTerm } from "@/lib/search-aliases";
+import { hasHindiSearchConstraints } from "@/lib/search-query-guards";
 import type { MatchingPost, SearchFilters, SearchResult } from "@/lib/search-types";
 
 export type { MatchingPost, SearchFilters, SearchResult } from "@/lib/search-types";
@@ -528,12 +529,14 @@ async function searchPostingsHindi(
 
   // Never turn an unparsed Hindi/Hinglish query into an unfiltered browse.
   // That would claim relevance while returning every open recruitment.
-  const hasExtractedConstraint =
-    extracted.exams.length > 0 ||
-    extracted.states.length > 0 ||
-    extracted.qualifications.length > 0 ||
-    Boolean(locationRegion || organizationId || announcementState || closingState);
-  if (query.trim() && !hasExtractedConstraint) return [];
+  const hasExtractedConstraint = hasHindiSearchConstraints({
+    query,
+    examsCount: extracted.exams.length,
+    statesCount: extracted.states.length,
+    qualificationsCount: extracted.qualifications.length,
+    hasExplicitFilter: Boolean(locationRegion || organizationId || announcementState || closingState),
+  });
+  if (!hasExtractedConstraint) return [];
 
   // Match lifecycle filters consistently with the English path.
   const conditions: string[] = [];
