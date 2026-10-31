@@ -46,7 +46,12 @@ import { toPlausibleRecruitmentDate } from '@/lib/recruitment-dates';
 import { stateFromIsoCode } from '@/lib/india-states';
 import { getQualification } from '@/lib/qualifications';
 import { publicLink } from '@/lib/aggregators';
-import { isPreliminaryUnverifiedSourceMetadata } from '@/lib/source-verification';
+import {
+  isManuallyVerifiedOfficialLink,
+  isPreliminaryUnverifiedSourceMetadata,
+  isRecruitmentSourceTrusted,
+  isUnverifiedAggregatorSource,
+} from '@/lib/source-verification';
 import { SITE_URL } from '@/lib/site';
 import {
   composeRecruitmentDescription,
@@ -241,11 +246,22 @@ export function buildHubData(
     str(recruitment.organization?.website_url) ?? str(recruitment.organization?.websiteUrl),
   );
 
-  const sourceFactsUnverified = isPreliminaryUnverifiedSourceMetadata(recruitment.metadata) || Boolean(
-    recruitment.sourceExtract &&
-    recruitment.sourceVerificationStatus !== 'VERIFIED'
-  );
-  const verified = recruitment.sourceVerificationStatus === 'VERIFIED';
+  const sourceTrustInput = {
+    sourceDiscoveryOrigin: recruitment.sourceDiscoveryOrigin,
+    officialLinkSource: recruitment.officialLinkSource,
+    verificationStatus: recruitment.verificationStatus,
+    metadata: recruitment.metadata,
+  };
+  const aggregatorSourceUnverified = isUnverifiedAggregatorSource(sourceTrustInput);
+  const sourceFactsUnverified = isPreliminaryUnverifiedSourceMetadata(recruitment.metadata)
+    || aggregatorSourceUnverified
+    || Boolean(recruitment.sourceExtract && recruitment.sourceVerificationStatus !== 'VERIFIED');
+  const verified = isRecruitmentSourceTrusted(sourceTrustInput)
+    && (recruitment.verificationStatus === 'VERIFIED'
+      || recruitment.verificationStatus === 'MANUALLY_VERIFIED'
+      || recruitment.sourceVerificationStatus === 'VERIFIED');
+  const officialLinksVerified = verified
+    && isManuallyVerifiedOfficialLink(recruitment.officialLinkSource);
 
   // ── State ────────────────────────────────────────────────────────────────
   const stateRef = stateFromIsoCode(recruitment.locationStateCode);
@@ -496,10 +512,12 @@ export function buildHubData(
   const sourceDocuments = strList(sourceOtherInfo?.application_documents);
 
   // ── URLs ─────────────────────────────────────────────────────────────────
-  const notificationUrl = publicLink(
+  const notificationUrl = officialLinksVerified ? publicLink(
     str(recruitment.officialNotificationUrl) ?? str(recruitment.notificationUrl),
-  );
-  const applyCandidate = publicLink(str(recruitment.officialApplicationUrl) ?? str(recruitment.applyUrl));
+  ) : null;
+  const applyCandidate = officialLinksVerified
+    ? publicLink(str(recruitment.officialApplicationUrl) ?? str(recruitment.applyUrl))
+    : null;
   const applyUrl = applyCandidate && applyCandidate !== notificationUrl ? applyCandidate : null;
   const officialWebsiteUrl = orgWebsite && orgWebsite !== notificationUrl && orgWebsite !== applyUrl ? orgWebsite : null;
 
@@ -575,7 +593,9 @@ export function buildHubData(
 
   // PHASE 2: Display official application URL if it exists
   // (Show even when closed so candidates know where to apply next time)
-  const officialApplicationUrlValue = publicLink(str(recruitment.officialApplicationUrl));
+  const officialApplicationUrlValue = officialLinksVerified
+    ? publicLink(str(recruitment.officialApplicationUrl))
+    : null;
   if (officialApplicationUrlValue && officialApplicationUrlValue !== notificationUrl) {
     glance.push({
       label: 'Official portal',
