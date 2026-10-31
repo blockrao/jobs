@@ -42,6 +42,7 @@ type PostRow = Omit<
     updatedAt: string | Date;
     recruitmentVerificationStatus: string | null;
     recruitmentOfficialLinkSource: string | null;
+    recruitmentSourceDiscoveryOrigin: string | null;
     recruitmentMetadata: Record<string, unknown> | null;
     postSourceName: string | null;
     recruitmentApplicationStartDate: RawDate;
@@ -134,6 +135,7 @@ async function getPostCoreData(
         r.status AS "postingStatus",
         r.verification_status AS "recruitmentVerificationStatus",
         r.official_link_source AS "recruitmentOfficialLinkSource",
+        r.source_discovery_origin AS "recruitmentSourceDiscoveryOrigin",
         r.metadata AS "recruitmentMetadata",
         p.source_post_code AS "sourcePostCode",
         NULL AS "applicationMethod",
@@ -581,7 +583,7 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    const isAggregatorDiscovered = data.recruitmentOfficialLinkSource === "AGGREGATOR_DISCOVERED";
+    const isAggregatorDiscovered = data.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED";
     const sourceProvenance = (data.recruitmentMetadata as any)?.source_provenance;
     const reviewedFields: string[] = Array.isArray(sourceProvenance?.fact_review?.reviewed_fields)
       ? sourceProvenance.fact_review.reviewed_fields
@@ -614,6 +616,7 @@ export async function getPostBySlug(
       recruitmentName: data.recruitmentName,
       recruitmentVerificationStatus: data.recruitmentVerificationStatus ?? null,
       recruitmentOfficialLinkSource: data.recruitmentOfficialLinkSource ?? null,
+      recruitmentSourceDiscoveryOrigin: data.recruitmentSourceDiscoveryOrigin ?? null,
       recruitmentMetadata: data.recruitmentMetadata ?? null,
       postSourceName: data.postSourceName ?? null,
       recruitmentSlug: data.recruitmentSlug,
