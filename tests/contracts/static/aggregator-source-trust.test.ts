@@ -34,6 +34,7 @@ describe("aggregator source trust gate", () => {
       },
     };
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED")).toBe(true);
+    expect(isUnverifiedAggregatorSource(null, "VERIFIED", reviewedMetadata, undefined, "AGGREGATOR_DISCOVERED")).toBe(true);
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "VERIFIED", reviewedMetadata, undefined, "MANUAL_VERIFIED")).toBe(false);
     const incompleteEvidence = {
       source_provenance: {
