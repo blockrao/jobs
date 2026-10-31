@@ -46,6 +46,9 @@ function isAuthoritativeDomain(url: string | null | undefined): boolean {
 
 export default function RecruitmentHubStructuredData({ data }: RecruitmentHubSchemaProps) {
   const { recruitment } = data;
+  // Unverified aggregator-derived pages remain accessible to candidates but
+  // must not emit structured data that could be interpreted as issuer-backed facts.
+  if (data.sourceFactsUnverified) return null;
   const hubUrl = `${SITE_URL}/jobs/${data.slug}`;
   const factsVerified = recruitment.sourceVerificationStatus === "VERIFIED";
   const orgName = data.orgName;
