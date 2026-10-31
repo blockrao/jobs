@@ -99,19 +99,17 @@ export function CategoryContent({
             const days = end ? daysUntil(end) : null;
             const orgName = isHi && p.orgNameHi ? p.orgNameHi : p.orgName;
             let deadline: string | null = null;
-            let deadlineTone = "text-neutral-600";
             if (p.recruitmentStatus === "UPCOMING" && !end) {
               deadline = L.upcoming;
             } else if (end && days !== null) {
               if (days <= 0) deadline = L.closingToday;
               else if (days <= 7) deadline = L.daysLeft(days);
-              else deadline = `${L.lastDate}: ${formatDate(end, dateLocale)}`;
-              if (days <= 7) deadlineTone = "text-red-700 font-medium";
+              else deadline = formatDate(end, dateLocale);
             }
             const urgent = p.recruitmentStatus !== "UPCOMING" && days !== null && days >= 0 && days <= 7;
             const statusLabel = p.recruitmentStatus === "UPCOMING"
               ? L.upcoming
-              : urgent ? L.closingToday === "आज बंद" ? "जल्द बंद" : "Closing soon" : (isHi ? "आवेदन खुले हैं" : "Applications open");
+              : urgent ? (isHi ? "जल्द बंद" : "Closing soon") : (isHi ? "आवेदन खुले हैं" : "Applications open");
             return (
               <li key={p.postId}>
                 <JobOpportunityCard
@@ -131,7 +129,7 @@ export function CategoryContent({
                   viewDetailsLabel={isHi ? "विवरण देखें" : "View job details"}
                 />
               </li>
-            );;
+            );
           })}
         </ul>
       )}
