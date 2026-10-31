@@ -107,6 +107,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         FROM recruitments r
         JOIN organizations ro ON ro.id = r.organization_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND public.is_recruitment_source_trusted(
+            r.source_discovery_origin, r.official_link_source, r.verification_status, r.metadata
+          )
           AND ro.slug <> ${UNRESOLVED_ORG_SLUG}
         ORDER BY r.updated_at DESC NULLS LAST, r.id DESC
       `),
@@ -117,6 +120,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         INNER JOIN recruitments r ON r.id = p.recruitment_id
         JOIN organizations ro ON ro.id = r.organization_id
         WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND public.is_recruitment_source_trusted(
+            r.source_discovery_origin, r.official_link_source, r.verification_status, r.metadata
+          )
           AND ro.slug <> ${UNRESOLVED_ORG_SLUG}
           AND lower(btrim(ro.name)) <> ${UNRESOLVED_ORG_NAME.toLowerCase()}
           AND p.posting_status IS DISTINCT FROM 'DUPLICATE'
@@ -129,6 +135,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         FROM organizations o
         JOIN recruitments r ON r.organization_id = o.id
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
+          AND public.is_recruitment_source_trusted(
+            r.source_discovery_origin, r.official_link_source, r.verification_status, r.metadata
+          )
         WHERE o.merged_into_id IS NULL AND o.slug <> ${UNRESOLVED_ORG_SLUG}
         GROUP BY o.id, o.slug
         HAVING count(*) >= ${ORG_INDEX_MIN_RECRUITMENTS}
