@@ -45,6 +45,8 @@ type PostRow = Omit<
     recruitmentApplicationStartDate: RawDate;
     recruitmentApplicationEndDate: RawDate;
     notificationPublicationDate: RawDate;
+    officialNotificationEvidenceAccepted: boolean;
+    officialApplicationEvidenceAccepted: boolean;
     // "payLevel" is selected from both posts and post_enrichments; the
     // driver returns whichever column comes last.
     payLevel: JobPostingData["payLevel"] & PostEnrichment["payLevel"];
