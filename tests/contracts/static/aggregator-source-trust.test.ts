@@ -130,7 +130,7 @@ describe("aggregator source trust gate", () => {
     });
 
     expect(partial.ageRules).toHaveLength(0);
-    expect(partial.vacancies).toBeUndefined();
+    expect(partial.vacancies).toHaveLength(0);
     expect(partial.applicationFees).toHaveLength(0);
     expect(partial.requiredDocuments).toHaveLength(0);
     expect(partial.selectionProcess).toHaveLength(0);
@@ -166,7 +166,8 @@ describe("aggregator source trust gate", () => {
     expect(query).toContain('r.metadata AS "recruitmentMetadata"');
     expect(query).toContain('post:${data.title}:${field}');
     const transformer = readFileSync("src/db/operations/enrichment-transformer.ts", "utf8");
-    expect(transformer).toContain("source === 'fja_post_inventory'");
+    expect(transformer).toContain("const trustedFactSources = new Set");
+    expect(transformer).not.toContain("'FJA_POST_INVENTORY'");
     expect(transformer).toContain("verifiedAt == null");
     expect(transformer).toContain("sourceRef");
     expect(transformer).toContain("sourceLocator");
@@ -194,7 +195,8 @@ describe("aggregator source trust gate", () => {
     expect(listingQueries).toContain("metadata -> 'source_provenance' -> 'fact_review'");
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
     expect(recruitmentQueries).toContain("'AGGREGATOR_DISCOVERED'");
-    expect(sitemap).toContain("r.official_link_source = 'AGGREGATOR_DISCOVERED'");
+    expect(sitemap).toContain("COALESCE(r.official_link_source, '') <> 'AGGREGATOR_DISCOVERED'");
+    expect(sitemap).toContain("r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'");
   });
 
   it("requires a human issuer-source review before official-digest promotion", () => {
