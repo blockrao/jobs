@@ -116,7 +116,7 @@ export default async function RecruitmentHubPage({ params }: Props) {
     return (
       <section className="mx-auto max-w-3xl px-4 py-12" role="status">
         <h1 className="text-2xl font-semibold">Recruitment details under verification</h1>
-        {recruitment.organization?.name ? (
+        {recruitment.organizationName ? (
           <p className="mt-3 text-base">{recruitment.organization.name}</p>
         ) : null}
         <p className="mt-4 text-sm leading-6">
