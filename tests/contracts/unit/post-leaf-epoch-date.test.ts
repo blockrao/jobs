@@ -35,7 +35,7 @@ describe("Post Leaf publication-date provenance", () => {
     const job = graph["@graph"].find((node) => node["@type"] === "JobPosting");
     const page = graph["@graph"].find((node) => node["@type"] === "WebPage");
     expect(job).toMatchObject({ datePosted: "2026-10-08T12:00:00.000Z" });
-    expect(page).toMatchObject({ datePublished: "2026-10-08T12:00:00.000Z" });
+    expect(page).not.toHaveProperty("datePublished");
   });
 
   test("does not substitute the Unix epoch or an ingestion timestamp when source date is absent", () => {
