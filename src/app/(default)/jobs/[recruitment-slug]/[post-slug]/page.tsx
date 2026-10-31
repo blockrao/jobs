@@ -45,7 +45,6 @@ interface Props {
 function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
   const enrichment = post.enrichment;
   const vacancies = resolvePostVacancy(post) ?? 0;
-  const eligibility = resolveEligibility(post);
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const deadlineRaw = post.recruitmentApplicationEndDate ?? enrichment?.applicationClosingDate ?? null;
@@ -134,6 +133,7 @@ export default async function JobDetailPage({ params }: Props) {
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const vacancies = resolvePostVacancy(post) ?? 0;
+  const eligibility = resolveEligibility(post);
 
   // Fetch related posts (semantically grouped)
   const relatedPosts = await getRelatedPostsGrouped(
