@@ -128,6 +128,138 @@ WHERE r.id = p.recruitment_id
     OR coalesce(p.enrichment, '{}'::jsonb) ? 'source_provenance'
   );
 
+-- Clear stale child-fact verification markers for this cohort. The facts remain
+-- stored for review, but none can appear verified until the new review process
+-- records fresh evidence against the issuing authority's notice.
+UPDATE public.eligibilities e
+SET status = 'PENDING',
+    verified_at = NULL,
+    source_type = NULL,
+    source_ref = NULL,
+    source_locator = NULL,
+    derivation = NULL,
+    updated_at = now()
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id
+  AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_education e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_experience e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_vacancies e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_selection_process e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_documents e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_important_dates e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.post_age_rules e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_application_fee e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+UPDATE public.posts_official_links e
+SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+FROM public.posts p
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE e.post_id = p.id AND r.source_discovery_origin = 'AGGREGATOR_DISCOVERED';
+
+-- Refresh canonical JSONB after the child evidence has been cleared. This
+-- prevents stale verified_at/source pointers from surviving in JSONB projections.
+WITH refreshed AS (
+  SELECT p.id, public.aggregate_enrichment_for_post(p.id) AS payload
+  FROM public.posts p
+  JOIN public.recruitments r ON r.id = p.recruitment_id
+  WHERE r.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+)
+UPDATE public.posts p
+SET enrichment = (coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance')
+  || jsonb_build_object(
+    'vacancies', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'vacancies' -> 'rows', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'vacancies'
+      ELSE p.enrichment -> 'vacancies'
+    END,
+    'education', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'education', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'education'
+      ELSE p.enrichment -> 'education'
+    END,
+    'experience', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'experience', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'experience'
+      ELSE p.enrichment -> 'experience'
+    END,
+    'selection_process', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'selection_process', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'selection_process'
+      ELSE p.enrichment -> 'selection_process'
+    END,
+    'documents', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'documents', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'documents'
+      ELSE p.enrichment -> 'documents'
+    END,
+    'important_dates', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'important_dates', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'important_dates'
+      ELSE p.enrichment -> 'important_dates'
+    END,
+    'age_rules', CASE
+      WHEN coalesce(refreshed.payload -> 'age_rules', '{}'::jsonb) <> '{}'::jsonb
+        THEN refreshed.payload -> 'age_rules'
+      ELSE p.enrichment -> 'age_rules'
+    END,
+    'application_fees', CASE
+      WHEN coalesce(refreshed.payload -> 'application_fees', '{}'::jsonb) <> '{}'::jsonb
+        THEN refreshed.payload -> 'application_fees'
+      ELSE p.enrichment -> 'application_fees'
+    END,
+    'official_links', CASE
+      WHEN jsonb_array_length(coalesce(refreshed.payload -> 'official_links', '[]'::jsonb)) > 0
+        THEN refreshed.payload -> 'official_links'
+      ELSE p.enrichment -> 'official_links'
+    END,
+    'sourceVerificationStatus', 'UNVERIFIABLE',
+    'sourceVerificationDate', NULL
+  )
+FROM refreshed
+WHERE p.id = refreshed.id;
+
 -- Existing post_enrichments sourceVerificationDate was NOT NULL. Make it nullable
 -- so an unverified record does not retain a misleading verification timestamp.
 ALTER TABLE public.post_enrichments
