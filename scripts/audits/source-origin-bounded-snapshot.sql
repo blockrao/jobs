@@ -1,11 +1,12 @@
 -- JobOye bounded source-origin audit snapshot — READ ONLY.
 -- Production snapshot: 2026-10-31 11:35 UTC.
--- Intended to finish quickly; each query is bounded by a 15-second statement timeout.
+-- Run the three numbered SELECT statements separately (do not submit the whole
+-- file as one batch). Each is an aggregate-only query; no row-level export.
+-- Set the session statement timeout before running each query.
 -- Source-origin signals indicate discovery provenance, not that every fact is wrong.
--- This script performs SELECTs only and makes no production changes.
+-- This file contains SELECTs only and makes no production changes.
 
-BEGIN TRANSACTION READ ONLY;
-SET LOCAL statement_timeout = '15s';
+SET statement_timeout = '15s';
 
 -- 1) Base inventory and source-signal cohort.
 WITH candidates AS (
@@ -209,4 +210,3 @@ SELECT
   ) AS recruitments_with_aggregator_in_official_fields
 FROM hits;
 
-COMMIT;
