@@ -22,8 +22,9 @@ vi.mock("@/db", () => ({
       if (rows.fail) throw new Error("connection refused");
       const text = JSON.stringify(query);
       if (/FROM organizations o/.test(text)) return rows.orgs;
-      if (/FROM posts p/.test(text)) return rows.leaves;
+      // The hub query contains a nested FROM posts p; match the top-level FROM first.
       if (/FROM recruitments r/.test(text)) return rows.hubs;
+      if (/FROM posts p/.test(text)) return rows.leaves;
       if (/FROM exams/.test(text)) return [];
       throw new Error("unexpected sitemap query: " + text.slice(0, 120));
     },
@@ -115,6 +116,18 @@ describe("sitemap", () => {
     expect(src).toMatch(/p\.posting_status IS DISTINCT FROM 'DUPLICATE'/);
     expect(src).toMatch(/p\.slug IS NOT NULL/);
     expect(src).toMatch(/btrim\(p\.slug\) <> ''/);
+  });
+
+  test("IDX-04i recruitment hubs require a valid non-duplicate canonical Post Leaf", async () => {
+    const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
+    const start = src.indexOf("SELECT r.slug");
+    const end = src.indexOf("ORDER BY r.updated_at", start);
+    const hubQuery = src.slice(start, end);
+    expect(hubQuery).toContain("AND EXISTS (");
+    expect(hubQuery).toContain("WHERE p.recruitment_id = r.id");
+    expect(hubQuery).toContain("p.posting_status IS DISTINCT FROM 'DUPLICATE'");
+    expect(hubQuery).toContain("p.slug IS NOT NULL");
+    expect(hubQuery).toContain("btrim(p.slug) <> ''");
   });
 
   test("IDX-04g the organization query applies the same exclusions as the entity page (merged, quarantined, threshold)", async () => {

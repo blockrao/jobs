@@ -52,12 +52,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ]);
   const hub = buildHubData(recruitment, posts, undefined, postingLocations, cutoffMarks);
   const { title, description } = hub;
+  // A Recruitment Hub is index-eligible only when it links to at least one
+  // valid canonical Post Leaf. The loader already excludes duplicate Posts.
+  const hasCanonicalPostLeaf = posts.some(
+    (post) => typeof post.slug === "string" && post.slug.trim().length > 0,
+  );
 
   return {
     title,
     description,
-    // Recruitments whose issuing organisation is not identified yet stay out of the index.
-    ...pageSeo(`/jobs/${recruitment.slug}`, { index: !isUnresolvedOrganization(recruitment.organizationSlug) }),
+    // Unresolved organisations and Hubs without a canonical Post Leaf stay noindex.
+    ...pageSeo(`/jobs/${recruitment.slug}`, {
+      index: hasCanonicalPostLeaf && !isUnresolvedOrganization(recruitment.organizationSlug),
+    }),
     openGraph: { title, description, type: "website" },
     twitter: { card: "summary", title, description },
   };
