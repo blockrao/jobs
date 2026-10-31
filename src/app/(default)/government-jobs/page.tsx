@@ -128,7 +128,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
 
-      <div className="mx-auto max-w-7xl px-4 pb-14 pt-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-2 pb-14 pt-4 sm:px-6 sm:pt-5 lg:px-8">
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-slate-500">
           <Link href="/" className="transition hover:text-indigo-700">Home</Link>
           <span aria-hidden="true">/</span>
@@ -243,13 +243,13 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
 
                   return (
                     <li key={post.postId}>
-                      <article className="group rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-900/[0.025] transition duration-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-900/[0.06] sm:p-5">
-                        <div className="flex items-start gap-3 sm:gap-4">
-                          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-sm font-bold tracking-wide text-indigo-700 sm:h-12 sm:w-12">
-                            {initials(post.orgName) || "GO"}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
+                      <article className="group overflow-hidden rounded-[1.35rem] border border-slate-200/90 bg-white p-3.5 shadow-sm shadow-slate-900/[0.025] transition duration-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-900/[0.06] sm:rounded-2xl sm:p-5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2.5 sm:gap-4">
+                            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-sm font-bold tracking-wide text-indigo-700 sm:h-12 sm:w-12">
+                              {initials(post.orgName) || "GO"}
+                            </span>
+                            <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
                               <span className={urgent
                                 ? "inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700"
                                 : lifecycle.state === "open"
@@ -264,34 +264,36 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                                 </span>
                               )}
                             </div>
+                          </div>
 
-                            <h3 className="mt-2 text-base font-bold leading-6 tracking-tight text-slate-950 sm:text-lg">
+                          <div className="mt-3 min-w-0 sm:mt-2">
+                            <h3 className="text-lg font-bold leading-6 tracking-tight text-slate-950 sm:text-lg">
                               <Link href={detailHref} className="rounded-sm decoration-2 underline-offset-4 transition group-hover:text-indigo-700 group-hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                                 {post.postName}
                               </Link>
                             </h3>
 
-                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+                            <div className="mt-1.5 space-y-1 text-[15px] leading-5 text-slate-600 sm:flex sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1 sm:space-y-0 sm:text-sm">
                               <Link href={`/organizations/${post.orgSlug}`} className="font-semibold text-slate-700 hover:text-indigo-700 hover:underline">
                                 {post.orgName}
                               </Link>
-                              <span aria-hidden="true" className="text-slate-300">·</span>
+                              <span aria-hidden="true" className="hidden text-slate-300 sm:inline">·</span>
                               <Link href={recruitmentHref({ slug: post.recruitmentSlug })} className="min-w-0 hover:text-indigo-700 hover:underline">
                                 {post.recruitmentName}
                               </Link>
                             </div>
 
-                            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-600 sm:text-sm">
-                              <span className="inline-flex items-center gap-1.5">
+                            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                              <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-slate-600 sm:text-sm">
                                 <span aria-hidden="true" className="text-slate-400">◷</span>
-                                <span className="font-medium text-slate-500">Application deadline:</span>
+                                <span className="font-medium text-slate-500">Deadline</span>
                                 <span className={urgent ? "font-bold text-rose-700" : "font-semibold text-slate-800"}>{deadline}</span>
-                                {urgent && <span className="font-semibold text-rose-700">· {lifecycle.daysLeft === 0 ? "Last day" : `${lifecycle.daysLeft} days left`}</span>}
                               </span>
+                              {urgent && <span className="shrink-0 rounded-full bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">{lifecycle.daysLeft === 0 ? "Last day" : `${lifecycle.daysLeft} days left`}</span>}
                             </div>
 
-                            <div className="mt-4 flex justify-end">
-                              <Link href={detailHref} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50 hover:text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                            <div className="mt-3">
+                              <Link href={detailHref} className="flex min-h-11 w-full items-center justify-center gap-1 rounded-xl bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:w-auto sm:justify-start sm:bg-transparent sm:px-2 sm:py-1 sm:hover:bg-indigo-50">
                                 View job details <span aria-hidden="true" className="transition group-hover:translate-x-0.5">→</span>
                               </Link>
                             </div>
