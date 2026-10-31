@@ -27,7 +27,10 @@ import RecruitmentHub, { buildHubData, toPlainJSON } from "@/components/recruitm
 import RecruitmentHubStructuredData from "@/components/recruitment/structured-data/recruitment-hub-schema";
 import { getRecruitmentWithPostsCached, getRecruitmentPostingLocations, getRecruitmentCutoffMarks } from "@/db/operations/get-recruitments";
 import { isUnresolvedOrganization } from "@/lib/organizations/unresolved";
-import { isUnverifiedAggregatorSource } from "@/lib/source-verification";
+import {
+  isPreliminaryUnverifiedSourceMetadata,
+  isUnverifiedAggregatorSource,
+} from "@/lib/source-verification";
 
 // Recruitment hubs need request-time rendering while resolving database-backed
 // canonical entities. Calling noStore() conditionally for individual slugs inside
@@ -52,7 +55,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     officialLinkSource: recruitment.officialLinkSource,
     verificationStatus: recruitment.verificationStatus,
     metadata: recruitment.metadata,
-  });
+  }) || isPreliminaryUnverifiedSourceMetadata(recruitment.metadata)
+    || Boolean(recruitment.sourceExtract && recruitment.sourceVerificationStatus !== "VERIFIED");
   if (sourceUnverified) {
     const title = "Recruitment details under verification | JobOye";
     const description = "JobOye is checking this recruitment against the issuing body's official notification. Verified details and application links will appear after review.";
@@ -106,7 +110,8 @@ export default async function RecruitmentHubPage({ params }: Props) {
     officialLinkSource: recruitment.officialLinkSource,
     verificationStatus: recruitment.verificationStatus,
     metadata: recruitment.metadata,
-  });
+  }) || isPreliminaryUnverifiedSourceMetadata(recruitment.metadata)
+    || Boolean(recruitment.sourceExtract && recruitment.sourceVerificationStatus !== "VERIFIED");
   if (sourceUnverified) {
     return (
       <section className="mx-auto max-w-3xl px-4 py-12" role="status">
