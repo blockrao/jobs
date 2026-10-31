@@ -781,7 +781,7 @@ BEGIN
   END IF;
 
   IF NEW.source_discovery_origin = 'AGGREGATOR_DISCOVERED'
-     AND NEW.verification_status = 'VERIFIED' THEN
+     AND NEW.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED') THEN
     SELECT d.* INTO v_review
     FROM public.official_digest_promote d
     WHERE d.batch = NEW.metadata ->> 'ingest_batch'
@@ -818,6 +818,7 @@ BEGIN
       NEW.last_verified_at := NULL;
       NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) - 'source_provenance';
     ELSE
+      NEW.verification_status := 'VERIFIED';
       NEW.official_link_source := 'MANUAL_VERIFIED';
       NEW.metadata := coalesce(NEW.metadata, '{}'::jsonb) || jsonb_build_object(
         'source_provenance', jsonb_build_object(
