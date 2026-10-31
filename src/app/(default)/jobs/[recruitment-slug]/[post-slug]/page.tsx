@@ -337,7 +337,7 @@ export default async function JobDetailPage({ params }: Props) {
           isExempted: f.isExempted,
           exemptionCategory: f.exemptionCategory,
         })) : [],
-        officialLinks: Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
+        officialLinks: officialLinksVerified && Array.isArray(enrichment?.officialLinks) ? enrichment.officialLinks.map((l: any) => ({
           type: l.type,
           url: l.url,
           title: l.title,
