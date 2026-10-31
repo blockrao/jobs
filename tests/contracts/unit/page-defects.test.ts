@@ -61,7 +61,7 @@ describe("Job leaf SEO description fallback", () => {
     const src = readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx");
     expect(src).toMatch(/post\.description\.trim\(\)/);
     expect(src).toMatch(/const description = storedDescription \|\| fallbackDescription/);
-    expect(src).toMatch(/See the official notification for eligibility, age limit, fee, selection process and how to apply/);
+    expect(src).toMatch(/Check the recruiting organisation's official website for eligibility, age limit, fee, selection process and how to apply/);
   });
 });
 
