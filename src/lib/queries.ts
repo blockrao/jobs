@@ -127,15 +127,13 @@ const notPastLastDate = sql`(${postings.validThrough} IS NULL OR ${postings.vali
 // Legacy Posting rows are never independently canonical. They are visible only
 // when both persisted Recruitment/Post relationships resolve to trusted entities.
 const sourceTrustedPosting = sql`
-  private.is_recruitment_publicly_trusted(
-    COALESCE(
-      ${postings.inferredRecruitmentId},
-      (SELECT p.recruitment_id FROM public.posts p WHERE p.id = ${postings.inferredPostId})
-    )
-  )
+  ${postings.inferredPostId} IS NOT NULL
+  AND private.is_post_publicly_trusted(${postings.inferredPostId})
   AND (
-    ${postings.inferredPostId} IS NULL
-    OR private.is_post_publicly_trusted(${postings.inferredPostId})
+    ${postings.inferredRecruitmentId} IS NULL
+    OR ${postings.inferredRecruitmentId} = (
+      SELECT p.recruitment_id FROM public.posts p WHERE p.id = ${postings.inferredPostId}
+    )
   )
 `;
 
@@ -143,14 +141,12 @@ const sourceTrustedPostingLink = sql`
   EXISTS (
     SELECT 1
     FROM public.postings sp
-    LEFT JOIN public.posts linked_post ON linked_post.id = sp.inferred_post_id
+    JOIN public.posts linked_post ON linked_post.id = sp.inferred_post_id
     WHERE sp.id = ${postingCategories.postingId}
-      AND private.is_recruitment_publicly_trusted(
-        COALESCE(sp.inferred_recruitment_id, linked_post.recruitment_id)
-      )
+      AND private.is_post_publicly_trusted(sp.inferred_post_id)
       AND (
-        sp.inferred_post_id IS NULL
-        OR private.is_post_publicly_trusted(sp.inferred_post_id)
+        sp.inferred_recruitment_id IS NULL
+        OR sp.inferred_recruitment_id = linked_post.recruitment_id
       )
   )
 `;
@@ -896,7 +892,7 @@ export async function getPostSlugsForSitemap() {
     .innerJoin(recruitments, eq(recruitments.id, posts.recruitmentId))
     .innerJoin(organizations, eq(organizations.id, recruitments.organizationId))
     // All posts are included in sitemap; consumer protection via frontend labels.
-    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL AND private.is_recruitment_publicly_trusted(${recruitments.id})`)
+    .where(sql`${posts.slug} IS NOT NULL AND ${recruitments.slug} IS NOT NULL AND private.is_post_publicly_trusted(${posts.id})`)
     .orderBy(posts.id);
   return rows;
 }
@@ -1075,6 +1071,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY 1
       ORDER BY MIN(r.application_end_date) NULLS LAST
@@ -1093,6 +1090,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
       GROUP BY o.id, o.name, o.slug
       ORDER BY vacancies DESC NULLS LAST
       LIMIT 12
@@ -1118,6 +1116,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY r.id, o.name
       ORDER BY r.application_end_date ASC NULLS LAST
@@ -1135,6 +1134,7 @@ export async function getJobsControlCenter(): Promise<{
       JOIN public.recruitments r ON r.id = po.recruitment_id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY po.name
       ORDER BY total_vacancies DESC NULLS LAST
@@ -1256,6 +1256,7 @@ export async function getHomepageStats(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(po.id)
         AND r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '10 days'
       GROUP BY r.id, r.slug, r.name, r.application_end_date, r.total_vacancies, o.name
       ORDER BY r.application_end_date ASC
