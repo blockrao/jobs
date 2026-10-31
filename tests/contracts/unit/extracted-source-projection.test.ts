@@ -101,6 +101,8 @@ describe("extracted source projection", () => {
     expect(renderer).toContain("jobPostingQuality.tier === \"A\" && post.qualificationVerificationStatus === \"VERIFIED\"");
     expect(renderer).toContain("!enrichmentFactsVerified && <p className={styles.muted}>{enrichmentFactsNote}</p>");
     expect(route).toContain("const eligibility = resolveEligibility(post);");
+    expect(route).toContain("applyUrl: post.applyPortalUrl || post.recruitmentOfficialApplicationUrl");
+    expect(route).not.toContain("post.applicationUrl");
     // Existing legacy posting UI still labels pending enrichment facts as reported.
     const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
     expect(page).toContain("Vacancies (reported)");
