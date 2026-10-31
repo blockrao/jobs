@@ -83,6 +83,11 @@ ALTER TABLE public.posts_official_links
   ADD COLUMN IF NOT EXISTS source_ref text,
   ADD COLUMN IF NOT EXISTS source_locator text;
 
+-- Revoking a source/fact review must be able to clear the prior verification
+-- timestamp. The Drizzle model already treats this column as nullable.
+ALTER TABLE public.post_enrichments
+  ALTER COLUMN "sourceVerificationDate" DROP NOT NULL;
+
 ALTER TABLE public.official_digest_promote
   ADD COLUMN IF NOT EXISTS authority_review_status text NOT NULL DEFAULT 'UNVERIFIED',
   ADD COLUMN IF NOT EXISTS authority_evidence_url text,
