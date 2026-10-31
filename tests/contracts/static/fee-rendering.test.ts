@@ -14,5 +14,11 @@ describe("application fee rendering", () => {
     expect(source).not.toContain(
       "amount: f.amount != null ? inr(f.amount) : 'Nil',",
     );
+    const route = readFileSync(
+      "src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx",
+      "utf8",
+    );
+    expect(route).toContain("amount: f.amount ?? null");
+    expect(route).not.toContain("amount: f.amount || null");
   });
 });
