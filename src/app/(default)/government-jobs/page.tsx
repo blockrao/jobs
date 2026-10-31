@@ -158,8 +158,8 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
       <section className="mt-8" aria-labelledby="all-open-jobs">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="all-open-jobs" className="text-2xl font-bold tracking-tight">Open Government Vacancies</h2>
-            <p className="mt-1 text-sm text-neutral-600">Ordered by application deadline, with undated deadlines later in the list.</p>
+            <h2 id="all-open-jobs" className="text-2xl font-bold tracking-tight">Current and Upcoming Government Jobs</h2>
+            <p className="mt-1 text-sm text-neutral-600">Applications open now and upcoming notifications, ordered by application deadline where a reliable date is available.</p>
           </div>
           <p className="text-sm text-neutral-500">Page {page}</p>
         </div>
