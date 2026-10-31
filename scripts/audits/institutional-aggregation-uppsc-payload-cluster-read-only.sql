@@ -26,7 +26,19 @@ FROM public.recruitments r
 WHERE r.created_at = '2026-10-21 13:46:58.259881+00'::timestamptz
 GROUP BY r.created_at;
 
--- 3) Payload fingerprint distribution for the exact bulk-created cohort.
+-- 3) Update timestamp identifies the exact bulk payload-reuse write.
+SELECT
+  r.updated_at,
+  count(*) AS records,
+  count(DISTINCT md5(r.enrichment_data::text)) AS distinct_payloads,
+  count(*) FILTER (WHERE r.enrichment_data -> 'institution' ->> 'name' ILIKE '%UPPSC%') AS uppsc_payload_records,
+  count(DISTINCT r.organization_id) AS organisations
+FROM public.recruitments r
+WHERE r.created_at = '2026-10-21 13:46:58.259881+00'::timestamptz
+GROUP BY r.updated_at
+ORDER BY records DESC, r.updated_at;
+
+-- 4) Payload fingerprint distribution for the exact bulk-created cohort.
 SELECT
   md5(r.enrichment_data::text) AS payload_hash,
   r.enrichment_data -> 'institution' ->> 'name' AS institution_name,
@@ -40,7 +52,7 @@ WHERE r.created_at = '2026-10-21 13:46:58.259881+00'::timestamptz
 GROUP BY 1,2,3
 ORDER BY records DESC, payload_hash;
 
--- 4) Detailed impact of the exact repeated UPPSC payload cluster.
+-- 5) Detailed impact of the exact repeated UPPSC payload cluster.
 SELECT
   count(*) AS records,
   count(DISTINCT r.organization_id) AS organisations,
@@ -66,7 +78,7 @@ FROM public.recruitments r
 WHERE r.created_at = '2026-10-21 13:46:58.259881+00'::timestamptz
   AND md5(r.enrichment_data::text) = '5a74fdfd45727e6f51e7201868c3a329';
 
--- 5) Sector distribution of the exact repeated payload cluster.
+-- 6) Sector distribution of the exact repeated payload cluster.
 SELECT
   o.sector::text AS organisation_sector,
   count(*) AS records,
@@ -80,7 +92,7 @@ WHERE r.created_at = '2026-10-21 13:46:58.259881+00'::timestamptz
 GROUP BY o.sector::text
 ORDER BY records DESC, organisation_sector;
 
--- 6) Small, deterministic record sample for manual traceability.
+-- 7) Small, deterministic record sample for manual traceability.
 SELECT
   r.id,
   r.slug,
@@ -93,6 +105,11 @@ SELECT
   r.official_notification_url,
   r.official_application_url,
   r.notification_date,
+  r.created_at,
+  r.updated_at,
+  r.metadata,
+  r.source_url,
+  r.official_link_source,
   r.enrichment_data -> 'meta' AS payload_meta,
   r.enrichment_data -> 'institution' ->> 'name' AS payload_institution,
   r.enrichment_data -> 'reference' ->> 'source' AS payload_reference,
