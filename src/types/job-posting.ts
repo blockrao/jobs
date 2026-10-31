@@ -188,7 +188,7 @@ export interface PostEnrichment {
 
   // Verification & Quality
   sourceVerificationStatus: "VERIFIED" | "PENDING" | "UNVERIFIABLE";
-  sourceVerificationDate?: Date;
+  sourceVerificationDate?: Date | null;
   extractionConfidence: number; // 0-100
   dataGaps: string[];
 
