@@ -83,29 +83,31 @@ describe("extracted source projection", () => {
     expect(source).toContain("sourceFactsUnverified ? false : lifecycle.state === 'closed'");
     expect(source).toContain("sourceFactsUnverified ? null : lifecycle.daysLeft");
   });
-  test("Post Leaves emit JobPosting until the deadline closes, regardless of verification; frontend labels unverified facts as reported", () => {
-    // Architecture decision (2026-10-15): All posts emit full JobPosting schema.
-    // Unverified posts are marked as "reported" on the UI for consumer transparency.
+  test("Post Leaves emit JobPosting only when the open, indexable leaf has manually verified official notification and application links", () => {
+    // A-070 provenance is the authority for official-link trust. A populated URL,
+    // aggregator discovery, or enrichment verification alone does not prove that
+    // the official links are verified. The page remains available without JobPosting.
     const route = stripComments(readSource("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx"));
     const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
-    // No verification-based schema suppression anywhere on the leaf path.
     expect(route).not.toContain("suppressJobPostingSchema");
     expect(route).not.toContain("sourceVerificationPending");
-    // Verification status is not a schema gate. JobPosting requires an open
-    // lifecycle and an indexable leaf; a CLOSED deadline also drops the node.
     expect(schema).toContain("jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed || !emitJobPosting ? null : jobPosting, faqPage)");
     expect(schema).toContain('const postingClosed = resolvedDeadline.state === "CLOSED";');
-    expect(schema).not.toMatch(/[vV]erif/);
-    // Frontend shows "reported" labels for consumer protection (verification notice banners)
+    // The renderer, not the schema builder, enforces official-link provenance.
+    const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
+    expect(renderer).toContain("const jobPostingSourceVerified = notificationLinkVerified && applicationLinkVerified;");
+    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && jobPostingSourceVerified}");
+    expect(renderer).toContain("isManuallyVerifiedOfficialLink(post.officialLinkSource)");
+    // Existing legacy posting UI still labels pending enrichment facts as reported.
     const page = stripComments(readSource("src/components/job-posting/job-posting-page.tsx"));
     expect(page).toContain("Vacancies (reported)");
     expect(page).toContain("verificationStatus");
   });
 
-  test("the leaf renderer gates JobPosting on lifecycle only, never on verification status", () => {
+  test("the leaf renderer requires lifecycle, indexability and verified source provenance for JobPosting", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
     expect(renderer).toMatch(/const emitJobPosting = lifecycle \? lifecycle\.isOpen : !isApplicationClosed;/);
-    expect(renderer).not.toMatch(/emitJobPosting[^\n]*[vV]erif/);
+    expect(renderer).toContain("emitJobPosting && indexable && jobPostingSourceVerified");
   });
 
   test("a recruitment hub is always canonical to itself and indexable (URL contract 2026-10-20)", () => {
