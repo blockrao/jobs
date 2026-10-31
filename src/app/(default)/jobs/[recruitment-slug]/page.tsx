@@ -46,7 +46,7 @@ type Props = { params: Promise<{ "recruitment-slug": string }> };
  * extracted facts/links. The canonical entity and URL remain intact.
  */
 function publicHubInput(recruitment: any, posts: any[]) {
-  const aggregatorDiscovered = recruitment.sourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED";
+  const aggregatorDiscovered = recruitment.sourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" || (recruitment.sourceDiscoveryOrigin == null && recruitment.officialLinkSource === "AGGREGATOR_DISCOVERED");
   const unverifiedAggregator = isUnverifiedAggregatorSource(
     recruitment.sourceDiscoveryOrigin,
     recruitment.verificationStatus,
