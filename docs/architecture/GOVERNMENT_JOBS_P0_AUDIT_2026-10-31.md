@@ -37,18 +37,25 @@ Captured at `2026-10-31 00:01:44 UTC`. Counts are time-sensitive because lifecyc
 
 A prior read-only query returned 2,951 posts. The later 2,848 result is the current snapshot; the inventory is not a fixed count and should be timestamped in reporting.
 
-### Enrichment coverage
+### Enrichment coverage and provenance mismatch
 
-| Enrichment state | Live posts |
+The canonical leaf loader reads `posts.enrichment` JSONB and transforms that object into the `post.enrichments` shape consumed by the detail page.
+
+| Canonical `posts.enrichment` JSONB measure | Live posts |
 |---|---:|
-| No enrichment row | 1,867 |
-| VERIFIED | 825 |
-| UNVERIFIABLE | 155 |
-| PENDING | 1 |
+| Non-empty JSONB enrichment object | 2,483 |
+| Explicit `sourceVerificationStatus = VERIFIED` | 1 |
+| Explicit `sourceVerificationStatus = PENDING` | 0 |
+| Explicit `sourceVerificationStatus = UNVERIFIABLE` | 0 |
+| Missing source verification status (transformer defaults to PENDING) | 2,847 |
+| Has an education array | 1,648 |
+| Has an experience array | 330 |
+| Has duties | 1 |
+| Has responsibilities | 0 |
 
-Across those live posts, 34 had eligibility pathways, 9 had experience data, and none had duties or responsibilities populated in the audited columns.
+A separate `post_enrichments` table query returned 825 VERIFIED, 155 UNVERIFIABLE, 1 PENDING and 1,867 without a row. That table is fetched by the current loader, but the returned `enrichment` object is built from `posts.enrichment` JSONB; the table's verification status is not propagated into the transformed object. The two status distributions therefore must not be conflated.
 
-The enrichment verification state is distinct from official-link provenance. A record marked VERIFIED does not automatically make its notification or application URL officially verified.
+This is a P0 provenance/data-contract mismatch to reconcile. Until then, the canonical leaf treats missing JSONB verification status as PENDING and labels those extracted eligibility/experience/age facts as reported. The enrichment verification state is also distinct from official-link provenance: even a VERIFIED enrichment record does not automatically make its notification or application URL officially verified.
 
 ## Findings
 
