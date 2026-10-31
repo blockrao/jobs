@@ -186,3 +186,11 @@ WHERE (
   )
   AND enrichment_data->'meta'->>'source' IN ('institutional_aggregation', 'institution_aggregation', 'fja_html')
   AND source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED';
+
+
+-- Legacy MANUALLY_VERIFIED states without the new authority/fact evidence chain
+-- must not survive the remediation as a conflicting public verification label.
+SELECT count(*) AS aggregator_records_still_manually_verified
+FROM public.recruitments
+WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+  AND verification_status = 'MANUALLY_VERIFIED';
