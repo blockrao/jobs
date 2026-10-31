@@ -726,15 +726,18 @@ BEGIN
   -- Backward compatibility for the historical promotion function: it still
   -- writes AGGREGATOR_DISCOVERED into official_link_source. Capture that as
   -- immutable origin before applying the independent verification-state gate.
-  IF NEW.source_discovery_origin IS NULL AND (
-       NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
-       OR NEW.enrichment_data->'meta'->>'source' IN (
-         'institutional_aggregation',
-         'institution_aggregation',
-         'fja_html'
-       )
+  IF NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
+     OR NEW.enrichment_data->'meta'->>'source' IN (
+       'institutional_aggregation',
+       'institution_aggregation',
+       'fja_html'
      ) THEN
-    NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
+    IF NEW.source_discovery_origin IS NULL THEN
+      NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
+    ELSIF NEW.source_discovery_origin <> 'AGGREGATOR_DISCOVERED' THEN
+      RAISE EXCEPTION
+        'Extraction metadata conflicts with source_discovery_origin; aggregator discovery origin cannot be relabelled';
+    END IF;
   END IF;
 
   -- Source origin is provenance, not a mutable verification label. Keep the
