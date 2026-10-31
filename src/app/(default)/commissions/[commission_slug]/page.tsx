@@ -1,4 +1,4 @@
-import { pageSeo } from "@/lib/seo";
+import { discoveryHubMetadata } from "@/lib/seo/discovery-hub-metadata";
 import { getCommissionBySlug, getPostingsByCommission, listCommissionsWithExams } from "@/lib/queries";
 import { CommissionContent } from "@/components/commission-content";
 import { safeQuery } from "@/lib/safe-query";
@@ -12,11 +12,15 @@ type Props = {
 export async function generateMetadata({ params }: Props) {
   const { commission_slug } = await params;
   const commission = await safeQuery(() => getCommissionBySlug(commission_slug), null);
-  return {
-    title: commission ? commission.name : "Commission",
-    description: `Browse all open ${commission?.name || "government"} job exams and positions.`,
-    ...(commission ? pageSeo(`/commissions/${commission.slug}`) : {}),
-  };
+  if (!commission) return {};
+  const title = `${commission.name} Recruitment, Exams & Jobs`;
+  const description = `Explore ${commission.name} exams, recruitment information and available positions on JobOye.`;
+  return discoveryHubMetadata({
+    title,
+    description,
+    canonicalPath: `/commissions/${commission.slug}`,
+    ogImageAlt: `${commission.name} recruitment and jobs – JobOye`,
+  });
 }
 
 export async function generateStaticParams() {
