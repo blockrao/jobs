@@ -598,7 +598,7 @@ export async function getPostBySlug(
     // Transform raw JSONB enrichment to canonical EnrichmentSchema. The
     // transformer also requires explicit per-post review keys for child facts.
     const transformedEnrichment = transformEnrichment(enrichmentJsonb, {
-      sourceOrigin: data.recruitmentOfficialLinkSource,
+      sourceOrigin: data.recruitmentSourceDiscoveryOrigin,
       postName: data.title,
     });
 
