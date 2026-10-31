@@ -123,7 +123,6 @@ WHERE EXISTS (
   SELECT 1 FROM public.posts_experience x
   WHERE x.post_id = p.id
     AND x.source = 'fja_post_inventory'
-    AND x.verified_at IS NULL
 )
 ORDER BY r.id, p.id;
 
