@@ -27,6 +27,17 @@ BEGIN
 END;
 $guard$;
 
+-- Restore the pre-migration public-read policies only as part of a full
+-- application rollback. This returns to the prior exposure model.
+DROP POLICY IF EXISTS "public read" ON public.recruitments;
+CREATE POLICY "public read" ON public.recruitments FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "public read" ON public.posts;
+CREATE POLICY "public read" ON public.posts FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "public read" ON public.eligibilities;
+CREATE POLICY "public read" ON public.eligibilities FOR SELECT TO public USING (true);
+DROP POLICY IF EXISTS "public read" ON public.post_age_rules;
+CREATE POLICY "public read" ON public.post_age_rules FOR SELECT TO public USING (true);
+
 DROP TRIGGER IF EXISTS trg_guard_official_digest_promotion_review ON public.official_digest_promote;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_recruitment_verification ON public.recruitments;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_post_source ON public.posts;
@@ -202,5 +213,6 @@ DROP FUNCTION IF EXISTS public.guard_official_digest_promotion_review();
 DROP FUNCTION IF EXISTS public.official_digest_fact_review_complete(text, text[], jsonb, jsonb, jsonb, text, timestamptz, text);
 DROP FUNCTION IF EXISTS public.official_digest_required_fact_keys(jsonb, jsonb);
 DROP FUNCTION IF EXISTS public.official_digest_authority_review_complete(text, text, text, timestamptz, text);
+DROP FUNCTION IF EXISTS public.is_publicly_verified_recruitment_source(text, text, text, jsonb, jsonb);
 
 COMMIT;
