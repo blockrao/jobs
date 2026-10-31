@@ -48,6 +48,7 @@ export function isUnverifiedAggregatorSource(
 ): boolean {
   const aggregatorOrigin =
     sourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" ||
+    (sourceDiscoveryOrigin == null && officialLinkVerificationStatus === "AGGREGATOR_DISCOVERED") ||
     (typeof postSourceName === "string" && postSourceName.trim().toLowerCase() === "aggregator");
   if (!aggregatorOrigin) return false;
   if (verificationStatus !== "VERIFIED") return true;
