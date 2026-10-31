@@ -215,7 +215,6 @@ export default async function JobDetailPage({ params }: Props) {
         recruitmentSlug: post.recruitmentSlug,
         recruitmentName: post.recruitmentName,
         slug: post.slug,
-        postedAt: post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" ? null : post.postedAt,
         updatedAt: post.updatedAt,
         notificationPublicationDate: unverifiedAggregator ? null : post.notificationPublicationDate,
         officialSourceUrl: unverifiedAggregator ? null : post.officialSourceUrl,
