@@ -96,9 +96,13 @@ describe("extracted source projection", () => {
 
   test("the leaf renderer gates JobPosting on lifecycle and a plausible, non-future notification date", () => {
     const renderer = stripComments(readSource("src/components/job-posting/job-detail-page-production.tsx"));
-    expect(renderer).toContain("const candidatePublishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
-    expect(renderer).toContain("candidatePublishedDate.getTime() <= Date.now()");
-    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && publishedDate !== null}");
+    expect(renderer).toContain("const publishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
+    expect(renderer).toContain("publishedDate.getTime() <= Date.now()");
+    expect(renderer).toContain("const emitJobPosting = sourceVerified");
+    expect(renderer).toContain("&& indexable");
+    expect(renderer).toContain("&& notificationLinkVerified");
+    expect(renderer).toContain("&& applicationLinkVerified");
+    expect(renderer).toContain("&& hasValidPublishedDate");
     expect(renderer).not.toContain("post.postedAt");
   });
 
