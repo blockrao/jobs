@@ -168,15 +168,16 @@ export default function JobDetailPageProduction({
   const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
-  const qualificationText = post.qualificationText || post.fjaExtract?.qualificationRaw || null;
-  const experienceText = post.experienceText || post.fjaExtract?.experienceRaw || null;
-  const ageText = post.ageLimit || post.fjaExtract?.ageRaw || null;
+  // Raw aggregator extraction is internal discovery material, never a public fallback.
+  const qualificationText = post.qualificationText || null;
+  const experienceText = post.experienceText || null;
+  const ageText = post.ageLimit || null;
   const employmentLabel = post.employmentType ? EMPLOYMENT_LABELS[post.employmentType.toUpperCase()] ?? null : null;
   const salaryText = salaryMin
     ? (salaryMax && salaryMax !== salaryMin ? `${inr(salaryMin)} – ${inr(salaryMax)} per month` : `${inr(salaryMin)} per month`)
-    : post.fjaExtract?.salaryRaw ?? null;
+    : null;
   const orgName = post.organizationName ?? null;
-  const advertisementNumber = post.fjaExtract?.advertisementNumber ?? null;
+  const advertisementNumber = null;
 
   const feeRows = (post.applicationFees ?? []).map((f) => ({
     who: f.waivedFor ? `Waived for ${f.waivedFor}` : f.note ?? 'All candidates',
