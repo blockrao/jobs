@@ -299,8 +299,8 @@ export default async function JobDetailPage({ params }: Props) {
           note: a.note,
         })) : [],
         applicationFees: !unverifiedAggregator && Array.isArray(enrichment?.applicationFees) ? enrichment.applicationFees.map((f: any) => ({
-          amount: f.amount || null,
-          currency: f.currency || "INR",
+          amount: f.amount ?? null,
+          currency: f.currency ?? "INR",
           waivedFor: f.waivedFor,
           paymentMethods: f.paymentMethods,
           note: f.note,
