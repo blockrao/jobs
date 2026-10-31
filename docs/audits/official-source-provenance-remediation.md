@@ -28,7 +28,7 @@ This allows aggregator-discovered records to carry an official verification stat
 The previous read-only audit found:
 
 - 542 posts created in the `official_digest_20261015` decomposition batch, across 362 recruitments.
-- All 362 recruitments had `official_link_source = 'AGGREGATOR_DISCOVERED'`; 30 were nevertheless marked `VERIFIED`.
+- All 362 recruitments were discovered through an aggregator (then recorded in the overloaded `official_link_source` field); 30 were nevertheless marked `VERIFIED` without review metadata.
 - 3,262 `posts_education` rows and 643 `posts_experience` rows labelled `source = 'fja_post_inventory'`; education rows had confidence 60 and `verified_at IS NULL`. The experience table did not have a `verified_at` column at audit time, so it could not represent fact verification at all.
 - These child facts were spread across multiple parent recruitment source labels, including `AGGREGATOR_DISCOVERED`, NULL, `GOA_GOV_IN` and `MANUAL_VERIFIED`; parent source labels alone therefore cannot safely gate them.
 - The `fja_post_inventory` table was empty at the time of the audit, so the surviving fact rows had no matching raw inventory record.
@@ -89,6 +89,7 @@ The current branch now contains the first end-to-end protection slice:
 - A forward migration adds two separate manual gates to `official_digest_promote`: (1) issuer-source authority review, and (2) fact-accuracy review. A promotion cannot transition from PENDING to PROMOTED unless the official notification URL and issuer evidence URL are HTTPS, and both reviews have reviewer identities, timestamps and notes.
 - Fact review requires every populated hub/post staging fact, explicit application-window review, and per-post review of education, experience, eligibility, age rules, vacancies, salary, fees, documents, selection process, important dates and official links.
 - Each reviewed field must have a matching evidence object with a non-empty `evidence_ref` and `excerpt`. Use keys `hub:<field>` and `post:<post-name>:<field>` (the staging JSON does not carry canonical post slugs). For absent facts, record the evidence reference and an excerpt supporting that the item is not stated.
+- `recruitments.source_discovery_origin` now preserves immutable discovery origin; `official_link_source` is reserved for the A-070 link-verification state (`MANUAL_VERIFIED` only after the issuer review passes). The original aggregator discovery trail is never overwritten.
 - Database triggers defend the recruitment, post and post-enrichment write paths against the legacy promotion function's unconditional official labels. Aggregator-discovered rows without both matching reviews are forced to UNVERIFIABLE / `aggregator_extracted` and cannot carry an official-source boolean.
 - Approved review evidence is persisted in `recruitments.metadata.source_provenance` and `posts.enrichment.source_provenance`. Preservation triggers prevent later JSONB enrichment consolidation from erasing it.
 - The same review keys gate education, experience and other canonical enrichment fact families at transformation/render time. A recruitment passing source review does not automatically authorize every child fact.
