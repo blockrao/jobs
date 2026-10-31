@@ -171,15 +171,16 @@ export function transformEnrichment(
     // Age rules - only expose rows with complete issuer evidence.
     const verifiedAgeRuleEntries = eligibleObjectEntries(rawEnrichment.age_rules, 'age_rules');
     if (verifiedAgeRuleEntries.length > 0) {
-      const ageRulesObject: Record<string, { min: number; max: number }> = {};
-      const ageRulesArray: Array<{ category: string; min: number; max: number; maxAge?: number; relaxationYears?: number; ruleType?: string; note?: string }> = [];
+      const ageRulesObject: Record<string, { min?: number | null; max?: number | null }> = {};
+      const ageRulesArray: Array<{ category: string; min?: number | null; max?: number | null; maxAge?: number | null; relaxationYears?: number; ruleType?: string; note?: string }> = [];
 
       verifiedAgeRuleEntries.forEach(([category, rule]: [string, any]) => {
         if (rule && typeof rule === 'object') {
           const maxAge = rule.max ?? rule.max_age ?? null;
-          ageRulesObject[category] = { max: maxAge };
+          ageRulesObject[category] = { min: rule.min ?? rule.min_age ?? null, max: maxAge };
           ageRulesArray.push({
             category,
+            min: rule.min ?? rule.min_age ?? null,
             max: maxAge,
             maxAge,
             relaxationYears: rule.relaxation_years ?? rule.relaxationYears,
