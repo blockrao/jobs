@@ -1,9 +1,15 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { isUnverifiedAggregatorSource } from "../../../src/lib/source-verification";
+import { isManuallyVerifiedOfficialLink, isUnverifiedAggregatorSource } from "../../../src/lib/source-verification";
 import { transformEnrichment } from "../../../src/db/operations/enrichment-transformer";
 
 describe("aggregator source trust gate", () => {
+  it("requires a distinct manual verification state for official links", () => {
+    expect(isManuallyVerifiedOfficialLink("MANUAL_VERIFIED")).toBe(true);
+    expect(isManuallyVerifiedOfficialLink("AGGREGATOR_DISCOVERED")).toBe(false);
+    expect(isManuallyVerifiedOfficialLink("UNVERIFIED")).toBe(false);
+  });
+
   it("treats aggregator discovery as unverified unless the recruitment is explicitly VERIFIED", () => {
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "UNVERIFIABLE")).toBe(true);
     expect(isUnverifiedAggregatorSource("AGGREGATOR_DISCOVERED", "UNVERIFIED")).toBe(true);
