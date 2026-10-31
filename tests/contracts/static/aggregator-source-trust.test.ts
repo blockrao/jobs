@@ -155,6 +155,9 @@ describe("aggregator source trust gate", () => {
     expect(query).toContain('r.official_link_source AS "recruitmentOfficialLinkSource"');
     expect(query).toContain('r.metadata AS "recruitmentMetadata"');
     expect(query).toContain('post:${data.title}:${field}');
+    const transformer = readFileSync("src/db/operations/enrichment-transformer.ts", "utf8");
+    expect(transformer).toContain("source === 'fja_post_inventory'");
+    expect(transformer).toContain("verifiedAt == null");
     const recruitmentLoader = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     expect(recruitmentLoader).toContain('eq(eligibilities.status, "VERIFIED")');
     expect(recruitmentLoader).toContain("isNotNull(eligibilities.verifiedAt)");
@@ -211,6 +214,8 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("'verified_at', pe.verified_at");
     expect(migration).toContain("'confidence_score', pex.confidence_score");
     expect(migration).toContain("'verified_at', pex.verified_at");
+    expect(migration).toContain("'sourceVerificationStatus', 'UNVERIFIABLE'");
+    expect(migration).toContain("OLD.enrichment ? 'sourceVerificationStatus'");
     expect(migration).toContain("UPDATE public.posts p");
     expect(migration).toContain("aggregate_enrichment_for_post");
     expect(migration).toContain("OLD.hub IS DISTINCT FROM NEW.hub OR OLD.posts IS DISTINCT FROM NEW.posts");
