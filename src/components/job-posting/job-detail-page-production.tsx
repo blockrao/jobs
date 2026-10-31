@@ -163,16 +163,16 @@ export default function JobDetailPageProduction({
   const deadlineStatusText = !applicationDeadline
     ? null
     : lifecycle?.state === 'upcoming'
-      ? `Applications are not open yet; the stated last date to apply is ${formatDate(applicationDeadline)}.`
+      ? `Applications are not open yet; the ${post.officialSourceVerified ? "stated" : "reported"} last date to apply is ${formatDate(applicationDeadline)}.`
       : lifecycle?.state === 'results'
         ? 'This recruitment is in the results stage; applications are not open.'
         : lifecycle?.state === 'archived'
           ? 'This recruitment is archived; applications are not open.'
           : lifecycle?.state === 'closed' || isApplicationClosed
             ? (lifecycle?.daysLeft !== null && lifecycle?.daysLeft !== undefined && lifecycle.daysLeft <= 0)
-              ? `Applications closed on ${formatDate(applicationDeadline)}.`
-              : 'Applications are closed.'
-            : `The last date to apply is ${formatDate(applicationDeadline)}.`;
+              ? `${post.officialSourceVerified ? "Applications closed" : "Reported applications closed"} on ${formatDate(applicationDeadline)}.`
+              : (post.officialSourceVerified ? 'Applications are closed.' : 'Reported status: applications are closed.')
+            : `${post.officialSourceVerified ? "The last date" : "The reported last date"} to apply is ${formatDate(applicationDeadline)}.`;
   const candidateNotificationDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);
   const notificationDate = candidateNotificationDate
     && candidateNotificationDate.getTime() > 0
@@ -250,7 +250,7 @@ export default function JobDetailPageProduction({
     const loc = [post.locationCity, post.locationState].filter(Boolean).join(', ');
     details.push({ label: 'Job location', value: loc, text: loc });
   }
-  if (applicationDeadline) details.push({ label: 'Last date', value: <time dateTime={applicationDeadline.toISOString()}>{formatDate(applicationDeadline)}</time>, text: formatDate(applicationDeadline) });
+  if (applicationDeadline) details.push({ label: post.officialSourceVerified === true ? 'Last date' : 'Reported last date', value: <time dateTime={applicationDeadline.toISOString()}>{formatDate(applicationDeadline)}</time>, text: formatDate(applicationDeadline) });
 
   // Fact lines for the JobPosting description (same facts, plain text).
   const facts: LeafFact[] = details
