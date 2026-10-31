@@ -26,7 +26,9 @@ import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
 
-export const revalidate = 86400; // 1 day ISR
+// Job lifecycle and JobPosting eligibility are time-sensitive; keep the detail
+// page's stale window aligned with the hourly live-job inventory refresh.
+export const revalidate = 3600;
 
 interface Props {
   params: Promise<{
