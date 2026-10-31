@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/labels";
 import { pageHref } from "@/lib/pagination";
 import { readLocaleCookie, LOCALE_CHANGE_EVENT } from "@/i18n/locale-cookie";
 import type { Locale } from "@/i18n/request";
+import { JobOpportunityCard } from "@/components/jobs/job-opportunity-card";
 
 // Sector hub body. The page (src/app/(default)/categories/[slug]/page.tsx)
 // stays a static/ISR server component; this client component picks the
@@ -98,41 +99,35 @@ export function CategoryContent({
             const days = end ? daysUntil(end) : null;
             const orgName = isHi && p.orgNameHi ? p.orgNameHi : p.orgName;
             let deadline: string | null = null;
-            let deadlineTone = "text-neutral-600";
             if (p.recruitmentStatus === "UPCOMING" && !end) {
               deadline = L.upcoming;
             } else if (end && days !== null) {
               if (days <= 0) deadline = L.closingToday;
               else if (days <= 7) deadline = L.daysLeft(days);
-              else deadline = `${L.lastDate}: ${formatDate(end, dateLocale)}`;
-              if (days <= 7) deadlineTone = "text-red-700 font-medium";
+              else deadline = formatDate(end, dateLocale);
             }
+            const urgent = p.recruitmentStatus !== "UPCOMING" && days !== null && days >= 0 && days <= 7;
+            const statusLabel = p.recruitmentStatus === "UPCOMING"
+              ? L.upcoming
+              : urgent ? (isHi ? "जल्द बंद" : "Closing soon") : (isHi ? "आवेदन खुले हैं" : "Applications open");
             return (
-              <li key={p.postId} className="py-4">
-                <Link
-                  href={`/jobs/${p.recruitmentSlug}/${p.postSlug}`}
-                  className="font-semibold hover:underline"
-                >
-                  {p.postName}
-                </Link>
-                <p className="mt-0.5 text-sm text-neutral-600">
-                  <Link href={`/organizations/${p.orgSlug}`} className="hover:underline">
-                    {orgName}
-                  </Link>
-                  {" · "}
-                  <Link href={`/jobs/${p.recruitmentSlug}`} className="hover:underline">
-                    {p.recruitmentName}
-                  </Link>
-                </p>
-                <p className="mt-0.5 text-sm">
-                  {p.vacancyTotal != null && (
-                    <span className="text-neutral-700">
-                      {p.vacancyTotal.toLocaleString("en-IN")} {L.vacancies}
-                      {deadline && " · "}
-                    </span>
-                  )}
-                  {deadline && <span className={deadlineTone}>{deadline}</span>}
-                </p>
+              <li key={p.postId}>
+                <JobOpportunityCard
+                  postName={p.postName}
+                  organizationName={orgName}
+                  organizationHref={`/organizations/${p.orgSlug}`}
+                  recruitmentName={p.recruitmentName}
+                  recruitmentHref={`/jobs/${p.recruitmentSlug}`}
+                  detailHref={`/jobs/${p.recruitmentSlug}/${p.postSlug}`}
+                  statusLabel={statusLabel}
+                  urgent={urgent}
+                  vacancyTotal={p.vacancyTotal}
+                  deadlineLabel={deadline ?? (isHi ? "सूचना में नहीं दिया गया" : "Not stated")}
+                  daysLeft={days}
+                  vacanciesLabel={L.vacancies}
+                  deadlineTitle={L.lastDate}
+                  viewDetailsLabel={isHi ? "विवरण देखें" : "View job details"}
+                />
               </li>
             );
           })}

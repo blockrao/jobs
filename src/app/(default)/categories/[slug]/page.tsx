@@ -1,8 +1,8 @@
-import { pageSeo } from "@/lib/seo";
+import { discoveryHubMetadata } from "@/lib/seo/discovery-hub-metadata";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
-import { buildBreadcrumbSchema, jsonLdGraph } from "@/lib/structured-data";
+import { buildBreadcrumbSchema, buildDiscoveryCollectionPageSchema, buildDiscoveryItemListSchema, jsonLdGraph } from "@/lib/structured-data";
 import { safeQuery } from "@/lib/safe-query";
 import { SECTORS, LEGACY_SLUGS_TO_INDEX, getSector, getSectorByAlias, sectorHref } from "@/lib/sectors";
 import { parsePage } from "@/lib/pagination";
@@ -35,11 +35,14 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const page = parsePage(pageParam);
   const suffix = page > 1 ? ` — Page ${page}` : "";
   const path = page > 1 ? `${sectorHref(sector)}?page=${page}` : sectorHref(sector);
-  return {
-    title: `${sector.label} Jobs 2026 — Latest Notifications${suffix}`,
+  const year = new Date().getFullYear();
+  return discoveryHubMetadata({
+    title: `${sector.label} Jobs ${year} — Latest Notifications${suffix}`,
     description: sector.description,
-    ...pageSeo(path),
-  };
+    canonicalPath: path,
+    indexable: true,
+    ogImageAlt: `${sector.label} Jobs — JobOye`,
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -78,13 +81,30 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   // A paginated page beyond the data is a soft 404; return a real one.
   if (page > 1 && posts.length === 0) notFound();
 
+  const pagePath = page > 1 ? `${sectorHref(sector)}?page=${page}` : sectorHref(sector);
   const schema = jsonLdGraph(
     buildBreadcrumbSchema([
       { name: "Home", path: "/" },
       { name: "Categories", path: "/categories" },
       { name: sector.label, path: sectorHref(sector) },
     ]),
+    buildDiscoveryCollectionPageSchema({
+      name: `${sector.label} Jobs`,
+      description: sector.description,
+      path: pagePath,
+      itemListPath: pagePath,
+    }),
   );
+  const itemList = buildDiscoveryItemListSchema({
+    name: `${sector.label} job opportunities`,
+    description: sector.description,
+    path: pagePath,
+    positionOffset: (page - 1) * PAGE_SIZE,
+    items: posts.map((post) => ({
+      name: post.postName,
+      path: `/jobs/${post.recruitmentSlug}/${post.postSlug}`,
+    })),
+  });
 
   return (
     <>
@@ -92,6 +112,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
       <CategoryContent
         sector={sector}
         posts={posts}

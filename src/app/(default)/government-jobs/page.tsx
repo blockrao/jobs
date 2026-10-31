@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { pageSeo } from "@/lib/seo";
+import { discoveryHubMetadata } from "@/lib/seo/discovery-hub-metadata";
 import { hasDb, listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
 import { deriveLifecycle, lifecycleLabel } from "@/lib/lifecycle";
 import { SECTORS, sectorHref } from "@/lib/sectors";
@@ -9,7 +9,8 @@ import { parsePage } from "@/lib/pagination";
 import { formatDate } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import { recruitmentHref } from "@/lib/recruitment-href";
-import { jsonLdGraph, buildBreadcrumbSchema } from "@/lib/structured-data";
+import { jsonLdGraph, buildBreadcrumbSchema, buildDiscoveryCollectionPageSchema, buildDiscoveryItemListSchema } from "@/lib/structured-data";
+import { JobOpportunityCard } from "@/components/jobs/job-opportunity-card";
 
 export const revalidate = 3600;
 const PAGE_SIZE = 100;
@@ -40,28 +41,26 @@ function formatCount(value: number) {
   return value.toLocaleString("en-IN");
 }
 
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
+
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
   const suffix = page > 1 ? ` — Page ${page}` : "";
-  const path = page > 1 ? `/government-jobs?page=${page}` : "/government-jobs";
   const year = new Date().getFullYear();
+  const title = `Government Jobs in India: Current & Upcoming Vacancies ${year}${suffix}`;
+  const description =
+    "Explore current and upcoming government jobs in India across central and state departments, railways, banks, defence and PSUs. Browse recruitment posts, vacancy details and application deadlines.";
 
-  return {
-    title: `Government Jobs in India: Current & Upcoming Vacancies ${year}${suffix} | JobOye`,
-    description:
-      "Explore current and upcoming government jobs in India across central and state departments, railways, banks, defence and PSUs. Browse recruitment posts, vacancy details and application deadlines.",
-    ...pageSeo(path),
-  };
+  return discoveryHubMetadata({
+    title,
+    description,
+    // Each paginated result set has a distinct URL and its own canonical.
+    // Unlike filters/sort variants, page N contains a different set of posts.
+    canonicalPath: page > 1 ? `/government-jobs?page=${page}` : "/government-jobs",
+    indexable: true,
+    ogImageAlt: `Government Jobs in India — Current and Upcoming Vacancies ${year}`,
+  });
 }
 
 export default async function AllGovernmentJobsPage({ searchParams }: Props) {
@@ -89,41 +88,32 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
       { name: "Home", path: "/" },
       { name: "Government Jobs in India", path: "/government-jobs" },
     ]),
-    {
-      "@type": "CollectionPage",
-      "@id": `${SITE_URL}${pagePath}#collection`,
-      name: `Government Jobs in India — Current and Upcoming Vacancies`,
+    buildDiscoveryCollectionPageSchema({
+      name: "Government Jobs in India — Current and Upcoming Vacancies",
       description:
         "A directory of current and upcoming government recruitment posts across central and state departments, railways, banking, defence and public-sector undertakings in India.",
-      url: `${SITE_URL}${pagePath}`,
-      inLanguage: "en-IN",
-      isPartOf: { "@id": `${SITE_URL}#website` },
-      mainEntity: { "@id": `${SITE_URL}${pagePath}#job-list` },
-    },
+      path: pagePath,
+      itemListPath: pagePath,
+    }),
   );
 
-  const itemList = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "@id": `${SITE_URL}${pagePath}#job-list`,
+  const itemList = buildDiscoveryItemListSchema({
     name: "Government job vacancies",
     description: "Current and upcoming government recruitment posts listed on JobOye.",
-    numberOfItems: posts.length,
-    itemListOrder: "https://schema.org/ItemListOrderAscending",
-    itemListElement: posts.map((post, index) => ({
-      "@type": "ListItem",
-      position: (page - 1) * PAGE_SIZE + index + 1,
-      name: post.postName,
-      url: `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.postSlug}`,
+    path: pagePath,
+    positionOffset: (page - 1) * PAGE_SIZE,
+    items: posts.map((post) => ({
+      name: post.postName ?? post.recruitmentName,
+      path: `/jobs/${post.recruitmentSlug}/${post.postSlug}`,
     })),
-  };
+  });
 
   return (
     <div className="bg-slate-50/70">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }} />
 
-      <div className="mx-auto max-w-7xl px-4 pb-14 pt-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-2 pb-14 pt-4 sm:px-6 sm:pt-5 lg:px-8">
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-slate-500">
           <Link href="/" className="transition hover:text-indigo-700">Home</Link>
           <span aria-hidden="true">/</span>
@@ -238,61 +228,19 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
 
                   return (
                     <li key={post.postId}>
-                      <article className="group rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-900/[0.025] transition duration-200 hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-900/[0.06] sm:p-5">
-                        <div className="flex items-start gap-3 sm:gap-4">
-                          <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-sm font-bold tracking-wide text-indigo-700 sm:h-12 sm:w-12">
-                            {initials(post.orgName) || "GO"}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className={urgent
-                                ? "inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700"
-                                : lifecycle.state === "open"
-                                  ? "inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700"
-                                  : "inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-bold text-sky-700"
-                              }>
-                                {urgent ? "Closing soon" : statusText}
-                              </span>
-                              {post.vacancyTotal != null && post.vacancyTotal > 0 && (
-                                <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                                  {formatCount(post.vacancyTotal)} vacancies
-                                </span>
-                              )}
-                            </div>
-
-                            <h3 className="mt-2 text-base font-bold leading-6 tracking-tight text-slate-950 sm:text-lg">
-                              <Link href={detailHref} className="rounded-sm decoration-2 underline-offset-4 transition group-hover:text-indigo-700 group-hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                                {post.postName}
-                              </Link>
-                            </h3>
-
-                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
-                              <Link href={`/organizations/${post.orgSlug}`} className="font-semibold text-slate-700 hover:text-indigo-700 hover:underline">
-                                {post.orgName}
-                              </Link>
-                              <span aria-hidden="true" className="text-slate-300">·</span>
-                              <Link href={recruitmentHref({ slug: post.recruitmentSlug })} className="min-w-0 hover:text-indigo-700 hover:underline">
-                                {post.recruitmentName}
-                              </Link>
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-600 sm:text-sm">
-                              <span className="inline-flex items-center gap-1.5">
-                                <span aria-hidden="true" className="text-slate-400">◷</span>
-                                <span className="font-medium text-slate-500">Application deadline:</span>
-                                <span className={urgent ? "font-bold text-rose-700" : "font-semibold text-slate-800"}>{deadline}</span>
-                                {urgent && <span className="font-semibold text-rose-700">· {lifecycle.daysLeft === 0 ? "Last day" : `${lifecycle.daysLeft} days left`}</span>}
-                              </span>
-                            </div>
-
-                            <div className="mt-4 flex justify-end">
-                              <Link href={detailHref} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50 hover:text-indigo-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                                View job details <span aria-hidden="true" className="transition group-hover:translate-x-0.5">→</span>
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
+                      <JobOpportunityCard
+                        postName={post.postName ?? post.recruitmentName ?? "Government job opportunity"}
+                        organizationName={post.orgName}
+                        organizationHref={`/organizations/${post.orgSlug}`}
+                        recruitmentName={post.recruitmentName}
+                        recruitmentHref={recruitmentHref({ slug: post.recruitmentSlug })}
+                        detailHref={detailHref}
+                        statusLabel={urgent ? "Closing soon" : statusText}
+                        urgent={urgent}
+                        vacancyTotal={post.vacancyTotal}
+                        deadlineLabel={deadline ?? "Not listed"}
+                        daysLeft={lifecycle.daysLeft}
+                      />
                     </li>
                   );
                 })}

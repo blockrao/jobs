@@ -74,7 +74,7 @@ export function CommissionContent({
   });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-7xl rounded-3xl bg-slate-50/70 px-4 py-8 sm:px-6">
       <div className="mb-6">
         <Link href="/exams" className="text-sm text-neutral-600 hover:underline">
           {L.backToExams}
@@ -112,11 +112,11 @@ export function CommissionContent({
             const displayEligibility =
               isHi && eligibilityHi ? eligibilityHi : exam.eligibility;
             return (
-              <div key={exam.id} className="p-4 border border-black/10 rounded-lg">
-                <h3 className="font-semibold text-base mb-2">
+              <div key={exam.id} className="rounded-2xl border border-slate-300 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
+                <h3 className="mb-3 text-lg font-extrabold tracking-tight text-slate-950">
                   {displayLabel}
                 </h3>
-                <div className="text-sm text-neutral-600 space-y-1">
+                <div className="space-y-2 text-sm font-medium leading-6 text-slate-700">
                   {openCount > 0 && (
                     <p>
                       <span className="font-medium text-green-600">
@@ -153,7 +153,7 @@ export function CommissionContent({
             <p className="text-neutral-600">{L.noPositions}</p>
           </div>
         ) : (
-          <ul className="divide-y divide-black/10">
+          <ul className="space-y-3">
             {allPostings.map((posting) => {
               const titleHi = posting.titleHi as string | null;
               const orgNameHi = posting.organization.nameHi as
@@ -170,21 +170,21 @@ export function CommissionContent({
                 isHi && examLabelHi ? examLabelHi : posting.exam?.label;
               const detailHref = legacyPostingHref(posting);
               return (
-                <li key={posting.id} className="py-4">
+                <li key={posting.id} className="rounded-2xl border border-slate-300 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md sm:p-5">
                   {detailHref ? (
                     <Link
                       href={detailHref}
-                      className="text-base font-semibold hover:underline block"
+                      className="block text-lg font-extrabold leading-7 tracking-tight text-slate-950 hover:text-indigo-700 hover:underline sm:text-xl"
                     >
                       {displayTitle}
                     </Link>
                   ) : (
-                    <span className="text-base font-semibold block">{displayTitle}</span>
+                    <span className="block text-lg font-extrabold leading-7 tracking-tight text-slate-950 sm:text-xl">{displayTitle}</span>
                   )}
-                  <p className="text-sm text-neutral-600 mt-1">
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-700">
                     {displayOrgName}
                     {posting.locationCity ? ` · ${posting.locationCity}` : ""} ·{" "}
-                    <span className="text-xs bg-neutral-100 px-2 py-1 rounded">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
                       {displayExamLabel}
                     </span>
                   </p>
