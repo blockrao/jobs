@@ -180,7 +180,7 @@ describe("aggregator source trust gate", () => {
     const transformer = readFileSync("src/db/operations/enrichment-transformer.ts", "utf8");
     expect(transformer).toContain("const trustedFactSources = new Set");
     expect(transformer).not.toContain("'FJA_POST_INVENTORY'");
-    expect(transformer).toContain("verifiedAt == null");
+    expect(transformer).toContain("verifiedAt != null");
     expect(transformer).toContain("sourceRef");
     expect(transformer).toContain("sourceLocator");
     const recruitmentLoader = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
