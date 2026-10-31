@@ -25,6 +25,7 @@ import JobDetailPageProduction from "@/components/job-posting/job-detail-page-pr
 import { formatDate, formatCurrency } from "@/lib/formatting";
 import { deriveLifecycle } from "@/lib/lifecycle";
 import { resolvePostVacancy } from "@/lib/resolvers/fact-resolvers";
+import { publicLink, stripAggregatorData } from "@/lib/aggregators";
 
 export const revalidate = 86400; // 1 day ISR
 
@@ -41,16 +42,15 @@ interface Props {
  * The same strings are passed to the renderer so H1, <head> and JSON-LD agree.
  */
 function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlugCached>>>) {
-  const enrichment = post.enrichment;
+  const enrichment = stripAggregatorData(post.enrichment);
   const vacancies = resolvePostVacancy(post) ?? 0;
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const lifecycle = deriveLifecycle(post.postingStatus, post.recruitmentApplicationEndDate);
   const deadline = lifecycle.deadline;
   const applicationWindowEnded = lifecycle.state === "closed" || lifecycle.state === "results" || lifecycle.state === "archived";
-  const qualification = post.fjaExtract?.qualificationRaw ?? null;
 
-  const titleParts = [post.title];
+  const titleParts = [stripAggregatorData(post.title) || "Job opportunity"];
   if (post.organizationName) titleParts.push(`– ${post.organizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
   else if (post.recruitmentName) titleParts.push(`– ${post.recruitmentName}`);
   if (vacancies > 0) titleParts.push(`(${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "Post" : "Posts"})`);
@@ -61,11 +61,12 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   if (post.organizationName) bits.push(`${post.organizationName} recruitment for ${post.title}`);
   else bits.push(`${post.title} recruitment`);
   if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
-  if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
   if (deadline && lifecycle.state === "closed" && (lifecycle.daysLeft !== null && lifecycle.daysLeft <= 0)) bits.push(`applications closed on ${formatDate(deadline)}`);
   else if (deadline && !applicationWindowEnded) bits.push(`last date ${formatDate(deadline)}`);
-  const storedDescription = typeof post.description === "string" ? post.description.trim() : "";
+  const storedDescription = typeof post.description === "string"
+    ? stripAggregatorData(post.description.trim()) || ""
+    : "";
   const fallbackDescription = `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
   const description = storedDescription || fallbackDescription;
 
@@ -128,7 +129,7 @@ export default async function JobDetailPage({ params }: Props) {
   );
 
   // Normalize salary data
-  const enrichment = post.enrichment;
+  const enrichment = stripAggregatorData(post.enrichment);
   const salaryMin = enrichment?.salaryMin ?? post.legacySalaryMin ?? null;
   const salaryMax = enrichment?.salaryMax ?? post.legacySalaryMax ?? null;
   const vacancies = resolvePostVacancy(post) ?? 0;
