@@ -60,7 +60,9 @@ Run `scripts/audits/official-source-provenance-dry-run.sql` with a read-only rol
 ### P0-C — repair NIT Warangal
 
 - Treat the NITW faculty recruitment as a separate evidence-led case.
-- Verify role-specific qualification, experience, fee, vacancy split and application portal from the official NITW 2026 notification and official recruitment portal.
+- The official faculty page search listing confirms Advertisement NITW/FR-2/2026 dated 15-10-2026 and exposes Faculty Recruitment 2026 / Apply Online Portal actions. The official PDF endpoint currently returns a retrieval cache miss/inaccessible response in the available research channel.
+- Secondary pages conflict on application dates and fee details. They are not accepted as evidence for correcting JobOye facts.
+- Therefore role-specific qualifications, experience, fee, vacancy split, deadline and application portal remain unverified until the official PDF and portal target can be inspected directly or supplied for review.
 - Do not reuse qualifications from another recruitment or infer fee = zero from a null.
 - Publish only fields supported by the issuer source; label unknown fields as not stated or omit them.
 
