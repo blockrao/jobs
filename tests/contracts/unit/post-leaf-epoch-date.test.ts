@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import PostLeafStructuredData from "@/components/job-posting/structured-data/post-leaf-schema";
 
-function renderGraph(notificationPublicationDate: Date | null, postedAt: Date | null) {
+function renderGraph(notificationPublicationDate: Date | null) {
   const html = renderToStaticMarkup(createElement(PostLeafStructuredData, {
     post: {
       id: 123,
@@ -17,7 +17,6 @@ function renderGraph(notificationPublicationDate: Date | null, postedAt: Date | 
       locationCity: null,
       locationState: null,
       notificationPublicationDate,
-      postedAt,
       updatedAt: null,
     },
     resolvedVacancy: null,
@@ -30,18 +29,17 @@ function renderGraph(notificationPublicationDate: Date | null, postedAt: Date | 
 }
 
 describe("Post Leaf structured date placeholders", () => {
-  test("does not publish Unix epoch as datePosted and falls back to a real postedAt date", () => {
+  test("does not use postedAt as a fallback when notification date is a Unix epoch", () => {
     const graph = renderGraph(
       new Date("1970-01-01T00:00:00.000Z"),
-      new Date("2026-10-08T12:00:00.000Z"),
     );
     const job = graph["@graph"].find((node) => node["@type"] === "JobPosting");
-    expect(job?.datePosted).toBe("2026-10-08T12:00:00.000Z");
-    expect(job?.datePosted).not.toBe("1970-01-01T00:00:00.000Z");
+    expect(job).toBeDefined();
+    expect(job).not.toHaveProperty("datePosted");
   });
 
   test("omits datePosted when only the Unix epoch sentinel exists", () => {
-    const graph = renderGraph(new Date("1970-01-01T00:00:00.000Z"), null);
+    const graph = renderGraph(new Date("1970-01-01T00:00:00.000Z"));
     const job = graph["@graph"].find((node) => node["@type"] === "JobPosting");
     expect(job).toBeDefined();
     expect(job).not.toHaveProperty("datePosted");
