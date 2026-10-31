@@ -59,7 +59,6 @@ interface JobDetailPageProps {
     recruitmentSlug: string;
     recruitmentName?: string | null;
     slug: string;
-    postedAt?: Date | string | null;
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
@@ -162,7 +161,16 @@ export default function JobDetailPageProduction({
   const isApplicationClosed = !isApplicationOpen;
   // JobPosting is only for an application that is currently open. The schema
   // builder independently omits markup for a known expired deadline.
-  const emitJobPosting = sourceVerified && (lifecycle ? lifecycle.isOpen : !isApplicationClosed);
+  const publishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);
+  const hasValidPublishedDate = publishedDate !== null && publishedDate.getTime() <= Date.now();
+  const notificationLinkVerified = sourceVerified && Boolean(post.officialSourceUrl);
+  const applicationLinkVerified = sourceVerified && Boolean(post.applyUrl);
+  const emitJobPosting = sourceVerified
+    && (lifecycle ? lifecycle.isOpen : !isApplicationClosed)
+    && indexable
+    && notificationLinkVerified
+    && applicationLinkVerified
+    && hasValidPublishedDate;
   const deadlineStatusText = !applicationDeadline
     ? null
     : lifecycle?.state === 'upcoming'
@@ -176,7 +184,6 @@ export default function JobDetailPageProduction({
               ? `Applications closed on ${formatDate(applicationDeadline)}.`
               : 'Applications are closed.'
             : `The last date to apply is ${formatDate(applicationDeadline)}.`;
-  const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
   const qualificationText = post.qualificationText || post.fjaExtract?.qualificationRaw || null;
@@ -286,7 +293,6 @@ export default function JobDetailPageProduction({
       locationCity: post.locationCity,
       locationState: post.locationState,
       notificationPublicationDate: publishedDate,
-      postedAt: post.postedAt ? new Date(post.postedAt) : null,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
       officialSourceUrl: post.officialSourceUrl,
