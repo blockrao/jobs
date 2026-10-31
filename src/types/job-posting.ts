@@ -59,6 +59,9 @@ export interface JobPostingData {
   officialSourceRegistryUrl?: string | null;
   officialSourceVerified?: boolean;
   officialApplicationVerified?: boolean;
+  recruitmentEnrichmentSource?: string | null;
+  recruitmentInstitutionName?: string | null;
+  organizationIdentityMismatch?: boolean;
 
   // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
   vacancyTotal?: number | null;
