@@ -113,50 +113,50 @@ export function HomeContent({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(closingListJsonLd) }} />
       )}
 
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
 
         {/* ── Hero: compact, functional ──────────────────────────── */}
-        <section className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-8 lg:gap-12 items-end pt-8 pb-8 sm:pt-11 sm:pb-9">
+        <section className="my-5 grid grid-cols-1 items-center gap-8 rounded-3xl border border-slate-800 bg-slate-950 px-5 py-7 shadow-xl shadow-slate-900/10 sm:my-7 sm:px-8 sm:py-10 lg:grid-cols-[1.2fr_0.9fr] lg:gap-12">
           <div className="flex flex-col gap-4">
-            <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-brand-600">
+            <p className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-indigo-300">
               {isHi ? "भारत की सरकारी नौकरियां" : "Government jobs in India"}
             </p>
-            <h1 className="text-[28px] sm:text-[40px] lg:text-[44px] font-bold leading-[1.12] tracking-tight text-neutral-900">
+            <h1 className="text-[30px] font-extrabold leading-[1.08] tracking-tight text-white sm:text-[42px] lg:text-[48px]">
               {isHi
                 ? "हर खुली सरकारी रिक्ति — अंतिम तिथि और आधिकारिक आवेदन लिंक के साथ।"
                 : "Every open sarkari vacancy, with the last date and the official apply link."}
             </h1>
-            <p className="text-base sm:text-lg text-neutral-600 max-w-xl">
+            <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
               {isHi
                 ? "अधिसूचना से सीधे तथ्य — रिक्तियां, पात्रता, शुल्क, तारीखें। कोई एजेंट नहीं, कोई शुल्क नहीं।"
                 : "Facts straight from the notification — vacancies, eligibility, fee, dates. No agents, no middlemen, never a charge."}
             </p>
-            <form action="/search" method="get" className="flex gap-2 max-w-xl mt-1">
+            <form action="/search" method="get" className="mt-2 flex max-w-2xl flex-col gap-2 rounded-2xl border border-white/15 bg-white p-2 shadow-lg shadow-black/20 sm:flex-row">
               <label htmlFor="home-q" className="sr-only">{isHi ? "नौकरी खोजें" : "Search jobs"}</label>
               <input
                 id="home-q"
                 type="search"
                 name="q"
                 placeholder={isHi ? "पद, परीक्षा या विभाग खोजें" : "Search a post, exam or department — e.g. “junior engineer”, “BPSC”"}
-                className="min-w-0 flex-1 h-12 rounded-lg border border-black/20 px-4 text-base focus:outline-none focus:ring-2 focus:ring-brand-600/30"
+                className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 px-4 text-base text-slate-950 outline-none placeholder:text-slate-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
               />
-              <button type="submit" className="h-12 shrink-0 rounded-lg bg-brand-600 px-5 text-base font-bold text-white hover:bg-brand-700">
+              <button type="submit" className="h-12 shrink-0 rounded-xl bg-indigo-700 px-7 text-base font-extrabold text-white transition hover:bg-indigo-800">
                 {isHi ? "खोजें" : "Search"}
               </button>
             </form>
-            <p className="mt-2 text-sm"><Link href="/government-jobs" className="font-semibold text-brand-700 hover:underline">Browse all government jobs →</Link></p>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm"><Link href="/jobs" className="rounded-full border border-white/20 px-3 py-1.5 font-semibold text-slate-100 hover:bg-white/10">Latest jobs</Link><Link href="/closing-soon" className="rounded-full border border-white/20 px-3 py-1.5 font-semibold text-slate-100 hover:bg-white/10">Closing soon</Link><Link href="/government-jobs" className="rounded-full border border-white/20 px-3 py-1.5 font-semibold text-slate-100 hover:bg-white/10">All government jobs</Link><Link href="/qualifications" className="rounded-full border border-white/20 px-3 py-1.5 font-semibold text-slate-100 hover:bg-white/10">By qualification</Link></div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Link href="/closing-soon" className="flex flex-col gap-1 rounded-xl border border-red-200 bg-red-50 px-4 py-4 hover:border-red-300">
+            <Link href="/closing-soon" className="flex flex-col gap-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 transition hover:border-rose-300 hover:shadow-md">
               <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-red-800">{stats.closing7dPosts > 0 ? nf(stats.closing7dPosts) : "—"}</span>
-              <span className="text-[13px] sm:text-sm font-semibold text-red-900">{isHi ? "पद 7 दिन में बंद" : "posts close within 7 days"}</span>
+              <span className="text-[13px] font-bold text-rose-900 sm:text-sm">{isHi ? "पद 7 दिन में बंद" : "posts close within 7 days"}</span>
             </Link>
-            <Link href="/jobs" className="flex flex-col gap-1 rounded-xl border border-black/8 bg-neutral-50 px-4 py-4 hover:border-black/20">
-              <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
-              <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "रिक्तियां खुली" : "vacancies open now"}</span>
+            <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
+              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
+              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "रिक्तियां खुली" : "vacancies open now"}</span>
             </Link>
-            <Link href="/jobs" className="flex flex-col gap-1 rounded-xl border border-black/8 bg-neutral-50 px-4 py-4 hover:border-black/20">
+            <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
               <span className="font-bold text-[28px] sm:text-[34px] leading-none tabular-nums text-neutral-900">{stats.liveRecruitments > 0 ? nf(stats.liveRecruitments) : "—"}</span>
               <span className="text-[13px] sm:text-sm font-semibold text-neutral-600">{isHi ? "सक्रिय अधिसूचनाएं" : "live notifications"}</span>
             </Link>
