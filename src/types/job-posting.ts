@@ -65,6 +65,10 @@ export interface JobPostingData {
   recruitmentVacancyTotal?: number | null;
   recruitmentOfficialNotificationUrl?: string | null;
   recruitmentOfficialApplicationUrl?: string | null;
+  recruitmentVerificationStatus?: string | null;
+  recruitmentOfficialLinkSource?: string | null;
+  recruitmentSourceDiscoveryOrigin?: string | null;
+  recruitmentMetadata?: Record<string, unknown> | null;
   recruitmentApplicationStartDate?: Date | null;
   recruitmentApplicationEndDate?: Date | null;
   recruitmentSelectionProcess?: string | null;
