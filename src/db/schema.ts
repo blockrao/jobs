@@ -1701,16 +1701,87 @@ export const postsApplicationFee = pgTable(
     id: serial("id").primaryKey(),
     postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
     category: varchar("category", { length: 100 }),
-    amount: numeric("amount", { precision: 10, scale: 2 }),
+    amount: integer("amount"),
     currencyCode: varchar("currency_code", { length: 3 }).default("INR"),
     note: text("note"),
-    paymentMode: text("payment_mode"),
-    source: varchar("source", { length: 100 }),
-    extractedAt: timestamp("extracted_at", { withTimezone: true }),
+    paymentMode: varchar("payment_mode", { length: 100 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("idx_posts_application_fee_post_id").on(table.postId),
+    index("idx_posts_application_fee_category").on(table.category),
+  ],
+).enableRLS();
+
+/** How to apply instructions. */
+export const postsHowToApply = pgTable(
+  "posts_how_to_apply",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    step: smallint("step").notNull(),
+    title: varchar("title", { length: 200 }),
+    description: text("description"),
+    url: text("url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_how_to_apply_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Documents required for application. */
+export const postsDocuments = pgTable(
+  "posts_documents",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    documentName: varchar("document_name", { length: 200 }),
+    documentCategory: varchar("document_category", { length: 100 }),
+    isRequired: boolean("is_required").default(true),
+    requiredForCategories: text("required_for_categories").array(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_documents_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Selection process stages. */
+export const postsSelectionProcess = pgTable(
+  "posts_selection_process",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    stageName: varchar("stage_name", { length: 200 }),
+    stageOrder: smallint("stage_order"),
+    description: text("description"),
+    marks: integer("marks"),
+    duration: varchar("duration", { length: 100 }),
+    minQualifyingMarks: jsonb("min_qualifying_marks").$type<Record<string, number>>(),
+    mode: varchar("mode", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_selection_process_post_id").on(table.postId),
+  ],
+).enableRLS();
+
+/** Important dates (notification, application, exam, result, etc.). */
+export const postsImportantDates = pgTable(
+  "posts_important_dates",
+  {
+    id: serial("id").primaryKey(),
+    postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+    dateType: varchar("date_type", { length: 100 }).notNull(), // notification, application_open, application_close, exam, etc.
+    dateValue: timestamp("date_value", { withTimezone: true }),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_posts_important_dates_post_id").on(table.postId),
+    index("idx_posts_important_dates_type").on(table.dateType),
   ],
 ).enableRLS();
 
