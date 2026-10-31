@@ -74,7 +74,19 @@ WHERE px.source = 'fja_post_inventory'
 GROUP BY 1,2,3
 ORDER BY fact_type, fact_rows DESC;
 
--- 4) Row-level remediation manifest. Review every row against its own issuer notice;
+-- 4) Eligibility records marked VERIFIED without a complete issuer evidence chain.
+SELECT
+  status,
+  COALESCE(source_type, 'NULL') AS source_type,
+  count(*) AS rows,
+  count(*) FILTER (WHERE verified_at IS NULL) AS missing_verified_at,
+  count(*) FILTER (WHERE source_ref IS NULL) AS missing_source_ref,
+  count(*) FILTER (WHERE source_locator IS NULL) AS missing_source_locator
+FROM public.eligibilities
+GROUP BY status, source_type
+ORDER BY rows DESC;
+
+-- 5) Row-level remediation manifest. Review every row against its own issuer notice;
 -- repeated text is a risk signal, not proof that an individual fact is incorrect.
 SELECT
   r.id AS recruitment_id,
@@ -117,7 +129,7 @@ JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE px.source = 'fja_post_inventory'
 ORDER BY recruitment_id, post_id, review_action, fact_id;
 
--- 5) Recruitment-level verification contradictions for individual review.
+-- 6) Recruitment-level verification contradictions for individual review.
 SELECT
   r.id,
   r.slug,
