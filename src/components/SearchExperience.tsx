@@ -56,7 +56,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
     searchController.current?.abort();
     const controller = new AbortController();
     searchController.current = controller;
-    if (append) setLoadingMore(true);
+    if (append) { setLoadingMore(true); setError(null); }
     else {
       setLoading(true);
       setError(null);
@@ -157,6 +157,8 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
 
   useEffect(() => {
     suggestionController.current?.abort();
+    setSuggestions([]);
+    setActiveSuggestion(-1);
     if (query.trim().length < 3) {
       setSuggestions([]);
       return;
@@ -309,7 +311,7 @@ export function SearchExperience({ initialState }: { initialState: SearchInitial
         )}
         {!loading && !error && !searched && <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600">Start with a post, exam, organisation, qualification or state. You can narrow the results with filters.</div>}
 
-        {!loading && !error && results.length > 0 && (
+        {!loading && results.length > 0 && (
           <>
             <div className="space-y-3">{results.map((result) => <SearchResultCard key={result.id} result={result} />)}</div>
             {hasMore && <div className="flex justify-center pt-2"><button type="button" onClick={loadMore} disabled={loadingMore} className="min-h-11 rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-800 shadow-sm hover:border-indigo-400 hover:bg-indigo-50 disabled:opacity-60">{loadingMore ? "Loading more…" : "Load more opportunities"}</button></div>}
