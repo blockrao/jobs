@@ -20,7 +20,7 @@ import { getAllHubs } from "@/data/hubs-metadata";
 export const HOME_FAQ = [
   {
     q: "How do I find government jobs closing soon?",
-    a: "The 'Closing in the next two weeks' list on this page and the Closing Soon page rank every open notification by vacancies and last date, with a live countdown. Dates come from the official notification.",
+    a: "Use the 'Closing in the next two weeks' list on this page and the Closing Soon page to compare available deadlines and vacancy information. Always confirm the latest closing date in the recruiting body's official notification.",
   },
   {
     q: "What is the difference between a recruitment notification and a post?",
@@ -28,11 +28,11 @@ export const HOME_FAQ = [
   },
   {
     q: "Can I apply for government jobs directly from JobOye?",
-    a: "No, and that is deliberate. Each post page links directly to the official application portal on the recruiting body's website. JobOye never charges a fee and is not an intermediary.",
+    a: "No. Before applying, use the recruiting body's latest official notification to confirm the correct application website and process. JobOye does not collect applications or application fees.",
   },
   {
     q: "How often is job data updated on JobOye?",
-    a: "New notifications are added daily and pages refresh automatically. Vacancy counts and deadlines reflect the official notification; if you spot an error, contact us.",
+    a: "Job listings are refreshed as recruitment information is processed. Recruiting bodies can publish corrigenda or extend deadlines, so confirm vacancies, eligibility and dates in the latest official notification before applying.",
   },
   {
     q: "Is JobOye free to use?",
@@ -123,13 +123,13 @@ export function HomeContent({
             </p>
             <h1 className="text-[30px] font-extrabold leading-[1.08] tracking-tight text-white sm:text-[42px] lg:text-[48px]">
               {isHi
-                ? "वर्तमान सरकारी नौकरियां — स्पष्ट अंतिम तिथि और आधिकारिक आवेदन लिंक के साथ।"
-                : "Find current government jobs, with clear deadlines and official apply links."}
+                ? "सरकारी नौकरी के अवसर खोजें, अंतिम तिथियों की तुलना करें और आवेदन की जानकारी देखें।"
+                : "Find government job opportunities, compare available deadlines and review application information."}
             </h1>
             <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
               {isHi
-                ? "अधिसूचना से सीधे तथ्य — रिक्तियां, पात्रता, शुल्क, तारीखें। कोई एजेंट नहीं, कोई शुल्क नहीं।"
-                : "Facts straight from the notification — vacancies, eligibility, fee, dates. No agents, no middlemen, never a charge."}
+                ? "नौकरी की जानकारी उपलब्ध भर्ती रिकॉर्ड से संकलित की जाती है। आवेदन से पहले रिक्तियों, पात्रता, शुल्क और तारीखों की पुष्टि भर्ती संस्था की नवीनतम आधिकारिक अधिसूचना से करें।"
+                : "Job details are compiled from available recruitment information. Confirm vacancies, eligibility, fees and dates in the recruiting body's latest official notification before applying."}
             </p>
             <form action="/search" method="get" className="mt-2 flex max-w-2xl flex-col gap-2 rounded-2xl border border-white/15 bg-white p-2 shadow-lg shadow-black/20 sm:flex-row">
               <label htmlFor="home-q" className="sr-only">{isHi ? "नौकरी खोजें" : "Search jobs"}</label>
@@ -182,8 +182,8 @@ export function HomeContent({
             </ul>
             <p className="mt-3 pt-3 border-t border-black/8 text-sm text-neutral-500">
               {isHi
-                ? "14 दिनों में बंद होने वाली अधिसूचनाओं में रिक्तियों के अनुसार क्रम, ताकि बड़ी भर्तियां पहले दिखें। तारीखें आधिकारिक अधिसूचना से।"
-                : "Ranked by vacancies among notifications closing within 14 days, so the biggest drives surface first. Dates come from the official notification; the badge counts down in IST."}
+                ? "अगले 14 दिनों में बंद होने वाली भर्तियों को रिक्तियों के अनुसार क्रम दिया गया है। दिखाई गई अंतिम तिथि की पुष्टि भर्ती संस्था की नवीनतम आधिकारिक अधिसूचना से करें।"
+                : "Recruitments closing within 14 days are ranked by vacancy count. Confirm each displayed deadline in the recruiting body's latest official notification."}
             </p>
           </section>
         )}
@@ -326,18 +326,18 @@ export function HomeContent({
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 py-9 border-t border-black/8">
           <TrustItem
             icon={<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4zM9 12l2 2 4-4" />}
-            title={isHi ? "हर तथ्य आधिकारिक अधिसूचना से" : "Every fact from the official notification"}
-            body={isHi ? "रिक्तियां, तारीखें, शुल्क और पात्रता भर्ती संस्था की अपनी PDF से — कभी अनुमान नहीं, कभी किसी और पोर्टल से नहीं।" : "Vacancies, dates, fees and eligibility are taken from the recruiting body's own PDF — never guessed, never copied from another portal."}
+            title={isHi ? "आधिकारिक अधिसूचना से पुष्टि करें" : "Confirm details in the official notification"}
+            body={isHi ? "JobOye उपलब्ध भर्ती जानकारी दिखाता है। रिक्तियों, पात्रता, शुल्क और तारीखों के लिए भर्ती संस्था की नवीनतम आधिकारिक अधिसूचना को अंतिम स्रोत मानें।" : "JobOye displays available recruitment information. Use the recruiting body's latest official notification as the final source for vacancies, eligibility, fees and dates."}
           />
           <TrustItem
             icon={<path d="M14 3h7v7M21 3l-9 9M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6" />}
-            title={isHi ? "आधिकारिक वेबसाइट पर आवेदन करें" : "Apply on the official website"}
-            body={isHi ? "हर पद सीधे सरकारी पोर्टल से जुड़ा है। JobOye कोई आवेदन, शुल्क या साइनअप नहीं लेता।" : "Each post links straight to the government portal. JobOye never takes an application, a fee or a signup."}
+            title={isHi ? "आवेदन से पहले वेबसाइट की पुष्टि करें" : "Confirm the application website"}
+            body={isHi ? "आवेदन करने से पहले आधिकारिक अधिसूचना में दिए गए आवेदन पोर्टल और प्रक्रिया की पुष्टि करें। JobOye आवेदन या शुल्क नहीं लेता।" : "Before applying, confirm the application portal and process in the official notification. JobOye does not collect applications or fees."}
           />
           <TrustItem
             icon={<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></>}
             title={isHi ? "अंतिम तिथि, गिनती के साथ" : "Last date, counted down"}
-            body={isHi ? "हर पद का एक स्थायी पेज जो बताता है कितने दिन बचे हैं — और विंडो बंद होने के बाद भी सच बताता है।" : "One permanent page per post that tells you how many days are left, and stays honest after the window closes."}
+            body={isHi ? "अंतिम तिथियां उपलब्ध जानकारी के आधार पर दिखाई जाती हैं और भर्ती संस्था द्वारा बदली जा सकती हैं। कार्रवाई से पहले नवीनतम अधिसूचना देखें।" : "Deadlines are shown when available and may change if the recruiting body issues an update. Check the latest notification before acting."}
           />
         </section>
 
