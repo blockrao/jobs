@@ -182,7 +182,7 @@ export default async function JobDetailPage({ params }: Props) {
         locationCity: post.locationCity,
         locationState: post.locationState,
         recruitmentSlug: post.recruitmentSlug,
-        recruitmentName: post.recruitmentName,
+        recruitmentName: stripAggregatorData(post.recruitmentName) || undefined,
         slug: post.slug,
         postedAt: post.postedAt,
         updatedAt: post.updatedAt,
@@ -273,17 +273,17 @@ export default async function JobDetailPage({ params }: Props) {
           : [],
       }}
       relatedByOrg={relatedPosts.byOrganization.map((p) => ({
-        title: p.title,
+        title: stripAggregatorData(p.title) || "Job opportunity",
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
       }))}
       relatedByLocation={relatedPosts.byLocation.map((p) => ({
-        title: p.title,
+        title: stripAggregatorData(p.title) || "Job opportunity",
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
       }))}
       relatedByRole={relatedPosts.byRole.map((p) => ({
-        title: p.title,
+        title: stripAggregatorData(p.title) || "Job opportunity",
         slug: p.slug,
         recruitment_slug: p.recruitment_slug,
       }))}
