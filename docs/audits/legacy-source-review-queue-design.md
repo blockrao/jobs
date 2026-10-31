@@ -129,3 +129,19 @@ The public application, live discovery queries and sitemap should consume the sa
 - Never expose the FJA name or URL in public UI.
 - No mass re-ingestion, status reset, link overwrite, page creation, deletion or canonical URL change as a shortcut.
 - Keep the Latest Government Jobs page behind the same source/date/publication contract.
+
+
+## 8. Production RLS finding and public gate requirement
+
+A read-only policy inspection (2026-10-31) found RLS enabled but unrestricted `public read USING (true)` policies on `recruitments`, `posts`, `eligibilities` and `post_age_rules`. Direct anonymous Supabase REST reads could therefore bypass Next.js filtering.
+
+The source-review result must be consumed consistently by:
+- Recruitment Hub and Post Leaf server queries;
+- listing, related-job and sitemap queries;
+- direct public RLS policies on canonical Recruitment/Post and exposed child-fact tables.
+
+PR #189 adds a shared RLS predicate for the four existing public-read tables. The legacy queue must ultimately write/produce the same authoritative decision; do not create a separate review state that the server and RLS policies interpret differently.
+
+A fresh read-only audit of the 5,381 extraction-origin Recruitments found zero existing `metadata.source_provenance` records, zero issuer reviews marked VERIFIED, zero fact reviews marked VERIFIED and zero complete notification-date evidence chains. Five legacy MANUAL_VERIFIED link labels exist, but none has the new authority/fact evidence. They remain pending entity and notification matching.
+
+This confirms that the queue must review both the issuer-to-Recruitment identity and field facts. A manually verified URL host alone does not establish that the notice belongs to the named organization or supports its Post records.
