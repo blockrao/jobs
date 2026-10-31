@@ -149,7 +149,7 @@ async function getPostCoreData(
         (
           SELECT s.url
           FROM public.sources s
-          WHERE s.slug = r.official_link_source
+          WHERE lower(s.slug) = lower(r.official_link_source)
             AND s.authority = 'OFFICIAL'
             AND s.is_official IS TRUE
           LIMIT 1
