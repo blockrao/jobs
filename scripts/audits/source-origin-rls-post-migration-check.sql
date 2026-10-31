@@ -15,6 +15,9 @@ SELECT
     WHERE NOT private.recruitment_has_aggregator_origin(r.id)
   ) AS origin_signals_missed_by_gate,
   count(*) FILTER (
+    WHERE private.is_recruitment_publicly_trusted(r.id)
+  ) AS trusted_recruitments,
+  count(*) FILTER (
     WHERE private.recruitment_has_aggregator_origin(r.id)
       AND NOT EXISTS (
         SELECT 1 FROM public.posts p
