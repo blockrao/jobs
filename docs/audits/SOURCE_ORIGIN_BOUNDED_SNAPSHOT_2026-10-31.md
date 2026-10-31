@@ -152,7 +152,7 @@ The host set checked includes FreeJobAlert, SarkariResult, SarkariNaukri, IndiaS
 
 ## Next bounded action
 
-Run a read-only, source-evidence dry-run for the **same 81 records**. Verify issuer-owned notification/application destinations and extract only post-level facts supported by the official issuer source. Keep existing Recruitment IDs; propose a canonical Post only when the official evidence supports a distinct post title and the required facts. Explicitly resolve the 9 placeholder organizations and the one zero-vacancy title flag. Keep the 1,445 unmapped records out of this pass. No Post creation, verification update, URL correction, or publication-status change is authorized without a separately reviewed dry-run and explicit approval.
+Complete exact-document retrieval and OCR for the **first 10 pilot records** before expanding to the next batch. Start with the four strong issuer-page matches (SMC 7596, SMKV 7607, Digital University Kerala 7619, RGNAU 7630), resolve the DUK CLOSED and SMC ACTIVE lifecycle discrepancies against the actual notice/corrigenda, and extract the exact post names, vacancy counts, eligibility, dates and application instructions from the PDFs. Keep OUAT 7599 as partial corroboration and the five unverified records on hold pending issuer confirmation. If the exact documents remain unavailable, mark the record unverified rather than infer facts. Do not create Posts, update verification, correct URLs, or change statuses until a separate reviewed dry-run is approved. Only after the first 10 are resolved should the next 10 records be examined; keep the 1,445 unmapped records out of this work.
 
 ## Safety record
 
