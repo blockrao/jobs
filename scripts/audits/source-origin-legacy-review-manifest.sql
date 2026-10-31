@@ -228,6 +228,10 @@ post_origin AS (
   OR private.is_aggregator_url(p."sourceReference")
   OR private.is_aggregator_url(p.original_recruitment_url)
   OR private.is_aggregator_url(p."originalRecruitmentUrl")
+  OR private.is_aggregator_url(p."officialSourceUrl")
+  OR private.is_aggregator_url(p."applyPortalUrl")
+  OR private.is_aggregator_url(p.application_url)
+  OR private.is_aggregator_url(p."officialNotificationUrl")
 ),
 candidates AS (
   SELECT
@@ -447,6 +451,8 @@ WHERE (
     OR lower(coalesce(r.metadata -> 'source_provenance' ->> 'discovery_origin', '')) = 'aggregator_discovered'
     OR lower(coalesce(r.official_link_source, '')) IN ('aggregator_discovered','fja_official_link_extracted','official_link_extracted')
     OR private.is_aggregator_url(r.source_url)
+    OR private.is_aggregator_url(r.official_notification_url)
+    OR private.is_aggregator_url(r.official_application_url)
     OR EXISTS (
       SELECT 1 FROM public.posts p
       WHERE p.recruitment_id = r.id
@@ -534,6 +540,10 @@ WHERE lower(coalesce(p."sourceName", '')) = 'pilot_preliminary'
    OR private.is_aggregator_url(p."sourceReference")
    OR private.is_aggregator_url(p.original_recruitment_url)
    OR private.is_aggregator_url(p."originalRecruitmentUrl")
+   OR private.is_aggregator_url(p."officialSourceUrl")
+   OR private.is_aggregator_url(p."applyPortalUrl")
+   OR private.is_aggregator_url(p.application_url)
+   OR private.is_aggregator_url(p."officialNotificationUrl")
 ORDER BY r.id, p.id;
 
 COMMIT;
