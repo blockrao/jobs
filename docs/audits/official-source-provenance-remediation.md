@@ -136,3 +136,25 @@ A separate read-only production inventory identified three unverified extraction
 3,130 of these rows have a NULL `official_link_source`, so discovery origin cannot be reconstructed from that field alone. Four `fja_html` records marked VERIFIED/MANUAL_VERIFIED point to the same UPSC Advt 12/2026 PDF while naming four different organisations and have no field-level `source_provenance`. They remain subject to issuer and fact review.
 
 The Stage 1 backfill, dry-run manifest and post-migration checks must cover all three exact source values. This is an expanded read-only audit; no production records were changed.
+
+
+### Public-discovery impact and lifecycle separation (2026-10-31 06:23 UTC)
+
+A read-only production query quantified the impact of the 5,381-row extraction-origin cohort:
+
+- 4,435 total live Recruitment records.
+- 3,630 live records in the extraction-origin cohort (**81.8%**): 664 ACTIVE and 2,966 UPCOMING.
+- 2,472 Post rows are associated with those live Recruitments; 851 currently have `posts.isLive = true`.
+- 677 have a syntactically valid HTTP(S) notification URL, but zero have `official_link_source = 'MANUAL_VERIFIED'`.
+- 2,964 of the 2,966 UPCOMING records have no application end date; 257 of the 664 ACTIVE records also have no application end date.
+
+This is a material discovery/indexability impact. Do not apply the source gate or remediation migration as an unreviewed mass suppression. The frozen row-level manifest and a source-review/replacement plan must be reviewed first.
+
+Keep three decisions separate:
+1. **Source authority and fact review:** whether the issuer and each public fact are supported by evidence.
+2. **Recruitment lifecycle/publication:** whether an upcoming, open, closed or archived recruitment page remains useful and indexable.
+3. **JobPosting structured data:** only for an open post with manually verified official notification/application links and a plausible, non-future, source-evidenced notification date.
+
+A reviewed UPCOMING recruitment can remain a useful indexable Recruitment Hub while its application window is not yet announced. The source-authority gate must not require `application_end_date IS NOT NULL`; the page should state the missing window accurately, and JobPosting schema/Apply actions remain separately gated.
+
+No production migration or data mutation has been applied.
