@@ -278,36 +278,27 @@ export function transformEnrichment(
     // TAB 4: REQUIRED DOCUMENTS
     // ─────────────────────────────────────────────────────────────────
 
-    if (hasPostFactReview('documents') && Array.isArray(rawEnrichment.documents) && rawEnrichment.documents.length > 0) {
-      enrichment.requiredDocuments = rawEnrichment.documents.map((doc: any) => ({
-        name: doc.name || doc.document_name || '',
-        category: doc.category,
-        required: doc.required !== false,
-      }));
-    } else {
-      enrichment.requiredDocuments = [];
-    }
+    const verifiedDocuments = eligibleRows(rawEnrichment.documents, 'documents');
+    enrichment.requiredDocuments = verifiedDocuments.map((doc: any) => ({
+      name: doc.name || doc.document_name || '',
+      category: doc.category || doc.document_category,
+      required: doc.required !== false && doc.is_required !== false,
+    }));
 
     // ─────────────────────────────────────────────────────────────────
     // TAB 5: SELECTION PROCESS
     // ─────────────────────────────────────────────────────────────────
 
-    if (hasPostFactReview('selection_process') && Array.isArray(rawEnrichment.selection_process) && rawEnrichment.selection_process.length > 0) {
-      enrichment.selectionProcess = rawEnrichment.selection_process.map((stage: any) => ({
-        step: stage.step || 0,
-        name: stage.name || stage.stage_name || '',
-        totalMarks: stage.total_marks || stage.totalMarks,
-        duration: stage.duration,
-        minQualifyingMarks: stage.min_qualifying_marks || stage.minQualifyingMarks,
-        description: stage.description,
-      }));
-
-      // Also provide alias for compatibility
-      enrichment.selectionProcessStages = enrichment.selectionProcess;
-    } else {
-      enrichment.selectionProcess = [];
-      enrichment.selectionProcessStages = [];
-    }
+    const verifiedSelectionStages = eligibleRows(rawEnrichment.selection_process, 'selection_process');
+    enrichment.selectionProcess = verifiedSelectionStages.map((stage: any) => ({
+      step: stage.step ?? stage.stage_order ?? 0,
+      name: stage.name || stage.stage_name || '',
+      totalMarks: stage.total_marks ?? stage.totalMarks,
+      duration: stage.duration_minutes ?? stage.duration,
+      minQualifyingMarks: stage.minimum_marks ?? stage.min_qualifying_marks ?? stage.minQualifyingMarks,
+      description: stage.description,
+    }));
+    enrichment.selectionProcessStages = enrichment.selectionProcess;
 
     // ─────────────────────────────────────────────────────────────────
     // TAB 6: PAY & COMPENSATION (Not in consolidated enrichment JSONB)
@@ -318,19 +309,18 @@ export function transformEnrichment(
     // TAB 7: IMPORTANT DATES (In database but not currently mapped)
     // ─────────────────────────────────────────────────────────────────
 
-    if (hasPostFactReview('important_dates') && Array.isArray(rawEnrichment.important_dates) && rawEnrichment.important_dates.length > 0) {
-      // Create importantDates array for PostEnrichment
-      enrichment.importantDates = rawEnrichment.important_dates.map((d: any) => ({
-        label: d.label || d.description || '',
-        date: d.date ? new Date(d.date) : undefined,
-        dateStr: d.date || d.dateStr,
+    const verifiedImportantDates = eligibleRows(rawEnrichment.important_dates, 'important_dates');
+    if (verifiedImportantDates.length > 0) {
+      enrichment.importantDates = verifiedImportantDates.map((d: any) => ({
+        label: d.label || d.date_type || '',
+        date: d.date ? new Date(d.date) : (d.date_value ? new Date(d.date_value) : undefined),
+        dateStr: d.date || d.date_value || d.dateStr,
       }));
 
-      // Extract and map specific dates based on labels
-      rawEnrichment.important_dates.forEach((d: any) => {
-        const label = d.label?.toLowerCase() || '';
-        const dateVal = d.date ? new Date(d.date) : undefined;
-
+      verifiedImportantDates.forEach((d: any) => {
+        const label = (d.label || d.date_type || '').toLowerCase();
+        const rawDate = d.date || d.date_value || d.dateStr;
+        const dateVal = rawDate ? new Date(rawDate) : undefined;
         if (label.includes('notification')) {
           enrichment.notificationDate = dateVal;
         } else if ((label.includes('open') || label.includes('start')) && label.includes('application')) {
@@ -354,21 +344,20 @@ export function transformEnrichment(
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // TAB 8: OFFICIAL LINKS    // ─────────────────────────────────────────────────────────────────
     // TAB 8: OFFICIAL LINKS
     // ─────────────────────────────────────────────────────────────────
 
-    if (hasPostFactReview('official_links') && Array.isArray(rawEnrichment.official_links) && rawEnrichment.official_links.length > 0) {
-      enrichment.officialLinks = rawEnrichment.official_links.map((link: any) => ({
-        type: link.type,
-        url: link.url,
-        title: link.label || link.title,
-        source: link.source,
-      }));
-    } else {
-      enrichment.officialLinks = [];
-    }
+    const verifiedOfficialLinks = eligibleRows(rawEnrichment.official_links, 'official_links');
+    enrichment.officialLinks = verifiedOfficialLinks.map((link: any) => ({
+      type: link.type || link.link_type,
+      url: link.url || link.link_url,
+      title: link.label || link.title || link.link_label,
+      source: link.source,
+    }));
 
     // ─────────────────────────────────────────────────────────────────
+    // VERIFICATION & QUALITY METRICS    // ─────────────────────────────────────────────────────────────────
     // VERIFICATION & QUALITY METRICS
     // ─────────────────────────────────────────────────────────────────
 
