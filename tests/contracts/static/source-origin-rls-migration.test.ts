@@ -46,7 +46,7 @@ describe("P0 source-origin RLS migration contract", () => {
   });
 
   it("does not mass-backfill or mutate existing Recruitment records", () => {
-    expect(migration).not.toMatch(/UPDATE public\\.recruitments\\s+SET source_discovery_origin/i);
+    expect(migration).not.toMatch(/UPDATE public\.recruitments\s+SET source_discovery_origin/i);
   });
 
   it("requires at least one canonical non-duplicate Post Leaf before a Recruitment is public", () => {
@@ -55,7 +55,7 @@ describe("P0 source-origin RLS migration contract", () => {
   });
 
   it("does not alter shared reference table policies or grant access to legacy tables", () => {
-    expect(migration).not.toMatch(/CREATE POLICY .* ON public\\.(organizations|positions|exams|locations|qualifications|postings)/i);
-    expect(migration).not.toMatch(/GRANT .* ON public\\.(postings|exams|locations|qualifications|evidence|recruitment_fees)/i);
+    expect(migration).not.toMatch(/CREATE POLICY .* ON public\.(organizations|positions|exams|locations|qualifications|postings)/i);
+    expect(migration).not.toMatch(/GRANT .* ON public\.(postings|exams|locations|qualifications|evidence|recruitment_fees)/i);
   });
 });
