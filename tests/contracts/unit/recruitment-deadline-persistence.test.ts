@@ -18,7 +18,7 @@ function makeDb(existingDeadline: Date | null, evidenceFacts?: Record<string, un
     }),
   }));
   const execute = vi.fn().mockResolvedValue(evidenceFacts ? [{ facts: evidenceFacts }] : []);
-  const db = {
+  const db: any = {
     query: {
       recruitments: {
         findFirst: vi.fn().mockResolvedValue({
@@ -31,6 +31,7 @@ function makeDb(existingDeadline: Date | null, evidenceFacts?: Record<string, un
     update,
     execute,
   };
+  db.transaction = vi.fn(async (callback: (tx: typeof db) => Promise<unknown>) => callback(db));
   return { db, update, patches, execute };
 }
 
@@ -69,7 +70,7 @@ describe("recruitment deadline persistence boundary", () => {
     );
 
     expect(result).toEqual({ filledStart: false, extendedEnd: false });
-    expect(execute).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledOnce(); // recruitment row is locked before it is read
     expect(update).not.toHaveBeenCalled();
     expect(patches).toEqual([]);
   });
@@ -94,7 +95,8 @@ describe("recruitment deadline persistence boundary", () => {
       },
     );
 
-    expect(execute).toHaveBeenCalledOnce();
+    expect(execute).toHaveBeenCalledTimes(2); // FOR UPDATE lock, then official-evidence lookup
+    expect(db.transaction).toHaveBeenCalledOnce();
     expect(result).toEqual({ filledStart: false, extendedEnd: true });
     expect(update).toHaveBeenCalledOnce();
     expect(patches).toHaveLength(1);
@@ -171,7 +173,7 @@ describe("recruitment deadline persistence boundary", () => {
     );
 
     expect(result).toEqual({ filledStart: false, extendedEnd: true });
-    expect(execute).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledOnce(); // FOR UPDATE lock; no evidence lookup for a missing deadline
     expect(update).toHaveBeenCalledOnce();
     expect(patches).toHaveLength(1);
     expect(patches[0].applicationEndDate).toBe(laterCandidate);
