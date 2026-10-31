@@ -9,6 +9,24 @@
 
 BEGIN;
 
+-- A reviewer decision triggers canonical Recruitment/Post/fact writes. Once
+-- any authority or fact review has been recorded, do not use this rollback:
+-- it intentionally does not reverse those data changes. Use a forward,
+-- evidence-preserving recovery migration instead.
+DO $guard$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.official_digest_promote
+    WHERE authority_review_status IS DISTINCT FROM 'UNVERIFIED'
+       OR fact_review_status IS DISTINCT FROM 'UNVERIFIED'
+  ) THEN
+    RAISE EXCEPTION
+      'Rollback blocked: source review decisions have been recorded; use a forward recovery migration';
+  END IF;
+END;
+$guard$;
+
 DROP TRIGGER IF EXISTS trg_guard_official_digest_promotion_review ON public.official_digest_promote;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_recruitment_verification ON public.recruitments;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_post_source ON public.posts;
