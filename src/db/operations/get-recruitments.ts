@@ -62,7 +62,10 @@ export async function getRecruitmentPosts(recruitmentId: number) {
     .from(posts)
     .innerJoin(positions, eq(posts.positionId, positions.id))
     .leftJoin(eligibilities, eq(posts.id, eligibilities.postId))
-    .where(eq(posts.recruitmentId, recruitmentId));
+    .where(and(
+      eq(posts.recruitmentId, recruitmentId),
+      sql`private.is_post_publicly_trusted(${posts.id})`,
+    ));
 
   // Group by post ID since there can be multiple eligibilities per post
   const postsMap = new Map();
