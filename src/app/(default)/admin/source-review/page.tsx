@@ -35,6 +35,8 @@ type QueueRow = {
   valid_post_count: number;
   has_legacy_mapping: boolean;
   review_action: string;
+  post_source_evidence: Array<Record<string, unknown>>;
+  legacy_posting_evidence: Array<Record<string, unknown>>;
 };
 
 function displayDate(value: string | null): string {
@@ -149,6 +151,50 @@ async function loadQueue(pageNumber: number): Promise<QueueRow[]> {
          )
          OR EXISTS (SELECT 1 FROM legacy_origin lo WHERE lo.recruitment_id = r.id)
     ),
+    post_source_refs AS (
+      SELECT p.recruitment_id,
+             jsonb_agg(jsonb_build_object(
+               'post_id', p.id, 'post_slug', p.slug, 'posting_status', p.posting_status,
+               'source_name', p."sourceName", 'source_reference', p."sourceReference",
+               'official_source_url', p."officialSourceUrl",
+               'official_notification_url', p."officialNotificationUrl",
+               'application_url', p.application_url
+             ) ORDER BY p.id) AS post_source_evidence
+      FROM public.posts p GROUP BY p.recruitment_id
+    ),
+    legacy_posting_refs AS (
+      SELECT coalesce(sp.inferred_recruitment_id, cp.recruitment_id) AS recruitment_id,
+             jsonb_agg(jsonb_build_object(
+               'legacy_posting_id', sp.id, 'external_id', sp.external_id, 'title', sp.title,
+               'source', sp.source, 'source_type', sp.source_type,
+               'enrichment_source', sp.enrichment_source, 'source_portals', sp.source_portals,
+               'source_url', sp.source_url, 'official_notification_url', sp.official_notification_url,
+               'apply_url', sp.apply_url, 'review_status', sp.review_status,
+               'source_document_id', sp.source_document_id,
+               'source_document', (
+                 SELECT jsonb_build_object('id', sd.id, 'source_url', sd.source_url,
+                   'document_type', sd.document_type, 'external_id', sd.external_id,
+                   'published_at', sd.published_at, 'extracted_at', sd.extracted_at,
+                   'extraction_method', sd.extraction_method)
+                 FROM public.source_documents sd WHERE sd.id = sp.source_document_id
+               ),
+               'source_observations', (
+                 SELECT coalesce(jsonb_agg(jsonb_build_object(
+                   'id', so.id, 'source', so.source, 'external_id', so.external_id,
+                   'source_url', so.source_url, 'observed_at', so.observed_at,
+                   'outcome', so.outcome, 'outcome_reason', so.outcome_reason,
+                   'facts', so.facts, 'links', so.links
+                 ) ORDER BY so.observed_at DESC), '[]'::jsonb)
+                 FROM public.source_observations so WHERE so.posting_id = sp.id
+               ),
+               'inferred_recruitment_id', sp.inferred_recruitment_id,
+               'inferred_post_id', sp.inferred_post_id
+             ) ORDER BY sp.id) AS legacy_posting_evidence
+      FROM public.postings sp
+      LEFT JOIN public.posts cp ON cp.id = sp.inferred_post_id
+      WHERE sp.inferred_recruitment_id IS NOT NULL OR cp.recruitment_id IS NOT NULL
+      GROUP BY coalesce(sp.inferred_recruitment_id, cp.recruitment_id)
+    ),
     manifest AS (
       SELECT r.id, r.slug, r.name, o.name AS organization_name,
              r.status::text AS lifecycle_status, r.verification_status,
@@ -167,6 +213,8 @@ async function loadQueue(pageNumber: number): Promise<QueueRow[]> {
                LEFT JOIN public.posts cp ON cp.id = sp.inferred_post_id
                WHERE sp.inferred_recruitment_id = r.id OR cp.recruitment_id = r.id
              ) AS has_legacy_mapping,
+             coalesce(ps.post_source_evidence, '[]'::jsonb) AS post_source_evidence,
+             coalesce(lp.legacy_posting_evidence, '[]'::jsonb) AS legacy_posting_evidence,
              EXISTS (
                SELECT 1 FROM public.official_digest_promote d
                WHERE d.batch = r.metadata ->> 'ingest_batch'
@@ -174,6 +222,8 @@ async function loadQueue(pageNumber: number): Promise<QueueRow[]> {
              ) AS has_staging_match
       FROM public.recruitments r
       LEFT JOIN public.organizations o ON o.id = r.organization_id
+      LEFT JOIN post_source_refs ps ON ps.recruitment_id = r.id
+      LEFT JOIN legacy_posting_refs lp ON lp.recruitment_id = r.id
       JOIN candidates c ON c.id = r.id
     ),
     unmatched AS (
@@ -204,7 +254,8 @@ async function loadQueue(pageNumber: number): Promise<QueueRow[]> {
            lifecycle_status,verification_status,official_link_source,
            official_notification_url,official_application_url,source_url,
            notification_date::text,application_start_date::text,application_end_date::text,
-           enrichment_source,ingest_batch,valid_post_count,has_legacy_mapping,review_action
+           enrichment_source,ingest_batch,valid_post_count,has_legacy_mapping,review_action,
+           post_source_evidence,legacy_posting_evidence
     FROM ranked
     ORDER BY queue_rank
     LIMIT ${PAGE_SIZE} OFFSET ${offset}
