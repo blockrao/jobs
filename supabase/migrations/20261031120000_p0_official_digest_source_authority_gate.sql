@@ -722,6 +722,83 @@ BEGIN
         AND p.recruitment_id = NEW.id
         AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':experience'];
 
+      UPDATE public.posts_vacancies x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':vacancies'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':vacancies'];
+
+      UPDATE public.posts_selection_process x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':selection_process'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':selection_process'];
+
+      UPDATE public.posts_documents x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':documents'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':documents'];
+
+      UPDATE public.posts_important_dates x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':important_dates'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':important_dates'];
+
+      UPDATE public.post_age_rules x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':age_rules'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':age_rules'];
+
+      UPDATE public.posts_application_fee x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':application_fees'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':application_fees'];
+
+      UPDATE public.posts_official_links x
+      SET verified_at = v_review.fact_reviewed_at AT TIME ZONE 'UTC',
+          source_ref = v_review.authority_evidence_url,
+          source_locator = v_review.fact_review_evidence -> (
+            'post:' || p.name || ':official_links'
+          ) ->> 'evidence_ref'
+      FROM public.posts p
+      WHERE x.post_id = p.id
+        AND p.recruitment_id = NEW.id
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || p.name || ':official_links'];
+
       WITH refreshed AS (
         SELECT p.id, public.aggregate_enrichment_for_post(p.id) AS payload
         FROM public.posts p
@@ -1072,6 +1149,55 @@ BEGIN
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE x.post_id = p.id
       AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_vacancies x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_selection_process x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_documents x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_important_dates x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.post_age_rules x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_application_fee x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
+      AND r.metadata ->> 'ingest_batch' = NEW.batch
+      AND r.official_notification_url = NEW.hub ->> 'official_url';
+
+    UPDATE public.posts_official_links x
+    SET verified_at = NULL, source_ref = NULL, source_locator = NULL
+    FROM public.posts p JOIN public.recruitments r ON r.id = p.recruitment_id
+    WHERE x.post_id = p.id AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
       AND r.metadata ->> 'ingest_batch' = NEW.batch
       AND r.official_notification_url = NEW.hub ->> 'official_url';
 
