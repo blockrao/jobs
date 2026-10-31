@@ -21,7 +21,7 @@
  * - org: Organization ID (numeric)
  * - location: Location region/city filter
  * - sort: relevance (default if query present) | newest | closing_soonest | most_urgent
- * - limit: Results per page (default 50, max 100)
+ * - limit: Results per page (default 20, max 99; one extra row is fetched to determine hasMore)
  * - offset: Pagination offset (default 0)
  */
 
