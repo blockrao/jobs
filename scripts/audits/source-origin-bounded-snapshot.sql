@@ -190,7 +190,7 @@ WITH domains(domain) AS (
 ), host_rows AS (
   SELECT recruitment_id, field,
     lower((regexp_match(
-      btrim(value), '^(?:(?:https?:)?//)?(?:www\\.)?([^/:?#]+)'
+      btrim(value), '^(?:(?:https?:)?//)?(?:www\.)?([^/:?#]+)'
     ))[1]) AS host
   FROM urls
 ), hits AS (
