@@ -170,6 +170,27 @@ EXCEPTION WHEN others THEN
 END;
 $fn$;
 
+CREATE OR REPLACE FUNCTION private.has_complete_issuer_authority_review(p_metadata jsonb)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+  SELECT coalesce(
+    p_metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
+    AND nullif(btrim(p_metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_by'), '') IS NOT NULL
+    AND private.is_past_review_timestamp(
+      p_metadata -> 'source_provenance' -> 'authority_review' ->> 'reviewed_at'
+    )
+    AND p_metadata -> 'source_provenance' -> 'authority_review' ->> 'evidence_url' ~ '^https://'
+    AND NOT private.is_aggregator_url(
+      p_metadata -> 'source_provenance' -> 'authority_review' ->> 'evidence_url'
+    )
+    AND nullif(btrim(p_metadata -> 'source_provenance' -> 'authority_review' ->> 'notes'), '') IS NOT NULL,
+    false
+  );
+$fn$;
+
 CREATE OR REPLACE FUNCTION private.has_complete_issuer_fact_review(p_metadata jsonb)
 RETURNS boolean
 LANGUAGE sql
@@ -249,6 +270,17 @@ AS $fn$
         WHEN private.recruitment_has_aggregator_origin(r.id) THEN
           r.verification_status = 'VERIFIED'
           AND upper(btrim(coalesce(r.official_link_source, ''))) = 'MANUAL_VERIFIED'
+          AND r.official_notification_url IS NOT NULL
+          AND r.official_notification_url ~ '^https://'
+          AND NOT private.is_aggregator_url(r.official_notification_url)
+          AND (
+            r.official_application_url IS NULL
+            OR (
+              r.official_application_url ~ '^https://'
+              AND NOT private.is_aggregator_url(r.official_application_url)
+            )
+          )
+          AND private.has_complete_issuer_authority_review(r.metadata)
           AND private.has_complete_issuer_fact_review(r.metadata)
         ELSE true
       END
@@ -302,7 +334,7 @@ $fn$;
 
 DROP TRIGGER IF EXISTS trg_guard_recruitment_discovery_origin ON public.recruitments;
 CREATE TRIGGER trg_guard_recruitment_discovery_origin
-BEFORE INSERT OR UPDATE OF source_discovery_origin, official_link_source, enrichment_data, metadata, source_url
+BEFORE INSERT OR UPDATE OF source_discovery_origin, official_link_source, enrichment_data, metadata, source_url, official_notification_url, official_application_url
 ON public.recruitments
 FOR EACH ROW
 EXECUTE FUNCTION private.guard_recruitment_discovery_origin();
@@ -545,6 +577,7 @@ REVOKE ALL ON FUNCTION private.is_aggregator_url(text) FROM PUBLIC, anon, authen
 REVOKE ALL ON FUNCTION private.is_aggregator_source_value(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.recruitment_has_aggregator_origin(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_past_review_timestamp(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.has_complete_issuer_authority_review(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.has_complete_issuer_fact_review(jsonb) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_recruitment_publicly_trusted(integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION private.is_post_publicly_trusted(integer) FROM PUBLIC, anon, authenticated;
