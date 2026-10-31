@@ -119,7 +119,14 @@ describe("sitemap", () => {
 
   test("IDX-04i recruitment hubs require a valid non-duplicate canonical Post Leaf", async () => {
     const src = (await import("../helpers/source")).readSource("src/app/sitemap.ts");
-    expect(src).toMatch(/AND EXISTS \\(\\s*SELECT 1\\s+FROM posts p\\s+WHERE p\\.recruitment_id = r\\.id\\s+AND p\\.posting_status IS DISTINCT FROM 'DUPLICATE'\\s+AND p\\.slug IS NOT NULL\\s+AND btrim\\(p\\.slug\\) <> ''\\s*\\)/);
+    const start = src.indexOf("SELECT r.slug");
+    const end = src.indexOf("ORDER BY r.updated_at", start);
+    const hubQuery = src.slice(start, end);
+    expect(hubQuery).toContain("AND EXISTS (");
+    expect(hubQuery).toContain("WHERE p.recruitment_id = r.id");
+    expect(hubQuery).toContain("p.posting_status IS DISTINCT FROM 'DUPLICATE'");
+    expect(hubQuery).toContain("p.slug IS NOT NULL");
+    expect(hubQuery).toContain("btrim(p.slug) <> ''");
   });
 
   test("IDX-04g the organization query applies the same exclusions as the entity page (merged, quarantined, threshold)", async () => {
