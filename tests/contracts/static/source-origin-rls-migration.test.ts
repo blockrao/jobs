@@ -27,6 +27,7 @@ describe("P0 source-origin RLS migration contract", () => {
       "sp.source_type",
       "sp.source_portals",
       "sp.source_url",
+      "r.source_url",
       "sp.inferred_recruitment_id",
       "sp.inferred_post_id",
       "'pilot_preliminary'",
