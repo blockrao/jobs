@@ -44,7 +44,9 @@ export async function proxy(request: NextRequest) {
   }
 
   // 3. Admin authentication (everything under /admin except the login page).
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+  // The legacy /reports route is an internal enrichment dashboard, not a
+  // public job-seeker destination, so protect it with the same admin session.
+  if ((pathname.startsWith("/admin") && pathname !== "/admin/login") || pathname === "/reports" || pathname.startsWith("/reports/")) {
     const token = await adminSessionToken();
     const cookie = request.cookies.get(COOKIE_NAME)?.value;
     if (!token || cookie !== token) {
