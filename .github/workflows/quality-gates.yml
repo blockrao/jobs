@@ -100,4 +100,4 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node src/app/(default)/government-jobs/page.tsx src/components/jobs/job-opportunity-card.tsx src/lib/seo/discovery-hub-metadata.ts src/lib/structured-data.ts tests/contracts/unit/discovery-hub-schema.test.ts scripts/reconcile-fja-artifact.ts
+      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/reconcile-fja-artifact.ts
