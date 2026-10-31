@@ -1,3 +1,4 @@
+import { isAggregatorUrl } from "@/lib/aggregators";
 /**
  * Source verification and discovery-origin helpers.
  *
