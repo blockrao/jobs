@@ -201,3 +201,13 @@ WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
     OR metadata -> 'source_provenance' -> 'authority_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
     OR metadata -> 'source_provenance' -> 'fact_review' ->> 'status' IS DISTINCT FROM 'VERIFIED'
   );
+
+
+-- The review-revocation trigger must be able to clear the verification date.
+SELECT
+  column_name,
+  is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'post_enrichments'
+  AND column_name = 'sourceVerificationDate';
