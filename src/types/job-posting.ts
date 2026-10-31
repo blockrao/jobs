@@ -138,7 +138,7 @@ export interface PostEnrichment {
   selectionProcess: Array<{
     step: number;
     name: string;
-    scheduledDate?: Date;
+    scheduledDate?: string;
     duration?: string;
     durationMinutes?: number;
     totalMarks?: number;
