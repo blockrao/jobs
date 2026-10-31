@@ -209,6 +209,7 @@ describe("aggregator source trust gate", () => {
     const recruitmentQueries = readFileSync("src/db/operations/get-recruitments.ts", "utf8");
     const sitemap = readFileSync("src/app/sitemap.ts", "utf8");
     const relatedQueries = readFileSync("src/db/operations/get-related-posts.ts", "utf8");
+    const leafRoute = readFileSync("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx", "utf8");
     const leafComponent = readFileSync("src/components/job-posting/job-detail-page-production.tsx", "utf8");
 
     expect(hubRoute).toContain("publicHubInput(recruitment, posts)");
@@ -219,7 +220,7 @@ describe("aggregator source trust gate", () => {
     expect(hubRoute).toContain("hasPostReview(name, \"experience\")");
     expect(hubComponent).toContain("recruitment.sourceDiscoveryOrigin === 'AGGREGATOR_DISCOVERED' && verified");
     expect(hubComponent).toContain(") && !recruitment.applicationEndDate");
-    expect(page).toContain('post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate');
+    expect(leafRoute).toContain('post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate');
     expect(listingQueries).toContain("issuerSourcePublicCondition");
     expect(listingQueries).toContain("metadata -> 'source_provenance' -> 'fact_review'");
     expect(listingQueries).toContain("'AGGREGATOR_DISCOVERED'");
