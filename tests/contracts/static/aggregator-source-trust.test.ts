@@ -297,6 +297,7 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("aggregate_enrichment_for_post");
     expect(migration).toContain("OLD.hub IS DISTINCT FROM NEW.hub OR OLD.posts IS DISTINCT FROM NEW.posts");
     expect(remediation).toContain("UPDATE public.posts_education e");
+    expect(remediation).toContain("verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')");
     expect(remediation).toContain("UPDATE public.posts_experience e");
     expect(remediation).toContain("Refresh canonical JSONB after the child evidence has been cleared");
     expect(migration).not.toContain("SET official_link_source = 'UNVERIFIED'");
@@ -309,7 +310,7 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain('"sourceVerificationStatus" := \'UNVERIFIABLE\'');
   });
   
-  it("backfills and verifies the complete institutional_aggregation origin cohort", () => {
+  it("backfills and verifies all aggregator extraction origins", () => {
     const migration = readFileSync(
       "supabase/migrations/20261031120000_p0_official_digest_source_authority_gate.sql",
       "utf8",
@@ -322,6 +323,8 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("'institutional_aggregation'");
     expect(migration).toContain("'institution_aggregation'");
     expect(migration).toContain("'fja_html'");
+    expect(migration).toContain("NEW.enrichment_data->'meta'->>'source' IN (");
+    expect(migration).toContain("official_notification_url, metadata, enrichment_data");
     expect(postCheck).toContain("aggregator_extraction_without_discovery_origin");
     expect(postCheck).toContain("uppsc_contamination_without_discovery_origin");
   });
