@@ -2,54 +2,67 @@
 -- Snapshot basis: source-origin/RLS audit dated 2026-10-31.
 -- No writes, quarantine, suppression, deletion, promotion or re-ingestion.
 --
--- Candidate discovery deliberately covers every persisted source signal:
--- Recruitment metadata/link source/source URL; Post sourceName and FJA source
--- references; legacy postings.source/source_type/source_portals and both
--- inferred relationship paths. A candidate means aggregator discovery origin,
--- NOT that every fact is incorrect.
+-- Candidate discovery covers Recruitment metadata/link/source URL, canonical
+-- Post sourceName/FJA source-reference URLs, and legacy Posting source,
+-- enrichment_source, source_type, source_portals, source_url and both inferred
+-- relationship paths. A candidate means aggregator discovery origin, NOT that
+-- every fact is incorrect.
 
 BEGIN TRANSACTION READ ONLY;
 
+-- 1) Reconciled population and staging match summary.
 WITH legacy_posting_origin AS (
   SELECT DISTINCT r.id AS recruitment_id
   FROM public.recruitments r
   JOIN public.postings sp
     ON sp.inferred_recruitment_id = r.id
     OR EXISTS (
-      SELECT 1
-      FROM public.posts mapped_post
+      SELECT 1 FROM public.posts mapped_post
       WHERE mapped_post.id = sp.inferred_post_id
         AND mapped_post.recruitment_id = r.id
     )
-  WHERE lower(coalesce(sp.source, '')) IN (
-      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+  WHERE (
+    lower(coalesce(sp.source, '')) IN (
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+      'aggregator','aggregator_extracted','pilot_preliminary',
+      'institutional_aggregation','institution_aggregation','fja_html',
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
-      'aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+      'aggregator','aggregator_extracted','pilot_preliminary',
+      'institutional_aggregation','institution_aggregation','fja_html',
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
-        CASE
-          WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
-            THEN sp.source_portals
-          ELSE '[]'::jsonb
-        END
+        CASE WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
+          THEN sp.source_portals ELSE '[]'::jsonb END
       ) AS portal(value)
-      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+      WHERE lower(portal.value) IN (
+        'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+        'aggregator','aggregator_extracted','pilot_preliminary',
+        'institutional_aggregation','institution_aggregation','fja_html',
+        'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      )
     )
+  )
 ),
 post_origin AS (
   SELECT DISTINCT p.recruitment_id
   FROM public.posts p
   WHERE lower(coalesce(p."sourceName", '')) IN (
-      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
-    )
-    OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-    OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-    OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+    'aggregator','aggregator_extracted','pilot_preliminary',
+    'institutional_aggregation','institution_aggregation','fja_html',
+    'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+  )
+  OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+  OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+  OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
 ),
 candidates AS (
   SELECT
@@ -96,8 +109,7 @@ manifest AS (
   SELECT
     c.*,
     EXISTS (
-      SELECT 1
-      FROM public.official_digest_promote d
+      SELECT 1 FROM public.official_digest_promote d
       WHERE d.batch = c.ingest_batch
         AND d.hub ->> 'official_url' = c.official_notification_url
     ) AS has_staging_match,
@@ -107,8 +119,7 @@ manifest AS (
     (SELECT count(*) FROM public.posts p
       WHERE p.recruitment_id = c.id) AS all_post_rows,
     EXISTS (
-      SELECT 1
-      FROM public.postings sp
+      SELECT 1 FROM public.postings sp
       WHERE sp.inferred_recruitment_id = c.id
          OR EXISTS (
            SELECT 1 FROM public.posts mapped_post
@@ -118,9 +129,6 @@ manifest AS (
     ) AS has_legacy_mapping
   FROM candidates c
 )
-
--- 1) Reconciled cohort totals. Expected 2026-10-31 snapshot:
--- 6,365 candidates; 355 staging matches; 6,010 unmatched; 6,003 without batch.
 SELECT
   (SELECT count(*) FROM public.recruitments) AS total_recruitments,
   count(*) AS expanded_origin_candidates,
@@ -144,40 +152,52 @@ WITH legacy_posting_origin AS (
   JOIN public.postings sp
     ON sp.inferred_recruitment_id = r.id
     OR EXISTS (
-      SELECT 1
-      FROM public.posts mapped_post
+      SELECT 1 FROM public.posts mapped_post
       WHERE mapped_post.id = sp.inferred_post_id
         AND mapped_post.recruitment_id = r.id
     )
-  WHERE lower(coalesce(sp.source, '')) IN (
-      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+  WHERE (
+    lower(coalesce(sp.source, '')) IN (
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+      'aggregator','aggregator_extracted','pilot_preliminary',
+      'institutional_aggregation','institution_aggregation','fja_html',
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
-      'aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+      'aggregator','aggregator_extracted','pilot_preliminary',
+      'institutional_aggregation','institution_aggregation','fja_html',
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
-        CASE
-          WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
-            THEN sp.source_portals
-          ELSE '[]'::jsonb
-        END
+        CASE WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
+          THEN sp.source_portals ELSE '[]'::jsonb END
       ) AS portal(value)
-      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+      WHERE lower(portal.value) IN (
+        'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+        'aggregator','aggregator_extracted','pilot_preliminary',
+        'institutional_aggregation','institution_aggregation','fja_html',
+        'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      )
     )
+  )
 ),
 post_origin AS (
   SELECT DISTINCT p.recruitment_id
   FROM public.posts p
   WHERE lower(coalesce(p."sourceName", '')) IN (
-      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted'
-    )
-    OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-    OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-    OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+    'aggregator','aggregator_extracted','pilot_preliminary',
+    'institutional_aggregation','institution_aggregation','fja_html',
+    'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+  )
+  OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+  OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+  OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
 ),
 candidates AS (
   SELECT
@@ -224,8 +244,7 @@ manifest AS (
   SELECT
     c.*,
     EXISTS (
-      SELECT 1
-      FROM public.official_digest_promote d
+      SELECT 1 FROM public.official_digest_promote d
       WHERE d.batch = c.ingest_batch
         AND d.hub ->> 'official_url' = c.official_notification_url
     ) AS has_staging_match,
@@ -235,8 +254,7 @@ manifest AS (
     (SELECT count(*) FROM public.posts p
       WHERE p.recruitment_id = c.id) AS all_post_rows,
     EXISTS (
-      SELECT 1
-      FROM public.postings sp
+      SELECT 1 FROM public.postings sp
       WHERE sp.inferred_recruitment_id = c.id
          OR EXISTS (
            SELECT 1 FROM public.posts mapped_post
@@ -246,7 +264,6 @@ manifest AS (
     ) AS has_legacy_mapping
   FROM candidates c
 )
-
 SELECT
   id AS recruitment_id,
   slug AS recruitment_slug,
@@ -266,6 +283,7 @@ SELECT
   enrichment_meta_verified,
   ingest_batch,
   has_recruitment_metadata_signal,
+  has_metadata_provenance_signal,
   has_official_link_signal,
   has_post_signal,
   has_legacy_posting_signal,
@@ -291,8 +309,8 @@ ORDER BY
   END,
   id;
 
--- 3) Legacy-posting-only records with no canonical Post Leaf. Preserve current
--- Recruitment IDs/slugs. No duplicate hubs or guessed Post decompositions.
+-- 3) The 81 legacy-mapped Recruitment records with no canonical Post Leaf.
+-- Preserve Recruitment IDs/slugs. No guessed relationships or duplicate hubs.
 SELECT
   r.id AS recruitment_id,
   r.slug AS recruitment_slug,
@@ -313,7 +331,7 @@ SELECT
   sp.inferred_recruitment_id,
   sp.inferred_post_id,
   sp.source_url,
-  'MATCH_EXISTING_RECRUITMENT_AND_CREATE_REVIEWED_CANONICAL_POST' AS required_next_action
+  'REVIEW_EXISTING_RELATIONSHIP_AND_CREATE_CANONICAL_POST' AS required_next_action
 FROM public.recruitments r
 JOIN public.postings sp
   ON sp.inferred_recruitment_id = r.id
@@ -323,19 +341,32 @@ JOIN public.postings sp
       AND mapped_post.recruitment_id = r.id
   )
 WHERE (
-    lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+    lower(coalesce(sp.source, '')) IN (
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+      'aggregator','aggregator_extracted','pilot_preliminary',
+      'institutional_aggregation','institution_aggregation','fja_html',
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+    )
+    OR lower(coalesce(sp.enrichment_source, '')) IN (
+      'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+      'aggregator','aggregator_extracted','pilot_preliminary',
+      'institutional_aggregation','institution_aggregation','fja_html',
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+    )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
-        CASE
-          WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
-            THEN sp.source_portals
-          ELSE '[]'::jsonb
-        END
+        CASE WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
+          THEN sp.source_portals ELSE '[]'::jsonb END
       ) AS portal(value)
-      WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+      WHERE lower(portal.value) IN (
+        'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+        'aggregator','aggregator_extracted','pilot_preliminary',
+        'institutional_aggregation','institution_aggregation','fja_html',
+        'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      )
     )
   )
   AND NOT EXISTS (
@@ -345,8 +376,8 @@ WHERE (
   )
 ORDER BY r.id, sp.id;
 
--- 4) Source-origin Recruitments with no canonical Post and no legacy Posting mapping.
--- These records need source-backed Post decomposition review; never guess a Post.
+-- 4) The 1,445 source-origin Recruitments with no canonical Post and no
+-- legacy Posting relationship. These require source-backed decomposition.
 SELECT
   r.id AS recruitment_id,
   r.slug AS recruitment_slug,
@@ -371,15 +402,20 @@ WHERE (
     lower(coalesce(r.enrichment_data -> 'meta' ->> 'source', '')) IN ('institutional_aggregation','institution_aggregation','fja_html')
     OR lower(coalesce(r.metadata -> 'source_provenance' ->> 'discovery_origin', '')) = 'aggregator_discovered'
     OR lower(coalesce(r.official_link_source, '')) IN ('aggregator_discovered','fja_official_link_extracted','official_link_extracted')
-    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
+    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
     OR EXISTS (
       SELECT 1 FROM public.posts p
       WHERE p.recruitment_id = r.id
         AND (
-          lower(coalesce(p."sourceName", '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
-          OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
-          OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
-          OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
+          lower(coalesce(p."sourceName", '')) IN (
+            'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+            'aggregator','aggregator_extracted','pilot_preliminary',
+            'institutional_aggregation','institution_aggregation','fja_html',
+            'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+          )
+          OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+          OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+          OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
         )
     )
     OR EXISTS (
@@ -387,16 +423,31 @@ WHERE (
       LEFT JOIN public.posts mapped_post ON mapped_post.id = sp.inferred_post_id
       WHERE (sp.inferred_recruitment_id = r.id OR mapped_post.recruitment_id = r.id)
         AND (
-          lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
-          OR lower(coalesce(sp.enrichment_source, '')) IN ('aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+          lower(coalesce(sp.source, '')) IN (
+            'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+            'aggregator','aggregator_extracted','pilot_preliminary',
+            'institutional_aggregation','institution_aggregation','fja_html',
+            'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+          )
+          OR lower(coalesce(sp.enrichment_source, '')) IN (
+            'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+            'aggregator','aggregator_extracted','pilot_preliminary',
+            'institutional_aggregation','institution_aggregation','fja_html',
+            'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+          )
           OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-          OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
+          OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
           OR EXISTS (
             SELECT 1 FROM jsonb_array_elements_text(
               CASE WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
                 THEN sp.source_portals ELSE '[]'::jsonb END
-            ) portal(value)
-            WHERE lower(portal.value) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5','aggregator','aggregator_extracted','pilot_preliminary','institutional_aggregation','institution_aggregation','fja_html','aggregator_discovered','fja_official_link_extracted','official_link_extracted')
+            ) AS portal(value)
+            WHERE lower(portal.value) IN (
+              'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
+              'aggregator','aggregator_extracted','pilot_preliminary',
+              'institutional_aggregation','institution_aggregation','fja_html',
+              'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+            )
           )
         )
     )
@@ -413,8 +464,8 @@ WHERE (
   )
 ORDER BY r.id;
 
--- 5) Preliminary Post source records whose FJA source-reference URL must remain
--- discovery provenance, not be upgraded to official issuer evidence.
+-- 5) Preliminary Post source records whose FJA source-reference URL remains
+-- discovery provenance, not official issuer evidence.
 SELECT
   r.id AS recruitment_id,
   r.slug AS recruitment_slug,
