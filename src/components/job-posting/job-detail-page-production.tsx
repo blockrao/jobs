@@ -107,7 +107,6 @@ interface JobDetailPageProps {
   /** Source issuer and fact review must pass before JobPosting is emitted. */
   sourceVerified?: boolean;
   /** Source issuer and fact review must pass before JobPosting is emitted. */
-  sourceVerified?: boolean;
   /** Mirrors route-level robots eligibility; prevents JobPosting on noindex leaves. */
   indexable?: boolean;
   pillarSlug?: string | null;
