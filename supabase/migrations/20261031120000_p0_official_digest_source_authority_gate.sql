@@ -325,6 +325,7 @@ BEGIN
     FROM public.official_digest_promote d
     WHERE d.batch = NEW.metadata ->> 'ingest_batch'
       AND d.hub ->> 'official_url' = NEW.official_notification_url
+      AND d.status = 'PROMOTED'
     ORDER BY d.rownum
     LIMIT 1;
 
@@ -429,6 +430,7 @@ BEGIN
     FROM public.official_digest_promote d
     WHERE d.batch = v_batch
       AND d.hub ->> 'official_url' = v_official_url
+      AND d.status = 'PROMOTED'
     ORDER BY d.rownum
     LIMIT 1;
 
@@ -553,6 +555,7 @@ BEGIN
     JOIN public.official_digest_promote d
       ON d.batch = r.metadata ->> 'ingest_batch'
      AND d.hub ->> 'official_url' = r.official_notification_url
+     AND d.status = 'PROMOTED'
     WHERE p.id = NEW.post_id
       AND r.official_link_source = 'AGGREGATOR_DISCOVERED'
       AND public.official_digest_authority_review_complete(
