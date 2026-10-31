@@ -872,8 +872,51 @@ BEGIN
       )
       UPDATE public.posts p
       SET enrichment = coalesce(p.enrichment, '{}'::jsonb) || jsonb_build_object(
-        'education', refreshed.payload -> 'education',
-        'experience', refreshed.payload -> 'experience',
+        'vacancies', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'vacancies' -> 'rows', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'vacancies'
+          ELSE p.enrichment -> 'vacancies'
+        END,
+        'education', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'education', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'education'
+          ELSE p.enrichment -> 'education'
+        END,
+        'experience', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'experience', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'experience'
+          ELSE p.enrichment -> 'experience'
+        END,
+        'selection_process', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'selection_process', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'selection_process'
+          ELSE p.enrichment -> 'selection_process'
+        END,
+        'documents', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'documents', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'documents'
+          ELSE p.enrichment -> 'documents'
+        END,
+        'important_dates', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'important_dates', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'important_dates'
+          ELSE p.enrichment -> 'important_dates'
+        END,
+        'age_rules', CASE
+          WHEN coalesce(refreshed.payload -> 'age_rules', '{}'::jsonb) <> '{}'::jsonb
+            THEN refreshed.payload -> 'age_rules'
+          ELSE p.enrichment -> 'age_rules'
+        END,
+        'application_fees', CASE
+          WHEN coalesce(refreshed.payload -> 'application_fees', '{}'::jsonb) <> '{}'::jsonb
+            THEN refreshed.payload -> 'application_fees'
+          ELSE p.enrichment -> 'application_fees'
+        END,
+        'official_links', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'official_links', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'official_links'
+          ELSE p.enrichment -> 'official_links'
+        END,
         'sourceVerificationStatus', 'VERIFIED',
         'sourceVerificationDate', v_review.fact_reviewed_at
       )
@@ -1374,8 +1417,51 @@ BEGIN
     UPDATE public.posts p
     SET enrichment = (coalesce(p.enrichment, '{}'::jsonb) - 'source_provenance')
       || jsonb_build_object(
-        'education', refreshed.payload -> 'education',
-        'experience', refreshed.payload -> 'experience',
+        'vacancies', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'vacancies' -> 'rows', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'vacancies'
+          ELSE p.enrichment -> 'vacancies'
+        END,
+        'education', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'education', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'education'
+          ELSE p.enrichment -> 'education'
+        END,
+        'experience', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'experience', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'experience'
+          ELSE p.enrichment -> 'experience'
+        END,
+        'selection_process', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'selection_process', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'selection_process'
+          ELSE p.enrichment -> 'selection_process'
+        END,
+        'documents', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'documents', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'documents'
+          ELSE p.enrichment -> 'documents'
+        END,
+        'important_dates', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'important_dates', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'important_dates'
+          ELSE p.enrichment -> 'important_dates'
+        END,
+        'age_rules', CASE
+          WHEN coalesce(refreshed.payload -> 'age_rules', '{}'::jsonb) <> '{}'::jsonb
+            THEN refreshed.payload -> 'age_rules'
+          ELSE p.enrichment -> 'age_rules'
+        END,
+        'application_fees', CASE
+          WHEN coalesce(refreshed.payload -> 'application_fees', '{}'::jsonb) <> '{}'::jsonb
+            THEN refreshed.payload -> 'application_fees'
+          ELSE p.enrichment -> 'application_fees'
+        END,
+        'official_links', CASE
+          WHEN jsonb_array_length(coalesce(refreshed.payload -> 'official_links', '[]'::jsonb)) > 0
+            THEN refreshed.payload -> 'official_links'
+          ELSE p.enrichment -> 'official_links'
+        END,
         'sourceVerificationStatus', 'UNVERIFIABLE',
         'sourceVerificationDate', NULL
       )
