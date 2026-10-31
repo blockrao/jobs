@@ -100,7 +100,7 @@ describe("extracted source projection", () => {
     expect(renderer).toContain("const candidateNotificationDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
     expect(renderer).toContain("candidateNotificationDate.getTime() > 0");
     expect(renderer).toContain("candidateNotificationDate.getTime() <= Date.now()");
-    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && publishedDate !== null}");
+    expect(renderer).toContain("emitJobPosting={emitJobPosting && indexable && notificationDate !== null}");
     expect(renderer).not.toContain("post.postedAt");
   });
 
