@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import { JobPostingData, PostEnrichment } from "@/types/job-posting";
 import { transformEnrichment } from "./enrichment-transformer";
 import { recruitmentIsLiveSql } from "./recruitment-lifecycle-sql";
+import { isVerifiedOfficialUrl } from "@/lib/official-source";
 
 type RawDate = string | Date | null;
 type FjaExtract = NonNullable<JobPostingData["fjaExtract"]>;
@@ -44,6 +45,8 @@ type PostRow = Omit<
     recruitmentApplicationStartDate: RawDate;
     recruitmentApplicationEndDate: RawDate;
     notificationPublicationDate: RawDate;
+    officialNotificationEvidenceAccepted: boolean;
+    officialApplicationEvidenceAccepted: boolean;
     // "payLevel" is selected from both posts and post_enrichments; the
     // driver returns whichever column comes last.
     payLevel: JobPostingData["payLevel"] & PostEnrichment["payLevel"];
@@ -145,6 +148,60 @@ async function getPostCoreData(
         p.updated_at AS "updatedAt",
         r.official_notification_url AS "officialSourceUrl",
         r.official_application_url AS "applyPortalUrl",
+        (
+          SELECT s.url
+          FROM public.sources s
+          WHERE lower(s.slug) = lower(r.official_link_source)
+            AND s.authority = 'OFFICIAL'
+            AND s.is_official IS TRUE
+          LIMIT 1
+        ) AS "officialSourceRegistryUrl",
+        EXISTS (
+          SELECT 1
+          FROM public.source_observations so
+          INNER JOIN public.postings legacy_posting ON legacy_posting.id = so.posting_id
+          WHERE lower(so.source) = lower(r.official_link_source)
+            AND so.outcome = 'ACCEPTED'
+            AND (
+              legacy_posting.inferred_post_id = p.id
+              OR legacy_posting.inferred_recruitment_id = r.id
+            )
+            AND (
+              so.source_url = r.official_notification_url
+              OR so.facts ->> 'official_url' = r.official_notification_url
+              OR so.facts ->> 'notification_url' = r.official_notification_url
+              OR EXISTS (
+                SELECT 1
+                FROM jsonb_array_elements(
+                  CASE WHEN jsonb_typeof(so.links) = 'array' THEN so.links ELSE '[]'::jsonb END
+                ) AS observed_link(value)
+                WHERE observed_link.value ->> 'url' = r.official_notification_url
+              )
+            )
+        ) AS "officialNotificationEvidenceAccepted",
+        EXISTS (
+          SELECT 1
+          FROM public.source_observations so
+          INNER JOIN public.postings legacy_posting ON legacy_posting.id = so.posting_id
+          WHERE lower(so.source) = lower(r.official_link_source)
+            AND so.outcome = 'ACCEPTED'
+            AND (
+              legacy_posting.inferred_post_id = p.id
+              OR legacy_posting.inferred_recruitment_id = r.id
+            )
+            AND (
+              so.source_url = r.official_application_url
+              OR so.facts ->> 'official_application_url' = r.official_application_url
+              OR so.facts ->> 'application_url' = r.official_application_url
+              OR EXISTS (
+                SELECT 1
+                FROM jsonb_array_elements(
+                  CASE WHEN jsonb_typeof(so.links) = 'array' THEN so.links ELSE '[]'::jsonb END
+                ) AS observed_link(value)
+                WHERE observed_link.value ->> 'url' = r.official_application_url
+              )
+            )
+        ) AS "officialApplicationEvidenceAccepted",
         p.vacancy_total AS "vacancyTotal",
         p.salary_min AS "legacySalaryMin",
         p.salary_max AS "legacySalaryMax",
@@ -570,9 +627,29 @@ export async function getPostBySlug(
       ...(enrichmentData || {}),
     } as PostRow;
 
-    // Transform raw JSONB enrichment to canonical EnrichmentSchema
-    // This is the single source of truth for all enrichment transformations
-    const transformedEnrichment = transformEnrichment(enrichmentJsonb);
+    // An external URL is not an official issuer link merely because an
+    // aggregator discovered it or it is hosted on a government-looking domain.
+    // Require a registered OFFICIAL source and an exact/subdomain HTTPS host match.
+    const officialSourceRegistryUrl = data.officialSourceRegistryUrl ?? null;
+    const officialSourceVerified =
+      data.officialNotificationEvidenceAccepted === true
+      && isVerifiedOfficialUrl(data.officialSourceUrl, officialSourceRegistryUrl);
+    const officialApplicationVerified =
+      data.officialApplicationEvidenceAccepted === true
+      && isVerifiedOfficialUrl(data.applyPortalUrl, officialSourceRegistryUrl);
+
+    // Transform raw JSONB enrichment to canonical EnrichmentSchema. Any
+    // additional officialLinks must independently match the same registered
+    // issuer host before they can reach the public page.
+    const transformed = transformEnrichment(enrichmentJsonb);
+    const transformedEnrichment = transformed
+      ? {
+          ...transformed,
+          // JSONB links do not yet have per-link accepted issuer observations.
+          // Do not expose them as official until each destination is evidenced.
+          officialLinks: [],
+        }
+      : transformed;
 
     return {
       id: data.id,
@@ -611,8 +688,11 @@ export async function getPostBySlug(
       isLive: data.isLive,
       postedAt: new Date(data.postedAt),
       updatedAt: new Date(data.updatedAt),
-      officialSourceUrl: data.officialSourceUrl,
-      applyPortalUrl: data.applyPortalUrl,
+      officialSourceUrl: officialSourceVerified ? data.officialSourceUrl : null,
+      applyPortalUrl: officialApplicationVerified ? data.applyPortalUrl : null,
+      officialSourceRegistryUrl,
+      officialSourceVerified,
+      officialApplicationVerified,
       // Preserve extracted source facts as a distinct, explicitly unverified projection.
       // Never pass these fields into canonical fact resolvers or official-link CTAs.
       fjaExtract: data.fjaInventoryPostId != null ? {
@@ -649,8 +729,8 @@ export async function getPostBySlug(
       legacySalaryMax: data.legacySalaryMax ?? null,
       // Recruitment-level fields for resolvers
       recruitmentVacancyTotal: data.recruitmentVacancyTotal ?? null,
-      recruitmentOfficialNotificationUrl: data.recruitmentOfficialNotificationUrl ?? null,
-      recruitmentOfficialApplicationUrl: data.recruitmentOfficialApplicationUrl ?? null,
+      recruitmentOfficialNotificationUrl: officialSourceVerified ? data.recruitmentOfficialNotificationUrl ?? null : null,
+      recruitmentOfficialApplicationUrl: officialApplicationVerified ? data.recruitmentOfficialApplicationUrl ?? null : null,
       recruitmentApplicationEndDate: data.recruitmentApplicationEndDate
         ? new Date(data.recruitmentApplicationEndDate)
         : null,

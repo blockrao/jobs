@@ -62,7 +62,9 @@ interface JobDetailPageProps {
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
+    officialSourceVerified?: boolean;
     applyUrl?: string | null;
+    officialApplicationVerified?: boolean;
     employmentType?: string | null;
     qualificationText?: string | null;
     experienceText?: string | null;
@@ -157,20 +159,20 @@ export default function JobDetailPageProduction({
   const isApplicationClosed = !isApplicationOpen;
   // JobPosting is only for an application that is currently open. The schema
   // builder independently omits markup for a known expired deadline.
-  const emitJobPosting = lifecycle ? lifecycle.isOpen : !isApplicationClosed;
+  const emitJobPosting = (lifecycle ? lifecycle.isOpen : !isApplicationClosed) && post.officialSourceVerified === true;
   const deadlineStatusText = !applicationDeadline
     ? null
     : lifecycle?.state === 'upcoming'
-      ? `Applications are not open yet; the stated last date to apply is ${formatDate(applicationDeadline)}.`
+      ? `Applications are not open yet; the ${post.officialSourceVerified ? "stated" : "reported"} last date to apply is ${formatDate(applicationDeadline)}.`
       : lifecycle?.state === 'results'
         ? 'This recruitment is in the results stage; applications are not open.'
         : lifecycle?.state === 'archived'
           ? 'This recruitment is archived; applications are not open.'
           : lifecycle?.state === 'closed' || isApplicationClosed
             ? (lifecycle?.daysLeft !== null && lifecycle?.daysLeft !== undefined && lifecycle.daysLeft <= 0)
-              ? `Applications closed on ${formatDate(applicationDeadline)}.`
-              : 'Applications are closed.'
-            : `The last date to apply is ${formatDate(applicationDeadline)}.`;
+              ? `${post.officialSourceVerified ? "Applications closed" : "Reported applications closed"} on ${formatDate(applicationDeadline)}.`
+              : (post.officialSourceVerified ? 'Applications are closed.' : 'Reported status: applications are closed.')
+            : `${post.officialSourceVerified ? "The last date" : "The reported last date"} to apply is ${formatDate(applicationDeadline)}.`;
   const candidateNotificationDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);
   const notificationDate = candidateNotificationDate
     && candidateNotificationDate.getTime() > 0
@@ -211,10 +213,14 @@ export default function JobDetailPageProduction({
     seen.add(href);
     links.push({ label, href });
   };
-  if (!isApplicationClosed) pushLink('Apply online', post.applyUrl);
-  pushLink('Official notification', post.officialSourceUrl);
-  for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
-  if (isApplicationClosed) pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
+  if (!isApplicationClosed && post.officialApplicationVerified === true) pushLink('Apply online', post.applyUrl);
+  if (post.officialSourceVerified === true) {
+    pushLink('Official notification', post.officialSourceUrl);
+    for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
+  }
+  if (isApplicationClosed && post.officialApplicationVerified === true) {
+    pushLink(lifecycle?.state === 'upcoming' ? 'Application portal (not open yet)' : 'Application portal (closed)', post.applyUrl);
+  }
 
   // ── Intro (stored description or one sentence of known facts) ────────────
   const introFacts: string[] = [];
@@ -244,7 +250,7 @@ export default function JobDetailPageProduction({
     const loc = [post.locationCity, post.locationState].filter(Boolean).join(', ');
     details.push({ label: 'Job location', value: loc, text: loc });
   }
-  if (applicationDeadline) details.push({ label: 'Last date', value: <time dateTime={applicationDeadline.toISOString()}>{formatDate(applicationDeadline)}</time>, text: formatDate(applicationDeadline) });
+  if (applicationDeadline) details.push({ label: post.officialSourceVerified === true ? 'Last date' : 'Reported last date', value: <time dateTime={applicationDeadline.toISOString()}>{formatDate(applicationDeadline)}</time>, text: formatDate(applicationDeadline) });
 
   // Fact lines for the JobPosting description (same facts, plain text).
   const facts: LeafFact[] = details
@@ -288,7 +294,7 @@ export default function JobDetailPageProduction({
       notificationPublicationDate: notificationDate,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
-      officialSourceUrl: post.officialSourceUrl,
+      officialSourceUrl: post.officialSourceVerified === true ? post.officialSourceUrl : null,
       qualificationText,
       experienceText,
     },
@@ -306,7 +312,7 @@ export default function JobDetailPageProduction({
       : { date: null, state: 'UNKNOWN' as const },
   };
 
-  const statusText = lifecycle?.state === 'upcoming'
+  const lifecycleStatusText = lifecycle?.state === 'upcoming'
     ? (applicationDeadline ? `Applications not open yet · last date ${formatDate(applicationDeadline)}` : 'Applications not open yet')
     : lifecycle?.state === 'results'
       ? 'Recruitment is in the results stage'
@@ -317,6 +323,9 @@ export default function JobDetailPageProduction({
           : applicationDeadline
             ? `Applications close on ${formatDate(applicationDeadline)}`
             : recruitmentClosed ? 'This recruitment is closed' : null;
+  const statusText = lifecycleStatusText && post.officialSourceVerified !== true
+    ? `Reported: ${lifecycleStatusText}`
+    : lifecycleStatusText;
 
   const hasRelated = Boolean(
     (relatedByOrg && relatedByOrg.length > 0) || (relatedByLocation && relatedByLocation.length > 0)
@@ -325,7 +334,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && notificationDate !== null} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && notificationDate !== null && post.officialSourceVerified === true} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
@@ -344,7 +353,7 @@ export default function JobDetailPageProduction({
                 {statusText && (
                   <li className={`${styles.chip} ${isApplicationClosed ? styles.chipClosed : styles.chipOpen}`}>{statusText}</li>
                 )}
-                {post.officialSourceUrl && <li className={styles.chip}>From official notification</li>}
+                {post.officialSourceVerified === true && post.officialSourceUrl && <li className={styles.chip}>From official notification</li>}
                 {modifiedDate && <li className={`${styles.chip} ${styles.chipMuted}`}>Updated {formatDate(modifiedDate)}</li>}
               </ul>
               <h1 className={styles.heroTitle}>
@@ -352,17 +361,22 @@ export default function JobDetailPageProduction({
               </h1>
               <p className={styles.lead}>{intro}</p>
               <p className={styles.actions}>
-                {post.applyUrl && !isApplicationClosed && (
+                {post.officialApplicationVerified === true && post.applyUrl && !isApplicationClosed && (
                   <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">Apply online</a>
                 )}
-                {post.officialSourceUrl && (
+                {post.officialSourceVerified === true && post.officialSourceUrl && (
                   <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
                 )}
               </p>
+              {(post.officialSourceVerified !== true || post.officialApplicationVerified !== true) && (
+                <p className={styles.notice}>
+                  Unverified notification or application links are hidden. Confirm the destination on the recruiting organisation&apos;s official website before applying.
+                </p>
+              )}
               {notificationDate && (
                 <p className={styles.notice}>
-                  Notification date <time dateTime={notificationDate.toISOString()}>{formatDate(notificationDate)}</time>
-                  {post.officialSourceUrl ? '. Facts on this page are read from the official notification; confirm on the official site before applying.' : '.'}
+                  {post.officialSourceVerified === true ? 'Notification date' : 'Reported notification date'} <time dateTime={notificationDate.toISOString()}>{formatDate(notificationDate)}</time>
+                  {post.officialSourceVerified === true && post.officialSourceUrl ? '. Facts on this page are read from the registered official notification; confirm on the issuer site before applying.' : '.'}
                 </p>
               )}
             </header>

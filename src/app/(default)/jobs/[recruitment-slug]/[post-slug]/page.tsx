@@ -50,23 +50,24 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   const applicationWindowEnded = lifecycle.state === "closed" || lifecycle.state === "results" || lifecycle.state === "archived";
   const qualification = post.fjaExtract?.qualificationRaw ?? null;
 
+  const displayOrganizationName = isUnresolvedOrganization(post.organizationName) ? null : post.organizationName;
   const titleParts = [post.title];
-  if (post.organizationName) titleParts.push(`– ${post.organizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
+  if (displayOrganizationName) titleParts.push(`– ${displayOrganizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
   else if (post.recruitmentName) titleParts.push(`– ${post.recruitmentName}`);
   if (vacancies > 0) titleParts.push(`(${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "Post" : "Posts"})`);
-  if (deadline && !applicationWindowEnded) titleParts.push(`– Apply by ${formatDate(deadline)}`);
+  if (deadline && !applicationWindowEnded) titleParts.push(`– ${post.officialSourceVerified ? "Apply by" : "Reported last date"} ${formatDate(deadline)}`);
   const title = titleParts.join(" ");
 
   const bits: string[] = [];
-  if (post.organizationName) bits.push(`${post.organizationName} recruitment for ${post.title}`);
+  if (displayOrganizationName) bits.push(`${displayOrganizationName} recruitment for ${post.title}`);
   else bits.push(`${post.title} recruitment`);
   if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
-  if (deadline && lifecycle.state === "closed" && (lifecycle.daysLeft !== null && lifecycle.daysLeft <= 0)) bits.push(`applications closed on ${formatDate(deadline)}`);
-  else if (deadline && !applicationWindowEnded) bits.push(`last date ${formatDate(deadline)}`);
+  if (deadline && lifecycle.state === "closed" && (lifecycle.daysLeft !== null && lifecycle.daysLeft <= 0)) bits.push(`${post.officialSourceVerified ? "applications closed" : "reported applications closed"} on ${formatDate(deadline)}`);
+  else if (deadline && !applicationWindowEnded) bits.push(`${post.officialSourceVerified ? "last date" : "reported last date"} ${formatDate(deadline)}`);
   const storedDescription = typeof post.description === "string" ? post.description.trim() : "";
-  const fallbackDescription = `${bits.join(", ")}. See the official notification for eligibility, age limit, fee, selection process and how to apply.`;
+  const fallbackDescription = `${bits.join(", ")}. Check the recruiting organisation's official website for eligibility, age limit, fee, selection process and how to apply.`;
   const description = storedDescription || fallbackDescription;
 
   return { title, description };
@@ -175,7 +176,7 @@ export default async function JobDetailPage({ params }: Props) {
         id: post.id,
         title: post.title,
         description: post.description,
-        organizationName: post.organizationName,
+        organizationName: isUnresolvedOrganization(post.organizationName) ? null : post.organizationName,
         organizationType: post.organizationSector,
         organizationWebsite,
         locationCity: post.locationCity,
@@ -185,8 +186,12 @@ export default async function JobDetailPage({ params }: Props) {
         slug: post.slug,
         updatedAt: post.updatedAt,
         notificationPublicationDate: post.notificationPublicationDate,
-        officialSourceUrl: post.officialSourceUrl,
-        applyUrl: post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl,
+        officialSourceUrl: post.officialSourceVerified ? post.officialSourceUrl : null,
+        officialSourceVerified: post.officialSourceVerified,
+        applyUrl: post.officialApplicationVerified
+          ? post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl
+          : null,
+        officialApplicationVerified: post.officialApplicationVerified,
         employmentType: post.employmentType ?? null,
         qualificationText:
           post.fjaExtract?.qualificationRaw || post.fjaExtract?.eligibilityRaw,

@@ -52,9 +52,13 @@ export interface JobPostingData {
   postedAt: Date;
   updatedAt: Date;
 
-  // Source Links
-  officialSourceUrl?: string;
-  applyPortalUrl?: string;
+  // Source Links. URLs are exposed publicly only when they match an OFFICIAL
+  // source-registry host; aggregator-discovered and unknown-provenance links stay null.
+  officialSourceUrl?: string | null;
+  applyPortalUrl?: string | null;
+  officialSourceRegistryUrl?: string | null;
+  officialSourceVerified?: boolean;
+  officialApplicationVerified?: boolean;
 
   // Gate 4D bridge: old-schema columns for resolver legacy fallback paths
   vacancyTotal?: number | null;
