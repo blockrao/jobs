@@ -24,7 +24,7 @@ function renderGraph(notificationPublicationDate: Date | null, emitJobPosting = 
     resolvedDeadline: { date: null, state: "UNKNOWN" },
     emitJobPosting,
   }));
-  const match = html.match(/<script type="application\\/ld\\+json">([\\s\\S]*?)<\\/script>/);
+  const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
   if (!match) throw new Error("JSON-LD script not rendered");
   return JSON.parse(match[1]) as { "@graph": Record<string, unknown>[] };
 }
