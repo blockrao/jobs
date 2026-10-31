@@ -3,13 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
+import { pageSeo } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const metadata: Metadata = {
-  title: "Source-Origin Review Queue | JobOye Admin",
-  robots: { index: false, follow: false, noarchive: true },
-};
+export const metadata: Metadata = pageSeo("/admin/source-review", { index: false });
 
 const PAGE_SIZE = 50;
 
