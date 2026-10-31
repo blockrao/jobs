@@ -53,6 +53,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     verificationStatus: recruitment.verificationStatus,
     metadata: recruitment.metadata,
   });
+  if (sourceUnverified) {
+    const title = "Recruitment details under verification | JobOye";
+    const description = "JobOye is checking this recruitment against the issuing body's official notification. Verified details and application links will appear after review.";
+    return {
+      title,
+      description,
+      ...pageSeo(`/jobs/${recruitment.slug}`, { index: false }),
+    };
+  }
   const [postingLocations, cutoffMarks] = await Promise.all([
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
@@ -98,7 +107,21 @@ export default async function RecruitmentHubPage({ params }: Props) {
     verificationStatus: recruitment.verificationStatus,
     metadata: recruitment.metadata,
   });
-  const publicPosts = sourceUnverified ? [] : posts;
+  if (sourceUnverified) {
+    return (
+      <section className="mx-auto max-w-3xl px-4 py-12" role="status">
+        <h1 className="text-2xl font-semibold">Recruitment details under verification</h1>
+        {recruitment.organization?.name ? (
+          <p className="mt-3 text-base">{recruitment.organization.name}</p>
+        ) : null}
+        <p className="mt-4 text-sm leading-6">
+          JobOye is checking this recruitment against the issuing body&apos;s official notification.
+          Verified vacancy details, eligibility and application links will appear after review.
+        </p>
+      </section>
+    );
+  }
+  const publicPosts = posts;
   const [postingLocations, cutoffMarks] = await Promise.all([
     getRecruitmentPostingLocations(recruitment.id),
     getRecruitmentCutoffMarks(recruitment.id),
