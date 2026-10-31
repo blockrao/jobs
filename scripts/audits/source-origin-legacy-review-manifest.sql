@@ -24,6 +24,10 @@ WITH legacy_posting_origin AS (
   WHERE lower(coalesce(sp.source, '')) IN (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
     )
+    OR lower(coalesce(sp.enrichment_source, '')) IN (
+      'aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+    )
+    OR lower(coalesce(sp.enrichment_source, '')) IN ('aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
     OR EXISTS (
@@ -133,6 +137,10 @@ WITH legacy_posting_origin AS (
   WHERE lower(coalesce(sp.source, '')) IN (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
     )
+    OR lower(coalesce(sp.enrichment_source, '')) IN (
+      'aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5'
+    )
+    OR lower(coalesce(sp.enrichment_source, '')) IN ('aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
     OR EXISTS (
@@ -268,6 +276,7 @@ SELECT
   sp.title AS legacy_posting_title,
   sp.source,
   sp.source_type,
+  sp.enrichment_source,
   sp.source_portals,
   sp.external_id,
   sp.review_status::text AS legacy_review_status,
@@ -285,6 +294,7 @@ JOIN public.postings sp
   )
 WHERE (
     lower(coalesce(sp.source, '')) IN ('fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
+    OR lower(coalesce(sp.enrichment_source, '')) IN ('aggregator','fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5')
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
     OR lower(coalesce(sp.source_url, '')) LIKE '%freejobalert.com%'
     OR EXISTS (
