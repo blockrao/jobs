@@ -26,16 +26,28 @@ WITH legacy_posting_origin AS (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
       'aggregator','aggregator_extracted','pilot_preliminary',
       'institutional_aggregation','institution_aggregation','fja_html',
-      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted',
+      'sarkariresult','sarkarinaukri','indiasarkarinaukri','sahisarkarijobs',
+      'sarkariexam','marugujarat','marugujarat.co.in','pdfjobsjankari','pdfjobsjankari.com',
+      'onlineupcar','onlineupcar.com','rojgarresult','rojgarresult.com','freshersworld','freshersworld.com',
+      'telegram','telegram.me','telegram.org','t.me','whatsapp','whatsapp.com','wa.me',
+      'arattai','arattai.in','facebook','facebook.com','twitter','twitter.com','x.com',
+      'instagram','instagram.com','youtube','youtube.com'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
       'aggregator','aggregator_extracted','pilot_preliminary',
       'institutional_aggregation','institution_aggregation','fja_html',
-      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted',
+      'sarkariresult','sarkarinaukri','indiasarkarinaukri','sahisarkarijobs',
+      'sarkariexam','marugujarat','marugujarat.co.in','pdfjobsjankari','pdfjobsjankari.com',
+      'onlineupcar','onlineupcar.com','rojgarresult','rojgarresult.com','freshersworld','freshersworld.com',
+      'telegram','telegram.me','telegram.org','t.me','whatsapp','whatsapp.com','wa.me',
+      'arattai','arattai.in','facebook','facebook.com','twitter','twitter.com','x.com',
+      'instagram','instagram.com','youtube','youtube.com'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-    OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR private.is_aggregator_url(sp.source_url)
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
@@ -60,9 +72,13 @@ post_origin AS (
     'institutional_aggregation','institution_aggregation','fja_html',
     'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
   )
-  OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-  OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-  OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+  OR private.is_aggregator_url(p."sourceReference")
+  OR private.is_aggregator_url(p.original_recruitment_url)
+  OR private.is_aggregator_url(p."originalRecruitmentUrl")
+  OR private.is_aggregator_url(p."officialSourceUrl")
+  OR private.is_aggregator_url(p."applyPortalUrl")
+  OR private.is_aggregator_url(p.application_url)
+  OR private.is_aggregator_url(p."officialNotificationUrl")
 ),
 candidates AS (
   SELECT
@@ -101,7 +117,9 @@ candidates AS (
     OR lower(coalesce(r.official_link_source, '')) IN (
       'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
-    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR private.is_aggregator_url(r.source_url)
+    OR private.is_aggregator_url(r.official_notification_url)
+    OR private.is_aggregator_url(r.official_application_url)
     OR EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id)
     OR EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id)
 ),
@@ -161,16 +179,28 @@ WITH legacy_posting_origin AS (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
       'aggregator','aggregator_extracted','pilot_preliminary',
       'institutional_aggregation','institution_aggregation','fja_html',
-      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted',
+      'sarkariresult','sarkarinaukri','indiasarkarinaukri','sahisarkarijobs',
+      'sarkariexam','marugujarat','marugujarat.co.in','pdfjobsjankari','pdfjobsjankari.com',
+      'onlineupcar','onlineupcar.com','rojgarresult','rojgarresult.com','freshersworld','freshersworld.com',
+      'telegram','telegram.me','telegram.org','t.me','whatsapp','whatsapp.com','wa.me',
+      'arattai','arattai.in','facebook','facebook.com','twitter','twitter.com','x.com',
+      'instagram','instagram.com','youtube','youtube.com'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
       'aggregator','aggregator_extracted','pilot_preliminary',
       'institutional_aggregation','institution_aggregation','fja_html',
-      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted',
+      'sarkariresult','sarkarinaukri','indiasarkarinaukri','sahisarkarijobs',
+      'sarkariexam','marugujarat','marugujarat.co.in','pdfjobsjankari','pdfjobsjankari.com',
+      'onlineupcar','onlineupcar.com','rojgarresult','rojgarresult.com','freshersworld','freshersworld.com',
+      'telegram','telegram.me','telegram.org','t.me','whatsapp','whatsapp.com','wa.me',
+      'arattai','arattai.in','facebook','facebook.com','twitter','twitter.com','x.com',
+      'instagram','instagram.com','youtube','youtube.com'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-    OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR private.is_aggregator_url(sp.source_url)
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
@@ -195,9 +225,9 @@ post_origin AS (
     'institutional_aggregation','institution_aggregation','fja_html',
     'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
   )
-  OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-  OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-  OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+  OR private.is_aggregator_url(p."sourceReference")
+  OR private.is_aggregator_url(p.original_recruitment_url)
+  OR private.is_aggregator_url(p."originalRecruitmentUrl")
 ),
 candidates AS (
   SELECT
@@ -236,7 +266,9 @@ candidates AS (
     OR lower(coalesce(r.official_link_source, '')) IN (
       'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
     )
-    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR private.is_aggregator_url(r.source_url)
+    OR private.is_aggregator_url(r.official_notification_url)
+    OR private.is_aggregator_url(r.official_application_url)
     OR EXISTS (SELECT 1 FROM post_origin po WHERE po.recruitment_id = r.id)
     OR EXISTS (SELECT 1 FROM legacy_posting_origin lo WHERE lo.recruitment_id = r.id)
 ),
@@ -345,16 +377,28 @@ WHERE (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
       'aggregator','aggregator_extracted','pilot_preliminary',
       'institutional_aggregation','institution_aggregation','fja_html',
-      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted',
+      'sarkariresult','sarkarinaukri','indiasarkarinaukri','sahisarkarijobs',
+      'sarkariexam','marugujarat','marugujarat.co.in','pdfjobsjankari','pdfjobsjankari.com',
+      'onlineupcar','onlineupcar.com','rojgarresult','rojgarresult.com','freshersworld','freshersworld.com',
+      'telegram','telegram.me','telegram.org','t.me','whatsapp','whatsapp.com','wa.me',
+      'arattai','arattai.in','facebook','facebook.com','twitter','twitter.com','x.com',
+      'instagram','instagram.com','youtube','youtube.com'
     )
     OR lower(coalesce(sp.enrichment_source, '')) IN (
       'fja','freejobalert','ext-1','ext-2','ext-3','ext-4','ext-5',
       'aggregator','aggregator_extracted','pilot_preliminary',
       'institutional_aggregation','institution_aggregation','fja_html',
-      'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
+      'aggregator_discovered','fja_official_link_extracted','official_link_extracted',
+      'sarkariresult','sarkarinaukri','indiasarkarinaukri','sahisarkarijobs',
+      'sarkariexam','marugujarat','marugujarat.co.in','pdfjobsjankari','pdfjobsjankari.com',
+      'onlineupcar','onlineupcar.com','rojgarresult','rojgarresult.com','freshersworld','freshersworld.com',
+      'telegram','telegram.me','telegram.org','t.me','whatsapp','whatsapp.com','wa.me',
+      'arattai','arattai.in','facebook','facebook.com','twitter','twitter.com','x.com',
+      'instagram','instagram.com','youtube','youtube.com'
     )
     OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-    OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR private.is_aggregator_url(sp.source_url)
     OR EXISTS (
       SELECT 1
       FROM jsonb_array_elements_text(
@@ -402,7 +446,7 @@ WHERE (
     lower(coalesce(r.enrichment_data -> 'meta' ->> 'source', '')) IN ('institutional_aggregation','institution_aggregation','fja_html')
     OR lower(coalesce(r.metadata -> 'source_provenance' ->> 'discovery_origin', '')) = 'aggregator_discovered'
     OR lower(coalesce(r.official_link_source, '')) IN ('aggregator_discovered','fja_official_link_extracted','official_link_extracted')
-    OR lower(btrim(r.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+    OR private.is_aggregator_url(r.source_url)
     OR EXISTS (
       SELECT 1 FROM public.posts p
       WHERE p.recruitment_id = r.id
@@ -413,9 +457,13 @@ WHERE (
             'institutional_aggregation','institution_aggregation','fja_html',
             'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
           )
-          OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-          OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-          OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+          OR private.is_aggregator_url(p."sourceReference")
+          OR private.is_aggregator_url(p.original_recruitment_url)
+          OR private.is_aggregator_url(p."originalRecruitmentUrl")
+          OR private.is_aggregator_url(p."officialSourceUrl")
+          OR private.is_aggregator_url(p."applyPortalUrl")
+          OR private.is_aggregator_url(p.application_url)
+          OR private.is_aggregator_url(p."officialNotificationUrl")
         )
     )
     OR EXISTS (
@@ -436,7 +484,7 @@ WHERE (
             'aggregator_discovered','fja_official_link_extracted','official_link_extracted'
           )
           OR upper(coalesce(sp.source_type, '')) = 'AGGREGATOR'
-          OR lower(btrim(sp.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+          OR private.is_aggregator_url(sp.source_url)
           OR EXISTS (
             SELECT 1 FROM jsonb_array_elements_text(
               CASE WHEN jsonb_typeof(coalesce(sp.source_portals, '[]'::jsonb)) = 'array'
@@ -483,9 +531,9 @@ SELECT
 FROM public.posts p
 JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE lower(coalesce(p."sourceName", '')) = 'pilot_preliminary'
-   OR lower(btrim(p."sourceReference")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-   OR lower(btrim(p.original_recruitment_url)) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
-   OR lower(btrim(p."originalRecruitmentUrl")) ~ '^((https?:)?//)?([a-z0-9-]+\.)*freejobalert\.com([/:?#]|$)'
+   OR private.is_aggregator_url(p."sourceReference")
+   OR private.is_aggregator_url(p.original_recruitment_url)
+   OR private.is_aggregator_url(p."originalRecruitmentUrl")
 ORDER BY r.id, p.id;
 
 COMMIT;
