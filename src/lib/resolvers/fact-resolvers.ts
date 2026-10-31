@@ -158,12 +158,11 @@ function salaryConsistentWithPayLevel(
  * Returns the authoritative vacancy count for a specific Post, or null.
  *
  * Pipeline:
- *   1. post_enrichments.vacanciesTotal — passes when:
- *      - sourceVerificationStatus === VERIFIED or PENDING
+ *   1. post_enrichments.vacanciesTotal — passes only when:
+ *      - sourceVerificationStatus === VERIFIED
  *      - extractionConfidence >= 70
+ *      - an accepted official observation explicitly supports this Post vacancy field
  *      - vacanciesTotal does NOT match the recruitment-level total (entity scope guard)
- *      Note: vacanciesByCategory must be non-null for the entity scope check to pass
- *        when vacanciesTotal looks like a recruitment total (see note below).
  *   2. No legacy-column fallback: posts.vacancy_total is not accepted without persisted provenance.
  *   3. null — insufficient evidence.
  */
