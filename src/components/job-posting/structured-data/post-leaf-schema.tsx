@@ -72,7 +72,6 @@ export interface PostLeafSchemaProps {
     locationCity?: string | null;
     locationState?: string | null;
     notificationPublicationDate?: Date | null;
-    postedAt?: Date | null;
     updatedAt?: Date | null;
     qualificationText?: string | null;
     experienceText?: string | null;
@@ -184,7 +183,17 @@ export default function PostLeafStructuredData({
   };
 
   // ── Dates ────────────────────────────────────────────────────────────────
-  const datePostedIso = toIso(post.notificationPublicationDate) ?? toIso(post.postedAt);
+  const candidateDatePosted = post.notificationPublicationDate
+    ? new Date(post.notificationPublicationDate)
+    : null;
+  const datePostedIso = candidateDatePosted
+    && Number.isFinite(candidateDatePosted.getTime())
+    && candidateDatePosted.getTime() <= Date.now()
+    ? toIso(candidateDatePosted)
+    : undefined;
+  // Google JobPosting requires datePosted. Never substitute a database
+  // creation/ingestion timestamp for the issuer's notification publication date.
+  const shouldEmitJobPosting = emitJobPosting && Boolean(datePostedIso);
   const dateModifiedIso = toIso(post.updatedAt);
 
   // ── WebPage ──────────────────────────────────────────────────────────────
@@ -203,7 +212,7 @@ export default function PostLeafStructuredData({
       publisher: { "@id": `${SITE_URL}/#org` },
     },
     breadcrumb: { "@id": `${leafUrl}#breadcrumb` },
-    ...(emitJobPosting ? { mainEntity: { "@id": `${leafUrl}#jobposting` } } : {}),
+    ...(shouldEmitJobPosting ? { mainEntity: { "@id": `${leafUrl}#jobposting` } } : {}),
   };
   if (datePostedIso) webPage.datePublished = datePostedIso;
   if (dateModifiedIso) webPage.dateModified = dateModifiedIso;
@@ -318,11 +327,11 @@ export default function PostLeafStructuredData({
   // requires expired postings to drop the markup (validThrough alone is not
   // enough). The page itself stays, labelled closed, with no JobPosting.
   const postingClosed = resolvedDeadline.state === "CLOSED";
-  if (postingClosed || !emitJobPosting) delete webPage.mainEntity;
+  if (postingClosed || !shouldEmitJobPosting) delete webPage.mainEntity;
 
   // One @graph: site org, breadcrumb, web page, the JobPosting (open/unknown
   // deadline only), visible FAQ.
-  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed || !emitJobPosting ? null : jobPosting, faqPage);
+  const graph = jsonLdGraph(siteOrg, breadcrumb, webPage, postingClosed || !shouldEmitJobPosting ? null : jobPosting, faqPage);
 
   return (
     <script
