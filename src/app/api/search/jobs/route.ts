@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     // Parse query parameters
-    const query = searchParams.get("q")?.trim();
+    const query = searchParams.get("q")?.trim().slice(0, 160);
     const announcementState = searchParams.get("announcement") as
       | "ANNOUNCED_TODAY"
       | "ANNOUNCED_THIS_WEEK"
@@ -90,13 +90,13 @@ export async function GET(request: NextRequest) {
       | null) || "relevance";
 
     // Parse pagination
-    let limit = 50;
+    let limit = 20;
     let offset = 0;
 
     const limitStr = searchParams.get("limit");
     if (limitStr) {
       const parsed = parseInt(limitStr, 10);
-      if (!isNaN(parsed) && parsed > 0 && parsed <= 100) {
+      if (!isNaN(parsed) && parsed > 0 && parsed <= 99) {
         limit = parsed;
       }
     }
@@ -131,7 +131,9 @@ export async function GET(request: NextRequest) {
     };
 
     // Execute search
-    const results = await searchPostings(filters);
+    const fetchedResults = await searchPostings({ ...filters, limit: limit + 1 });
+    const hasMore = fetchedResults.length > limit;
+    const results = fetchedResults.slice(0, limit);
 
     // Build response with pagination metadata
     const response = {
@@ -143,7 +145,7 @@ export async function GET(request: NextRequest) {
         limit,
         offset,
         count: results.length,
-        hasMore: results.length === limit, // Next page exists if we got full page
+        hasMore, // Proven by fetching one extra row beyond the requested page.
       },
       filters: {
         query: query || null,
