@@ -1413,8 +1413,7 @@ export async function getDailyDigestJobs(opts: {
       rn.official_pdf_url,
       rn.apply_url,
       CASE
-        WHEN lower(btrim(rn.source_url)) ~ '^((https?:)?//)?([a-z0-9-]+\\.)*freejobalert\\.com([/:?#]|$)'
-          THEN NULL
+        WHEN private.is_aggregator_url(rn.source_url) THEN NULL
         ELSE rn.source_url
       END AS source_url,
       rn.category,
