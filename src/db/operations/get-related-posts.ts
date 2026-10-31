@@ -50,7 +50,6 @@ export async function getRelatedPostsGrouped(
               AND r.official_link_source = 'MANUAL_VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-              AND r.application_end_date IS NOT NULL
             )
           )
         ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
@@ -81,7 +80,6 @@ export async function getRelatedPostsGrouped(
               AND r.official_link_source = 'MANUAL_VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-              AND r.application_end_date IS NOT NULL
             )
           )
         ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
@@ -119,7 +117,6 @@ export async function getRelatedPostsGrouped(
               AND r.official_link_source = 'MANUAL_VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
               AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-              AND r.application_end_date IS NOT NULL
             )
           )
         ORDER BY r.application_end_date DESC NULLS LAST, r.id DESC
