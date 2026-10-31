@@ -35,7 +35,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         <div className="flex items-center gap-4">
           <Link href="/admin/posts" className="text-sm underline">Posts Management</Link>
           <Link href="/admin/enrich-posts" className="text-sm underline">Enrich Posts</Link>
-          <Link href="/admin/fja-review" className="text-sm underline">FJA candidate review</Link>
+          <Link href="/admin/source-review" className="text-sm underline">Source-origin review queue</Link>
           <form action={logoutAction}>
           <SubmitButton className="text-sm underline" pendingText="Logging out…">
             Log out
