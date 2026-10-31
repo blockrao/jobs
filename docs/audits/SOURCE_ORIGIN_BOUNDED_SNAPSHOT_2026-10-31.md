@@ -75,6 +75,24 @@ Additional flags:
 - Every legacy row has a populated external ID; all 81 external IDs are distinct.
 - Every legacy row is marked `source = fja`, `source_type = UNKNOWN`, and `verification_status = UNVERIFIED` in the reviewed cohort.
 
+### URL-field inventory for the 81-record cohort
+
+A follow-up read-only aggregate checked URL fields on both sides of the mapping:
+
+| Field | Present |
+|---|---:|
+| Recruitment `official_notification_url` | 0 / 81 |
+| Recruitment `official_application_url` | 0 / 81 |
+| Recruitment `source_url` | 0 / 81 |
+| Recruitment `notification_url` | 0 / 81 |
+| Legacy Posting `source_url` | 0 / 81 |
+| Legacy Posting `official_notification_url` | **81 / 81** |
+| Legacy Posting `apply_url` | 7 / 81 |
+
+The 81 legacy `official_notification_url` values resolve to **61 distinct host strings** in a simple hostname inventory; none matched the small known-aggregator substring check used in this query. Top observed hosts included `cdn.s3waas.gov.in` (11), `cdnbbsr.s3waas.gov.in` (5), `www.mcgm.gov.in` (3), `esic.gov.in` (2), `diat.ac.in` (2), `www.barc.gov.in` (2), and `psc.ap.gov.in` (2).
+
+This is a promising evidence lead, not issuer verification. A government-looking domain, a PDF/CDN host, or a field named `official_notification_url` is not by itself proof that the linked document belongs to the named recruiting body. The next review must resolve the 81 exact destinations and compare issuer, advertisement/notification identity, recruitment title, post names, dates and application route. Do not copy these values into Recruitment official fields or publish them without that check.
+
 ### Decision
 
 **Structural mapping eligibility: PASS (81/81). Canonical Post creation eligibility: NOT YET ESTABLISHED (0/81 approved).**
