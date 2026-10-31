@@ -793,7 +793,6 @@ export async function getRelatedPostsForLeaf(
             AND r.official_link_source = 'MANUAL_VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-            AND r.application_end_date IS NOT NULL
           )
         )
       ORDER BY p."postedAt" DESC NULLS LAST
@@ -833,7 +832,6 @@ export async function getRelatedPostsForLeaf(
             AND r.official_link_source = 'MANUAL_VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-            AND r.application_end_date IS NOT NULL
           )
         )
       ORDER BY p."postedAt" DESC NULLS LAST
@@ -873,7 +871,6 @@ export async function getRelatedPostsForLeaf(
             AND r.official_link_source = 'MANUAL_VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-            AND r.application_end_date IS NOT NULL
           )
         )
       ORDER BY p."postedAt" DESC NULLS LAST
@@ -1013,7 +1010,6 @@ export async function getPostsByRecruitment(
             AND r.official_link_source = 'MANUAL_VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'authority_review' ->> 'status' = 'VERIFIED'
             AND r.metadata -> 'source_provenance' -> 'fact_review' ->> 'status' = 'VERIFIED'
-            AND r.application_end_date IS NOT NULL
           )
         )
       ORDER BY p."postedAt" DESC
