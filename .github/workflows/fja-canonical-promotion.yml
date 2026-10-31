@@ -11,7 +11,7 @@ on:
         options:
           - pilot
           - eligible_inventory
-        default: pilot
+        default: eligible_inventory
       external_ids:
         description: "Comma-separated FJA external IDs (required for pilot; leave empty for eligible_inventory)"
         required: false
