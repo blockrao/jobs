@@ -421,7 +421,7 @@ export async function getRecruitmentWithPosts(slug: string) {
         // The Drizzle Post entity stores its display name as `name`, while leaf UI expects `title`.
         title: row.post.name,
         position: row.position,
-        vacancies: vacanciesByPostId.get(row.post.id) ?? [],
+        vacancies: postsVacanciesByPostId.get(row.post.id) ?? [],
         eligibilities: eligibilitiesByPostId.get(row.post.id) ?? [],
         fjaExtract: sourcePost ? {
           inventoryId: sourcePost.id as number | string,
@@ -484,7 +484,7 @@ export async function getRecruitmentWithPosts(slug: string) {
     }
     const postsWithDetails = enrichedPosts.map((post) => ({
       ...post,
-      vacancies: postsVacanciesByPostId.get(post.id) ?? vacancyDetailsByPostId.get(post.id) ?? vacanciesByPostId.get(post.id) ?? [],
+      vacancies: postsVacanciesByPostId.get(post.id) ?? vacancyDetailsByPostId.get(post.id) ?? postsVacanciesByPostId.get(post.id) ?? [],
       eligibilities: eligibilityDetailsByPostId.get(post.id) ?? eligibilitiesByPostId.get(post.id) ?? [],
       ageRules: ageRulesByPostId.get(post.id) ?? [],
       postEnrichment: enrichmentByPostId.get(post.id) ?? null,
