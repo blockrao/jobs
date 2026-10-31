@@ -448,15 +448,24 @@ AS $trusted$
           AND nullif(btrim(authority ->> 'reviewed_at'), '') IS NOT NULL
           AND nullif(btrim(authority ->> 'notes'), '') IS NOT NULL
           AND facts ->> 'status' = 'VERIFIED'
-          AND jsonb_typeof(facts -> 'reviewed_fields') = 'array'
-          AND jsonb_array_length(facts -> 'reviewed_fields') > 0
+          AND CASE
+            WHEN jsonb_typeof(facts -> 'reviewed_fields') = 'array'
+              THEN jsonb_array_length(facts -> 'reviewed_fields') > 0
+            ELSE false
+          END
           AND jsonb_typeof(facts -> 'evidence') = 'object'
           AND nullif(btrim(facts ->> 'reviewed_by'), '') IS NOT NULL
           AND nullif(btrim(facts ->> 'reviewed_at'), '') IS NOT NULL
           AND nullif(btrim(facts ->> 'notes'), '') IS NOT NULL
           AND NOT EXISTS (
             SELECT 1
-            FROM jsonb_array_elements_text(facts -> 'reviewed_fields') AS reviewed(field_key)
+            FROM jsonb_array_elements_text(
+              CASE
+                WHEN jsonb_typeof(facts -> 'reviewed_fields') = 'array'
+                  THEN facts -> 'reviewed_fields'
+                ELSE '[]'::jsonb
+              END
+            ) AS reviewed(field_key)
             WHERE nullif(btrim(facts -> 'evidence' -> reviewed.field_key ->> 'evidence_ref'), '') IS NULL
                OR nullif(btrim(facts -> 'evidence' -> reviewed.field_key ->> 'excerpt'), '') IS NULL
           )
