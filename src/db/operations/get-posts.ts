@@ -201,6 +201,7 @@ async function getPostCoreData(
       FROM posts p
       INNER JOIN recruitments r ON r.id = p.recruitment_id
       WHERE r.verification_status IS DISTINCT FROM 'QUARANTINED'
+        AND private.is_recruitment_publicly_trusted(r.id)
         AND (
           r.slug = ${recruitmentSlug}
           OR r.id IN (
