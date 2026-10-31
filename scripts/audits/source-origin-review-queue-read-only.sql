@@ -350,3 +350,53 @@ WHERE ranked.queue_rank BETWEEN
   AND (params.page_number * params.page_size)
 ORDER BY ranked.queue_rank;
 COMMIT;
+
+
+-- ---------------------------------------------------------------------------
+-- 3) Host parser sanity checks. Expected all_pass = true.
+--    These cover user-info, trailing dots, scheme-relative URLs, ports,
+--    lookalike suffixes, and a hostname that merely appears in user-info.
+-- ---------------------------------------------------------------------------
+BEGIN READ ONLY;
+WITH domains(domain) AS (
+  VALUES ('freejobalert.com'),('sarkariresult.com'),('sarkarinaukri.com')
+),
+cases(input_url, expected_aggregator) AS (
+  VALUES
+    ('https://user@freejobalert.com/jobs', true),
+    ('https://freejobalert.com./jobs', true),
+    ('//cdn.freejobalert.com:443/jobs', true),
+    ('https://freejobalert.com.evil.example/jobs', false),
+    ('https://notfreejobalert.com/jobs', false),
+    ('https://freejobalert.com@official.gov/jobs', false)
+),
+normalized AS (
+  SELECT input_url, expected_aggregator,
+    regexp_replace(
+      regexp_replace(
+        regexp_replace(
+          regexp_replace(
+            split_part(split_part(split_part(
+              regexp_replace(btrim(input_url), '^(https?:)?//', '', 'i'),
+              '/', 1), '?', 1), '#', 1),
+            '^.*@', ''),
+          ':[0-9]+$', ''),
+        '[.]$', ''),
+      '^www[.]', '') AS host
+  FROM cases
+),
+checked AS (
+  SELECT n.*,
+    EXISTS (
+      SELECT 1 FROM domains d
+      WHERE lower(n.host) = d.domain OR lower(n.host) LIKE '%.' || d.domain
+    ) AS actual_aggregator
+  FROM normalized n
+)
+SELECT bool_and(expected_aggregator = actual_aggregator) AS all_pass,
+       jsonb_agg(jsonb_build_object(
+         'url', input_url, 'host', host,
+         'expected', expected_aggregator, 'actual', actual_aggregator
+       ) ORDER BY input_url) AS cases
+FROM checked;
+COMMIT;
