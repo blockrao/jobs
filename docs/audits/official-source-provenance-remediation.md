@@ -176,3 +176,14 @@ The proposed `official_digest_promote` workflow was matched against the 5,381 ex
 5,019 rows have no ingest batch and 5,026 have no matching staging row. The current review trigger can therefore re-verify only 355 existing rows. Before the Stage 2 remediation is applied, a legacy-record review/backfill path must be designed for the remaining 5,026, preserving Recruitment/Post identity and canonical URLs and retaining the same authority/fact evidence requirements.
 
 No staging backfill or production mutation has been performed.
+
+
+### Direct Supabase REST / RLS bypass (2026-10-31 06:57 UTC)
+
+A read-only production policy inspection found RLS enabled but unrestricted `public read USING (true)` policies on `recruitments`, `posts`, `eligibilities` and `post_age_rules`. These policies permit anonymous direct Supabase REST reads that bypass Next.js query filters.
+
+The additive gate migration now replaces those four policies with a shared immutable source predicate. Aggregator-origin records are visible through direct public table reads only when the recruitment is globally VERIFIED, its official notification link is MANUAL_VERIFIED, issuer-authority evidence is HTTPS/reviewer-backed, and the fact-review metadata contains the required notification-date field evidence. The policy also detects the legacy AGGREGATOR_DISCOVERED link label and all three known extraction metadata origins.
+
+The production cohort audit found zero of the 5,381 records with the new `metadata.source_provenance` chain; zero have authority/fact review marked VERIFIED, and zero have complete notification-date evidence. Five legacy MANUAL_VERIFIED link labels exist but none has the new issuer/fact evidence chain. They therefore remain non-public under the RLS gate pending review.
+
+The rollback restores the former unrestricted policies only as part of a full application rollback. No migration has been applied.
