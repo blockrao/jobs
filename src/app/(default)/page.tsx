@@ -17,7 +17,7 @@ export const revalidate = 86400; // Phase 1: daily revalidation
 export const metadata: Metadata = {
   title: "Latest Government Jobs in India | JobOye",
   description:
-    "Live government job notifications ranked by vacancies and closing date. Facts from the official notification: vacancies, eligibility, fee, last date and the official apply link.",
+    "Discover government job opportunities ranked by vacancy information and available deadlines. Review each listing and confirm vacancies, eligibility, fees, dates and the application process in the recruiting body's latest official notification.",
   ...pageSeo("/"),
 };
 
