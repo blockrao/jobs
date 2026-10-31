@@ -15,9 +15,9 @@
  *     defaulted. A section renders only when it has data.
  *   - The FAQ list and the fact lines are computed once and handed to the
  *     structured-data component, so JSON-LD mirrors the visible page exactly.
- *   - JobPosting is gated on lifecycle only: a closed recruitment with no
- *     verifiable deadline emits no JobPosting (Google forbids live expired
- *     postings without a past validThrough).
+ *   - JobPosting is emitted only for an open, indexable post with manually
+ *     verified official notification/application links and a plausible past
+ *     source notification date. Ingestion timestamps are never publication dates.
  *   - Uses the recruitment hub's stylesheet so hub and leaf look identical.
  */
 
@@ -163,9 +163,10 @@ export default function JobDetailPageProduction({
   // builder independently omits markup for a known expired deadline.
   const notificationLinkVerified = Boolean(post.officialSourceUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
   const applicationLinkVerified = Boolean(post.applyUrl) && isManuallyVerifiedOfficialLink(post.officialLinkSource);
+  const publishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);
+  const hasValidPublishedDate = publishedDate !== null && publishedDate.getTime() <= Date.now();
   const emitJobPosting = (lifecycle ? lifecycle.isOpen : !isApplicationClosed)
-    && indexable && notificationLinkVerified && applicationLinkVerified;
-  const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
+    && indexable && notificationLinkVerified && applicationLinkVerified && hasValidPublishedDate;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
   const qualificationText = post.qualificationText || post.fjaExtract?.qualificationRaw || null;
@@ -288,7 +289,6 @@ export default function JobDetailPageProduction({
       locationCity: post.locationCity,
       locationState: post.locationState,
       notificationPublicationDate: publishedDate,
-      postedAt: post.postedAt ? new Date(post.postedAt) : null,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
       officialSourceUrl: post.officialSourceUrl,
