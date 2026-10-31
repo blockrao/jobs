@@ -74,7 +74,61 @@ WHERE px.source = 'fja_post_inventory'
 GROUP BY 1,2,3
 ORDER BY fact_type, fact_rows DESC;
 
--- 4) Eligibility records marked VERIFIED without a complete issuer evidence chain.
+-- 4) Aggregate enrichment records whose child education/experience facts are FJA-derived and unverified.
+SELECT
+  COALESCE(pe."sourceVerificationStatus", 'NULL') AS enrichment_verification_status,
+  count(*) AS enrichment_rows,
+  count(DISTINCT p.id) AS posts,
+  count(DISTINCT r.id) AS recruitments,
+  count(*) FILTER (WHERE pe."sourceVerificationDate" IS NOT NULL) AS with_verification_date
+FROM public.post_enrichments pe
+JOIN public.posts p ON p.id = pe.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE EXISTS (
+  SELECT 1 FROM public.posts_education e
+  WHERE e.post_id = p.id
+    AND e.source = 'fja_post_inventory'
+    AND e.verified_at IS NULL
+) OR EXISTS (
+  SELECT 1 FROM public.posts_experience x
+  WHERE x.post_id = p.id
+    AND x.source = 'fja_post_inventory'
+    AND x.verified_at IS NULL
+)
+GROUP BY 1
+ORDER BY enrichment_rows DESC;
+
+-- Exact post_enrichments rows to demote/review.
+SELECT
+  r.id AS recruitment_id,
+  r.slug AS recruitment_slug,
+  p.id AS post_id,
+  p.name AS post_name,
+  pe.id AS post_enrichment_id,
+  pe."sourceVerificationStatus" AS source_verification_status,
+  pe."sourceVerificationDate" AS source_verification_date,
+  (SELECT count(*) FROM public.posts_education e
+    WHERE e.post_id = p.id AND e.source = 'fja_post_inventory' AND e.verified_at IS NULL) AS unverified_fja_education_rows,
+  (SELECT count(*) FROM public.posts_experience x
+    WHERE x.post_id = p.id AND x.source = 'fja_post_inventory' AND x.verified_at IS NULL) AS unverified_fja_experience_rows,
+  'ENRICHMENT_VERIFICATION_REVIEW_REQUIRED' AS review_action
+FROM public.post_enrichments pe
+JOIN public.posts p ON p.id = pe.post_id
+JOIN public.recruitments r ON r.id = p.recruitment_id
+WHERE EXISTS (
+  SELECT 1 FROM public.posts_education e
+  WHERE e.post_id = p.id
+    AND e.source = 'fja_post_inventory'
+    AND e.verified_at IS NULL
+) OR EXISTS (
+  SELECT 1 FROM public.posts_experience x
+  WHERE x.post_id = p.id
+    AND x.source = 'fja_post_inventory'
+    AND x.verified_at IS NULL
+)
+ORDER BY r.id, p.id;
+
+-- 5) Eligibility records marked VERIFIED without a complete issuer evidence chain.
 SELECT
   status,
   COALESCE(source_type, 'NULL') AS source_type,
@@ -114,7 +168,7 @@ WHERE e.status = 'VERIFIED'
   )
 ORDER BY r.id, p.id, e.id;
 
--- 5) Row-level remediation manifest. Review every row against its own issuer notice;
+-- 7) Row-level remediation manifest. Review every row against its own issuer notice;
 -- repeated text is a risk signal, not proof that an individual fact is incorrect.
 SELECT
   r.id AS recruitment_id,
@@ -157,7 +211,7 @@ JOIN public.recruitments r ON r.id = p.recruitment_id
 WHERE px.source = 'fja_post_inventory'
 ORDER BY recruitment_id, post_id, review_action, fact_id;
 
--- 6) Recruitment-level verification contradictions for individual review.
+-- 8) Recruitment-level verification contradictions for individual review.
 SELECT
   r.id,
   r.slug,
