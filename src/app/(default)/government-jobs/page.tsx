@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageSeo } from "@/lib/seo";
-import { listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
+import { hasDb, listLivePostsBySector, countLivePostsBySector } from "@/lib/queries";
 import { deriveLifecycle, lifecycleLabel } from "@/lib/lifecycle";
 import { SECTORS, sectorHref } from "@/lib/sectors";
 import { parsePage } from "@/lib/pagination";
@@ -52,6 +52,7 @@ const FAQ = [
 export default async function AllGovernmentJobsPage({ searchParams }: Props) {
   const { page: pageParam } = await searchParams;
   const page = parsePage(pageParam);
+  if (!hasDb()) throw new Error("[government-jobs] DATABASE_URL is not configured");
   // Let database failures reach the route error boundary. Returning []/{} here
   // would publish a convincing but false "no jobs" page and zero sector counts.
   const [rows, counts] = await Promise.all([
