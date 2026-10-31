@@ -201,10 +201,12 @@ export function transformEnrichment(
     // TAB 2: VACANCY BREAKDOWN
     // ─────────────────────────────────────────────────────────────────
 
-    if (hasPostFactReview('vacancies') && rawEnrichment.vacancies && typeof rawEnrichment.vacancies === 'object') {
+    const rawVacancyRows = Array.isArray(rawEnrichment.vacancies?.rows)
+      ? rawEnrichment.vacancies.rows
+      : [];
+    const verifiedVacancyRows = eligibleRows(rawVacancyRows, 'vacancies');
+    if (rawVacancyRows.length > 0 && verifiedVacancyRows.length === rawVacancyRows.length) {
       const vacanc = rawEnrichment.vacancies;
-
-      // Transform categories to PostEnrichment format
       if (vacanc.categories && typeof vacanc.categories === 'object') {
         enrichment.vacanciesByCategory = {
           General: vacanc.categories.General || 0,
@@ -213,22 +215,21 @@ export function transformEnrichment(
           OBC: vacanc.categories.OBC || 0,
           EWS: vacanc.categories.EWS || 0,
         };
-      } else {
-        enrichment.vacanciesByCategory = {};
-      }
-
-      // Total vacancies count
-      if (vacanc.total) {
-        enrichment.vacanciesTotal = vacanc.total;
-      }
-
-      // Vacancies array for rendering
-      if (vacanc.categories && typeof vacanc.categories === 'object') {
         enrichment.vacancies = Object.entries(vacanc.categories).map(([category, count]) => ({
           category,
           count: Number(count) || 0,
         }));
+      } else {
+        enrichment.vacanciesByCategory = {};
+        enrichment.vacancies = [];
       }
+      enrichment.vacanciesTotal = vacanc.total ?? 0;
+      enrichment.vacanciesByLocation = vacanc.by_location ?? {};
+    } else {
+      enrichment.vacanciesByCategory = {};
+      enrichment.vacanciesByLocation = {};
+      enrichment.vacanciesTotal = 0;
+      enrichment.vacancies = [];
     }
 
     // ─────────────────────────────────────────────────────────────────
