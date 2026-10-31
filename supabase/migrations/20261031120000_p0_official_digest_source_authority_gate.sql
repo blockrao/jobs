@@ -610,6 +610,16 @@ DECLARE
   v_review public.official_digest_promote%ROWTYPE;
   v_review_ok boolean := false;
 BEGIN
+  -- Source origin is provenance, not a mutable verification label. Keep the
+  -- original aggregator discovery origin even after a successful issuer review.
+  -- Otherwise an alternate writer could relabel the record and bypass this gate.
+  IF TG_OP = 'UPDATE'
+     AND OLD.official_link_source = 'AGGREGATOR_DISCOVERED'
+     AND NEW.official_link_source IS DISTINCT FROM OLD.official_link_source THEN
+    RAISE EXCEPTION
+      'AGGREGATOR_DISCOVERED source origin is immutable; record issuer verification separately';
+  END IF;
+
   IF NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
      AND NEW.verification_status = 'VERIFIED' THEN
     SELECT d.* INTO v_review
