@@ -294,7 +294,7 @@ export function buildHubData(
   // total by summing Post rows, and never publish an unverified source extract.
   // The source status is checked here; the shared resolver validates the stored
   // recruitment total's shape. Missing evidence means no authoritative total.
-  const totalVacancies = verified
+  const totalVacancies = verified && recruitment.officialVacancyEvidenceAccepted === true
     ? resolveRecruitmentVacancy(recruitment)
     : null;
   const postNames = unique(posts.map(postDisplayName));
@@ -380,7 +380,8 @@ export function buildHubData(
     // Only a resolver-produced count with an explicitly verified source may
     // be presented as authoritative. Raw legacy columns and extracted strings
     // are not evidence and must not be used as fallbacks.
-    const vacancies = post.resolvedVacancyCount != null
+    const vacancies = post.officialVacancyEvidenceAccepted === true
+      && post.resolvedVacancyCount != null
       && post.fjaExtract?.verificationStatus === 'VERIFIED'
       ? post.resolvedVacancyCount
       : null;
@@ -390,7 +391,7 @@ export function buildHubData(
 
     // Compute vacancy breakdown by category from vacancies table
     const vacancyBreakdown: PostTableRow['vacancyBreakdown'] = [];
-    if (post.vacancies && Array.isArray(post.vacancies)) {
+    if (post.officialVacancyEvidenceAccepted === true && post.vacancies && Array.isArray(post.vacancies)) {
       const vacancyMap = new Map<string, number>();
       for (const vacRow of post.vacancies) {
         const vacRecord = asRecord(vacRow);

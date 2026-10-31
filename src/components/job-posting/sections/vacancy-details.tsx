@@ -19,12 +19,14 @@ interface VacancyDetailsProps {
 
 export default function VacancyDetails({ post, resolvedFacts, embedded }: VacancyDetailsProps) {
   // Use enrichment vacanciesByCategory when available; fall back to posts.vacancy_details
-  const vacanciesByCategory: Record<string, number> =
-    (post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory).length > 0)
+  const hasOfficialVacancyEvidence = post.officialVacancyEvidenceAccepted === true;
+  const vacanciesByCategory: Record<string, number> = hasOfficialVacancyEvidence
+    ? ((post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory).length > 0)
       ? post.enrichment.vacanciesByCategory
       : (post.vacancyDetails && Object.keys(post.vacancyDetails).length > 0)
         ? post.vacancyDetails
-        : {};
+        : {})
+    : {};
   const hasDetails = Object.keys(vacanciesByCategory).length > 0;
 
   // Use resolver output — never display raw enrichment vacanciesTotal
@@ -36,7 +38,7 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
     : null;
   const resolvedTotal = resolvedFacts?.vacancyCount ?? extractedTotal;
 
-  const isReported = post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED";
+  const isReported = !hasOfficialVacancyEvidence || Boolean(post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED");
   // PENDING policy: check resolver's vacancyCount for verification status
   const vacancyIsPending = resolvedFacts?.vacancyCount != null &&
     post.enrichment?.sourceVerificationStatus === "PENDING";
