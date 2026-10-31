@@ -187,6 +187,20 @@ describe("recruitment hub canonical (URL contract 2026-10-20)", () => {
     expect(isNoindex(meta)).toBe(false);
   });
 
+  test("IDX-10 a Recruitment Hub without a valid canonical Post Leaf is noindex, follow", async () => {
+    getRecruitmentWithPostsCached.mockResolvedValue({
+      recruitment,
+      posts: [],
+      totalPosts: 0,
+      resolutionMethod: "exact",
+    });
+    const mod = await import("@/app/(default)/jobs/[recruitment-slug]/page");
+    const meta = await mod.generateMetadata(params({ "recruitment-slug": recruitment.slug }));
+    expect(isNoindex(meta)).toBe(true);
+    expect((meta.robots as { follow?: boolean }).follow).toBe(true);
+    expect(canonicalOf(meta)!.pathname).toBe(`/jobs/${recruitment.slug}`);
+  });
+
   test("IDX-07 a missing recruitment is noindex, follow", async () => {
     getRecruitmentWithPostsCached.mockResolvedValue(null);
     const mod = await import("@/app/(default)/jobs/[recruitment-slug]/page");
