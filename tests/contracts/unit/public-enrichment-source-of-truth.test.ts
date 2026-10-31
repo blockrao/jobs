@@ -25,7 +25,7 @@ describe("public enrichment source of truth", () => {
 
   test("legacy detail projections remain available without overriding canonical fields", () => {
     const source = read("src/db/operations/get-posts.ts");
-    expect(source).toContain("async function getPostDetailEnrichment");
+    expect(source).not.toContain("async function getPostDetailEnrichment");
     expect(source).toContain("LEFT JOIN post_enrichments e ON p.id = e.post_id");
   });
 });
