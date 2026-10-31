@@ -59,7 +59,6 @@ interface JobDetailPageProps {
     recruitmentSlug: string;
     recruitmentName?: string | null;
     slug: string;
-    postedAt?: Date | string | null;
     updatedAt?: Date | string | null;
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
@@ -172,7 +171,12 @@ export default function JobDetailPageProduction({
               ? `Applications closed on ${formatDate(applicationDeadline)}.`
               : 'Applications are closed.'
             : `The last date to apply is ${formatDate(applicationDeadline)}.`;
-  const publishedDate = post.notificationPublicationDate || post.postedAt ? new Date(post.notificationPublicationDate || post.postedAt!) : null;
+  const candidatePublishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);
+  const publishedDate = candidatePublishedDate
+    && candidatePublishedDate.getTime() > 0
+    && candidatePublishedDate.getTime() <= Date.now()
+    ? candidatePublishedDate
+    : null;
   const modifiedDate = post.updatedAt ? new Date(post.updatedAt) : null;
 
   const qualificationText = post.qualificationText || post.fjaExtract?.qualificationRaw || null;
@@ -282,7 +286,6 @@ export default function JobDetailPageProduction({
       locationCity: post.locationCity,
       locationState: post.locationState,
       notificationPublicationDate: publishedDate,
-      postedAt: post.postedAt ? new Date(post.postedAt) : null,
       updatedAt: modifiedDate,
       vacancyNumber: advertisementNumber,
       officialSourceUrl: post.officialSourceUrl,
@@ -322,7 +325,7 @@ export default function JobDetailPageProduction({
 
   return (
     <>
-      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable} />}
+      {locale !== 'hi' && <JobPostingSchema {...schemaData} emitJobPosting={emitJobPosting && indexable && publishedDate !== null} />}
 
       <div className={styles.page}>
         <div className={styles.wrap}>
