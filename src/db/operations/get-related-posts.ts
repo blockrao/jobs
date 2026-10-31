@@ -46,7 +46,7 @@ export async function getRelatedPostsGrouped(
         WHERE r.organization_id = ${currentOrgId}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(p.id)
           AND ${liveRecruitment}
         ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
@@ -69,7 +69,7 @@ export async function getRelatedPostsGrouped(
         WHERE p.location_state = ${currentLocation}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(p.id)
           AND ${liveRecruitment}
         ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
@@ -99,7 +99,7 @@ export async function getRelatedPostsGrouped(
         WHERE LOWER(p.title) LIKE ${`%${roleKeywords}%`}
           AND p.recruitment_id != ${recruitmentId}
           AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
-        AND private.is_recruitment_publicly_trusted(r.id)
+        AND private.is_post_publicly_trusted(p.id)
           AND ${liveRecruitment}
         ORDER BY application_end_date DESC NULLS LAST, r.id DESC
         LIMIT ${limit}
