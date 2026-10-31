@@ -349,7 +349,12 @@ AS $fn$
   SELECT EXISTS (
     SELECT 1
     FROM public.postings sp
-    WHERE sp.inferred_post_id = p_post_id
+    WHERE (
+      sp.inferred_post_id = p_post_id
+      OR sp.inferred_recruitment_id = (
+        SELECT p.recruitment_id FROM public.posts p WHERE p.id = p_post_id
+      )
+    )
       AND (
         private.is_aggregator_source_value(sp.source)
         OR private.is_aggregator_source_value(sp.enrichment_source)
@@ -432,7 +437,7 @@ $fn$;
 
 DROP TRIGGER IF EXISTS trg_propagate_post_discovery_origin ON public.posts;
 CREATE TRIGGER trg_propagate_post_discovery_origin
-BEFORE INSERT OR UPDATE OF recruitment_id, "sourceName", "sourceReference", original_recruitment_url, "originalRecruitmentUrl" OR DELETE
+BEFORE INSERT OR UPDATE OF recruitment_id, "sourceName", "sourceReference", original_recruitment_url, "originalRecruitmentUrl", "officialSourceUrl", "applyPortalUrl", application_url, "officialNotificationUrl" OR DELETE
 ON public.posts
 FOR EACH ROW
 EXECUTE FUNCTION private.propagate_post_discovery_origin();
