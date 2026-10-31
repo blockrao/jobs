@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildDiscoveryCollectionPageSchema,
   buildDiscoveryItemListSchema,
-} from "@/lib/discovery-hub-schema";
+} from "@/lib/structured-data";
 import { SITE } from "../helpers/metadata";
 
 describe("discovery hub structured data", () => {
