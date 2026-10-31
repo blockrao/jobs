@@ -862,7 +862,7 @@ $recruitment$;
 DROP TRIGGER IF EXISTS trg_guard_aggregator_discovered_recruitment_verification
   ON public.recruitments;
 CREATE TRIGGER trg_guard_aggregator_discovered_recruitment_verification
-BEFORE INSERT OR UPDATE OF verification_status, official_link_source, official_notification_url, metadata
+BEFORE INSERT OR UPDATE OF verification_status, official_link_source, source_discovery_origin, official_notification_url, metadata
 ON public.recruitments
 FOR EACH ROW
 EXECUTE FUNCTION public.guard_aggregator_discovered_recruitment_verification();
@@ -1074,6 +1074,98 @@ BEFORE INSERT OR UPDATE OF post_id, "sourceVerificationStatus"
 ON public.post_enrichments
 FOR EACH ROW
 EXECUTE FUNCTION public.guard_aggregator_discovered_enrichment_verification();
+
+-- Canonical eligibility is another write path. Do not allow a legacy writer to
+-- mark aggregator-derived eligibility VERIFIED without the exact reviewed evidence.
+CREATE OR REPLACE FUNCTION public.guard_aggregator_eligibility_verification()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $eligibility$
+DECLARE
+  v_discovery_origin text;
+  v_batch text;
+  v_official_url text;
+  v_post_name text;
+  v_expected_locator text;
+  v_review public.official_digest_promote%ROWTYPE;
+  v_review_ok boolean := false;
+BEGIN
+  SELECT r.source_discovery_origin, r.metadata ->> 'ingest_batch',
+         r.official_notification_url, p.name
+  INTO v_discovery_origin, v_batch, v_official_url, v_post_name
+  FROM public.posts p
+  JOIN public.recruitments r ON r.id = p.recruitment_id
+  WHERE p.id = NEW.post_id
+  LIMIT 1;
+
+  IF v_discovery_origin = 'AGGREGATOR_DISCOVERED' THEN
+    IF NEW.status = 'VERIFIED' THEN
+      SELECT d.* INTO v_review
+      FROM public.official_digest_promote d
+      WHERE d.batch = v_batch
+        AND d.hub ->> 'official_url' = v_official_url
+        AND d.status = 'PROMOTED'
+      ORDER BY d.rownum
+      LIMIT 1;
+
+      v_expected_locator := v_review.fact_review_evidence -> (
+        'post:' || v_post_name || ':eligibility'
+      ) ->> 'evidence_ref';
+
+      v_review_ok := FOUND
+        AND public.official_digest_authority_review_complete(
+          v_review.authority_review_status,
+          v_review.authority_evidence_url,
+          v_review.authority_reviewed_by,
+          v_review.authority_reviewed_at,
+          v_review.authority_review_notes
+        )
+        AND public.official_digest_fact_review_complete(
+          v_review.fact_review_status,
+          v_review.fact_reviewed_fields,
+          v_review.fact_review_evidence,
+          v_review.hub,
+          v_review.posts,
+          v_review.fact_reviewed_by,
+          v_review.fact_reviewed_at,
+          v_review.fact_review_notes
+        )
+        AND v_review.fact_reviewed_fields @> ARRAY['post:' || v_post_name || ':eligibility']
+        AND nullif(btrim(v_expected_locator), '') IS NOT NULL
+        AND NEW.source_type = 'OFFICIAL_NOTIFICATION'
+        AND NEW.verified_at IS NOT NULL
+        AND NEW.source_ref = v_review.authority_evidence_url
+        AND NEW.source_locator = v_expected_locator;
+
+      IF NOT v_review_ok THEN
+        NEW.status := 'PENDING';
+        NEW.verified_at := NULL;
+        NEW.source_type := NULL;
+        NEW.source_ref := NULL;
+        NEW.source_locator := NULL;
+        NEW.derivation := NULL;
+      END IF;
+    ELSE
+      NEW.verified_at := NULL;
+      NEW.source_type := NULL;
+      NEW.source_ref := NULL;
+      NEW.source_locator := NULL;
+      NEW.derivation := NULL;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$eligibility$;
+
+DROP TRIGGER IF EXISTS trg_guard_aggregator_eligibility_verification
+  ON public.eligibilities;
+CREATE TRIGGER trg_guard_aggregator_eligibility_verification
+BEFORE INSERT OR UPDATE OF post_id, status, verified_at, source_type, source_ref, source_locator, derivation
+ON public.eligibilities
+FOR EACH ROW
+EXECUTE FUNCTION public.guard_aggregator_eligibility_verification();
 
 -- Reconcile already-promoted records whenever a reviewer changes either review.
 -- This supports controlled remediation of the historical cohort without rerunning
