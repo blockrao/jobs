@@ -13,6 +13,17 @@ WHERE source_discovery_origin = 'AGGREGATOR_DISCOVERED'
 GROUP BY 1,2,3
 ORDER BY 3,2;
 
+-- Both counts must be zero after stage 2: origin must be retained in its
+-- dedicated field, and the legacy overloaded verification value must be gone.
+SELECT count(*) AS legacy_aggregator_link_source_without_discovery_origin
+FROM public.recruitments
+WHERE official_link_source = 'AGGREGATOR_DISCOVERED'
+  AND source_discovery_origin IS NULL;
+
+SELECT count(*) AS legacy_aggregator_link_source_remaining
+FROM public.recruitments
+WHERE official_link_source = 'AGGREGATOR_DISCOVERED';
+
 -- This count must be zero.
 SELECT count(*) AS aggregator_recruitments_verified_without_manual_link_state
 FROM public.recruitments r
