@@ -37,8 +37,9 @@ An aggregator-origin Recruitment is publicly trusted only when all of the follow
 - `official_link_source = MANUAL_VERIFIED`.
 - Issuer review is VERIFIED, with HTTPS evidence URL, reviewer, valid non-future timestamp and notes.
 - Fact review is VERIFIED, with reviewer, valid non-future timestamp and notes.
+- The review declares a non-empty `required_fields` list, and `reviewed_fields` covers every required key.
 - Every reviewed field has its own non-empty evidence reference and excerpt.
-- The review includes evidence for `hub:notification_date`.
+- The required set includes `hub:notification_date`.
 
 A generic VERIFIED status, populated HTTPS URL, or aggregator extraction alone cannot pass this gate.
 
