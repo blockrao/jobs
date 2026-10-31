@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { sql } from "drizzle-orm";
 
@@ -35,8 +36,6 @@ type QueueRow = {
   has_legacy_mapping: boolean;
   review_action: string;
 };
-
-const DATE_FIELDS = ["notification_date", "application_start_date", "application_end_date"] as const;
 
 function displayDate(value: string | null): string {
   if (!value) return "—";
@@ -222,9 +221,10 @@ export default async function SourceOriginReviewQueuePage({
 }) {
   const params = await searchParams;
   const parsedPage = Number.parseInt(params.page ?? "1", 10);
-  const pageNumber = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
+  const pageNumber = Number.isFinite(parsedPage) ? Math.min(1000, Math.max(1, parsedPage)) : 1;
   const rows = await loadQueue(pageNumber);
-  const total = rows[0]?.total_queue_rows ?? 6010;
+  if (rows.length === 0 && pageNumber > 1) redirect("/admin/source-review");
+  const total = rows[0]?.total_queue_rows ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
