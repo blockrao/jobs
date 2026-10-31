@@ -408,6 +408,66 @@ AS $posts_match$
 $posts_match$;
 
 
+-- Shared public-query predicate. Non-aggregator sources retain the existing
+-- publication policy; aggregator-derived records require the complete human
+-- issuer + fact review chain written by the guarded promotion trigger.
+CREATE OR REPLACE FUNCTION public.is_recruitment_source_trusted(
+  p_source_discovery_origin text,
+  p_official_link_source text,
+  p_verification_status text,
+  p_metadata jsonb
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $trusted$
+  WITH provenance AS (
+    SELECT coalesce(p_metadata, '{}'::jsonb) -> 'source_provenance' AS value
+  ),
+  reviews AS (
+    SELECT
+      value -> 'authority_review' AS authority,
+      value -> 'fact_review' AS facts,
+      value ->> 'discovery_origin' AS reviewed_origin
+    FROM provenance
+  )
+  SELECT CASE
+    WHEN p_source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+      OR lower(coalesce(p_official_link_source, '')) IN (
+        'aggregator_discovered', 'fja_official_link_extracted', 'official_link_extracted'
+      )
+      OR EXISTS (SELECT 1 FROM reviews WHERE reviewed_origin = 'AGGREGATOR_DISCOVERED')
+    THEN
+      p_verification_status = 'VERIFIED'
+      AND p_official_link_source = 'MANUAL_VERIFIED'
+      AND EXISTS (
+        SELECT 1 FROM reviews
+        WHERE authority ->> 'status' = 'VERIFIED'
+          AND authority ->> 'evidence_url' ~* '^https://'
+          AND nullif(btrim(authority ->> 'reviewed_by'), '') IS NOT NULL
+          AND nullif(btrim(authority ->> 'reviewed_at'), '') IS NOT NULL
+          AND nullif(btrim(authority ->> 'notes'), '') IS NOT NULL
+          AND facts ->> 'status' = 'VERIFIED'
+          AND jsonb_typeof(facts -> 'reviewed_fields') = 'array'
+          AND jsonb_array_length(facts -> 'reviewed_fields') > 0
+          AND jsonb_typeof(facts -> 'evidence') = 'object'
+          AND nullif(btrim(facts ->> 'reviewed_by'), '') IS NOT NULL
+          AND nullif(btrim(facts ->> 'reviewed_at'), '') IS NOT NULL
+          AND nullif(btrim(facts ->> 'notes'), '') IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(facts -> 'reviewed_fields') AS reviewed(field_key)
+            WHERE nullif(btrim(facts -> 'evidence' -> reviewed.field_key ->> 'evidence_ref'), '') IS NULL
+               OR nullif(btrim(facts -> 'evidence' -> reviewed.field_key ->> 'excerpt'), '') IS NULL
+          )
+      )
+    ELSE true
+  END;
+$trusted$;
+
+COMMENT ON FUNCTION public.is_recruitment_source_trusted(text, text, text, jsonb) IS
+  'Returns false for aggregator-discovered Recruitment records until a guarded human issuer and fact review has set a complete source_provenance chain.';
+
 CREATE OR REPLACE FUNCTION public.guard_official_digest_promotion_review()
 RETURNS trigger
 LANGUAGE plpgsql
