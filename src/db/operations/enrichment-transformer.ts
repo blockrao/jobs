@@ -306,7 +306,7 @@ export function transformEnrichment(
     // Leave as undefined - handled separately in page component
 
     // ─────────────────────────────────────────────────────────────────
-    // TAB 7: IMPORTANT DATES (In database but not currently mapped)
+    // TAB 7: IMPORTANT DATES
     // ─────────────────────────────────────────────────────────────────
 
     const verifiedImportantDates = eligibleRows(rawEnrichment.important_dates, 'important_dates');
@@ -344,7 +344,6 @@ export function transformEnrichment(
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // TAB 8: OFFICIAL LINKS    // ─────────────────────────────────────────────────────────────────
     // TAB 8: OFFICIAL LINKS
     // ─────────────────────────────────────────────────────────────────
 
@@ -357,7 +356,6 @@ export function transformEnrichment(
     }));
 
     // ─────────────────────────────────────────────────────────────────
-    // VERIFICATION & QUALITY METRICS    // ─────────────────────────────────────────────────────────────────
     // VERIFICATION & QUALITY METRICS
     // ─────────────────────────────────────────────────────────────────
 
