@@ -530,7 +530,6 @@ export interface RecruitmentListRow {
   applicationEndDate: Date | null;
   examDate: Date | null;
   lastVerifiedAt: Date | null;
-  createdAt: Date | null;
   updatedAt: Date | null;
 }
 
@@ -567,7 +566,10 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     conditions.push(OPEN_RECRUITMENT_SQL);
   } else if (opts.filter === "newly-added") {
     conditions.push(LIVE_RECRUITMENT_SQL);
-    conditions.push(sql`COALESCE(r.notification_date, r.created_at) >= now() - interval '30 days'`);
+    conditions.push(sql`r.notification_date IS NOT NULL
+      AND r.notification_date >= now() - interval '30 days'
+      AND r.notification_date <= now()
+      AND EXTRACT(YEAR FROM r.notification_date AT TIME ZONE 'UTC') BETWEEN 1900 AND 2089`);
   } else if (!search) {
     // Browsing without a query shows current recruitments only. A text search
     // also matches closed ones, ordered after the open ones and labelled Closed.
@@ -579,13 +581,13 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
     : sql``;
 
   const orderBy = opts.filter === "newly-added"
-    ? sql`COALESCE(r.notification_date, r.created_at) DESC, r.id DESC`
+    ? sql`r.notification_date DESC, r.id DESC`
     : sql`
         (CASE WHEN ${OPEN_RECRUITMENT_SQL} THEN 0
               WHEN ${LIVE_RECRUITMENT_SQL} THEN 1
               ELSE 2 END),
         ${plausibleRecruitmentDeadlineSql(sql`r.application_end_date`)} ASC NULLS LAST,
-        COALESCE(r.notification_date, r.created_at) DESC,
+        r.notification_date DESC NULLS LAST,
         r.id DESC`;
 
   const rows = await db.execute<Record<string, unknown>>(sql`
@@ -619,7 +621,6 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
       r.application_end_date AS "applicationEndDate",
       r.exam_date AS "examDate",
       r.last_verified_at AS "lastVerifiedAt",
-      r.created_at AS "createdAt",
       r.updated_at AS "updatedAt"
     FROM recruitments r
     LEFT JOIN organizations o ON o.id = r.organization_id
