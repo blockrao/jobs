@@ -349,6 +349,64 @@ AS $fact$
   );
 $fact$;
 
+-- The reviewed staging payload must map one-to-one to the existing canonical
+-- Recruitment -> Post relationship. A valid review cannot authorize extra,
+-- missing, or differently named canonical Post Leaves.
+CREATE OR REPLACE FUNCTION public.official_digest_posts_match_recruitment(
+  p_recruitment_id integer,
+  p_post_ids integer[],
+  p_posts jsonb
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = public
+AS $posts_match$
+  SELECT CASE
+    WHEN jsonb_typeof(coalesce(p_posts, 'null'::jsonb)) IS DISTINCT FROM 'array'
+      THEN false
+    ELSE
+      cardinality(coalesce(p_post_ids, '{}'::integer[])) =
+        (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = p_recruitment_id)
+      AND jsonb_array_length(p_posts) =
+        (SELECT count(*) FROM public.posts p WHERE p.recruitment_id = p_recruitment_id)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.posts p
+        WHERE p.recruitment_id = p_recruitment_id
+          AND NOT (p.id = ANY(coalesce(p_post_ids, '{}'::integer[])))
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM unnest(coalesce(p_post_ids, '{}'::integer[])) AS staged(post_id)
+        WHERE NOT EXISTS (
+          SELECT 1 FROM public.posts p
+          WHERE p.id = staged.post_id
+            AND p.recruitment_id = p_recruitment_id
+        )
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.posts p
+        WHERE p.recruitment_id = p_recruitment_id
+          AND NOT EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(p_posts) AS staged(item)
+            WHERE lower(btrim(staged.item ->> 'name')) = lower(btrim(p.name))
+          )
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(p_posts) AS staged(item)
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM public.posts p
+          WHERE p.recruitment_id = p_recruitment_id
+            AND lower(btrim(p.name)) = lower(btrim(staged.item ->> 'name'))
+        )
+      )
+  END;
+$posts_match$;
+
 
 CREATE OR REPLACE FUNCTION public.guard_official_digest_promotion_review()
 RETURNS trigger
@@ -420,6 +478,9 @@ BEGIN
      AND (
        NEW.authority_review_status <> 'VERIFIED'
        OR NEW.fact_review_status <> 'VERIFIED'
+       OR NOT public.official_digest_posts_match_recruitment(
+         NEW.recruitment_id, NEW.post_ids, NEW.posts
+       )
      ) THEN
     RAISE EXCEPTION
       'Official-digest promotion blocked: issuer-source and fact-accuracy reviews are both required for batch %, row %',
@@ -681,19 +742,32 @@ AS $recruitment$
 DECLARE
   v_review public.official_digest_promote%ROWTYPE;
   v_review_ok boolean := false;
+  v_aggregator_origin boolean := false;
 BEGIN
-  -- Backward compatibility for the historical promotion function: it still
-  -- writes AGGREGATOR_DISCOVERED into official_link_source. Capture that as
-  -- immutable origin before applying the independent verification-state gate.
-  IF NEW.source_discovery_origin IS NULL AND (
-       NEW.official_link_source = 'AGGREGATOR_DISCOVERED'
-       OR NEW.enrichment_data->'meta'->>'source' IN (
-         'institutional_aggregation',
-         'institution_aggregation',
-         'fja_html'
-       )
-     ) THEN
-    NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
+  -- Discovery origin is derived from every persisted extraction signal.
+  -- It must not be overridden by a caller-supplied verification label.
+  v_aggregator_origin :=
+    lower(coalesce(NEW.official_link_source, '')) IN (
+      'aggregator_discovered', 'fja_official_link_extracted', 'official_link_extracted'
+    )
+    OR lower(coalesce(NEW.enrichment_data->'meta'->>'source', '')) IN (
+      'institutional_aggregation', 'institution_aggregation', 'fja_html'
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.posts p
+      WHERE p.recruitment_id = NEW.id
+        AND lower(coalesce(p."sourceName", '')) IN (
+          'aggregator', 'freejobalert', 'aggregator_extracted'
+        )
+    );
+
+  IF v_aggregator_origin THEN
+    IF NEW.source_discovery_origin IS NULL THEN
+      NEW.source_discovery_origin := 'AGGREGATOR_DISCOVERED';
+    ELSIF NEW.source_discovery_origin <> 'AGGREGATOR_DISCOVERED' THEN
+      RAISE EXCEPTION
+        'Aggregator extraction signals cannot be relabelled as a different discovery origin';
+    END IF;
   END IF;
 
   -- Source origin is provenance, not a mutable verification label. Keep the
@@ -733,6 +807,9 @@ BEGIN
         v_review.fact_reviewed_by,
         v_review.fact_reviewed_at,
         v_review.fact_review_notes
+      )
+      AND public.official_digest_posts_match_recruitment(
+        NEW.id, v_review.post_ids, v_review.posts
       );
 
     IF NOT v_review_ok THEN
@@ -990,6 +1067,26 @@ DECLARE
   v_batch text;
   v_official_url text;
 BEGIN
+  -- The canonical Post is also an origin signal. Promote the parent Recruitment
+  -- to aggregator-discovered before this Post can carry any official-source flag.
+  IF lower(coalesce(NEW."sourceName", '')) IN (
+    'aggregator', 'freejobalert', 'aggregator_extracted'
+  ) THEN
+    UPDATE public.recruitments
+    SET source_discovery_origin = 'AGGREGATOR_DISCOVERED'
+    WHERE id = NEW.recruitment_id
+      AND source_discovery_origin IS NULL;
+
+    IF EXISTS (
+      SELECT 1 FROM public.recruitments r
+      WHERE r.id = NEW.recruitment_id
+        AND r.source_discovery_origin IS DISTINCT FROM 'AGGREGATOR_DISCOVERED'
+    ) THEN
+      RAISE EXCEPTION
+        'Aggregator-sourced Post cannot be attached to a different discovery origin';
+    END IF;
+  END IF;
+
   SELECT r.metadata ->> 'ingest_batch', r.official_notification_url
   INTO v_batch, v_official_url
   FROM public.recruitments r
@@ -1023,6 +1120,9 @@ BEGIN
         v_review.fact_reviewed_by,
         v_review.fact_reviewed_at,
         v_review.fact_review_notes
+      )
+      AND public.official_digest_posts_match_recruitment(
+        NEW.recruitment_id, v_review.post_ids, v_review.posts
       );
 
     IF NOT v_review_ok THEN
@@ -1030,6 +1130,9 @@ BEGIN
       NEW."isOfficialSource" := false;
       NEW.is_official_source := false;
     ELSE
+      NEW."sourceName" := 'official_notification';
+      NEW."isOfficialSource" := true;
+      NEW.is_official_source := true;
       NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb) || jsonb_build_object(
         'source_provenance', jsonb_build_object(
           'authority_review', jsonb_build_object(
