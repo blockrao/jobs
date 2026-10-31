@@ -250,6 +250,7 @@ describe("aggregator source trust gate", () => {
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS source_discovery_origin text");
     expect(migration).toContain("NEW.official_link_source := 'MANUAL_VERIFIED'");
     expect(migration).toContain("ADD COLUMN IF NOT EXISTS category varchar(100)");
+    expect(migration).toContain('ALTER COLUMN "sourceVerificationDate" DROP NOT NULL');
     expect(migration).toContain("AGGREGATOR_DISCOVERED discovery origin is immutable");
     expect(migration).toContain("authority_evidence_url");
     expect(migration).toContain("authority_reviewed_by");
