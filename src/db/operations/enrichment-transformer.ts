@@ -71,13 +71,21 @@ export function transformEnrichment(
     if (isAggregatorDiscovered) return hasExplicitPostFactReview(field);
     const source = typeof item?.source === 'string' ? item.source : null;
     const verifiedAt = item?.verified_at ?? item?.verifiedAt ?? null;
+    const sourceRef = item?.source_ref ?? item?.sourceRef ?? null;
+    const sourceLocator = item?.source_locator ?? item?.sourceLocator ?? null;
     const verificationStatus = item?.verification_status ?? item?.verificationStatus;
+    const hasRowEvidence =
+      verifiedAt != null &&
+      typeof sourceRef === 'string' && sourceRef.trim().length > 0 &&
+      typeof sourceLocator === 'string' && sourceLocator.trim().length > 0;
     if (
+      isAggregatorDiscovered ||
+      !source ||
       source === 'fja_post_inventory' ||
-      verifiedAt == null ||
+      !hasRowEvidence ||
       verificationStatus === 'UNVERIFIABLE'
     ) {
-      return hasExplicitPostFactReview(field);
+      return hasExplicitPostFactReview(field) && hasRowEvidence;
     }
     return true;
   };
@@ -120,6 +128,8 @@ export function transformEnrichment(
           confidenceScore: e.confidence_score ?? e.confidenceScore,
           source: e.source ?? null,
           verifiedAt: e.verified_at ? new Date(e.verified_at) : (e.verifiedAt ? new Date(e.verifiedAt) : undefined),
+          sourceRef: e.source_ref ?? e.sourceRef ?? null,
+          sourceLocator: e.source_locator ?? e.sourceLocator ?? null,
           factId: e.fact_id ?? e.factId,
         }))
         .filter((e: any) => e.degree.trim().length > 0);
@@ -140,6 +150,8 @@ export function transformEnrichment(
           confidenceScore: exp.confidence_score ?? exp.confidenceScore,
           source: exp.source ?? null,
           verifiedAt: exp.verified_at ? new Date(exp.verified_at) : (exp.verifiedAt ? new Date(exp.verifiedAt) : undefined),
+          sourceRef: exp.source_ref ?? exp.sourceRef ?? null,
+          sourceLocator: exp.source_locator ?? exp.sourceLocator ?? null,
           factId: exp.fact_id ?? exp.factId,
         }));
     } else {
