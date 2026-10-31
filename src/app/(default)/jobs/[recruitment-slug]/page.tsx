@@ -51,6 +51,8 @@ function publicHubInput(recruitment: any, posts: any[]) {
     recruitment.sourceDiscoveryOrigin,
     recruitment.verificationStatus,
     recruitment.metadata,
+    undefined,
+    recruitment.officialLinkSource,
   );
   if (!aggregatorDiscovered) return { recruitment, posts, unverifiedAggregator };
 
