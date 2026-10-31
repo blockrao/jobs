@@ -110,6 +110,7 @@ describe("extracted source projection", () => {
     expect(renderer).toContain("const publishedDate = toPlausibleRecruitmentDate(post.notificationPublicationDate);");
     expect(renderer).toContain("&& indexable && notificationLinkVerified && applicationLinkVerified && hasValidPublishedDate;");
     expect(renderer).not.toContain("post.notificationPublicationDate || post.postedAt");
+    expect(renderer).not.toContain("post.postedAt");
     const schema = stripComments(readSource("src/components/job-posting/structured-data/post-leaf-schema.tsx"));
     expect(schema).toContain("const datePostedIso = toIso(post.notificationPublicationDate);");
     expect(schema).not.toContain("toIso(post.postedAt)");
