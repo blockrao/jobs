@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import { recruitmentHref } from "@/lib/recruitment-href";
 import { jsonLdGraph, buildBreadcrumbSchema } from "@/lib/structured-data";
+import { buildDiscoveryCollectionPageSchema, buildDiscoveryItemListSchema } from "@/lib/discovery-hub-schema";
 import { JobOpportunityCard } from "@/components/jobs/job-opportunity-card";
 
 export const revalidate = 3600;
@@ -88,34 +89,25 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
       { name: "Home", path: "/" },
       { name: "Government Jobs in India", path: "/government-jobs" },
     ]),
-    {
-      "@type": "CollectionPage",
-      "@id": `${SITE_URL}${pagePath}#collection`,
-      name: `Government Jobs in India — Current and Upcoming Vacancies`,
+    buildDiscoveryCollectionPageSchema({
+      name: "Government Jobs in India — Current and Upcoming Vacancies",
       description:
         "A directory of current and upcoming government recruitment posts across central and state departments, railways, banking, defence and public-sector undertakings in India.",
-      url: `${SITE_URL}${pagePath}`,
-      inLanguage: "en-IN",
-      isPartOf: { "@id": `${SITE_URL}#website` },
-      mainEntity: { "@id": `${SITE_URL}${pagePath}#job-list` },
-    },
+      path: pagePath,
+      itemListPath: pagePath,
+    }),
   );
 
-  const itemList = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "@id": `${SITE_URL}${pagePath}#job-list`,
+  const itemList = buildDiscoveryItemListSchema({
     name: "Government job vacancies",
     description: "Current and upcoming government recruitment posts listed on JobOye.",
-    numberOfItems: posts.length,
-    itemListOrder: "https://schema.org/ItemListOrderAscending",
-    itemListElement: posts.map((post, index) => ({
-      "@type": "ListItem",
-      position: (page - 1) * PAGE_SIZE + index + 1,
+    path: pagePath,
+    positionOffset: (page - 1) * PAGE_SIZE,
+    items: posts.map((post) => ({
       name: post.postName,
-      url: `${SITE_URL}/jobs/${post.recruitmentSlug}/${post.postSlug}`,
+      path: `/jobs/${post.recruitmentSlug}/${post.postSlug}`,
     })),
-  };
+  });
 
   return (
     <div className="bg-slate-50/70">
