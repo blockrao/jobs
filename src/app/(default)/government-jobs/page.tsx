@@ -56,11 +56,36 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const path = page > 1 ? `/government-jobs?page=${page}` : "/government-jobs";
   const year = new Date().getFullYear();
 
+  const title = `Government Jobs in India: Current & Upcoming Vacancies ${year}${suffix}`;
+  const description =
+    "Explore current and upcoming government jobs in India across central and state departments, railways, banks, defence and PSUs. Browse recruitment posts, vacancy details and application deadlines.";
+  const canonicalUrl = `${SITE_URL}${path}`;
+
   return {
-    title: `Government Jobs in India: Current & Upcoming Vacancies ${year}${suffix} | JobOye`,
-    description:
-      "Explore current and upcoming government jobs in India across central and state departments, railways, banks, defence and PSUs. Browse recruitment posts, vacancy details and application deadlines.",
+    title,
+    description,
     ...pageSeo(path),
+    openGraph: {
+      title: `${title} | JobOye`,
+      description,
+      url: canonicalUrl,
+      type: "website",
+      siteName: "JobOye",
+      images: [
+        {
+          url: "/og-default.png",
+          width: 1200,
+          height: 630,
+          alt: `Government Jobs in India — Current and Upcoming Vacancies ${year}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | JobOye`,
+      description,
+      images: ["/og-default.png"],
+    },
   };
 }
 
