@@ -525,11 +525,24 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $preservepost$
 BEGIN
-  IF NEW."sourceName" IS DISTINCT FROM 'aggregator_extracted'
-     AND OLD.enrichment ? 'source_provenance'
-     AND NOT (coalesce(NEW.enrichment, '{}'::jsonb) ? 'source_provenance') THEN
-    NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb)
-      || jsonb_build_object('source_provenance', OLD.enrichment -> 'source_provenance');
+  IF NEW."sourceName" IS DISTINCT FROM 'aggregator_extracted' THEN
+    IF OLD.enrichment ? 'source_provenance'
+       AND NOT (coalesce(NEW.enrichment, '{}'::jsonb) ? 'source_provenance') THEN
+      NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb)
+        || jsonb_build_object('source_provenance', OLD.enrichment -> 'source_provenance');
+    END IF;
+
+    IF OLD.enrichment ? 'sourceVerificationStatus'
+       AND NOT (coalesce(NEW.enrichment, '{}'::jsonb) ? 'sourceVerificationStatus') THEN
+      NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb)
+        || jsonb_build_object('sourceVerificationStatus', OLD.enrichment -> 'sourceVerificationStatus');
+    END IF;
+
+    IF OLD.enrichment ? 'sourceVerificationDate'
+       AND NOT (coalesce(NEW.enrichment, '{}'::jsonb) ? 'sourceVerificationDate') THEN
+      NEW.enrichment := coalesce(NEW.enrichment, '{}'::jsonb)
+        || jsonb_build_object('sourceVerificationDate', OLD.enrichment -> 'sourceVerificationDate');
+    END IF;
   END IF;
   RETURN NEW;
 END;
