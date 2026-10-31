@@ -271,6 +271,11 @@ STABLE
 AS $fact$
   SELECT COALESCE(
     p_status = 'VERIFIED'
+    AND CASE
+      WHEN jsonb_typeof(coalesce(p_posts, '[]'::jsonb)) = 'array'
+        THEN jsonb_array_length(coalesce(p_posts, '[]'::jsonb)) > 0
+      ELSE false
+    END
     AND cardinality(coalesce(p_reviewed_fields, '{}'::text[])) > 0
     AND jsonb_typeof(coalesce(p_fact_evidence, '{}'::jsonb)) = 'object'
     -- Field keys use post names. Reject missing or duplicate names so one
