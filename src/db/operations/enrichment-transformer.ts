@@ -176,11 +176,10 @@ export function transformEnrichment(
 
       verifiedAgeRuleEntries.forEach(([category, rule]: [string, any]) => {
         if (rule && typeof rule === 'object') {
-          const maxAge = rule.max ?? rule.max_age ?? 65;
-          ageRulesObject[category] = { min: rule.min ?? 0, max: maxAge };
+          const maxAge = rule.max ?? rule.max_age ?? null;
+          ageRulesObject[category] = { max: maxAge };
           ageRulesArray.push({
             category,
-            min: rule.min ?? 0,
             max: maxAge,
             maxAge,
             relaxationYears: rule.relaxation_years ?? rule.relaxationYears,
@@ -293,9 +292,14 @@ export function transformEnrichment(
     enrichment.selectionProcess = verifiedSelectionStages.map((stage: any) => ({
       step: stage.step ?? stage.stage_order ?? 0,
       name: stage.name || stage.stage_name || '',
+      scheduledDate: stage.scheduled_date ? new Date(stage.scheduled_date) : undefined,
       totalMarks: stage.total_marks ?? stage.totalMarks,
-      duration: stage.duration_minutes ?? stage.duration,
-      minQualifyingMarks: stage.minimum_marks ?? stage.min_qualifying_marks ?? stage.minQualifyingMarks,
+      duration: stage.duration ?? (stage.duration_minutes != null ? `${stage.duration_minutes} minutes` : undefined),
+      durationMinutes: stage.duration_minutes ?? undefined,
+      minimumMarks: stage.minimum_marks ?? undefined,
+      passingMarks: stage.passing_marks ?? undefined,
+      isQualifying: stage.is_qualifying ?? undefined,
+      minQualifyingMarks: stage.min_qualifying_marks ?? stage.minQualifyingMarks,
       description: stage.description,
     }));
     enrichment.selectionProcessStages = enrichment.selectionProcess;
