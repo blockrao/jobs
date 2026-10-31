@@ -13,6 +13,45 @@ ALTER TABLE public.posts_experience
   ADD COLUMN IF NOT EXISTS source_ref text,
   ADD COLUMN IF NOT EXISTS source_locator text;
 
+ALTER TABLE public.posts_vacancies
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.posts_selection_process
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.posts_documents
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.posts_important_dates
+  ADD COLUMN IF NOT EXISTS extracted_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.post_age_rules
+  ADD COLUMN IF NOT EXISTS source varchar(100) NOT NULL DEFAULT 'legacy_unknown',
+  ADD COLUMN IF NOT EXISTS extracted_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.posts_application_fee
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
+ALTER TABLE public.posts_official_links
+  ADD COLUMN IF NOT EXISTS extracted_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS verified_at timestamp without time zone,
+  ADD COLUMN IF NOT EXISTS source_ref text,
+  ADD COLUMN IF NOT EXISTS source_locator text;
+
 ALTER TABLE public.official_digest_promote
   ADD COLUMN IF NOT EXISTS authority_review_status text NOT NULL DEFAULT 'UNVERIFIED',
   ADD COLUMN IF NOT EXISTS authority_evidence_url text,
