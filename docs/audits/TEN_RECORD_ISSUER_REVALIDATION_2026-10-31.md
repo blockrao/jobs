@@ -58,6 +58,19 @@ Live read-only query found:
 - IIT Ropar official PDF with same ANRF/PAIR project number (2025 deadline): https://www.iitrpr.ac.in/downloads/sites/default/files/Advertisement%20for%20the%20post%20of%20JRF%20or%20PA%20in%20Department%20of%20Chemistry%20under%20PAIR%20Project%20of%20Dr.%20Tharamani%20%281%29.pdf
 - NIT Rourkela Project Fellowship: https://www.nitrkl.ac.in/SRICCE/Career/
 
+## Additional P0 discovery gate — no-Post Recruitment Hubs
+
+A separate live read-only count and source review found a public discoverability defect affecting this pilot and the wider inventory:
+
+- Current `src/app/(default)/jobs/[recruitment-slug]/page.tsx` sets Hub indexability based on organisation resolution only; it does not require a valid canonical Post Leaf.
+- Current `src/app/sitemap.ts` Hub query excludes quarantined Recruitments and unresolved organisations but does not require an existing non-duplicate Post with a non-empty slug.
+- Live read-only count: **739** Recruitments currently qualify for the Hub sitemap query but have no valid non-duplicate canonical Post Leaf. The total existing sitemap Hub candidates under current exclusions is 5,533.
+- All **10** pilot Recruitments are in the no-valid-Post cohort.
+
+**Remediation prepared:** Draft PR #216, https://github.com/blockrao/jobs/pull/216, adds a matching indexability and sitemap gate plus regression tests (IDX-10). It does not mutate data or publish anything. CI has not yet run for its latest head; Vercel preview is subject to the repository's current build-rate limit. Keep the PR Draft until validation is possible.
+
+This is required for the pilot: once verified canonical Post Leaves exist, their Hubs can become index-eligible and enter the sitemap; until then they remain reachable but noindex, follow.
+
 ## Next safe execution sequence
 
 1. Resolve TISS duplicate identity first; preserve existing canonical Posts under 7517 unless a reviewed redirect/merge plan establishes a better canonical.
