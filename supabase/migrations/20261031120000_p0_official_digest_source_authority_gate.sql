@@ -436,8 +436,7 @@ BEGIN
           source_ref = v_review.authority_evidence_url,
           source_locator = v_review.fact_review_evidence -> (
             'post:' || p.name || ':education'
-          ) ->> 'evidence_ref',
-          updated_at = now()
+          ) ->> 'evidence_ref'
       FROM public.posts p
       WHERE e.post_id = p.id
         AND p.recruitment_id = NEW.id
@@ -448,8 +447,7 @@ BEGIN
           source_ref = v_review.authority_evidence_url,
           source_locator = v_review.fact_review_evidence -> (
             'post:' || p.name || ':experience'
-          ) ->> 'evidence_ref',
-          updated_at = now()
+          ) ->> 'evidence_ref'
       FROM public.posts p
       WHERE x.post_id = p.id
         AND p.recruitment_id = NEW.id
@@ -773,8 +771,7 @@ BEGIN
     UPDATE public.posts_education e
     SET verified_at = NULL,
         source_ref = NULL,
-        source_locator = NULL,
-        updated_at = now()
+        source_locator = NULL
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE e.post_id = p.id
@@ -785,8 +782,7 @@ BEGIN
     UPDATE public.posts_experience x
     SET verified_at = NULL,
         source_ref = NULL,
-        source_locator = NULL,
-        updated_at = now()
+        source_locator = NULL
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
     WHERE x.post_id = p.id
