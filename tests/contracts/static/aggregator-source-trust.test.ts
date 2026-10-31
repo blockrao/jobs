@@ -219,6 +219,9 @@ describe("aggregator source trust gate", () => {
     expect(hubRoute).toContain("hasPostReview(name, \"education\")");
     expect(hubRoute).toContain("hasPostReview(name, \"experience\")");
     expect(hubComponent).toContain("recruitment.sourceDiscoveryOrigin === 'AGGREGATOR_DISCOVERED' && verified");
+    expect(hubComponent).toContain("isManuallyVerifiedOfficialLink(recruitment.officialLinkSource)");
+    expect(hubComponent).toContain("Application link (not manually verified)");
+    expect(hubComponent).toContain("A notification link is available, but it has not been manually verified");
     expect(hubComponent).toContain(") && !recruitment.applicationEndDate");
     expect(leafRoute).toContain('post.recruitmentSourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" && !post.recruitmentApplicationEndDate');
     expect(listingQueries).toContain("issuerSourcePublicCondition");
