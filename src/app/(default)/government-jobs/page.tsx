@@ -9,8 +9,7 @@ import { parsePage } from "@/lib/pagination";
 import { formatDate } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import { recruitmentHref } from "@/lib/recruitment-href";
-import { jsonLdGraph, buildBreadcrumbSchema } from "@/lib/structured-data";
-import { buildDiscoveryCollectionPageSchema, buildDiscoveryItemListSchema } from "@/lib/discovery-hub-schema";
+import { jsonLdGraph, buildBreadcrumbSchema, buildDiscoveryCollectionPageSchema, buildDiscoveryItemListSchema } from "@/lib/structured-data";
 import { JobOpportunityCard } from "@/components/jobs/job-opportunity-card";
 
 export const revalidate = 3600;
@@ -104,7 +103,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
     path: pagePath,
     positionOffset: (page - 1) * PAGE_SIZE,
     items: posts.map((post) => ({
-      name: post.postName,
+      name: post.postName ?? post.recruitmentName,
       path: `/jobs/${post.recruitmentSlug}/${post.postSlug}`,
     })),
   });
@@ -230,7 +229,7 @@ export default async function AllGovernmentJobsPage({ searchParams }: Props) {
                   return (
                     <li key={post.postId}>
                       <JobOpportunityCard
-                        postName={post.postName}
+                        postName={post.postName ?? post.recruitmentName}
                         organizationName={post.orgName}
                         organizationHref={`/organizations/${post.orgSlug}`}
                         recruitmentName={post.recruitmentName}
