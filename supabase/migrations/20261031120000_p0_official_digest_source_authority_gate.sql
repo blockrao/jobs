@@ -228,11 +228,12 @@ AS $required$
 
     UNION ALL
 
-    -- Explicitly review the presence or absence of application-window dates.
+    -- Explicitly review the presence or absence of notification and application-window dates.
     SELECT 'hub:' || required_hub_fields.field_key AS field_key
     FROM unnest(ARRAY[
       'org_full',
       'year',
+      'notification_date',
       'application_start_date',
       'application_end_date'
     ]::text[]) AS required_hub_fields(field_key)
