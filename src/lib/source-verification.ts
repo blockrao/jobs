@@ -7,6 +7,14 @@ export function isPreliminaryUnverifiedSourceMetadata(metadata: unknown): boolea
   return (metadata as Record<string, unknown>).verification_state === "preliminary_unverified";
 }
 
+/**
+ * A-070: only an explicit MANUAL_VERIFIED state permits a link to be described
+ * as an official notification or application link, or used as a verified citation.
+ */
+export function isManuallyVerifiedOfficialLink(source: unknown): boolean {
+  return typeof source === "string" && source.trim().toUpperCase() === "MANUAL_VERIFIED";
+}
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -32,13 +40,13 @@ function hasCompleteFactReviewEvidence(factReview: any): boolean {
  * with complete, field-addressable evidence.
  */
 export function isUnverifiedAggregatorSource(
-  officialLinkSource: unknown,
+  sourceDiscoveryOrigin: unknown,
   verificationStatus: unknown,
   metadata?: unknown,
   postSourceName?: unknown,
 ): boolean {
   const aggregatorOrigin =
-    officialLinkSource === "AGGREGATOR_DISCOVERED" ||
+    sourceDiscoveryOrigin === "AGGREGATOR_DISCOVERED" ||
     (typeof postSourceName === "string" && postSourceName.trim().toLowerCase() === "aggregator");
   if (!aggregatorOrigin) return false;
   if (verificationStatus !== "VERIFIED") return true;
