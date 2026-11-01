@@ -192,7 +192,7 @@ export function HomeContent({
         <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 lg:gap-12 pt-2 pb-10">
           <div>
             <div className="flex flex-wrap items-baseline justify-between gap-3 mb-2">
-              <h2 className={sectionTitle}>{isHi ? "अभी खुली सबसे बड़ी भर्तियां" : "Biggest recruitments open now"}</h2>
+              <h2 className={sectionTitle}>{isHi ? "हाल में अधिसूचित सक्रिय भर्तियां" : "Recently announced active recruitments"}</h2>
               <Link href="/jobs" className={viewAll}>{isHi ? "सभी देखें →" : "All notifications →"}</Link>
             </div>
             <ul>
@@ -315,7 +315,7 @@ export function HomeContent({
               {orgs.map((o) => (
                 <Link key={o.slug} href={`/organizations/${o.slug}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-black/12 bg-white px-3.5 text-[15px] font-semibold hover:border-brand-600/50">
                   <span className="max-w-[260px] truncate">{isHi && o.nameHi ? o.nameHi : o.name}</span>
-                  <span className="tabular-nums text-neutral-500">{nf(o.vacancies)}</span>
+                  <span className="tabular-nums text-neutral-500">{nf(o.recruitments)} {isHi ? "भर्तियां" : "recruitments"}</span>
                 </Link>
               ))}
             </div>
