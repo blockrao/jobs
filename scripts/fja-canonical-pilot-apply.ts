@@ -58,6 +58,19 @@ async function verifyPages(paths: string[]) {
     }
     results.push({ path: routePath, url, status: response.status, verified: reason === null, reason });
   }
+  const sitemapUrl = baseUrl + "/sitemap.xml";
+  const sitemapResponse = await fetch(sitemapUrl, { headers: { "user-agent": "JobOye-FJA-Pilot-Verification/1.0" } });
+  const sitemapText = await sitemapResponse.text();
+  const missingFromSitemap = paths.filter((routePath) => !sitemapText.includes(baseUrl + routePath));
+  results.push({
+    path: "/sitemap.xml",
+    url: sitemapUrl,
+    status: sitemapResponse.status,
+    verified: sitemapResponse.status === 200 && missingFromSitemap.length === 0,
+    reason: sitemapResponse.status !== 200
+      ? "SITEMAP_HTTP_" + sitemapResponse.status
+      : missingFromSitemap.length ? "CANONICAL_URLS_MISSING_FROM_SITEMAP: " + missingFromSitemap.join(", ") : null,
+  });
   return results;
 }
 
