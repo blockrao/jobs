@@ -44,6 +44,7 @@ describe("PV-U post-line classifier", () => {
     expect(classifyPostLine("Project Associate I/ Project Associate II", 2)).toBe("COMBINED");
     expect(classifyPostLine("Adjunct Faculty", 3)).toBe("OK");
     expect(classifyPostLine("Director, Centre for Distance and Online Education", 1)).toBe("OK");
+    expect(classifyPostLine("Professor cum Director, Centre for Distance and Online Education", 1)).toBe("COMBINED");
     expect(classifyPostLine("Director and Assistant Director", 2)).toBe("COMBINED");
   });
 
