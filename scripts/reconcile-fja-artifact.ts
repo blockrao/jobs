@@ -25,7 +25,7 @@ const cell=(v:unknown)=>'"'+String(v??"").replace(/"/g,'""')+'"';
 
 async function main(){
  const allListings=JSON.parse(await readFile(path.join(input,"all-in-window-listings.json"),"utf8"));
- const requestedIds=new Set((process.env.FJA_IMPORT_EXTERNAL_IDS??"").split(/[\\s,;]+/).map((v:string)=>v.trim()).filter(Boolean));
+ const requestedIds=new Set((process.env.FJA_IMPORT_EXTERNAL_IDS??"").split(/[\s,;]+/).map((v:string)=>v.trim()).filter(Boolean));
  const listings=requestedIds.size?allListings.filter((l:any)=>requestedIds.has(extId(l.listing_url))):allListings;
  if(requestedIds.size&&listings.length!==requestedIds.size){
   const found=new Set(listings.map((l:any)=>extId(l.listing_url)));
