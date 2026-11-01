@@ -417,7 +417,7 @@ export async function listTopHiringOrgs(limit = 12): Promise<HomeOrgRow[]> {
 }
 
 export async function getHomeStats(): Promise<HomeStats> {
-  if (!hasDb()) return { closing7dPosts: 0, totalVacancies: 0, liveRecruitments: 0 };
+  if (!hasDb()) return { closing7dPosts: 0, totalVacancies: null, liveRecruitments: 0 };
   const db = getDb();
   const rows = await db.execute(sql`
     SELECT
