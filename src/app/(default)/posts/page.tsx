@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const seo = pageSeo("/posts");
   return {
-    title: "Govt Jobs Control Center 2026 — All Active Recruitments & Vacancies",
+    title: "Govt Jobs Control Center 2026 — Active Recruitments & Posts",
     description:
-      "Live dashboard of active government job recruitments in India. Track deadlines, browse by organisation, and apply before they close.",
+      "Live dashboard of active government job recruitments in India. Browse individual posts, organisations and application deadlines.",
     alternates: seo.alternates,
     openGraph: {
       title: "Govt Jobs Control Center 2026 — All Active Recruitments",
@@ -183,7 +183,7 @@ function JobTable({ jobs }: { jobs: JobRow[] }) {
             <tr className="border-b border-black/5 bg-neutral-50 text-left">
               <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide min-w-[260px]">Recruitment</th>
               <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide">Organisation</th>
-              <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide text-right">Vacancies</th>
+              <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide text-right">Vacancies (issuer verification pending)</th>
               <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide">Last Date</th>
               <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide">Closes</th>
               <th className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide">Posts</th>
