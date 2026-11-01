@@ -32,6 +32,7 @@ describe("vacancy field-evidence publication gates", () => {
     const queries = read("src/lib/queries.ts");
     const recruitmentList = read("src/db/operations/get-recruitments.ts");
     const organisationStats = read("src/lib/organizations/stats.ts");
+    const stateQueries = read("src/lib/states/queries.ts");
 
     expect(search).toContain("totalVacancies: null");
     expect(search).not.toContain("COALESCE(r.total_vacancies, p.total_vacancies)");
@@ -40,6 +41,8 @@ describe("vacancy field-evidence publication gates", () => {
     expect(queries).not.toContain("verifiedHomeVacancy");
     expect(recruitmentList).toContain('NULL::int AS "totalVacancies"');
     expect(organisationStats).toContain("totalVacancies: null");
+    expect(stateQueries).toContain("totalVacancies: null");
+    expect(stateQueries).not.toContain("r.total_vacancies");
   });
 
   it("does not sum or rank public inventory using unsupported vacancy columns", () => {
