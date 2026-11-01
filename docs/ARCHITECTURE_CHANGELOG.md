@@ -1390,3 +1390,14 @@ Second batch under `docs/enrichment/ENRICHMENT_PIPELINE_BRIEF.md`: the ten neare
 **Tests.** tests/contracts/unit/descriptive-recruitment-slug.test.ts covers the two requested descriptive slugs, punctuation normalization and invalid titles.
 
 **Validation.** Production migration version `20261027061751` is recorded and the live constraint was checked read-only after application. Full CI must pass before the application code is merged.
+
+
+## FJA-005 — canonical provenance and notification URL check history
+
+**Objective.** Allow FJA HTML-derived evidence and notification-link checks to be associated with canonical Recruitment/Post entities without routing new records through legacy postings.
+
+**Change.** The proposed additive migration adds nullable recruitment_id and post_id foreign keys to source_observations while retaining posting_id for historical observations. It adds a private append-only notification_url_checks table linked to a source observation, with optional canonical entity links, explicit approved-host evidence, redirect trace, final destination, HTTP status, content type, result and timestamps. The Drizzle schema is updated in the same change. The existing private fja_source_captures inventory remains the raw HTML evidence store; no duplicate capture table is introduced.
+
+**Trust boundary.** A successful HEAD check proves only reachability and approved-host routing at the time checked. It does not verify PDF/document contents or any job facts. FJA source URLs and raw HTML remain private and must never enter public DTOs or rendered output. The new check-history table has RLS enabled and no anon/authenticated policies or grants.
+
+**Scope.** Migration and rollback are committed for review only. No migration has been applied, no data has been backfilled, and no ingestion, publication or daily schedule has been activated. Code integration and the 5–10 record pilot remain subsequent gates under issue #241.
