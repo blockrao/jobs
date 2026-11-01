@@ -13,71 +13,29 @@ export interface NotificationUrlCheck {
 }
 
 export interface NotificationUrlCheckOptions {
-  fetchImpl?: typeof fetch;
+  /** Explicit official host(s) authorised for this recruitment, resolved from trusted source evidence. */\n  approvedHosts: string[];\n  fetchImpl?: typeof fetch;
   maxRedirects?: number;
   timeoutMs?: number;
   now?: () => Date;
 }
 
-const AUTHORITY_DOMAINS = [
-  "gov.in",
-  "nic.in",
-  "ac.in",
-  "edu.in",
-  "res.in",
-  "mil.in",
-  "hmtindia.com",
-  "sbi.co.in",
-  "ibps.in",
-  "ongcindia.com",
-  "ntpc.co.in",
-  "iocl.com",
-  "bharatpetroleum.in",
-  "hindustanpetroleum.com",
-  "gailonline.com",
-  "bel-india.in",
-  "bhel.com",
-  "sail.co.in",
-  "coalindia.in",
-  "powergrid.in",
-  "ecil.co.in",
-  "rites.com",
-  "ircon.org",
-  "mazagondock.in",
-  "grse.in",
-  "nclcil.in",
-  "nlcindia.in",
-] as const;
-
-const AGGREGATOR_DOMAINS = [
-  "freejobalert.com",
-  "sarkariresult.com",
-  "sarkarinaukri.com",
-  "indiasarkarinaukri.com",
-  "sahisarkarijobs.com",
-  "sarkariexam.com",
-  "freshersworld.com",
-] as const;
-
-function hostMatchesDomain(host: string, domain: string): boolean {
-  return host === domain || host.endsWith(`.${domain}`);
-}
-
-function isPublicAuthorityHost(hostname: string): boolean {
+function isApprovedHost(hostname: string, approvedHosts: string[]): boolean {
   const host = hostname.toLowerCase().replace(/\\.$/, "");
   if (!host || isIP(host) !== 0 || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
     return false;
   }
-  if (AGGREGATOR_DOMAINS.some((domain) => hostMatchesDomain(host, domain))) return false;
-  return AUTHORITY_DOMAINS.some((domain) => hostMatchesDomain(host, domain));
+  return approvedHosts.some((entry) => {
+    const approved = entry.toLowerCase().replace(/^https?:\\/\\//, "").split("/")[0].replace(/^\\*\\./, "").replace(/\\.$/, "");
+    return approved.length > 0 && (host === approved || host.endsWith(`.${approved}`));
+  });
 }
 
-function parseCandidate(value: string): URL | null {
+function parseCandidate(value: string, approvedHosts: string[]): URL | null {
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) return null;
     if (url.username || url.password) return null;
-    if (!isPublicAuthorityHost(url.hostname)) return null;
+    if (!isApprovedHost(url.hostname, approvedHosts)) return null;
     return url;
   } catch {
     return null;
@@ -98,7 +56,7 @@ export async function checkOfficialNotificationUrl(
   const checkedAt = (options.now ?? (() => new Date()))().toISOString();
   const requestedUrl = value.trim();
   const redirectChain: string[] = [];
-  const initial = parseCandidate(requestedUrl);
+  const approvedHosts = options.approvedHosts ?? [];\n  const initial = parseCandidate(requestedUrl, approvedHosts);
 
   const result = (
     ok: boolean,
@@ -151,7 +109,7 @@ export async function checkOfficialNotificationUrl(
       } catch {
         return result(false, "INVALID_REDIRECT_LOCATION", current.toString(), response.status, contentType);
       }
-      if (!parseCandidate(next.toString())) {
+      if (!parseCandidate(next.toString(), approvedHosts)) {
         return result(false, "REDIRECT_TO_UNTRUSTED_HOST", current.toString(), response.status, contentType);
       }
       current = next;
