@@ -1044,7 +1044,7 @@ export async function getJobsControlCenter(): Promise<{
         r.application_start_date,
         NULL::int AS total_vacancies,
         COUNT(po.id)::int AS post_count,
-        STRING_AGG(po.name, ' · ' ORDER BY po.vacancy_total DESC NULLS LAST) AS post_names,
+        STRING_AGG(po.name, ' · ' ORDER BY po.name) AS post_names,
         EXTRACT(DAY FROM (r.application_end_date - NOW()))::int AS days_remaining,
         r.location_state_code
       FROM public.recruitments r
@@ -1078,7 +1078,7 @@ export async function getJobsControlCenter(): Promise<{
   const stats: ControlCenterStats = {
     activeRecruitments: Number(s.active_recruitments ?? 0),
     totalPosts: Number(s.total_posts ?? 0),
-    totalVacancies: Number(s.total_vacancies ?? 0),
+    totalVacancies: null,
     orgsHiring: Number(s.orgs_hiring ?? 0),
     closingThisWeek: Number(s.closing_this_week ?? 0),
     closingThisMonth: Number(s.closing_this_month ?? 0),
@@ -1181,7 +1181,7 @@ export async function getHomepageStats(): Promise<{
         r.name,
         o.name AS org_name,
         r.application_end_date,
-        COALESCE(r.total_vacancies, SUM(po.vacancy_total)::int) AS total_vacancies
+        NULL::int AS total_vacancies
       FROM public.recruitments r
       JOIN public.organizations o ON o.id = r.organization_id
       JOIN public.posts po ON po.recruitment_id = r.id
@@ -1206,7 +1206,7 @@ export async function getHomepageStats(): Promise<{
     name: String(r.name),
     orgName: String(r.org_name),
     applicationEndDate: new Date(String(r.application_end_date)),
-    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    totalVacancies: null,
   }));
 
   return { stats, closingSoon };
