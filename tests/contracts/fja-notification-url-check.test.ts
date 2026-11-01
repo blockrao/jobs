@@ -14,7 +14,7 @@ describe("checkOfficialNotificationUrl", () => {
 
     const result = await checkOfficialNotificationUrl(
       "https://www.upsc.gov.in/notices/notice.pdf",
-      { approvedHosts: ["upsc.gov.in"], fetchImpl, now: () => new Date("2026-11-01T00:00:00.000Z") },
+      { approvedHosts: ["upsc.gov.in", "www.upsc.gov.in"], fetchImpl, now: () => new Date("2026-11-01T00:00:00.000Z") },
     );
 
     expect(result.ok).toBe(true);
