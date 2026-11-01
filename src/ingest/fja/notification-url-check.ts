@@ -13,20 +13,32 @@ export interface NotificationUrlCheck {
 }
 
 export interface NotificationUrlCheckOptions {
-  /** Explicit official host(s) authorised for this recruitment, resolved from trusted source evidence. */\n  approvedHosts: string[];\n  fetchImpl?: typeof fetch;
+  /** Explicit official host(s) authorised for this recruitment, resolved from trusted source evidence. */
+  approvedHosts?: string[];
+  fetchImpl?: typeof fetch;
   maxRedirects?: number;
   timeoutMs?: number;
   now?: () => Date;
 }
 
+function normaliseApprovedHost(entry: string): string | null {
+  try {
+    const candidate = entry.trim().replace(/^\*\./, "");
+    const url = new URL(candidate.includes("://") ? candidate : `https://${candidate}`);
+    return url.hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return null;
+  }
+}
+
 function isApprovedHost(hostname: string, approvedHosts: string[]): boolean {
-  const host = hostname.toLowerCase().replace(/\\.$/, "");
+  const host = hostname.toLowerCase().replace(/\.$/, "");
   if (!host || isIP(host) !== 0 || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
     return false;
   }
   return approvedHosts.some((entry) => {
-    const approved = entry.toLowerCase().replace(/^https?:\\/\\//, "").split("/")[0].replace(/^\\*\\./, "").replace(/\\.$/, "");
-    return approved.length > 0 && (host === approved || host.endsWith(`.${approved}`));
+    const approved = normaliseApprovedHost(entry);
+    return !!approved && (host === approved || host.endsWith(`.${approved}`));
   });
 }
 
@@ -56,7 +68,8 @@ export async function checkOfficialNotificationUrl(
   const checkedAt = (options.now ?? (() => new Date()))().toISOString();
   const requestedUrl = value.trim();
   const redirectChain: string[] = [];
-  const approvedHosts = options.approvedHosts ?? [];\n  const initial = parseCandidate(requestedUrl, approvedHosts);
+  const approvedHosts = options.approvedHosts ?? [];
+  const initial = parseCandidate(requestedUrl, approvedHosts);
 
   const result = (
     ok: boolean,
