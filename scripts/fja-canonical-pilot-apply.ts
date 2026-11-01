@@ -25,7 +25,8 @@ type ReadyRecord = {
 };
 const db = getDb();
 const runId = process.env.FJA_SOURCE_RUN_ID ?? "";
-const baseUrl = (process.env.JOBOYE_BASE_URL ?? "https://www.joboye.com").replace(/\\/$/, "");
+const rawBaseUrl = process.env.JOBOYE_BASE_URL ?? "https://www.joboye.com";
+const baseUrl = rawBaseUrl.endsWith("/") ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
 const confirmWrite = process.env.FJA_CANONICAL_CONFIRM_LIVE_WRITE === "1";
 const reportPath = "fja-canonical-pilot-dry-run.json";
 const outputPath = "fja-canonical-pilot-live.json";
