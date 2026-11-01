@@ -282,7 +282,7 @@ export interface HomeOrgRow {
 
 export interface HomeStats {
   closing7dPosts: number;
-  totalVacancies: number;
+  totalVacancies: number | null;
   liveRecruitments: number;
 }
 
@@ -1804,7 +1804,7 @@ export async function listLivePostsByQualification(
       postId: posts.id,
       postName: posts.name,
       postSlug: posts.slug,
-      vacancyTotal: null, // No accepted field-level evidence is currently loaded.
+      vacancyTotal: sql<number | null>`NULL`, // No accepted field-level evidence is currently loaded.
       recruitmentSlug: recruitments.slug,
       applicationEndDate: plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
       orgName: organizations.name,
