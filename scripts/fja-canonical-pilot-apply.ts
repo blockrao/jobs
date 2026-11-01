@@ -74,7 +74,7 @@ async function main() {
   };
   if (report.mode !== "dry-run-only" || report.sourceRunId !== runId) throw new Error("Pilot report does not match this source run.");
   const ready = report.records.filter((r) => r.verdict === "READY_FOR_PILOT") as unknown as ReadyRecord[];
-  if (ready.length < 1 || ready.length > 10) throw new Error("No eligible records or pilot exceeded the 10-record bound.");
+  if (ready.length < 5 || ready.length > 10) throw new Error("The live pilot requires 5–10 eligible records; this dry-run produced " + ready.length + ". No canonical writes were made.");
 
   const written: Array<{ externalId: string; recruitmentSlug: string; recruitmentId: number; hubUrl: string; leafUrls: string[] }> = [];
   const failed: Array<{ externalId: string; reason: string }> = [];
