@@ -8,7 +8,8 @@ describe("vacancy field-evidence publication gates", () => {
   it("requires accepted issuer evidence in both canonical vacancy resolvers", () => {
     const source = read("src/lib/resolvers/fact-resolvers.ts");
     expect(source).toContain("post.officialVacancyEvidenceAccepted === true");
-    expect(source).toContain("post.resolvedVacancyCount != null && post.vacancies");
+    expect(source).toContain("sourceAccepted &&");
+    expect(source).toContain("!scopeViolation");
     expect(source).toContain("recruitment.officialVacancyEvidenceAccepted === true");
     expect(source).toContain('sourceVerificationStatus === "VERIFIED"');
   });
