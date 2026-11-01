@@ -15,7 +15,6 @@ import {
 } from "@/db/schema";
 import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
-import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 import { toPlausibleRecruitmentDate } from "@/lib/recruitment-dates";
 import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
 
@@ -255,10 +254,9 @@ export async function listCategories() {
 
 // ---------- Homepage (deadline desk) ----------
 //
-// Design decision 2026-10-14 (HOMEPAGE_DESIGN_STRATEGY): the homepage ranks
-// by vacancies × urgency, never by recency or pure date — bulk ingest makes
-// "new" meaningless and date-sorted heads are dominated by 1-vacancy project
-// posts. Government sectors only; "PRIVATE" is the write-path default bucket.
+// Vacancy figures are withheld until a persisted, accepted issuer observation
+// exists for the recruitment-scoped field. Discovery ranking therefore uses
+// freshness and deadline urgency, never unverified vacancy totals.
 
 export interface HomeRecruitmentRow {
   slug: string;
@@ -279,12 +277,12 @@ export interface HomeOrgRow {
   name: string;
   nameHi: string | null;
   slug: string;
-  vacancies: number;
+  recruitments: number;
 }
 
 export interface HomeStats {
   closing7dPosts: number;
-  totalVacancies: number;
+  totalVacancies: number | null;
   liveRecruitments: number;
 }
 
@@ -293,15 +291,6 @@ const liveGovRecruitment = sql`
   AND r.slug IS NOT NULL
   AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
   AND o.slug <> 'unclassified-government-jobs'
-`;
-
-// Homepage vacancy rankings are intentionally stricter than general page
-// visibility: only officially verified recruitment totals in a conservative
-// range are eligible. Extreme values remain available for review, not promotion.
-const verifiedHomeVacancy = sql`
-  r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
-  AND r.official_notification_url ~ '^https?://'
-  AND r.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
 `;
 
 /**
@@ -330,7 +319,6 @@ const homeRecruitmentSelect = sql`
     o.name_hi AS org_name_hi,
     o.slug AS org_slug,
     o.sector,
-    r.total_vacancies,
     r.application_end_date,
     (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count
   FROM public.recruitments r
@@ -347,10 +335,8 @@ function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
       orgNameHi: r.org_name_hi ? String(r.org_name_hi) : null,
       orgSlug: String(r.org_slug),
       sector: String(r.sector),
-      totalVacancies:
-        r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
-          ? Number(r.total_vacancies)
-          : null,
+      // Global verification and URL presence do not establish this field.
+      totalVacancies: null,
       applicationEndDate: deadline,
       postCount: Number(r.post_count ?? 0),
       daysLeft: deadline ? Math.ceil((deadline.getTime() - Date.now()) / 86_400_000) : null,
@@ -378,9 +364,8 @@ export async function listClosingSoon(opts: { days: number; limit: number; offse
   const rows = await db.execute(sql`
     ${homeRecruitmentSelect}
     WHERE ${liveGovRecruitment}
-      AND ${verifiedHomeVacancy}
       AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${opts.days}::int)
-    ORDER BY r.total_vacancies DESC, r.application_end_date ASC, r.id
+    ORDER BY r.application_end_date ASC, r.id
     LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
   `);
   return mapHomeRows(rows);
@@ -393,20 +378,19 @@ export async function countClosingSoon(days: number): Promise<number> {
     SELECT COUNT(*)::int AS n FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
     WHERE ${liveGovRecruitment}
-      AND ${verifiedHomeVacancy}
       AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${days}::int)
   `);
   return Number((rows as unknown as Record<string, unknown>[])[0]?.n ?? 0);
 }
 
-/** Live recruitments ranked by vacancies (the "biggest open now" rule). */
+/** Live recruitments ranked by notification freshness, then deadline. */
 export async function listBiggestOpen(opts: { limit: number; offset?: number }): Promise<HomeRecruitmentRow[]> {
   if (!hasDb()) return [];
   const db = getDb();
   const rows = await db.execute(sql`
     ${homeRecruitmentSelect}
-    WHERE ${liveGovRecruitment} AND ${verifiedHomeVacancy}
-    ORDER BY r.total_vacancies DESC, r.application_end_date ASC NULLS LAST, r.id
+    WHERE ${liveGovRecruitment}
+    ORDER BY r.notification_date DESC NULLS LAST, r.application_end_date ASC NULLS LAST, r.id DESC
     LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
   `);
   return mapHomeRows(rows);
@@ -416,41 +400,29 @@ export async function listTopHiringOrgs(limit = 12): Promise<HomeOrgRow[]> {
   if (!hasDb()) return [];
   const db = getDb();
   const rows = await db.execute(sql`
-    SELECT o.name, o.name_hi, o.slug, COALESCE(SUM(r.total_vacancies), 0)::int AS vacancies
+    SELECT o.name, o.name_hi, o.slug, COUNT(DISTINCT r.id)::int AS recruitments
     FROM public.organizations o
     JOIN public.recruitments r ON r.organization_id = o.id
-    WHERE ${liveGovRecruitment} AND ${verifiedHomeVacancy} AND o.merged_into_id IS NULL
+    WHERE ${liveGovRecruitment} AND o.merged_into_id IS NULL
     GROUP BY o.id
-    HAVING COALESCE(SUM(r.total_vacancies), 0) > 0
-    ORDER BY vacancies DESC, o.name
+    ORDER BY recruitments DESC, o.name
     LIMIT ${limit}
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
     name: String(r.name),
     nameHi: r.name_hi ? String(r.name_hi) : null,
     slug: String(r.slug),
-    vacancies: Number(r.vacancies),
+    recruitments: Number(r.recruitments),
   }));
 }
 
 export async function getHomeStats(): Promise<HomeStats> {
-  if (!hasDb()) return { closing7dPosts: 0, totalVacancies: 0, liveRecruitments: 0 };
+  if (!hasDb()) return { closing7dPosts: 0, totalVacancies: null, liveRecruitments: 0 };
   const db = getDb();
   const rows = await db.execute(sql`
     SELECT
       COUNT(p.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_7d_posts,
-      (
-        SELECT COALESCE(SUM(r2.total_vacancies), 0)::int
-        FROM public.recruitments r2
-        JOIN public.organizations o2 ON o2.id = r2.organization_id
-        WHERE ${recruitmentIsLiveSql(sql`r2.status`, sql`r2.application_end_date`)}
-          AND r2.slug IS NOT NULL
-          AND r2.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
-          AND r2.official_notification_url ~ '^https?://'
-          AND r2.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
-          AND r2.verification_status IS DISTINCT FROM 'QUARANTINED'
-          AND o2.slug <> 'unclassified-government-jobs'
-      ) AS total_vacancies,
+      0::int AS total_vacancies, -- Withheld until recruitment-scoped evidence is persisted.
       COUNT(DISTINCT r.id)::int AS live_recruitments
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
@@ -460,7 +432,7 @@ export async function getHomeStats(): Promise<HomeStats> {
   const s = (rows as unknown as Record<string, unknown>[])[0] ?? {};
   return {
     closing7dPosts: Number(s.closing_7d_posts ?? 0),
-    totalVacancies: Number(s.total_vacancies ?? 0),
+    totalVacancies: null,
     liveRecruitments: Number(s.live_recruitments ?? 0),
   };
 }
@@ -507,7 +479,7 @@ export async function listLivePostsBySector(
       postId: posts.id,
       postName: posts.name,
       postSlug: posts.slug,
-      vacancyTotal: posts.vacancyTotal,
+      vacancyTotal: sql<number | null>`NULL`, // No accepted field-level evidence is currently loaded.
       recruitmentName: recruitments.name,
       recruitmentSlug: recruitments.slug,
       recruitmentStatus: recruitments.status,
@@ -942,7 +914,7 @@ export async function countCurrentPostingsByCommission(): Promise<Record<number,
 export interface ControlCenterStats {
   activeRecruitments: number;
   totalPosts: number;
-  totalVacancies: number;
+  totalVacancies: number | null;
   orgsHiring: number;
   closingThisWeek: number;   // within 7 days
   closingThisMonth: number;  // within 30 days
@@ -952,7 +924,7 @@ export interface ControlCenterStats {
 export interface DeadlineBucket {
   label: string;
   recruitments: number;
-  vacancies: number;
+  vacancies: number | null;
   urgency: "critical" | "high" | "medium" | "low" | "none";
 }
 
@@ -982,7 +954,7 @@ export interface JobRow {
 export interface RoleRow {
   name: string;
   occurrenceCount: number;
-  totalVacancies: number;
+  totalVacancies: number | null;
   earliestDeadline: Date | null;
   closesWithinWeek: boolean;
 }
@@ -1011,7 +983,7 @@ export async function getJobsControlCenter(): Promise<{
       SELECT
         COUNT(DISTINCT r.id)::int AS active_recruitments,
         COUNT(po.id)::int AS total_posts,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        NULL::int AS total_vacancies,
         COUNT(DISTINCT r.organization_id)::int AS orgs_hiring,
         COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_this_week,
         COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '30 days')::int AS closing_this_month,
@@ -1033,7 +1005,7 @@ export async function getJobsControlCenter(): Promise<{
           ELSE 'Later'
         END AS label,
         COUNT(DISTINCT r.id)::int AS recruitments,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS vacancies
+        NULL::int AS vacancies
       FROM public.recruitments r
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
@@ -1048,14 +1020,14 @@ export async function getJobsControlCenter(): Promise<{
         o.name AS org_name,
         o.slug AS org_slug,
         COUNT(po.id)::int AS post_count,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS vacancies,
+        NULL::int AS vacancies,
         MIN(r.application_end_date) AS earliest_deadline
       FROM public.organizations o
       JOIN public.recruitments r ON r.organization_id = o.id
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
       GROUP BY o.id, o.name, o.slug
-      ORDER BY vacancies DESC NULLS LAST
+      ORDER BY post_count DESC NULLS LAST
       LIMIT 12
     `),
 
@@ -1069,9 +1041,9 @@ export async function getJobsControlCenter(): Promise<{
         r.status,
         r.application_end_date,
         r.application_start_date,
-        COALESCE(r.total_vacancies, SUM(po.vacancy_total)::int) AS total_vacancies,
+        NULL::int AS total_vacancies,
         COUNT(po.id)::int AS post_count,
-        STRING_AGG(po.name, ' · ' ORDER BY po.vacancy_total DESC NULLS LAST) AS post_names,
+        STRING_AGG(po.name, ' · ' ORDER BY po.name) AS post_names,
         EXTRACT(DAY FROM (r.application_end_date - NOW()))::int AS days_remaining,
         r.location_state_code
       FROM public.recruitments r
@@ -1089,14 +1061,14 @@ export async function getJobsControlCenter(): Promise<{
       SELECT
         po.name,
         COUNT(po.id)::int AS occurrence_count,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        NULL::int AS total_vacancies,
         MIN(r.application_end_date) AS earliest_deadline
       FROM public.posts po
       JOIN public.recruitments r ON r.id = po.recruitment_id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY po.name
-      ORDER BY total_vacancies DESC NULLS LAST
+      ORDER BY occurrence_count DESC
       LIMIT 50
     `),
   ]);
@@ -1105,7 +1077,7 @@ export async function getJobsControlCenter(): Promise<{
   const stats: ControlCenterStats = {
     activeRecruitments: Number(s.active_recruitments ?? 0),
     totalPosts: Number(s.total_posts ?? 0),
-    totalVacancies: Number(s.total_vacancies ?? 0),
+    totalVacancies: null,
     orgsHiring: Number(s.orgs_hiring ?? 0),
     closingThisWeek: Number(s.closing_this_week ?? 0),
     closingThisMonth: Number(s.closing_this_month ?? 0),
@@ -1123,7 +1095,7 @@ export async function getJobsControlCenter(): Promise<{
   const deadlineBuckets: DeadlineBucket[] = (bucketRows as unknown as Record<string, unknown>[]).map((r) => ({
     label: String(r.label),
     recruitments: Number(r.recruitments),
-    vacancies: Number(r.vacancies),
+    vacancies: null,
     urgency: urgencyMap[String(r.label)] ?? "none",
   }));
 
@@ -1143,7 +1115,7 @@ export async function getJobsControlCenter(): Promise<{
     status: String(r.status),
     applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
     applicationStartDate: r.application_start_date ? new Date(String(r.application_start_date)) : null,
-    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    totalVacancies: null,
     postCount: Number(r.post_count),
     postNames: String(r.post_names ?? ""),
     daysRemaining: r.days_remaining != null ? Number(r.days_remaining) : null,
@@ -1155,7 +1127,7 @@ export async function getJobsControlCenter(): Promise<{
     return {
       name: String(r.name),
       occurrenceCount: Number(r.occurrence_count),
-      totalVacancies: Number(r.total_vacancies),
+      totalVacancies: null,
       earliestDeadline,
       closesWithinWeek: earliestDeadline !== null && earliestDeadline.getTime() - Date.now() < 7 * 86_400_000,
     };
@@ -1173,7 +1145,7 @@ export interface ClosingSoonJob {
 }
 
 export interface HomepageStats {
-  totalVacancies: number;
+  totalVacancies: number | null;
   activeRecruitments: number;
   closingThisWeek: number;
   orgsHiring: number;
@@ -1194,7 +1166,7 @@ export async function getHomepageStats(): Promise<{
   const [statsRows, closingRows] = await Promise.all([
     db.execute(sql`
       SELECT
-        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        NULL::int AS total_vacancies,
         COUNT(DISTINCT r.id)::int AS active_recruitments,
         COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_this_week,
         COUNT(DISTINCT r.organization_id)::int AS orgs_hiring
@@ -1208,13 +1180,13 @@ export async function getHomepageStats(): Promise<{
         r.name,
         o.name AS org_name,
         r.application_end_date,
-        COALESCE(r.total_vacancies, SUM(po.vacancy_total)::int) AS total_vacancies
+        NULL::int AS total_vacancies
       FROM public.recruitments r
       JOIN public.organizations o ON o.id = r.organization_id
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '10 days'
-      GROUP BY r.id, r.slug, r.name, r.application_end_date, r.total_vacancies, o.name
+      GROUP BY r.id, r.slug, r.name, r.application_end_date, o.name
       ORDER BY r.application_end_date ASC
       LIMIT 6
     `),
@@ -1222,7 +1194,7 @@ export async function getHomepageStats(): Promise<{
 
   const s = (statsRows as unknown as Record<string, unknown>[])[0] ?? {};
   const stats: HomepageStats = {
-    totalVacancies: Number(s.total_vacancies ?? 0),
+    totalVacancies: null,
     activeRecruitments: Number(s.active_recruitments ?? 0),
     closingThisWeek: Number(s.closing_this_week ?? 0),
     orgsHiring: Number(s.orgs_hiring ?? 0),
@@ -1233,7 +1205,7 @@ export async function getHomepageStats(): Promise<{
     name: String(r.name),
     orgName: String(r.org_name),
     applicationEndDate: new Date(String(r.application_end_date)),
-    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    totalVacancies: null,
   }));
 
   return { stats, closingSoon };
@@ -1832,7 +1804,7 @@ export async function listLivePostsByQualification(
       postId: posts.id,
       postName: posts.name,
       postSlug: posts.slug,
-      vacancyTotal: posts.vacancyTotal,
+      vacancyTotal: sql<number | null>`NULL`, // No accepted field-level evidence is currently loaded.
       recruitmentSlug: recruitments.slug,
       applicationEndDate: plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
       orgName: organizations.name,
@@ -1847,8 +1819,9 @@ export async function listLivePostsByQualification(
       ),
     )
     .orderBy(
-      sql`COALESCE(${posts.vacancyTotal}, 0) DESC`,
       plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
+      desc(recruitments.updatedAt),
+      posts.id,
     )
     .limit(limit)
     .offset(offset);

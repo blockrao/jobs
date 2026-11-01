@@ -80,7 +80,7 @@ export interface StateRecruitment {
 
 type Row = {
   id: number; slug: string; name: string; status: string;
-  org_name: string; org_slug: string; total_vacancies: number | null; post_count: number;
+  org_name: string; org_slug: string; post_count: number;
   notification_date: Date | string | null; application_end_date: Date | string | null; query_now: Date | string;
 };
 
@@ -103,7 +103,7 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
   const codes = SLUG_TO_CODES[slug];
   if (!codes?.length) return [];
   const result = await db.execute(sql`
-    SELECT r.id, r.slug, r.name, r.status, r.total_vacancies, r.notification_date, r.application_end_date, now() AS query_now,
+    SELECT r.id, r.slug, r.name, r.status, r.notification_date, r.application_end_date, now() AS query_now,
            o.name AS org_name, o.slug AS org_slug,
            (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count
     FROM recruitments r
@@ -127,7 +127,7 @@ export async function listStateJobs(slug: string, limit = 100): Promise<StateRec
         name: r.name,
         orgName: r.org_name,
         orgSlug: r.org_slug,
-        totalVacancies: r.total_vacancies,
+        totalVacancies: null,
         postCount: r.post_count ?? 0,
         notificationDate: toDate(r.notification_date),
         applicationEndDate: lifecycle.deadline,

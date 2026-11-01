@@ -2,7 +2,6 @@ import { cache } from "react";
 import { stripAggregatorData } from "@/lib/aggregators";
 import { hasHighConfidenceIssuerOrganizationMismatch } from "@/lib/organization-identity";
 import { getDb } from "../index";
-import { MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql, recruitmentIsOpenSql } from "./recruitment-lifecycle-sql";
@@ -612,13 +611,7 @@ export async function listRecruitments(opts: ListRecruitmentsOptions): Promise<R
       o.slug AS "organizationSlug",
       o.sector::text AS "organizationSector",
       r.location_state_code AS "locationStateCode",
-      CASE
-        WHEN r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
-          AND r.official_notification_url ~ '^https?://'
-          AND r.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
-        THEN r.total_vacancies
-        ELSE NULL
-      END AS "totalVacancies",
+      NULL::int AS "totalVacancies", -- No persisted accepted issuer evidence for this field yet.
       COALESCE(pc.post_count, 0)::int AS "postCount",
       r.notification_date AS "notificationDate",
       r.application_start_date AS "applicationStartDate",

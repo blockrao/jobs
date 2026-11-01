@@ -158,12 +158,11 @@ function salaryConsistentWithPayLevel(
  * Returns the authoritative vacancy count for a specific Post, or null.
  *
  * Pipeline:
- *   1. post_enrichments.vacanciesTotal — passes when:
- *      - sourceVerificationStatus === VERIFIED or PENDING
+ *   1. post_enrichments.vacanciesTotal — passes only when:
+ *      - sourceVerificationStatus === VERIFIED
  *      - extractionConfidence >= 70
+ *      - an accepted official observation explicitly supports this Post vacancy field
  *      - vacanciesTotal does NOT match the recruitment-level total (entity scope guard)
- *      Note: vacanciesByCategory must be non-null for the entity scope check to pass
- *        when vacanciesTotal looks like a recruitment total (see note below).
  *   2. No legacy-column fallback: posts.vacancy_total is not accepted without persisted provenance.
  *   3. null — insufficient evidence.
  */
@@ -171,6 +170,7 @@ export function resolvePostVacancy(
   post: Pick<JobPostingData, "enrichment"> & {
     vacancyTotal?: number | null; // posts.vacancy_total (old schema)
     recruitmentVacancyTotal?: number | null; // recruitments.total_vacancies, for scope check
+    officialVacancyEvidenceAccepted?: boolean;
   }
 ): number | null {
   const enrichment = post.enrichment;
@@ -184,8 +184,8 @@ export function resolvePostVacancy(
     } = enrichment;
 
     const sourceVerified = sourceVerificationStatus === "VERIFIED";
-    const sourcePending = sourceVerificationStatus === "PENDING";
-    const sourceAccepted = sourceVerified || sourcePending; // Accept both VERIFIED and PENDING
+    // Global enrichment status/confidence is not field-level issuer evidence.
+    const sourceAccepted = sourceVerified && post.officialVacancyEvidenceAccepted === true;
     const extractionValid = extractionConfidence >= 70;
 
     // Entity scope: if the enrichment vacancy total equals the recruitment-level
@@ -208,8 +208,8 @@ export function resolvePostVacancy(
   }
 
   // Do not fall back to an unverified enrichment value. A plausible positive
-  // number is not authoritative without accepted source status and extraction
-  // confidence; this rule is shared by visible UI, metadata, and structured data.
+  // number is not authoritative without field-level issuer evidence, accepted
+  // verification status and extraction confidence.
   return null;
 }
 
@@ -218,7 +218,8 @@ export function resolvePostVacancy(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the officially stated Recruitment total vacancy count, or null.
+ * Returns the Recruitment total vacancy count only when an accepted official
+ * observation explicitly supports the recruitment-scoped vacancy field.
  *
  * Hard rule: NEVER derived by summing resolvePostVacancy() across Posts.
  * The Post dataset may be incomplete (BPSC TRE-4.0 has 5,682 vacancies
@@ -227,8 +228,9 @@ export function resolvePostVacancy(
  */
 export function resolveRecruitmentVacancy(recruitment: {
   totalVacancies?: number | null; // recruitments.total_vacancies
+  officialVacancyEvidenceAccepted?: boolean;
 }): number | null {
-  if (recruitment.totalVacancies != null && recruitment.totalVacancies > 0) {
+  if (recruitment.officialVacancyEvidenceAccepted === true && recruitment.totalVacancies != null && recruitment.totalVacancies > 0) {
     return recruitment.totalVacancies;
   }
   return null;

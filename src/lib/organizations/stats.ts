@@ -9,8 +9,8 @@
  *  - the legacy `postings` table is never read here;
  *  - quarantined recruitments are excluded everywhere;
  *  - live/closed comes from `deriveLifecycle`, never a stored flag;
- *  - vacancies are counted once per recruitment (recruitments.total_vacancies),
- *    never summed across post rows that repeat the same recruitment total;
+ *  - vacancy totals remain unknown until accepted field-level issuer evidence
+ *    is available; post rows are never summed into a recruitment total;
  *  - every number on the page traces to a row; nothing is estimated.
  */
 import { sql } from "drizzle-orm";
@@ -52,7 +52,7 @@ export interface OrganizationStats {
   recruitments: OrgRecruitment[];
   live: OrgRecruitment[];
   closed: OrgRecruitment[];
-  /** Sum of recruitment-level vacancies across live recruitments (null when none state a figure). */
+  /** Accepted recruitment-scoped vacancy total; null until field evidence is persisted. */
   liveVacancies: number | null;
   /** Date of the most recent notification on record, if any. */
   latestNotification: Date | null;
@@ -71,7 +71,6 @@ type RecruitmentRow = {
   status: string;
   notification_date: Date | string | null;
   application_end_date: Date | string | null;
-  total_vacancies: number | null;
   post_count: number;
   exam_slug: string | null;
   exam_name: string | null;
@@ -99,7 +98,7 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
 
   const recResult = await db.execute(sql`
     SELECT r.id, r.slug, r.name, r.status, r.notification_date, r.application_end_date,
-           r.total_vacancies,
+           /* vacancy total intentionally not selected until field evidence exists */
            (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count,
            e.slug AS exam_slug, e.label AS exam_name,
            o.name AS organisation_name,
@@ -150,7 +149,8 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
       status: r.status,
       notificationDate: toDate(r.notification_date),
       applicationEndDate: lifecycle.deadline,
-      totalVacancies: r.total_vacancies,
+      // Global recruitment verification is not field-level vacancy evidence.
+      totalVacancies: null,
       postCount: r.post_count ?? 0,
       examSlug: r.exam_slug,
       examName: r.exam_name,

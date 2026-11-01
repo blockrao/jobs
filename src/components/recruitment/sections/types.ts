@@ -32,6 +32,8 @@ export type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
   feeReserved?: number | string | null;
   selectionProcesses?: unknown;
   sourceVerificationStatus?: string | null;
+  /** Field-level accepted issuer evidence for recruitment.total_vacancies. */
+  officialVacancyEvidenceAccepted?: boolean;
   sourceListingPublishedDate?: Date | string | null;
   sourceExtract?: {
     title?: string | null;
@@ -52,6 +54,8 @@ export type RecruitmentHubRecruitment = typeof recruitments.$inferSelect & {
 export type RecruitmentHubPost = typeof posts.$inferSelect & {
   position?: typeof positions.$inferSelect | null;
   resolvedVacancyCount?: number | null;
+  /** Field-level accepted issuer evidence for this Post vacancy count. */
+  officialVacancyEvidenceAccepted?: boolean;
   employmentType?: string | null;
   eligibilities?: EligibilityRow[];
   vacancies?: unknown[];

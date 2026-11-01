@@ -117,7 +117,7 @@ export function QualificationHubContent({
       {total > 0 && (
         <p className="mt-1 text-sm text-neutral-500">
           {total.toLocaleString("en-IN")}{" "}
-          {isHi ? "सक्रिय रिक्तियां" : `active ${total === 1 ? "vacancy" : "vacancies"}`}
+          {isHi ? "सक्रिय पद" : `active ${total === 1 ? "post" : "posts"}`}
         </p>
       )}
 
@@ -126,7 +126,7 @@ export function QualificationHubContent({
         {/* Header row */}
         <div className="flex items-center justify-between border-b border-black/8 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
           <span>{isHi ? "पद" : "Post"}</span>
-          <span>{isHi ? "रिक्तियां / बंद होने की तारीख" : "Vacancies / Closing date"}</span>
+          <span>{isHi ? "पद / बंद होने की तारीख" : "Posts / Closing date"}</span>
         </div>
 
         {rows.length === 0 ? (

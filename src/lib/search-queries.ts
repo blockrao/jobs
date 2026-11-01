@@ -72,7 +72,6 @@ const JOBS_CTE = `
           p.location_region,
           p.location_city,
           p.eligibility,
-          COALESCE(r.total_vacancies, p.total_vacancies) AS total_vacancies,
           p.is_expired AS posting_expired,
           COALESCE(p.valid_through, r.application_end_date) AS last_date,
           COALESCE(p.created_at, r.created_at) AS announced_at,
@@ -81,7 +80,7 @@ const JOBS_CTE = `
         FROM recruitments r
         LEFT JOIN organizations o ON o.id = r.organization_id
         LEFT JOIN LATERAL (
-          SELECT p.title, p.location_region, p.location_city, p.eligibility, p.total_vacancies,
+          SELECT p.title, p.location_region, p.location_city, p.eligibility,
                  p.is_expired, p.valid_through, p.created_at, p.id
           FROM postings p
           WHERE p.inferred_recruitment_id = r.id
@@ -108,7 +107,6 @@ const RESULT_COLUMNS = `
       s.location_region,
       s.location_city,
       s.eligibility,
-      s.total_vacancies,
       s.last_date,
       s.announced_at,
       s.announcement_state,
@@ -197,7 +195,8 @@ function mapRow(row: Row): SearchResult {
     locationRegion: row.location_region ? String(row.location_region) : null,
     locationCity: row.location_city ? String(row.location_city) : null,
     eligibility: row.eligibility ? String(row.eligibility) : null,
-    totalVacancies: toNumberOrNull(row.total_vacancies),
+    // Recruitment/legacy posting totals are not field-evidence-backed. Keep search results discoverable, but do not publish an unsupported count.
+    totalVacancies: null,
     validThrough: toIsoOrNull(row.last_date),
     createdAt: toIsoOrNull(row.announced_at) ?? "",
     announcementState: row.announcement_state ? String(row.announcement_state) : null,

@@ -153,8 +153,8 @@ export function HomeContent({
               <span className="text-[13px] font-bold text-rose-900 sm:text-sm">{isHi ? "पद 7 दिन में बंद" : "posts close within 7 days"}</span>
             </Link>
             <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
-              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
-              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "रिक्तियां खुली" : "vacancies open now"}</span>
+              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.totalVacancies != null && stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
+              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "रिक्तियों के आंकड़े सत्यापनाधीन" : "vacancy figures pending verification"}</span>
             </Link>
             <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
               <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.liveRecruitments > 0 ? nf(stats.liveRecruitments) : "—"}</span>
@@ -182,8 +182,8 @@ export function HomeContent({
             </ul>
             <p className="mt-3 pt-3 border-t border-black/8 text-sm text-neutral-500">
               {isHi
-                ? "अगले 14 दिनों में बंद होने वाली भर्तियों को रिक्तियों के अनुसार क्रम दिया गया है। दिखाई गई अंतिम तिथि की पुष्टि भर्ती संस्था की नवीनतम आधिकारिक अधिसूचना से करें।"
-                : "Recruitments closing within 14 days are ranked by vacancy count. Confirm each displayed deadline in the recruiting body's latest official notification."}
+                ? "अगले 14 दिनों में बंद होने वाली भर्तियां अंतिम तिथि के अनुसार दिखाई जाती हैं। रिक्तियों की संख्या तभी दिखाई जाती है जब आधिकारिक स्रोत का प्रमाण स्वीकार हो।"
+                : "Recruitments closing within 14 days are ordered by earliest deadline. Vacancy figures appear only when the recruiting body's evidence has been accepted."}
             </p>
           </section>
         )}
@@ -192,7 +192,7 @@ export function HomeContent({
         <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 lg:gap-12 pt-2 pb-10">
           <div>
             <div className="flex flex-wrap items-baseline justify-between gap-3 mb-2">
-              <h2 className={sectionTitle}>{isHi ? "अभी खुली सबसे बड़ी भर्तियां" : "Biggest recruitments open now"}</h2>
+              <h2 className={sectionTitle}>{isHi ? "हाल में अधिसूचित सक्रिय भर्तियां" : "Recently announced active recruitments"}</h2>
               <Link href="/jobs" className={viewAll}>{isHi ? "सभी देखें →" : "All notifications →"}</Link>
             </div>
             <ul>
@@ -315,7 +315,7 @@ export function HomeContent({
               {orgs.map((o) => (
                 <Link key={o.slug} href={`/organizations/${o.slug}`} className="inline-flex h-10 items-center gap-2 rounded-full border border-black/12 bg-white px-3.5 text-[15px] font-semibold hover:border-brand-600/50">
                   <span className="max-w-[260px] truncate">{isHi && o.nameHi ? o.nameHi : o.name}</span>
-                  <span className="tabular-nums text-neutral-500">{nf(o.vacancies)}</span>
+                  <span className="tabular-nums text-neutral-500">{nf(o.recruitments)} {isHi ? "भर्तियां" : "recruitments"}</span>
                 </Link>
               ))}
             </div>

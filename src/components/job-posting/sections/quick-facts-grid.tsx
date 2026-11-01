@@ -61,7 +61,7 @@ export default function QuickFactsGrid({
       <div className={styles.card}>
         <div className={styles.icon}>👥</div>
         <div className={styles.content}>
-          <div className={styles.label}>Vacancies</div>
+          <div className={styles.label}>{vacancies.isReported ? "Vacancies (reported)" : "Vacancies"}</div>
           <div className={styles.value}>
             {vacancies.total}
           </div>
@@ -169,6 +169,7 @@ function getVacancyCount(
   obc: number;
   st: number;
   general: number;
+  isReported: boolean;
 } {
   let total = 0;
   let sc = 0;
@@ -176,13 +177,15 @@ function getVacancyCount(
   let st = 0;
   let general = 0;
 
-  // Try resolved vacancies first
-  if (resolvedFacts?.vacancyCount) {
+  const fieldAccepted = post.officialVacancyEvidenceAccepted === true && resolvedFacts?.vacancyCount != null;
+
+  // Only the shared resolver can promote a count to authoritative.
+  if (fieldAccepted && resolvedFacts?.vacancyCount) {
     total = resolvedFacts.vacancyCount;
   }
 
   // Try enrichment categories
-  if (post.enrichment?.vacanciesByCategory) {
+  if (fieldAccepted && post.enrichment?.vacanciesByCategory) {
     const cats = post.enrichment.vacanciesByCategory as Record<string, number>;
     sc = cats.SC || cats.sc || 0;
     obc = cats.OBC || cats.obc || 0;
@@ -203,6 +206,7 @@ function getVacancyCount(
     obc,
     st,
     general,
+    isReported: !fieldAccepted,
   };
 }
 
