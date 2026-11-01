@@ -48,6 +48,7 @@ type PostRow = Omit<
     notificationPublicationDate: RawDate;
     officialNotificationEvidenceAccepted: boolean;
     officialApplicationEvidenceAccepted: boolean;
+    notificationLinkUrl: string | null;
     // "payLevel" is selected from both posts and post_enrichments; the
     // driver returns whichever column comes last.
     payLevel: JobPostingData["payLevel"] & PostEnrichment["payLevel"];
@@ -159,15 +160,38 @@ async function getPostCoreData(
             AND s.is_official IS TRUE
           LIMIT 1
         ) AS "officialSourceRegistryUrl",
+        (
+          SELECT CASE
+            WHEN latest_check.status = 'VALIDATED'
+              AND latest_check.checked_at >= now() - interval '36 hours'
+            THEN latest_check.requested_url
+            ELSE NULL
+          END
+          FROM public.notification_url_checks latest_check
+          WHERE latest_check.requested_url = r.official_notification_url
+            AND (
+              latest_check.post_id = p.id
+              OR (latest_check.post_id IS NULL AND latest_check.recruitment_id = r.id)
+            )
+          ORDER BY latest_check.checked_at DESC, latest_check.id DESC
+          LIMIT 1
+        ) AS "notificationLinkUrl",
         EXISTS (
           SELECT 1
           FROM public.source_observations so
-          INNER JOIN public.postings legacy_posting ON legacy_posting.id = so.posting_id
+          LEFT JOIN public.postings legacy_posting ON legacy_posting.id = so.posting_id
           WHERE lower(so.source) = lower(r.official_link_source)
             AND so.outcome = 'ACCEPTED'
             AND (
-              legacy_posting.inferred_post_id = p.id
-              OR legacy_posting.inferred_recruitment_id = r.id
+              so.post_id = p.id
+              OR (so.post_id IS NULL AND so.recruitment_id = r.id)
+              OR (
+                so.post_id IS NULL AND so.recruitment_id IS NULL
+                AND (
+                  legacy_posting.inferred_post_id = p.id
+                  OR legacy_posting.inferred_recruitment_id = r.id
+                )
+              )
             )
             AND (
               so.source_url = r.official_notification_url
@@ -185,12 +209,19 @@ async function getPostCoreData(
         EXISTS (
           SELECT 1
           FROM public.source_observations so
-          INNER JOIN public.postings legacy_posting ON legacy_posting.id = so.posting_id
+          LEFT JOIN public.postings legacy_posting ON legacy_posting.id = so.posting_id
           WHERE lower(so.source) = lower(r.official_link_source)
             AND so.outcome = 'ACCEPTED'
             AND (
-              legacy_posting.inferred_post_id = p.id
-              OR legacy_posting.inferred_recruitment_id = r.id
+              so.post_id = p.id
+              OR (so.post_id IS NULL AND so.recruitment_id = r.id)
+              OR (
+                so.post_id IS NULL AND so.recruitment_id IS NULL
+                AND (
+                  legacy_posting.inferred_post_id = p.id
+                  OR legacy_posting.inferred_recruitment_id = r.id
+                )
+              )
             )
             AND (
               so.source_url = r.official_application_url
@@ -432,6 +463,8 @@ export async function getPostBySlug(
       postedAt: new Date(data.postedAt),
       updatedAt: new Date(data.updatedAt),
       officialSourceUrl: officialSourceVerified ? data.officialSourceUrl : null,
+      notificationLinkUrl: data.notificationLinkUrl ?? null,
+      notificationLinkValidated: Boolean(data.notificationLinkUrl),
       applyPortalUrl: officialApplicationVerified ? data.applyPortalUrl : null,
       officialSourceRegistryUrl,
       officialSourceVerified,
