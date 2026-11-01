@@ -40,9 +40,11 @@ export default function QuickFacts({ post, resolvedFacts }: QuickFactsProps) {
     ? reportedVacancyCount
     : null;
 
+  const vacancyFieldAccepted = post.officialVacancyEvidenceAccepted === true && resolvedFacts?.vacancyCount != null;
+
   const facts = [
     {
-      label: post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED" ? "Vacancies (reported)" : "Vacancies",
+      label: vacancyFieldAccepted ? "Vacancies" : "Vacancies (reported)",
       value: resolvedFacts?.vacancyCount != null
         ? resolvedFacts.vacancyCount.toLocaleString("en-IN")
         : extractedVacancyCount != null
