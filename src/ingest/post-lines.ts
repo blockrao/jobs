@@ -41,7 +41,9 @@ export function classifyPostLine(name: string | null | undefined, count: number 
   const toks = l.match(/[a-z]+/g) ?? [];
   if (toks.length && toks.every((t) => SPORTS.has(t) || t === "sports" || t === "sport") && toks.some((t) => SPORTS.has(t))) return "SPORT_DISCIPLINE";
   if (toks.length && toks.length <= 3 && toks.every((t) => DISCIPLINES.has(t))) return "ACADEMIC_DISCIPLINE";
-  if (COMBINED.test(n.replace(/\([^)]*\)/g, ""))) return "COMBINED";
+  const namedDepartmentSuffix = /^[^,]+,\s*(?:centre|center|department|school|college|division|unit)\b/i.test(n);
+  // "cum" denotes a combined appointment even when followed by a named department/centre.
+  if (/\bcum\b/i.test(n) || (COMBINED.test(n.replace(/\([^)]*\)/g, "")) && !namedDepartmentSuffix)) return "COMBINED";
   if (count == null || !Number.isInteger(count) || count <= 0) return "BAD_COUNT";
   if (!ROLE.test(n)) return "NO_ROLE_NOUN";
   return "OK";

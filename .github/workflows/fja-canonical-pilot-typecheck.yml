@@ -1,0 +1,32 @@
+name: FJA canonical pilot tooling type-check
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fja-canonical-pilot-dry-run.ts"
+      - "scripts/fja-canonical-pilot-apply.ts"
+      - "scripts/reconcile-fja-artifact.ts"
+      - "src/ingest/fja/notification-url-check.ts"
+      - "src/ingest/resolve.ts"
+      - "src/ingest/post-lines.ts"
+      - "tests/contracts/unit/post-lines.test.ts"
+      - ".github/workflows/fja-canonical-pilot-dry-run.yml"
+      - ".github/workflows/fja-canonical-pilot-live.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/reconcile-fja-artifact.ts
+      - run: npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-dry-run.ts
+      - run: npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-apply.ts

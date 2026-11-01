@@ -228,10 +228,14 @@ export default function JobDetailPageProduction({
 
   // ── Intro (stored description or one sentence of known facts) ────────────
   const introFacts: string[] = [];
-  if (orgName) introFacts.push(`${orgName} has invited applications for the post of ${post.title}${post.recruitmentName ? ` under ${post.recruitmentName}` : ''}`);
-  else introFacts.push(`Applications are invited for the post of ${post.title}${post.recruitmentName ? ` under ${post.recruitmentName}` : ''}`);
+  if (orgName) introFacts.push(post.officialSourceVerified === true
+    ? `${orgName} has invited applications for the post of ${post.title}${post.recruitmentName ? ` under ${post.recruitmentName}` : ''}`
+    : `${orgName} is reported to have invited applications for the post of ${post.title}${post.recruitmentName ? ` under ${post.recruitmentName}` : ''}`);
+  else introFacts.push(post.officialSourceVerified === true
+    ? `Applications are invited for the post of ${post.title}${post.recruitmentName ? ` under ${post.recruitmentName}` : ''}`
+    : `Recruitment information reports applications for the post of ${post.title}${post.recruitmentName ? ` under ${post.recruitmentName}` : ''}`);
   const introDetail: string[] = [];
-  if (vacancies > 0) introDetail.push(`${vacancies.toLocaleString('en-IN')} ${vacancies === 1 ? 'vacancy' : 'vacancies'}`);
+  if (vacancies > 0) introDetail.push(`${post.officialSourceVerified === true ? '' : 'reported '}${vacancies.toLocaleString('en-IN')} ${vacancies === 1 ? 'vacancy' : 'vacancies'}`);
   if (qualificationText && qualificationText.length <= 80) introDetail.push(`qualification: ${qualificationText}`);
   if (deadlineStatusText) introDetail.push(deadlineStatusText);
   const intro = post.description
@@ -243,7 +247,7 @@ export default function JobDetailPageProduction({
   if (post.recruitmentName) details.push({ label: 'Recruitment', value: <Link href={`/jobs/${post.recruitmentSlug}`}>{post.recruitmentName}</Link>, text: post.recruitmentName });
   if (advertisementNumber) details.push({ label: 'Advertisement no.', value: advertisementNumber, text: advertisementNumber });
   details.push({ label: 'Post name', value: post.title, text: post.title });
-  if (vacancies > 0) details.push({ label: 'Vacancies', value: vacancies.toLocaleString('en-IN'), text: String(vacancies) });
+  if (vacancies > 0) details.push({ label: post.officialSourceVerified === true ? 'Vacancies' : 'Reported vacancies', value: vacancies.toLocaleString('en-IN'), text: String(vacancies) });
   if (qualificationText) details.push({ label: 'Qualification', value: qualificationText, text: qualificationText });
   if (ageText) details.push({ label: 'Age limit', value: ageText, text: ageText });
   if (salaryText) details.push({ label: 'Pay', value: salaryText, text: salaryText });
@@ -629,7 +633,9 @@ export default function JobDetailPageProduction({
             </nav>
 
             <p className={styles.note}>
-              JobOye is not a government website. Information on this page is compiled from the official notification; candidates should verify every detail on the official website before applying.
+              JobOye is not a government website. {post.officialSourceVerified === true
+                ? 'Information on this page is compiled from the registered official notification; candidates should verify every detail on the recruiting organisation’s website before applying.'
+                : 'Information on this page is compiled from publicly available recruitment information and has not been independently verified against the recruiting organisation’s notification. Confirm all details directly with the recruiting organisation before applying.'}
               {' '}<Link href="/contact">Report an error</Link>.
             </p>
           </article>
