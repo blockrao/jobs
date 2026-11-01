@@ -1,4 +1,5 @@
 import { lookup as dnsLookup } from "node:dns/promises";
+import type { LookupAddress } from "node:dns";
 import { isIP } from "node:net";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -116,7 +117,7 @@ export function isPublicNotificationIPv4(value: string): boolean {
  */
 async function dnsPinnedHead(url: URL, timeoutMs: number): Promise<HeadResponse> {
   let dnsTimer: ReturnType<typeof setTimeout> | undefined;
-  let addresses: Awaited<ReturnType<typeof dnsLookup>>;
+  let addresses: LookupAddress[];
   try {
     addresses = await Promise.race([
       dnsLookup(url.hostname, { all: true, verbatim: true }),
