@@ -19,7 +19,7 @@ interface VacancyDetailsProps {
 
 export default function VacancyDetails({ post, resolvedFacts, embedded }: VacancyDetailsProps) {
   // Use enrichment vacanciesByCategory when available; fall back to posts.vacancy_details
-  const hasOfficialVacancyEvidence = post.officialVacancyEvidenceAccepted === true;
+  const hasOfficialVacancyEvidence = post.officialVacancyEvidenceAccepted === true && resolvedFacts?.vacancyCount != null;
   const vacanciesByCategory: Record<string, number> = hasOfficialVacancyEvidence
     ? ((post.enrichment?.vacanciesByCategory && Object.keys(post.enrichment.vacanciesByCategory).length > 0)
       ? post.enrichment.vacanciesByCategory
@@ -38,7 +38,7 @@ export default function VacancyDetails({ post, resolvedFacts, embedded }: Vacanc
     : null;
   const resolvedTotal = resolvedFacts?.vacancyCount ?? extractedTotal;
 
-  const isReported = !hasOfficialVacancyEvidence || Boolean(post.fjaExtract && post.fjaExtract.verificationStatus !== "VERIFIED");
+  const isReported = !hasOfficialVacancyEvidence;
   // PENDING policy: check resolver's vacancyCount for verification status
   const vacancyIsPending = resolvedFacts?.vacancyCount != null &&
     post.enrichment?.sourceVerificationStatus === "PENDING";
