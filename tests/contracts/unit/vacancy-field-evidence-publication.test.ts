@@ -25,4 +25,36 @@ describe("vacancy field-evidence publication gates", () => {
     expect(section).toContain("const hasOfficialVacancyEvidence = post.officialVacancyEvidenceAccepted === true");
     expect(section).toContain("const isReported = !hasOfficialVacancyEvidence");
   });
+
+  it("fails closed on public search, homepage, category, qualification and organisation vacancy counts", () => {
+    const search = read("src/lib/search-queries.ts");
+    const queries = read("src/lib/queries.ts");
+    const recruitmentList = read("src/db/operations/get-recruitments.ts");
+    const organisationStats = read("src/lib/organizations/stats.ts");
+
+    expect(search).toContain("totalVacancies: null");
+    expect(search).not.toContain("COALESCE(r.total_vacancies, p.total_vacancies)");
+    expect(queries).toContain("totalVacancies: null");
+    expect(queries).toContain("vacancyTotal: sql<number | null>`NULL`");
+    expect(queries).not.toContain("verifiedHomeVacancy");
+    expect(recruitmentList).toContain('NULL::int AS "totalVacancies"');
+    expect(organisationStats).toContain("totalVacancies: null");
+  });
+
+  it("does not sum or rank public inventory using unsupported vacancy columns", () => {
+    const homepage = read("src/lib/queries.ts");
+    const legacyArchive = read("src/app/(default)/recruitments/page.tsx");
+    const controlCenter = read("src/app/(default)/posts/page.tsx");
+    const quickFacts = read("src/components/job-posting/sections/quick-facts.tsx");
+    const quickFactsGrid = read("src/components/job-posting/sections/quick-facts-grid.tsx");
+
+    expect(homepage).not.toContain("r.total_vacancies DESC");
+    expect(homepage).not.toContain("SUM(po.vacancy_total)");
+    expect(legacyArchive).not.toContain("SUM(${vacancies.count})");
+    expect(legacyArchive).not.toContain("recruitment.totalVacancies");
+    expect(controlCenter).toContain("Verified Vacancy Figures");
+    expect(quickFacts).toContain('label: vacancyFieldAccepted ? "Vacancies" : "Vacancies (reported)"');
+    expect(quickFactsGrid).toContain("const fieldAccepted = post.officialVacancyEvidenceAccepted === true");
+    expect(quickFactsGrid).toContain("isReported: !fieldAccepted");
+  });
 });
