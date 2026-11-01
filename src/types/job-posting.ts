@@ -61,7 +61,6 @@ export interface JobPostingData {
   officialApplicationVerified?: boolean;
   /** True only when an accepted official observation supports the vacancy field itself. */
   officialVacancyEvidenceAccepted?: boolean;
-  /** True only when an accepted official observation supports the vacancy field itself. */
   recruitmentEnrichmentSource?: string | null;
   recruitmentInstitutionName?: string | null;
   organizationIdentityMismatch?: boolean;
