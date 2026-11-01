@@ -59,6 +59,34 @@ describe("checkOfficialNotificationUrl", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("requires exact approved hosts unless a wildcard is explicitly configured", async () => {
+    const fetchImpl = vi.fn(async () => headResponse(200));
+
+    const subdomainResult = await checkOfficialNotificationUrl(
+      "https://jobs.upsc.gov.in/notice.pdf",
+      { approvedHosts: ["upsc.gov.in"], fetchImpl },
+    );
+    expect(subdomainResult.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    const wildcardResult = await checkOfficialNotificationUrl(
+      "https://jobs.upsc.gov.in/notice.pdf",
+      { approvedHosts: ["*.upsc.gov.in"], fetchImpl },
+    );
+    expect(wildcardResult.ok).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects non-default ports even on an approved hostname", async () => {
+    const fetchImpl = vi.fn();
+    const result = await checkOfficialNotificationUrl(
+      "https://upsc.gov.in:8443/notice.pdf",
+      { approvedHosts: ["upsc.gov.in"], fetchImpl },
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("fails closed when no recruitment-specific approved host is supplied", async () => {
     const fetchImpl = vi.fn();
     const result = await checkOfficialNotificationUrl("https://upsc.gov.in/notice.pdf", { fetchImpl });
