@@ -19,16 +19,16 @@ type Detail = {
 };
 type Line = { name: string; vacancies: number | null };
 const db = getDb();
-const ids = [...new Set((process.env.FJA_CANONICAL_EXTERNAL_IDS ?? "").split(/[\\s,;]+/).map((v) => v.trim()).filter(Boolean))];
+const ids = [...new Set((process.env.FJA_CANONICAL_EXTERNAL_IDS ?? "").split(/[\s,;]+/).map((v) => v.trim()).filter(Boolean))];
 const runId = process.env.FJA_SOURCE_RUN_ID ?? "";
 const parseCount = (v: unknown): number | null => {
   const raw = typeof v === "string" ? v.replace(/,/g, "").trim() : "";
-  if (!/^\\d+$/.test(raw)) return null;
+  if (!/^\d+$/.test(raw)) return null;
   const n = Number(raw);
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 };
 const hostOf = (v: string): string | null => {
-  try { return new URL(v.includes("://") ? v : "https://" + v).hostname.toLowerCase().replace(/^www\\./, ""); }
+  try { return new URL(v.includes("://") ? v : "https://" + v).hostname.toLowerCase().replace(/^www\./, ""); }
   catch { return null; }
 };
 function findOrg(index: Awaited<ReturnType<typeof loadOrgIndex>>, text: string): string | null {
@@ -47,7 +47,7 @@ function getLines(detail: Detail): Line[] {
     const values = row.values ?? {};
     const postKey = Object.keys(values).find((k) => /^(post|post name|name of post|designation|position|trade|discipline)$/i.test(k.trim()));
     if (!postKey || !values[postKey]?.trim()) continue;
-    const countKey = Object.keys(values).find((k) => /vacanc|no\\.? of posts|number of posts|total posts/i.test(k));
+    const countKey = Object.keys(values).find((k) => /vacanc|no\.? of posts|number of posts|total posts/i.test(k));
     lines.push({ name: values[postKey].trim(), vacancies: unnumbered ? null : parseCount(countKey ? values[countKey] : null) });
   }
   if (!lines.length && facts.post_name) lines.push({ name: facts.post_name, vacancies: unnumbered ? null : parseCount(facts.vacancies) });
@@ -62,7 +62,7 @@ function getLines(detail: Detail): Line[] {
 }
 function getNotification(detail: Detail): { text: string; url: string; host: string } | null {
   const matches = (detail.official_link_candidates ?? []).filter((link) => {
-    if (!/(official\\s*(notification|advertisement)|notification\\s*(pdf|download)|download.*notification|notification.*(pdf|download)|advertisement.*pdf)/i.test(link.text)) return false;
+    if (!/(official\s*(notification|advertisement)|notification\s*(pdf|download)|download.*notification|notification.*(pdf|download)|advertisement.*pdf)/i.test(link.text)) return false;
     try {
       const u = new URL(link.url);
       return ["https:", "http:"].includes(u.protocol)
@@ -73,7 +73,7 @@ function getNotification(detail: Detail): { text: string; url: string; host: str
   });
   if (matches.length !== 1) return null;
   const u = new URL(matches[0].url);
-  return { text: matches[0].text, url: u.toString(), host: u.hostname.toLowerCase().replace(/^www\\./, "") };
+  return { text: matches[0].text, url: u.toString(), host: u.hostname.toLowerCase().replace(/^www\./, "") };
 }
 function getAdvertisementNumber(detail: Detail): string | null {
   const facts = detail.facts ?? {};
@@ -83,7 +83,7 @@ function getAdvertisementNumber(detail: Detail): string | null {
   if (!Array.isArray(tables)) return null;
   for (const table of tables as Array<{ rows?: string[][] }>) {
     for (const row of table.rows ?? []) {
-      if (row.length < 2 || !/advertisement|advt\\.?\\s*(no|number)|notification\\s*(no|number)|reference\\s*(no|number)/i.test(row[0])) continue;
+      if (row.length < 2 || !/advertisement|advt\.?\s*(no|number)|notification\s*(no|number)|reference\s*(no|number)/i.test(row[0])) continue;
       const value = normalizeAdvertisementNumber(row[1]);
       if (value) return value;
     }
@@ -129,7 +129,7 @@ async function main() {
       records.push({ ...base, verdict: "REVIEW", reason: "POST_LEAF_CLASSIFIER_REJECTED", organization: org.name, postName: rejectedLine.name, classifierVerdict: classifyPostLine(rejectedLine.name, rejectedLine.vacancies ?? 1) });
       continue;
     }
-    const yearMatch = (String(detail.page_title ?? "") + " " + row.title).match(/\\b(20\\d{2})\\b/);
+    const yearMatch = (String(detail.page_title ?? "") + " " + row.title).match(/\b(20\d{2})\b/);
     if (!yearMatch) { records.push({ ...base, verdict: "REVIEW", reason: "YEAR_NOT_EXPLICIT", organization: org.name }); continue; }
     const notification = getNotification(detail);
     if (!notification) { records.push({ ...base, verdict: "REVIEW", reason: "NOTIFICATION_LINK_MISSING_OR_AMBIGUOUS", organization: org.name, postNames: lines.map((l) => l.name) }); continue; }
