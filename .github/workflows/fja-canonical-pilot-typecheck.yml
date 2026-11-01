@@ -8,6 +8,8 @@ on:
       - "scripts/reconcile-fja-artifact.ts"
       - "src/ingest/fja/notification-url-check.ts"
       - "src/ingest/resolve.ts"
+      - "src/ingest/post-lines.ts"
+      - "tests/contracts/unit/post-lines.test.ts"
       - ".github/workflows/fja-canonical-pilot-dry-run.yml"
       - ".github/workflows/fja-canonical-pilot-live.yml"
 
