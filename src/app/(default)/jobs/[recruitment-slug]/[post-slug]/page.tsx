@@ -54,14 +54,14 @@ function composeLeafSeo(post: NonNullable<Awaited<ReturnType<typeof getPostBySlu
   const titleParts = [post.title];
   if (displayOrganizationName) titleParts.push(`– ${displayOrganizationName}${post.recruitmentName ? ` ${post.recruitmentName}` : ""}`);
   else if (post.recruitmentName) titleParts.push(`– ${post.recruitmentName}`);
-  if (vacancies > 0) titleParts.push(`(${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "Post" : "Posts"})`);
+  if (vacancies > 0) titleParts.push(`(${post.officialSourceVerified ? "" : "Reported "}${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "Post" : "Posts"})`);
   if (deadline && !applicationWindowEnded) titleParts.push(`– ${post.officialSourceVerified ? "Apply by" : "Reported last date"} ${formatDate(deadline)}`);
   const title = titleParts.join(" ");
 
   const bits: string[] = [];
   if (displayOrganizationName) bits.push(`${displayOrganizationName} recruitment for ${post.title}`);
   else bits.push(`${post.title} recruitment`);
-  if (vacancies > 0) bits.push(`${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
+  if (vacancies > 0) bits.push(`${post.officialSourceVerified ? "" : "reported "}${vacancies.toLocaleString("en-IN")} ${vacancies === 1 ? "vacancy" : "vacancies"}`);
   if (qualification && qualification.length <= 60) bits.push(`qualification ${qualification}`);
   if (salaryMin) bits.push(`pay ₹${formatCurrency(salaryMin)}${salaryMax && salaryMax !== salaryMin ? `–₹${formatCurrency(salaryMax)}` : ""} per month`);
   if (deadline && lifecycle.state === "closed" && (lifecycle.daysLeft !== null && lifecycle.daysLeft <= 0)) bits.push(`${post.officialSourceVerified ? "applications closed" : "reported applications closed"} on ${formatDate(deadline)}`);
