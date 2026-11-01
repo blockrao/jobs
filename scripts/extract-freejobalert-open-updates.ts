@@ -14,7 +14,7 @@ import { buildFjaEnrichmentCandidate } from "./lib/fja-enrichment-mapper";
 const BASE = "https://www.freejobalert.com";
 function normalizeDateInput(value: string | undefined, fallback: string, name: string): string {
   const input = (value || fallback).trim();
-  const match = input.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/);
+  const match = input.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (!match) throw new Error(`${name} must use YYYY-MM-DD format; received: ${input}`);
   const [, year, month, day] = match;
   const normalized = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
