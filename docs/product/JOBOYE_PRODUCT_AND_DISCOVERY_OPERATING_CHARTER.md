@@ -239,3 +239,16 @@ Before approving a feature, page, data change or technical initiative, ask:
 If yes, define the evidence and deliver it well. If no, defer it.
 
 **This is JobOye's governing product and architecture framework. Consult it when planning work and resolving priority conflicts.**
+
+
+### Mandatory FJA URL privacy and official notification link rule
+
+- FJA listing/article URLs are private extraction provenance only. They must never appear in public JobOye UI, page source, public APIs, metadata, canonical/alternate links, JSON-LD, sitemaps, share links or user-facing buttons.
+- The public **Official Notification** action must use the distinct notification URL explicitly extracted from the FJA article HTML and must never use an FJA URL or an application URL as a fallback.
+- Keep notification and application destinations in separate fields and actions.
+- Before publication, validate the notification URL's HTTP(S) syntax, redirect chain, final destination host and accessibility with a bounded HTTP HEAD probe. Reject FJA/aggregator/shortener or unrelated destinations. Do not download, open, parse or extract content from the official PDF/document; HTML remains the only extraction source.
+- A failed, inconclusive or inaccessible notification URL blocks publication of that notification action and keeps the record in review. Recheck links during daily refresh and detect later failures/changes.
+- A successful reachability probe proves availability only at the time checked; it does not prove document contents or independently verify extracted facts. Never claim facts were independently checked against the official notification unless a separately approved content-verification process has actually done so.
+- Automated tests must prove that FJA URLs cannot leak into any public surface and that the Official Notification action always points to the validated official destination.
+
+These rules are mandatory and are detailed in `docs/operations/FJA_HTML_INGESTION_OPERATING_PROCESS.md`.
