@@ -26,6 +26,11 @@ const cell=(v:unknown)=>'"'+String(v??"").replace(/"/g,'""')+'"';
 async function main(){
  const listings=JSON.parse(await readFile(path.join(input,"all-in-window-listings.json"),"utf8"));
  const details=JSON.parse(await readFile(path.join(input,"detail-records.json"),"utf8"));
+ const extractionSummary=JSON.parse(await readFile(path.join(input,"summary.json"),"utf8"));
+ const startDate=String(extractionSummary.start_date??"");
+ const asOfDate=String(extractionSummary.as_of_date??"");
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)||startDate>asOfDate)
+  throw Error("Extraction summary is missing a valid start_date/as_of_date window; no import attempted.");
  if(!Array.isArray(listings)||!listings.length)throw Error("Empty listing inventory; no writes attempted.");
  const byUrl=new Map(details.map((d:any)=>[d.listing_url,d]));
  const [recs,posts]=await Promise.all([
@@ -46,7 +51,7 @@ async function main(){
  });
  const counts=rows.reduce((a:any,r:any)=>(a[r.bucket]=(a[r.bucket]||0)+1,a),{});
  await mkdir(output,{recursive:true});
- await writeFile(path.join(output,"fja-reconciliation.json"),JSON.stringify({run_id:runId,window:{start:"2026-10-01",end:"2026-10-27"},source_listing_count:listings.length,detail_count:details.length,canonical_recruitments:recs.length,canonical_posts:posts.length,counts,records:rows.map((x:any)=>({update_date:x.listing.update_date,title:x.listing.title,listing_url:x.listing.listing_url,external_id:extId(x.listing.listing_url),detail_captured:!!x.detail,source_status:x.detail?.open_status??"NOT_CAPTURED",facts:x.facts,bucket:x.bucket,candidates:x.candidates}))},null,2));
+ await writeFile(path.join(output,"fja-reconciliation.json"),JSON.stringify({run_id:runId,window:{start:startDate,end:asOfDate},source_listing_count:listings.length,detail_count:details.length,canonical_recruitments:recs.length,canonical_posts:posts.length,counts,records:rows.map((x:any)=>({update_date:x.listing.update_date,title:x.listing.title,listing_url:x.listing.listing_url,external_id:extId(x.listing.listing_url),detail_captured:!!x.detail,source_status:x.detail?.open_status??"NOT_CAPTURED",facts:x.facts,bucket:x.bucket,candidates:x.candidates}))},null,2));
  const headers=["bucket","update_date","title","external_id","listing_url","detail_captured","source_status","candidate_entity","candidate_id","candidate_name","candidate_slug","candidate_organization","match_score","match_reason","alternatives_json"];
  await writeFile(path.join(output,"fja-reconciliation.csv"),[headers.join(","),...rows.map((x:any)=>{const c=x.candidates[0]??{};return [x.bucket,x.listing.update_date,x.listing.title,extId(x.listing.listing_url),x.listing.listing_url,!!x.detail,x.detail?.open_status??"NOT_CAPTURED",c.entity,c.id,c.name,c.slug,c.organization,c.score,c.reason,JSON.stringify(x.candidates)].map(cell).join(",")})].join("\n")+"\n");
  // Upsert only the private source inventory. No INSERT/UPDATE/DELETE is issued against recruitments or posts.
