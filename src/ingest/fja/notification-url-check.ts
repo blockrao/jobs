@@ -140,8 +140,10 @@ async function dnsPinnedHead(url: URL, timeoutMs: number): Promise<HeadResponse>
       headers: { accept: "application/pdf,text/html,application/octet-stream;q=0.9,*/*;q=0.1" },
       servername: url.hostname,
       // Pin the socket lookup to the address checked above; do not resolve again.
-      lookup: ((_hostname: string, _options: unknown, callback: (error: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
-        callback(null, selected.address, 4);
+      lookup: ((_hostname: string, options: { all?: boolean }, callback: (error: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void) => {
+        // Node's custom lookup callback has two forms; honour all: true too.
+        if (options.all) callback(null, [{ address: selected.address, family: 4 }]);
+        else callback(null, selected.address, 4);
       }) as never,
     };
     const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
