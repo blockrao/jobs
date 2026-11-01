@@ -50,10 +50,10 @@ async function verifyPages(paths: string[]) {
     const html = await response.text();
     let reason: string | null = null;
     if (response.status !== 200) reason = "PUBLIC_HTTP_" + response.status;
-    else if (/freejobalert\\.com/i.test(html)) reason = "FJA_SOURCE_URL_LEAKED_IN_PUBLIC_HTML";
+    else if (/freejobalert\.com/i.test(html)) reason = "FJA_SOURCE_URL_LEAKED_IN_PUBLIC_HTML";
     else {
-      const canonical = html.match(/<link\\b[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i)
-        ?? html.match(/<link\\b[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["']/i);
+      const canonical = html.match(/<link\b[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i)
+        ?? html.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["']/i);
       if (!canonical || canonical[1] !== url) reason = "CANONICAL_TAG_MISSING_OR_MISMATCHED";
       else if (/name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html)) reason = "PUBLIC_PAGE_IS_NOINDEX";
     }
@@ -110,7 +110,7 @@ async function main() {
       const identity: RecruitmentIdentity = {
         organizationId: item.organizationId,
         examId: null,
-        year: Number(item.recruitmentName.match(/\\b(20\\d{2})\\b/)?.[1] ?? 0) || null,
+        year: Number(item.recruitmentName.match(/\b(20\d{2})\b/)?.[1] ?? 0) || null,
         officialNotificationNumber: item.advertisementNumber,
         title: item.recruitmentName,
         applicationStartDate: null,
