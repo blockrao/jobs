@@ -1,0 +1,79 @@
+name: FJA canonical pilot dry run
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Successful FJA research extraction run ID"
+        required: true
+        type: string
+        default: "41289108441"
+      external_ids:
+        description: "Exact FJA article IDs from the selected extraction artifact (maximum 10)"
+        required: true
+        type: string
+        default: "3077667,3077665,3077663,3077661,3077659,3077657,3077655,3077653,3077651,3077649"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: fja-canonical-pilot-dry-run
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    name: Stage selected HTML evidence and check canonical pilot eligibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate bounded source scope
+        env:
+          EXTERNAL_IDS: ${{ inputs.external_ids }}
+        run: |
+          COUNT=$(echo "$EXTERNAL_IDS" | tr ',; ' '\\n' | sed '/^$/d' | sort -u | wc -l)
+          test "$COUNT" -ge 1 -a "$COUNT" -le 10 || { echo "Provide 1–10 unique FJA IDs."; exit 1; }
+      - name: Download research extraction artifact
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          mkdir -p artifacts/fja-download
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \\
+            --name "freejobalert-extraction-$SOURCE_RUN_ID" \\
+            --dir artifacts/fja-download
+          INPUT_DIR="$(find artifacts/fja-download -type f -name all-in-window-listings.json -print -quit | xargs -r dirname)"
+          test -n "$INPUT_DIR" || { echo "Listing inventory missing."; exit 1; }
+          test -f "$INPUT_DIR/detail-records.json" || { echo "Detail records missing."; exit 1; }
+          echo "FJA_ARTIFACT_DIR=$INPUT_DIR" >> "$GITHUB_ENV"
+      - name: Import selected records into private FJA inventory only
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FJA_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          FJA_IMPORT_EXTERNAL_IDS: ${{ inputs.external_ids }}
+          FJA_RECONCILIATION_OUT: artifacts/fja-reconciliation
+        run: |
+          test -n "$DATABASE_URL" || { echo "DATABASE_URL secret missing."; exit 1; }
+          npx tsx scripts/reconcile-fja-artifact.ts
+      - name: Run read-only canonical eligibility and notification HEAD checks
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FJA_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          FJA_CANONICAL_EXTERNAL_IDS: ${{ inputs.external_ids }}
+        run: npx tsx scripts/fja-canonical-pilot-dry-run.ts
+      - name: Upload private reconciliation and pilot report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-canonical-pilot-dry-run-${{ github.run_id }}
+          path: |
+            artifacts/fja-reconciliation/
+            fja-canonical-pilot-dry-run.json
+          if-no-files-found: warn
+          retention-days: 30
