@@ -2,7 +2,6 @@ import { cache } from "react";
 import { stripAggregatorData } from "@/lib/aggregators";
 import { hasHighConfidenceIssuerOrganizationMismatch } from "@/lib/organization-identity";
 import { getDb } from "../index";
-import { MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 import { recruitments, posts, vacancies, locations, positions, eligibilities, organizations, recruitment_slug_redirects, postAgeRules, postsVacancies, postingLocations, recruitmentCutoffs } from "../schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql, recruitmentIsOpenSql } from "./recruitment-lifecycle-sql";
