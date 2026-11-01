@@ -8,6 +8,7 @@ describe("vacancy field-evidence publication gates", () => {
   it("requires accepted issuer evidence in both canonical vacancy resolvers", () => {
     const source = read("src/lib/resolvers/fact-resolvers.ts");
     expect(source).toContain("post.officialVacancyEvidenceAccepted === true");
+    expect(source).toContain("post.resolvedVacancyCount != null && post.vacancies");
     expect(source).toContain("recruitment.officialVacancyEvidenceAccepted === true");
     expect(source).toContain('sourceVerificationStatus === "VERIFIED"');
   });
@@ -21,8 +22,8 @@ describe("vacancy field-evidence publication gates", () => {
   it("gates Leaf category breakdowns and never treats extracted counts as verified", () => {
     const route = read("src/app/(default)/jobs/[recruitment-slug]/[post-slug]/page.tsx");
     const section = read("src/components/job-posting/sections/vacancy-details.tsx");
-    expect(route).toContain("post.officialVacancyEvidenceAccepted === true && Array.isArray(enrichment?.vacancies)");
-    expect(section).toContain("const hasOfficialVacancyEvidence = post.officialVacancyEvidenceAccepted === true");
+    expect(route).toContain("post.officialVacancyEvidenceAccepted === true && vacancies > 0 && Array.isArray(enrichment?.vacancies)");
+    expect(section).toContain("const hasOfficialVacancyEvidence = post.officialVacancyEvidenceAccepted === true && resolvedFacts?.vacancyCount != null");
     expect(section).toContain("const isReported = !hasOfficialVacancyEvidence");
   });
 
