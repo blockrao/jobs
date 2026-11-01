@@ -111,10 +111,15 @@ export async function refreshRecruitmentDates(
         const evidenceResult = await tx.execute(sql`
           SELECT so.facts
           FROM public.source_observations so
-          INNER JOIN public.postings source_posting ON source_posting.id = so.posting_id
-          INNER JOIN public.posts canonical_post ON canonical_post.id = source_posting.inferred_post_id
+          LEFT JOIN public.postings source_posting ON source_posting.id = so.posting_id
+          LEFT JOIN public.posts canonical_post
+            ON canonical_post.id = COALESCE(so.post_id, source_posting.inferred_post_id)
           INNER JOIN public.sources s ON s.slug = so.source
-          WHERE canonical_post.recruitment_id = ${recruitmentId}
+          WHERE (
+              so.recruitment_id = ${recruitmentId}
+              OR canonical_post.recruitment_id = ${recruitmentId}
+              OR source_posting.inferred_recruitment_id = ${recruitmentId}
+            )
             AND s.authority = 'OFFICIAL'
             AND s.is_official IS TRUE
             AND so.outcome = 'LOADED'

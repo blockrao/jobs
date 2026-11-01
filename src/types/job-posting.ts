@@ -55,6 +55,9 @@ export interface JobPostingData {
   // Source Links. URLs are exposed publicly only when they match an OFFICIAL
   // source-registry host; aggregator-discovered and unknown-provenance links stay null.
   officialSourceUrl?: string | null;
+  /** Notification destination with a recent successful HEAD + approved-host check. */
+  notificationLinkUrl?: string | null;
+  notificationLinkValidated?: boolean;
   applyPortalUrl?: string | null;
   officialSourceRegistryUrl?: string | null;
   officialSourceVerified?: boolean;

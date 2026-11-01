@@ -32,6 +32,8 @@ function renderLeaf(
         notificationPublicationDate: new Date("2026-10-20T00:00:00.000Z"),
         officialSourceUrl: "https://ssc.gov.in/notice.pdf",
         officialSourceVerified,
+        notificationLinkUrl: officialSourceVerified ? "https://ssc.gov.in/notice.pdf" : null,
+        notificationLinkValidated: officialSourceVerified,
         applyUrl: "https://ssc.gov.in/apply",
         officialApplicationVerified,
       },
@@ -64,7 +66,7 @@ describe("job leaf source authority and application lifecycle", () => {
     expect(html).not.toContain(">Apply online</a>");
     expect(html).not.toContain(">Official notification</a>");
     expect(html).not.toContain("From official notification");
-    expect(html).toContain("Unverified notification or application links are hidden");
+    expect(html).toContain("Notification or application links that have not passed their respective destination checks are hidden.");
     expect(html).toContain("Reported notification date");
     expect(schemaProps).toHaveBeenLastCalledWith(expect.objectContaining({
       emitJobPosting: false,
@@ -76,6 +78,6 @@ describe("job leaf source authority and application lifecycle", () => {
     const html = renderLeaf("open", true, false);
     expect(html).not.toContain(">Apply online</a>");
     expect(html).toContain(">Official notification</a>");
-    expect(html).toContain("Unverified notification or application links are hidden");
+    expect(html).toContain("Notification or application links that have not passed their respective destination checks are hidden.");
   });
 });
