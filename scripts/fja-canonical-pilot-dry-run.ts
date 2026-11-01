@@ -4,7 +4,7 @@ import { getDb } from "../src/db";
 import { fjaJobInventory, fjaSourceCaptures } from "../src/db/schema";
 import { loadOrgIndex, normalizeOrgName, resolveOrganization } from "../src/ingest/organization-resolution";
 import { normalizeAdvertisementNumber } from "../src/ingest/resolve";
-import { normalizePostName } from "../src/ingest/post-lines";
+import { classifyPostLine, normalizePostName } from "../src/ingest/post-lines";
 import { checkOfficialNotificationUrl } from "../src/ingest/fja/notification-url-check";
 
 type Detail = {
@@ -109,6 +109,11 @@ async function main() {
     const org = orgResult.organization;
     const lines = getLines(detail);
     if (!lines.length) { records.push({ ...base, verdict: "REVIEW", reason: "POST_LEAF_NAME_MISSING", organization: org.name }); continue; }
+    const rejectedLine = lines.find((line) => classifyPostLine(line.name, line.vacancies ?? 1) !== "OK");
+    if (rejectedLine) {
+      records.push({ ...base, verdict: "REVIEW", reason: "POST_LEAF_CLASSIFIER_REJECTED", organization: org.name, postName: rejectedLine.name, classifierVerdict: classifyPostLine(rejectedLine.name, rejectedLine.vacancies ?? 1) });
+      continue;
+    }
     const yearMatch = (String(detail.page_title ?? "") + " " + row.title).match(/\\b(20\\d{2})\\b/);
     if (!yearMatch) { records.push({ ...base, verdict: "REVIEW", reason: "YEAR_NOT_EXPLICIT", organization: org.name }); continue; }
     const notification = getNotification(detail);
