@@ -1145,7 +1145,7 @@ export interface ClosingSoonJob {
 }
 
 export interface HomepageStats {
-  totalVacancies: number;
+  totalVacancies: number | null;
   activeRecruitments: number;
   closingThisWeek: number;
   orgsHiring: number;
@@ -1186,7 +1186,7 @@ export async function getHomepageStats(): Promise<{
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '10 days'
-      GROUP BY r.id, r.slug, r.name, r.application_end_date, r.total_vacancies, o.name
+      GROUP BY r.id, r.slug, r.name, r.application_end_date, o.name
       ORDER BY r.application_end_date ASC
       LIMIT 6
     `),
@@ -1194,7 +1194,7 @@ export async function getHomepageStats(): Promise<{
 
   const s = (statsRows as unknown as Record<string, unknown>[])[0] ?? {};
   const stats: HomepageStats = {
-    totalVacancies: Number(s.total_vacancies ?? 0),
+    totalVacancies: null,
     activeRecruitments: Number(s.active_recruitments ?? 0),
     closingThisWeek: Number(s.closing_this_week ?? 0),
     orgsHiring: Number(s.orgs_hiring ?? 0),
