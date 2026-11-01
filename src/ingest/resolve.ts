@@ -245,6 +245,22 @@ export async function resolveRecruitment(
     if (existing) return { id: existing.id, created: false };
   }
 
+  // Safe fallback when FJA/other HTML sources do not expose a notification
+  // number or exam entity: an exact organization + year + title match. This
+  // prevents duplicate source articles for the same named recruitment from
+  // creating duplicate hubs. Similar-but-not-exact names do not match here.
+  if (!identity.officialNotificationNumber && identity.year) {
+    const exact = await db.query.recruitments.findFirst({
+      where: and(
+        eq(recruitments.organizationId, identity.organizationId),
+        eq(recruitments.year, identity.year),
+        eq(recruitments.name, truncateForColumn(identity.title, RECRUITMENT_NAME_MAX_LENGTH)),
+        isNull(recruitments.officialNotificationNumber),
+      ),
+    });
+    if (exact) return { id: exact.id, created: false };
+  }
+
   // Fallback: organization + exam + year, narrowed further by title
   // similarity so two different recruitments by the same exam/org/year
   // (it happens — e.g. two separate notifications in one cycle) don't
