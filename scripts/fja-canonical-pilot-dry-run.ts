@@ -113,7 +113,9 @@ async function main() {
     if (!captured.has(row.externalId)) { records.push({ ...base, verdict: "REVIEW", reason: "PRIVATE_HTML_CAPTURE_MISSING" }); continue; }
     if (!detail) { records.push({ ...base, verdict: "REVIEW", reason: "DETAIL_NOT_CAPTURED" }); continue; }
     if (detail.open_status === "CLOSED_BY_CUTOFF") { records.push({ ...base, verdict: "SKIP", reason: "CLOSED_BY_CUTOFF" }); continue; }
-    if (!["OPEN_AS_OF_CUTOFF", "REVIEW_WALKIN_DATE_UNCLEAR"].includes(detail.open_status ?? "")) { records.push({ ...base, verdict: "REVIEW", reason: "LIFECYCLE_UNCLEAR" }); continue; }
+    // Only an explicitly open application is eligible for this live pilot.
+    // Walk-in/date-unclear records stay in review; never infer ACTIVE or UPCOMING.
+    if (detail.open_status !== "OPEN_AS_OF_CUTOFF") { records.push({ ...base, verdict: "REVIEW", reason: "LIFECYCLE_UNCLEAR" }); continue; }
     const facts = detail.facts ?? {};
     const orgRaw = String(facts.organization ?? row.organizationName ?? "").trim()
       || findOrg(orgIndex, String(detail.page_title ?? "") + " " + String(detail.detail_text ?? ""));
