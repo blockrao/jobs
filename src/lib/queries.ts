@@ -433,7 +433,7 @@ export async function getHomeStats(): Promise<HomeStats> {
   const s = (rows as unknown as Record<string, unknown>[])[0] ?? {};
   return {
     closing7dPosts: Number(s.closing_7d_posts ?? 0),
-    totalVacancies: Number(s.total_vacancies ?? 0),
+    totalVacancies: null,
     liveRecruitments: Number(s.live_recruitments ?? 0),
   };
 }
@@ -915,7 +915,7 @@ export async function countCurrentPostingsByCommission(): Promise<Record<number,
 export interface ControlCenterStats {
   activeRecruitments: number;
   totalPosts: number;
-  totalVacancies: number;
+  totalVacancies: number | null;
   orgsHiring: number;
   closingThisWeek: number;   // within 7 days
   closingThisMonth: number;  // within 30 days
@@ -925,7 +925,7 @@ export interface ControlCenterStats {
 export interface DeadlineBucket {
   label: string;
   recruitments: number;
-  vacancies: number;
+  vacancies: number | null;
   urgency: "critical" | "high" | "medium" | "low" | "none";
 }
 
@@ -955,7 +955,7 @@ export interface JobRow {
 export interface RoleRow {
   name: string;
   occurrenceCount: number;
-  totalVacancies: number;
+  totalVacancies: number | null;
   earliestDeadline: Date | null;
   closesWithinWeek: boolean;
 }
@@ -984,7 +984,7 @@ export async function getJobsControlCenter(): Promise<{
       SELECT
         COUNT(DISTINCT r.id)::int AS active_recruitments,
         COUNT(po.id)::int AS total_posts,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        NULL::int AS total_vacancies,
         COUNT(DISTINCT r.organization_id)::int AS orgs_hiring,
         COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_this_week,
         COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '30 days')::int AS closing_this_month,
@@ -1006,7 +1006,7 @@ export async function getJobsControlCenter(): Promise<{
           ELSE 'Later'
         END AS label,
         COUNT(DISTINCT r.id)::int AS recruitments,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS vacancies
+        NULL::int AS vacancies
       FROM public.recruitments r
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
@@ -1021,14 +1021,14 @@ export async function getJobsControlCenter(): Promise<{
         o.name AS org_name,
         o.slug AS org_slug,
         COUNT(po.id)::int AS post_count,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS vacancies,
+        NULL::int AS vacancies,
         MIN(r.application_end_date) AS earliest_deadline
       FROM public.organizations o
       JOIN public.recruitments r ON r.organization_id = o.id
       JOIN public.posts po ON po.recruitment_id = r.id
       WHERE r.status IN ('ACTIVE','UPCOMING')
       GROUP BY o.id, o.name, o.slug
-      ORDER BY vacancies DESC NULLS LAST
+      ORDER BY post_count DESC NULLS LAST
       LIMIT 12
     `),
 
@@ -1042,7 +1042,7 @@ export async function getJobsControlCenter(): Promise<{
         r.status,
         r.application_end_date,
         r.application_start_date,
-        COALESCE(r.total_vacancies, SUM(po.vacancy_total)::int) AS total_vacancies,
+        NULL::int AS total_vacancies,
         COUNT(po.id)::int AS post_count,
         STRING_AGG(po.name, ' · ' ORDER BY po.vacancy_total DESC NULLS LAST) AS post_names,
         EXTRACT(DAY FROM (r.application_end_date - NOW()))::int AS days_remaining,
@@ -1062,14 +1062,14 @@ export async function getJobsControlCenter(): Promise<{
       SELECT
         po.name,
         COUNT(po.id)::int AS occurrence_count,
-        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        NULL::int AS total_vacancies,
         MIN(r.application_end_date) AS earliest_deadline
       FROM public.posts po
       JOIN public.recruitments r ON r.id = po.recruitment_id
       WHERE r.status IN ('ACTIVE','UPCOMING')
         AND (r.application_end_date IS NULL OR r.application_end_date >= NOW())
       GROUP BY po.name
-      ORDER BY total_vacancies DESC NULLS LAST
+      ORDER BY occurrence_count DESC
       LIMIT 50
     `),
   ]);
@@ -1096,7 +1096,7 @@ export async function getJobsControlCenter(): Promise<{
   const deadlineBuckets: DeadlineBucket[] = (bucketRows as unknown as Record<string, unknown>[]).map((r) => ({
     label: String(r.label),
     recruitments: Number(r.recruitments),
-    vacancies: Number(r.vacancies),
+    vacancies: null,
     urgency: urgencyMap[String(r.label)] ?? "none",
   }));
 
@@ -1116,7 +1116,7 @@ export async function getJobsControlCenter(): Promise<{
     status: String(r.status),
     applicationEndDate: r.application_end_date ? new Date(String(r.application_end_date)) : null,
     applicationStartDate: r.application_start_date ? new Date(String(r.application_start_date)) : null,
-    totalVacancies: r.total_vacancies != null ? Number(r.total_vacancies) : null,
+    totalVacancies: null,
     postCount: Number(r.post_count),
     postNames: String(r.post_names ?? ""),
     daysRemaining: r.days_remaining != null ? Number(r.days_remaining) : null,
@@ -1128,7 +1128,7 @@ export async function getJobsControlCenter(): Promise<{
     return {
       name: String(r.name),
       occurrenceCount: Number(r.occurrence_count),
-      totalVacancies: Number(r.total_vacancies),
+      totalVacancies: null,
       earliestDeadline,
       closesWithinWeek: earliestDeadline !== null && earliestDeadline.getTime() - Date.now() < 7 * 86_400_000,
     };
@@ -1167,7 +1167,7 @@ export async function getHomepageStats(): Promise<{
   const [statsRows, closingRows] = await Promise.all([
     db.execute(sql`
       SELECT
-        COALESCE(SUM(po.vacancy_total), 0)::int AS total_vacancies,
+        NULL::int AS total_vacancies,
         COUNT(DISTINCT r.id)::int AS active_recruitments,
         COUNT(DISTINCT r.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_this_week,
         COUNT(DISTINCT r.organization_id)::int AS orgs_hiring
