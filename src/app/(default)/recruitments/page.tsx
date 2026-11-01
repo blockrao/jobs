@@ -2,7 +2,7 @@ import { pageSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/db";
-import { recruitments, posts, vacancies } from "@/db/schema";
+import { recruitments, posts } from "@/db/schema";
 import { absoluteUrl } from "@/lib/site";
 import { desc, eq, sql } from "drizzle-orm";
 
@@ -34,20 +34,18 @@ async function getAllRecruitments() {
 }
 
 /** One grouped query for every recruitment (the per-recruitment loop was 2 queries each and made the build time out). */
-async function getAllRecruitmentStats(): Promise<Map<number, { postCount: number; totalVacancies: number }>> {
+async function getAllRecruitmentStats(): Promise<Map<number, { postCount: number }>> {
   const db = getDb();
-  const out = new Map<number, { postCount: number; totalVacancies: number }>();
+  const out = new Map<number, { postCount: number }>();
   if (!db) return out;
   const rows = await db
     .select({
       recruitmentId: posts.recruitmentId,
       postCount: sql<number>`count(distinct ${posts.id})::int`,
-      totalVacancies: sql<number>`coalesce(sum(${vacancies.count}), 0)::int`,
     })
     .from(posts)
-    .leftJoin(vacancies, eq(vacancies.postId, posts.id))
     .groupBy(posts.recruitmentId);
-  for (const r of rows) out.set(r.recruitmentId, { postCount: r.postCount, totalVacancies: r.totalVacancies });
+  for (const r of rows) out.set(r.recruitmentId, { postCount: r.postCount });
   return out;
 }
 
@@ -59,7 +57,7 @@ export default async function RecruitmentsPage() {
     allRecruitments = [];
   }
 
-  let statsById = new Map<number, { postCount: number; totalVacancies: number }>();
+  let statsById = new Map<number, { postCount: number }>();
   try {
     statsById = await getAllRecruitmentStats();
   } catch {
@@ -67,7 +65,7 @@ export default async function RecruitmentsPage() {
   }
   const recruitmentsWithStats = allRecruitments.map((rec) => ({
     ...rec,
-    ...(statsById.get(rec.id) ?? { postCount: 0, totalVacancies: 0 }),
+    ...(statsById.get(rec.id) ?? { postCount: 0 }),
   }));
 
   const getStatusColor = (status: string) => {
@@ -138,14 +136,6 @@ export default async function RecruitmentsPage() {
                     </div>
                   )}
 
-                  {recruitment.totalVacancies > 0 && (
-                    <div>
-                      <div className="text-xs text-gray-600">Vacancies</div>
-                      <div className="font-semibold text-lg text-green-600">
-                        {recruitment.totalVacancies}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </Link>
