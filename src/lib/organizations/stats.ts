@@ -99,7 +99,7 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
 
   const recResult = await db.execute(sql`
     SELECT r.id, r.slug, r.name, r.status, r.notification_date, r.application_end_date,
-           r.total_vacancies,
+           /* vacancy total intentionally not selected until field evidence exists */
            (SELECT count(*)::int FROM posts p WHERE p.recruitment_id = r.id) AS post_count,
            e.slug AS exam_slug, e.label AS exam_name,
            o.name AS organisation_name,
