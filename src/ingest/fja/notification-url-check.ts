@@ -115,7 +115,18 @@ export function isPublicNotificationIPv4(value: string): boolean {
  * the approved hostname. Redirects are resolved and pinned independently.
  */
 async function dnsPinnedHead(url: URL, timeoutMs: number): Promise<HeadResponse> {
-  const addresses = await dnsLookup(url.hostname, { all: true, verbatim: true });
+  let dnsTimer: ReturnType<typeof setTimeout> | undefined;
+  let addresses: Awaited<ReturnType<typeof dnsLookup>>;
+  try {
+    addresses = await Promise.race([
+      dnsLookup(url.hostname, { all: true, verbatim: true }),
+      new Promise<never>((_, reject) => {
+        dnsTimer = setTimeout(() => reject(new Error("DNS_LOOKUP_TIMEOUT")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (dnsTimer) clearTimeout(dnsTimer);
+  }
   if (!addresses.length || addresses.some((entry) => entry.family === 4 && !isPublicNotificationIPv4(entry.address))) {
     throw new Error("DNS_RESOLVED_TO_NON_PUBLIC_ADDRESS");
   }
