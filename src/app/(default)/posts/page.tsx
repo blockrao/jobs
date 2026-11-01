@@ -71,7 +71,7 @@ function StatCard({ value, label, sub, accent }: { value: string; label: string;
 }
 
 function DeadlineHeatmap({ buckets }: { buckets: DeadlineBucket[] }) {
-  const maxVacancies = Math.max(...buckets.map((b) => b.vacancies), 1);
+  const maxRecruitments = Math.max(...buckets.map((b) => b.recruitments), 1);
   const urgencyBg: Record<string, string> = {
     critical: "bg-red-500",
     high: "bg-orange-400",
@@ -99,18 +99,18 @@ function DeadlineHeatmap({ buckets }: { buckets: DeadlineBucket[] }) {
       <div className="flex items-center gap-2 mb-4">
         <Clock className="h-4 w-4 text-neutral-400" />
         <h2 className="font-semibold text-neutral-900">Deadline Urgency</h2>
-        <span className="ml-auto text-xs text-neutral-400">vacancies by closing window</span>
+        <span className="ml-auto text-xs text-neutral-400">recruitments by closing window</span>
       </div>
       <div className="space-y-3">
         {buckets.map((b) => {
-          const barW = Math.round((b.vacancies / maxVacancies) * 100);
+          const barW = Math.round((b.recruitments / maxRecruitments) * 100);
           return (
             <div key={b.label} className={`rounded-lg border px-4 py-3 ${urgencyBorder[b.urgency]}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className={`text-sm font-semibold ${urgencyText[b.urgency]}`}>{b.label}</span>
                 <div className="flex items-center gap-3 text-xs text-neutral-500">
                   <span>{b.recruitments} notices</span>
-                  <span className="font-semibold text-neutral-800">{fmt(b.vacancies)} vacancies</span>
+                  <span className="font-semibold text-neutral-800">{fmt(b.recruitments)} notices</span>
                 </div>
               </div>
               <div className="h-2 rounded-full bg-black/5 overflow-hidden">
@@ -128,17 +128,17 @@ function DeadlineHeatmap({ buckets }: { buckets: DeadlineBucket[] }) {
 }
 
 function TopOrgsTable({ orgs }: { orgs: TopOrg[] }) {
-  const max = Math.max(...orgs.map((o) => o.vacancies ?? 0), 1);
+  const max = Math.max(...orgs.map((o) => o.postCount), 1);
   return (
     <div className="rounded-xl border border-black/8 bg-white shadow-sm p-5">
       <div className="flex items-center gap-2 mb-4">
         <Building2 className="h-4 w-4 text-neutral-400" />
         <h2 className="font-semibold text-neutral-900">Top Hiring Organisations</h2>
-        <span className="ml-auto text-xs text-neutral-400">by vacancy count</span>
+        <span className="ml-auto text-xs text-neutral-400">by active post count</span>
       </div>
       <div className="space-y-2">
         {orgs.map((org, i) => {
-          const barW = Math.round(((org.vacancies ?? 0) / max) * 100);
+          const barW = Math.round((org.postCount / max) * 100);
           return (
             <div key={org.orgSlug} className="group">
               <div className="flex items-center gap-2 mb-1">
@@ -147,7 +147,7 @@ function TopOrgsTable({ orgs }: { orgs: TopOrg[] }) {
                   {org.orgName}
                 </span>
                 <span className="text-xs font-semibold text-neutral-700 tabular-nums">
-                  {fmt(org.vacancies)}
+                  {fmt(org.postCount)}
                 </span>
               </div>
               <div className="ml-7 h-1.5 rounded-full bg-neutral-100 overflow-hidden">
@@ -248,23 +248,23 @@ function JobTable({ jobs }: { jobs: JobRow[] }) {
 }
 
 function RoleHeatmap({ roles }: { roles: RoleRow[] }) {
-  const max = roles[0]?.totalVacancies ?? 1;
+  const max = Math.max(...roles.map((role) => role.occurrenceCount), 1);
   return (
     <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-4 border-b border-black/5">
         <Users className="h-4 w-4 text-neutral-400" />
         <h2 className="font-semibold text-neutral-900">Top Hiring Roles</h2>
-        <span className="ml-auto text-xs text-neutral-400">by total vacancies</span>
+        <span className="ml-auto text-xs text-neutral-400">by post occurrence</span>
       </div>
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0">
         {roles.map((role) => {
-          const pct = Math.max(4, Math.round((role.totalVacancies / max) * 100));
+          const pct = Math.max(4, Math.round((role.occurrenceCount / max) * 100));
           const isUrgent = role.closesWithinWeek;
           const barColor = isUrgent
             ? "bg-red-400"
-            : role.totalVacancies > 2000
+            : role.occurrenceCount > 20
               ? "bg-indigo-500"
-              : role.totalVacancies > 500
+              : role.occurrenceCount > 5
                 ? "bg-indigo-400"
                 : "bg-indigo-300";
           return (
@@ -274,7 +274,7 @@ function RoleHeatmap({ roles }: { roles: RoleRow[] }) {
                   {role.name}
                 </span>
                 <span className="text-xs font-semibold tabular-nums text-neutral-800 shrink-0">
-                  {role.totalVacancies.toLocaleString("en-IN")}
+                  {role.occurrenceCount.toLocaleString("en-IN")}
                 </span>
               </div>
               <div className="h-1.5 rounded-full bg-neutral-100">
@@ -322,7 +322,7 @@ export default async function PostsControlCenterPage() {
             Govt Jobs Control Center
           </h1>
           <p className="mt-1.5 text-neutral-500 text-sm max-w-xl">
-            Every active government recruitment in India — vacancies, deadlines, and official links in one place.
+            Every active government recruitment in India — individual posts, deadlines, and official links in one place.
           </p>
         </div>
         <div className="flex gap-2">
@@ -347,8 +347,8 @@ export default async function PostsControlCenterPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           value={fmt(stats.totalVacancies)}
-          label="Total Vacancies"
-          sub="across active notices"
+          label="Verified Vacancy Figures"
+          sub="withheld until issuer evidence is accepted"
           accent="border-l-indigo-400"
         />
         <StatCard
