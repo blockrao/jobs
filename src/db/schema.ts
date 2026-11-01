@@ -1099,32 +1099,6 @@ export const organizationCandidates = pgTable(
 
 /** REMOVED: fja_source_captures — aggregator trace data removed in Step 3 cleanup (2026-10-24). */
 
-export const sourceObservations = pgTable(
-  "source_observations",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    source: varchar("source", { length: 80 }).notNull(),
-    externalId: varchar("external_id", { length: 200 }).notNull(),
-    sourceUrl: text("source_url"),
-    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
-    contentHash: varchar("content_hash", { length: 64 }).notNull(),
-    facts: jsonb("facts").notNull(),
-    links: jsonb("links"),
-    raw: jsonb("raw"),
-    runId: varchar("run_id", { length: 80 }),
-    outcome: varchar("outcome", { length: 30 }).notNull().default("RECEIVED"),
-    outcomeReason: text("outcome_reason"),
-    postingId: integer("posting_id").references(() => postings.id, { onDelete: "set null" }),
-    candidateId: integer("candidate_id").references(() => organizationCandidates.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    uniqueIndex("source_observations_content_idx").on(t.source, t.externalId, t.contentHash),
-    index("source_observations_identity_idx").on(t.source, t.externalId, t.observedAt),
-    index("source_observations_posting_idx").on(t.postingId),
-  ],
-).enableRLS();
-
 export const qualifications = pgTable("qualifications", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 120 }).notNull(),
@@ -1300,7 +1274,72 @@ export const posts = pgTable(
   (table) => [
     uniqueIndex("posts_recruitment_name_idx").on(table.recruitmentId, sql`lower(${table.name})`),
   ],
+).enableRLS();export const sourceObservations = pgTable(
+  "source_observations",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    source: varchar("source", { length: 80 }).notNull(),
+    externalId: varchar("external_id", { length: 200 }).notNull(),
+    sourceUrl: text("source_url"),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+    contentHash: varchar("content_hash", { length: 64 }).notNull(),
+    facts: jsonb("facts").notNull(),
+    links: jsonb("links"),
+    raw: jsonb("raw"),
+    runId: varchar("run_id", { length: 80 }),
+    outcome: varchar("outcome", { length: 30 }).notNull().default("RECEIVED"),
+    outcomeReason: text("outcome_reason"),
+    postingId: integer("posting_id").references(() => postings.id, { onDelete: "set null" }),
+    recruitmentId: integer("recruitment_id").references(() => recruitments.id, { onDelete: "set null" }),
+    postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+    candidateId: integer("candidate_id").references(() => organizationCandidates.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("source_observations_content_idx").on(t.source, t.externalId, t.contentHash),
+    index("source_observations_identity_idx").on(t.source, t.externalId, t.observedAt),
+    index("source_observations_posting_idx").on(t.postingId),
+    index("source_observations_recruitment_idx").on(t.recruitmentId),
+    index("source_observations_post_idx").on(t.postId),
+  ],
 ).enableRLS();
+
+/**
+ * Append-only record of HTTP HEAD checks for notification destinations.
+ * A successful check establishes reachability and approved-host routing only;
+ * it is not independent verification of the notification document's contents.
+ */
+export const notificationUrlChecks = pgTable(
+  "notification_url_checks",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    sourceObservationId: bigint("source_observation_id", { mode: "number" }).notNull()
+      .references(() => sourceObservations.id, { onDelete: "restrict" }),
+    recruitmentId: integer("recruitment_id")
+      .references(() => recruitments.id, { onDelete: "set null" }),
+    postId: integer("post_id")
+      .references(() => posts.id, { onDelete: "set null" }),
+    requestedUrl: text("requested_url").notNull(),
+    approvedHosts: text("approved_hosts").array().notNull().default(sql`'{}'::text[]`),
+    approvedHostEvidence: jsonb("approved_host_evidence").notNull().default(sql`'{}'::jsonb`),
+    finalUrl: text("final_url"),
+    finalHost: text("final_host"),
+    redirectChain: jsonb("redirect_chain").notNull().default(sql`'[]'::jsonb`),
+    httpStatus: integer("http_status"),
+    contentType: text("content_type"),
+    status: varchar("status", { length: 16 }).notNull(),
+    failureReason: text("failure_reason"),
+    validatorVersion: varchar("validator_version", { length: 40 }).notNull().default("v1"),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("notification_url_checks_observation_idx").on(t.sourceObservationId, t.checkedAt),
+    index("notification_url_checks_recruitment_idx").on(t.recruitmentId, t.checkedAt),
+    index("notification_url_checks_post_idx").on(t.postId, t.checkedAt),
+  ],
+).enableRLS();
+
 
 // Structured eligibility, child of Post — NOT a prose blob. Live FK is
 // post_id (the old schema-v2.ts declared positionId, which doesn't exist
