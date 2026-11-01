@@ -150,7 +150,8 @@ export async function getOrganizationStats(organizationId: number, now = new Dat
       status: r.status,
       notificationDate: toDate(r.notification_date),
       applicationEndDate: lifecycle.deadline,
-      totalVacancies: r.total_vacancies,
+      // Global recruitment verification is not field-level vacancy evidence.
+      totalVacancies: null,
       postCount: r.post_count ?? 0,
       examSlug: r.exam_slug,
       examName: r.exam_name,
