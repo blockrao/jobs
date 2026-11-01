@@ -63,6 +63,8 @@ interface JobDetailPageProps {
     notificationPublicationDate?: Date | string | null;
     officialSourceUrl?: string | null;
     officialSourceVerified?: boolean;
+    notificationLinkUrl?: string | null;
+    notificationLinkValidated?: boolean;
     applyUrl?: string | null;
     officialApplicationVerified?: boolean;
     employmentType?: string | null;
@@ -214,8 +216,10 @@ export default function JobDetailPageProduction({
     links.push({ label, href });
   };
   if (!isApplicationClosed && post.officialApplicationVerified === true) pushLink('Apply online', post.applyUrl);
+  if (post.notificationLinkValidated === true) {
+    pushLink('Official notification', post.notificationLinkUrl);
+  }
   if (post.officialSourceVerified === true) {
-    pushLink('Official notification', post.officialSourceUrl);
     for (const l of post.officialLinks ?? []) pushLink(linkLabel(l), l.url);
   }
   if (isApplicationClosed && post.officialApplicationVerified === true) {
@@ -364,13 +368,13 @@ export default function JobDetailPageProduction({
                 {post.officialApplicationVerified === true && post.applyUrl && !isApplicationClosed && (
                   <a className={`${styles.btn} ${styles.btnPrimary}`} href={post.applyUrl} target="_blank" rel="noopener noreferrer">Apply online</a>
                 )}
-                {post.officialSourceVerified === true && post.officialSourceUrl && (
-                  <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.officialSourceUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
+                {post.notificationLinkValidated === true && post.notificationLinkUrl && (
+                  <a className={`${styles.btn} ${post.applyUrl && !isApplicationClosed ? styles.btnSecondary : styles.btnPrimary}`} href={post.notificationLinkUrl} target="_blank" rel="noopener noreferrer">Official notification</a>
                 )}
               </p>
-              {(post.officialSourceVerified !== true || post.officialApplicationVerified !== true) && (
+              {(post.notificationLinkValidated !== true || post.officialApplicationVerified !== true) && (
                 <p className={styles.notice}>
-                  Unverified notification or application links are hidden. Confirm the destination on the recruiting organisation&apos;s official website before applying.
+                  Notification or application links that have not passed their respective destination checks are hidden. Confirm details on the recruiting organisation&apos;s website before applying.
                 </p>
               )}
               {notificationDate && (
