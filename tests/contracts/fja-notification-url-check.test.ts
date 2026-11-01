@@ -6,7 +6,7 @@ function headResponse(status: number, headers: Record<string, string> = {}): Res
 }
 
 describe("checkOfficialNotificationUrl", () => {
-  it("accepts a reachable authority URL using HEAD only", async () => {
+  it("accepts a reachable recruitment-authorised URL using HEAD only", async () => {
     const fetchImpl = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.method).toBe("HEAD");
       return headResponse(200, { "content-type": "application/pdf" });
@@ -24,14 +24,14 @@ describe("checkOfficialNotificationUrl", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
-  it("follows bounded redirects only when every destination remains an authority host", async () => {
+  it("follows bounded redirects only when every destination is explicitly approved", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(headResponse(302, { location: "https://recruitment.nic.in/notice.pdf" }))
       .mockResolvedValueOnce(headResponse(200, { "content-type": "application/pdf" }));
 
     const result = await checkOfficialNotificationUrl(
       "https://upsc.gov.in/notice.pdf",
-      { fetchImpl },
+      { approvedHosts: ["upsc.gov.in", "recruitment.nic.in"], fetchImpl },
     );
 
     expect(result.ok).toBe(true);
@@ -42,7 +42,7 @@ describe("checkOfficialNotificationUrl", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
-  it("rejects aggregator, unrelated, IP and non-HTTP(S) destinations before requesting", async () => {
+  it("rejects aggregator, unapproved, IP and non-HTTP(S) destinations before requesting", async () => {
     const fetchImpl = vi.fn();
 
     for (const url of [
@@ -51,11 +51,18 @@ describe("checkOfficialNotificationUrl", () => {
       "http://127.0.0.1/notice.pdf",
       "file:///tmp/notice.pdf",
     ]) {
-      const result = await checkOfficialNotificationUrl(url, { fetchImpl });
+      const result = await checkOfficialNotificationUrl(url, { approvedHosts: ["upsc.gov.in"], fetchImpl });
       expect(result.ok).toBe(false);
       expect(result.reason).toBe("INVALID_OR_UNTRUSTED_NOTIFICATION_HOST");
     }
 
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when no recruitment-specific approved host is supplied", async () => {
+    const fetchImpl = vi.fn();
+    const result = await checkOfficialNotificationUrl("https://upsc.gov.in/notice.pdf", { fetchImpl });
+    expect(result.ok).toBe(false);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -66,7 +73,7 @@ describe("checkOfficialNotificationUrl", () => {
 
     const result = await checkOfficialNotificationUrl(
       "https://upsc.gov.in/notice.pdf",
-      { fetchImpl },
+      { approvedHosts: ["upsc.gov.in"], fetchImpl },
     );
 
     expect(result.ok).toBe(false);
@@ -79,7 +86,7 @@ describe("checkOfficialNotificationUrl", () => {
 
     const result = await checkOfficialNotificationUrl(
       "https://upsc.gov.in/notice.pdf",
-      { fetchImpl },
+      { approvedHosts: ["upsc.gov.in"], fetchImpl },
     );
 
     expect(result.ok).toBe(false);
@@ -88,14 +95,14 @@ describe("checkOfficialNotificationUrl", () => {
     expect(fetchImpl.mock.calls[0][1]?.method).toBe("HEAD");
   });
 
-  it("fails closed when the authority host does not respond", async () => {
+  it("fails closed when the approved authority host does not respond", async () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error("network timeout");
     });
 
     const result = await checkOfficialNotificationUrl(
       "https://upsc.gov.in/notice.pdf",
-      { fetchImpl },
+      { approvedHosts: ["upsc.gov.in"], fetchImpl },
     );
 
     expect(result.ok).toBe(false);
