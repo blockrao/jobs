@@ -197,7 +197,8 @@ function mapRow(row: Row): SearchResult {
     locationRegion: row.location_region ? String(row.location_region) : null,
     locationCity: row.location_city ? String(row.location_city) : null,
     eligibility: row.eligibility ? String(row.eligibility) : null,
-    totalVacancies: toNumberOrNull(row.total_vacancies),
+    // Recruitment/legacy posting totals are not field-evidence-backed. Keep search results discoverable, but do not publish an unsupported count.
+    totalVacancies: null,
     validThrough: toIsoOrNull(row.last_date),
     createdAt: toIsoOrNull(row.announced_at) ?? "",
     announcementState: row.announcement_state ? String(row.announcement_state) : null,
