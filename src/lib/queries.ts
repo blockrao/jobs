@@ -15,7 +15,6 @@ import {
 } from "@/db/schema";
 import { posts, recruitments, positions, postAgeRules, selectionProcesses, recruitmentFees } from "@/db/schema";
 import { applySemanticGate } from "@/lib/semantic-fields";
-import { isPlausibleRecruitmentVacancyCount, MAX_TRUSTED_RECRUITMENT_VACANCIES } from "@/lib/vacancy-integrity";
 import { toPlausibleRecruitmentDate } from "@/lib/recruitment-dates";
 import { plausibleRecruitmentDeadlineSql, recruitmentIsLiveSql } from "@/db/operations/recruitment-lifecycle-sql";
 
@@ -255,10 +254,9 @@ export async function listCategories() {
 
 // ---------- Homepage (deadline desk) ----------
 //
-// Design decision 2026-10-14 (HOMEPAGE_DESIGN_STRATEGY): the homepage ranks
-// by vacancies × urgency, never by recency or pure date — bulk ingest makes
-// "new" meaningless and date-sorted heads are dominated by 1-vacancy project
-// posts. Government sectors only; "PRIVATE" is the write-path default bucket.
+// Vacancy figures are withheld until a persisted, accepted issuer observation
+// exists for the recruitment-scoped field. Discovery ranking therefore uses
+// freshness and deadline urgency, never unverified vacancy totals.
 
 export interface HomeRecruitmentRow {
   slug: string;
@@ -279,7 +277,7 @@ export interface HomeOrgRow {
   name: string;
   nameHi: string | null;
   slug: string;
-  vacancies: number;
+  recruitments: number;
 }
 
 export interface HomeStats {
@@ -293,15 +291,6 @@ const liveGovRecruitment = sql`
   AND r.slug IS NOT NULL
   AND r.verification_status IS DISTINCT FROM 'QUARANTINED'
   AND o.slug <> 'unclassified-government-jobs'
-`;
-
-// Homepage vacancy rankings are intentionally stricter than general page
-// visibility: only officially verified recruitment totals in a conservative
-// range are eligible. Extreme values remain available for review, not promotion.
-const verifiedHomeVacancy = sql`
-  r.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
-  AND r.official_notification_url ~ '^https?://'
-  AND r.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
 `;
 
 /**
@@ -347,10 +336,8 @@ function mapHomeRows(rows: unknown): HomeRecruitmentRow[] {
       orgNameHi: r.org_name_hi ? String(r.org_name_hi) : null,
       orgSlug: String(r.org_slug),
       sector: String(r.sector),
-      totalVacancies:
-        r.total_vacancies != null && isPlausibleRecruitmentVacancyCount(Number(r.total_vacancies))
-          ? Number(r.total_vacancies)
-          : null,
+      // Global verification and URL presence do not establish this field.
+      totalVacancies: null,
       applicationEndDate: deadline,
       postCount: Number(r.post_count ?? 0),
       daysLeft: deadline ? Math.ceil((deadline.getTime() - Date.now()) / 86_400_000) : null,
