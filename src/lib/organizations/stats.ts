@@ -9,8 +9,8 @@
  *  - the legacy `postings` table is never read here;
  *  - quarantined recruitments are excluded everywhere;
  *  - live/closed comes from `deriveLifecycle`, never a stored flag;
- *  - vacancies are counted once per recruitment (recruitments.total_vacancies),
- *    never summed across post rows that repeat the same recruitment total;
+ *  - vacancy totals remain unknown until accepted field-level issuer evidence
+ *    is available; post rows are never summed into a recruitment total;
  *  - every number on the page traces to a row; nothing is estimated.
  */
 import { sql } from "drizzle-orm";
@@ -52,7 +52,7 @@ export interface OrganizationStats {
   recruitments: OrgRecruitment[];
   live: OrgRecruitment[];
   closed: OrgRecruitment[];
-  /** Sum of recruitment-level vacancies across live recruitments (null when none state a figure). */
+  /** Accepted recruitment-scoped vacancy total; null until field evidence is persisted. */
   liveVacancies: number | null;
   /** Date of the most recent notification on record, if any. */
   latestNotification: Date | null;
