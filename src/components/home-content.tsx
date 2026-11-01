@@ -182,8 +182,8 @@ export function HomeContent({
             </ul>
             <p className="mt-3 pt-3 border-t border-black/8 text-sm text-neutral-500">
               {isHi
-                ? "अगले 14 दिनों में बंद होने वाली भर्तियों को रिक्तियों के अनुसार क्रम दिया गया है। दिखाई गई अंतिम तिथि की पुष्टि भर्ती संस्था की नवीनतम आधिकारिक अधिसूचना से करें।"
-                : "Recruitments closing within 14 days are ranked by vacancy count. Confirm each displayed deadline in the recruiting body's latest official notification."}
+                ? "अगले 14 दिनों में बंद होने वाली भर्तियां अंतिम तिथि के अनुसार दिखाई जाती हैं। रिक्तियों की संख्या तभी दिखाई जाती है जब आधिकारिक स्रोत का प्रमाण स्वीकार हो।"
+                : "Recruitments closing within 14 days are ordered by earliest deadline. Vacancy figures appear only when the recruiting body's evidence has been accepted."}
             </p>
           </section>
         )}
