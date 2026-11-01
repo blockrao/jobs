@@ -60,7 +60,21 @@ The existing structures do not yet form a complete, durable field-decision contr
 - `source_observations` links to legacy `postings` or organisation candidates, not directly to canonical `posts` / `recruitments`.
 - `evidence` does not currently carry a direct source-observation FK, an exact normalized value, an acceptance/rejection decision, reviewer identity or decision timestamp.
 - `source_documents` and `source_observations` have no explicit FK relationship in the current ORM schema.
-- The WP-001 migration's outcome check lists `RECEIVED`, `LOADED`, `HELD_CANDIDATE`, `REJECTED`, `SKIPPED`; the current ORM model uses a plain varchar. PR #221's description refers to `ACCEPTED` observations. This outcome vocabulary / deployed-schema difference must be reconciled before building on it.
+- The WP-001 migration and the live database both constrain `source_observations.outcome` to `RECEIVED`, `LOADED`, `HELD_CANDIDATE`, `REJECTED`, `SKIPPED`. PR #221's description refers to `ACCEPTED` observations. The live constraint confirms that `ACCEPTED` is not a valid ingestion outcome. Keep ingestion outcome separate from a field-level review decision; do not simply add `ACCEPTED` to this outcome check.
+
+### Read-only production schema and inventory check (2026-11-01)
+
+The connected Supabase project named `jobs` was inspected read-only; no rows or schema were changed.
+
+- `source_observations`: 2,975 rows.
+- `source_documents`: 2,082 rows.
+- `evidence`: 0 rows.
+- Source-observation outcomes: 1,844 `LOADED`, 912 `RECEIVED`, 120 `HELD_CANDIDATE`, 20 `REJECTED`, 79 `SKIPPED`.
+- The live `source_observations` foreign keys are to legacy `postings.id` and `organization_candidates.id`; there is no direct canonical Post or Recruitment FK.
+- `source_documents` links to `sources`, but not to `source_observations`.
+- `evidence` has only its primary key constraint in the live schema; its nullable `source_document_id` is not enforced as a foreign key. It currently has no rows.
+
+This confirms that no current evidence rows can authorize public vacancy facts, and that the outcome terminology in the earlier PR description must not be mistaken for a deployed field-review workflow.
 
 ### Recommended next design step
 
@@ -74,7 +88,7 @@ Do not add a boolean column to every entity or create a second source-of-truth. 
 - Decision state, reviewer, decision time and supersession/revocation history.
 - A rule preventing a Recruitment-scoped observation from authorizing a Post-scoped value, or vice versa.
 
-The public resolver should consume a typed, scope-specific accepted evidence result. It must not infer acceptance from a source URL, global verification status, extraction confidence or an aggregator record.
+The public resolver should consume a typed, scope-specific accepted evidence result. It must not infer acceptance from a source URL, global verification status, extraction confidence or an aggregator record. Keep source-observation ingestion outcomes separate from evidence review decisions. The existing `evidence` table is empty and is a candidate to extend, but only after canonical subject integrity and deployed schema are fully designed.
 
 This is a design recommendation only. No migration, production write, source-review UI or loader change is included here.
 
