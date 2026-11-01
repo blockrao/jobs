@@ -365,9 +365,8 @@ export async function listClosingSoon(opts: { days: number; limit: number; offse
   const rows = await db.execute(sql`
     ${homeRecruitmentSelect}
     WHERE ${liveGovRecruitment}
-      AND ${verifiedHomeVacancy}
       AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${opts.days}::int)
-    ORDER BY r.total_vacancies DESC, r.application_end_date ASC, r.id
+    ORDER BY r.application_end_date ASC, r.id
     LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
   `);
   return mapHomeRows(rows);
@@ -380,20 +379,19 @@ export async function countClosingSoon(days: number): Promise<number> {
     SELECT COUNT(*)::int AS n FROM public.recruitments r
     JOIN public.organizations o ON o.id = r.organization_id
     WHERE ${liveGovRecruitment}
-      AND ${verifiedHomeVacancy}
       AND r.application_end_date BETWEEN NOW() AND NOW() + make_interval(days => ${days}::int)
   `);
   return Number((rows as unknown as Record<string, unknown>[])[0]?.n ?? 0);
 }
 
-/** Live recruitments ranked by vacancies (the "biggest open now" rule). */
+/** Live recruitments ranked by notification freshness, then deadline. */
 export async function listBiggestOpen(opts: { limit: number; offset?: number }): Promise<HomeRecruitmentRow[]> {
   if (!hasDb()) return [];
   const db = getDb();
   const rows = await db.execute(sql`
     ${homeRecruitmentSelect}
-    WHERE ${liveGovRecruitment} AND ${verifiedHomeVacancy}
-    ORDER BY r.total_vacancies DESC, r.application_end_date ASC NULLS LAST, r.id
+    WHERE ${liveGovRecruitment}
+    ORDER BY r.notification_date DESC NULLS LAST, r.application_end_date ASC NULLS LAST, r.id DESC
     LIMIT ${opts.limit} OFFSET ${opts.offset ?? 0}
   `);
   return mapHomeRows(rows);
@@ -403,20 +401,19 @@ export async function listTopHiringOrgs(limit = 12): Promise<HomeOrgRow[]> {
   if (!hasDb()) return [];
   const db = getDb();
   const rows = await db.execute(sql`
-    SELECT o.name, o.name_hi, o.slug, COALESCE(SUM(r.total_vacancies), 0)::int AS vacancies
+    SELECT o.name, o.name_hi, o.slug, COUNT(DISTINCT r.id)::int AS recruitments
     FROM public.organizations o
     JOIN public.recruitments r ON r.organization_id = o.id
-    WHERE ${liveGovRecruitment} AND ${verifiedHomeVacancy} AND o.merged_into_id IS NULL
+    WHERE ${liveGovRecruitment} AND o.merged_into_id IS NULL
     GROUP BY o.id
-    HAVING COALESCE(SUM(r.total_vacancies), 0) > 0
-    ORDER BY vacancies DESC, o.name
+    ORDER BY recruitments DESC, o.name
     LIMIT ${limit}
   `);
   return (rows as unknown as Record<string, unknown>[]).map((r) => ({
     name: String(r.name),
     nameHi: r.name_hi ? String(r.name_hi) : null,
     slug: String(r.slug),
-    vacancies: Number(r.vacancies),
+    recruitments: Number(r.recruitments),
   }));
 }
 
@@ -426,18 +423,7 @@ export async function getHomeStats(): Promise<HomeStats> {
   const rows = await db.execute(sql`
     SELECT
       COUNT(p.id) FILTER (WHERE r.application_end_date BETWEEN NOW() AND NOW() + INTERVAL '7 days')::int AS closing_7d_posts,
-      (
-        SELECT COALESCE(SUM(r2.total_vacancies), 0)::int
-        FROM public.recruitments r2
-        JOIN public.organizations o2 ON o2.id = r2.organization_id
-        WHERE ${recruitmentIsLiveSql(sql`r2.status`, sql`r2.application_end_date`)}
-          AND r2.slug IS NOT NULL
-          AND r2.verification_status IN ('VERIFIED', 'MANUALLY_VERIFIED')
-          AND r2.official_notification_url ~ '^https?://'
-          AND r2.total_vacancies BETWEEN 1 AND ${MAX_TRUSTED_RECRUITMENT_VACANCIES}
-          AND r2.verification_status IS DISTINCT FROM 'QUARANTINED'
-          AND o2.slug <> 'unclassified-government-jobs'
-      ) AS total_vacancies,
+      0::int AS total_vacancies, -- Withheld until recruitment-scoped evidence is persisted.
       COUNT(DISTINCT r.id)::int AS live_recruitments
     FROM public.posts p
     JOIN public.recruitments r ON r.id = p.recruitment_id
@@ -494,7 +480,7 @@ export async function listLivePostsBySector(
       postId: posts.id,
       postName: posts.name,
       postSlug: posts.slug,
-      vacancyTotal: posts.vacancyTotal,
+      vacancyTotal: null, // No accepted field-level evidence is currently loaded.
       recruitmentName: recruitments.name,
       recruitmentSlug: recruitments.slug,
       recruitmentStatus: recruitments.status,
@@ -1819,7 +1805,7 @@ export async function listLivePostsByQualification(
       postId: posts.id,
       postName: posts.name,
       postSlug: posts.slug,
-      vacancyTotal: posts.vacancyTotal,
+      vacancyTotal: null, // No accepted field-level evidence is currently loaded.
       recruitmentSlug: recruitments.slug,
       applicationEndDate: plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
       orgName: organizations.name,
@@ -1834,8 +1820,9 @@ export async function listLivePostsByQualification(
       ),
     )
     .orderBy(
-      sql`COALESCE(${posts.vacancyTotal}, 0) DESC`,
       plausibleRecruitmentDeadlineSql(recruitments.applicationEndDate),
+      desc(recruitments.updatedAt),
+      posts.id,
     )
     .limit(limit)
     .offset(offset);
