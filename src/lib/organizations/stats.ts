@@ -71,7 +71,6 @@ type RecruitmentRow = {
   status: string;
   notification_date: Date | string | null;
   application_end_date: Date | string | null;
-  total_vacancies: number | null;
   post_count: number;
   exam_slug: string | null;
   exam_name: string | null;
