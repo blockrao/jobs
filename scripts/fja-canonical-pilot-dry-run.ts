@@ -124,6 +124,7 @@ async function main() {
     }
     records.push({
       ...base,
+      contentHash: row.contentHash,
       verdict: "READY_FOR_PILOT",
       organization: org.name,
       organizationId: org.id,
