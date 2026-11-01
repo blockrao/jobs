@@ -117,8 +117,11 @@ export async function refreshRecruitmentDates(
           INNER JOIN public.sources s ON s.slug = so.source
           WHERE (
               so.recruitment_id = ${recruitmentId}
-              OR canonical_post.recruitment_id = ${recruitmentId}
-              OR source_posting.inferred_recruitment_id = ${recruitmentId}
+              OR (so.post_id IS NOT NULL AND canonical_post.recruitment_id = ${recruitmentId})
+              OR (
+                so.recruitment_id IS NULL AND so.post_id IS NULL
+                AND source_posting.inferred_recruitment_id = ${recruitmentId}
+              )
             )
             AND s.authority = 'OFFICIAL'
             AND s.is_official IS TRUE
