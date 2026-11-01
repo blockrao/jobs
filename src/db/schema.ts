@@ -1274,7 +1274,9 @@ export const posts = pgTable(
   (table) => [
     uniqueIndex("posts_recruitment_name_idx").on(table.recruitmentId, sql`lower(${table.name})`),
   ],
-).enableRLS();export const sourceObservations = pgTable(
+).enableRLS();
+
+export const sourceObservations = pgTable(
   "source_observations",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
