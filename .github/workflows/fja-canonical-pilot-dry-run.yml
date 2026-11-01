@@ -65,8 +65,8 @@ jobs:
           npx tsx scripts/reconcile-fja-artifact.ts
       - name: Type-check bounded pilot tooling
         run: |
-          npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/reconcile-fja-artifact.ts
-          npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-dry-run.ts
+          npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/reconcile-fja-artifact.ts
+          npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-dry-run.ts
       - name: Run read-only canonical eligibility and notification HEAD checks
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
