@@ -12,8 +12,21 @@ import { parseFjaResearchDetail } from "./lib/fja-research-parser";
 import { buildFjaEnrichmentCandidate } from "./lib/fja-enrichment-mapper";
 
 const BASE = "https://www.freejobalert.com";
-const START_DATE = process.env.START_DATE || "2026-10-02";
-const AS_OF_DATE = process.env.AS_OF_DATE || "2026-10-09";
+function normalizeDateInput(value: string | undefined, fallback: string, name: string): string {
+  const input = (value || fallback).trim();
+  const match = input.match(/^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/);
+  if (!match) throw new Error(`${name} must use YYYY-MM-DD format; received: ${input}`);
+  const [, year, month, day] = match;
+  const normalized = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  const parsed = new Date(`${normalized}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== normalized) {
+    throw new Error(`${name} is not a valid calendar date: ${input}`);
+  }
+  return normalized;
+}
+const START_DATE = normalizeDateInput(process.env.START_DATE, "2026-10-02", "START_DATE");
+const AS_OF_DATE = normalizeDateInput(process.env.AS_OF_DATE, "2026-10-09", "AS_OF_DATE");
+if (START_DATE > AS_OF_DATE) throw new Error("START_DATE must not be later than AS_OF_DATE.");
 const DELAY_MS = Number(process.env.DELAY_MS || 1000);
 const MAX_LIST_PAGES = Number(process.env.MAX_LIST_PAGES || 20);
 const MAX_RECORDS = Math.max(1, Number.parseInt(process.env.MAX_RECORDS || "10", 10) || 10);
