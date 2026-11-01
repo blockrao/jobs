@@ -391,7 +391,7 @@ export function buildHubData(
 
     // Compute vacancy breakdown by category from vacancies table
     const vacancyBreakdown: PostTableRow['vacancyBreakdown'] = [];
-    if (post.officialVacancyEvidenceAccepted === true && post.vacancies && Array.isArray(post.vacancies)) {
+    if (post.officialVacancyEvidenceAccepted === true && post.resolvedVacancyCount != null && post.vacancies && Array.isArray(post.vacancies)) {
       const vacancyMap = new Map<string, number>();
       for (const vacRow of post.vacancies) {
         const vacRecord = asRecord(vacRow);
