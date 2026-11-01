@@ -24,7 +24,13 @@ const isoDate = (v:unknown):string|null => {
 const cell=(v:unknown)=>'"'+String(v??"").replace(/"/g,'""')+'"';
 
 async function main(){
- const listings=JSON.parse(await readFile(path.join(input,"all-in-window-listings.json"),"utf8"));
+ const allListings=JSON.parse(await readFile(path.join(input,"all-in-window-listings.json"),"utf8"));
+ const requestedIds=new Set((process.env.FJA_IMPORT_EXTERNAL_IDS??"").split(/[\\s,;]+/).map((v:string)=>v.trim()).filter(Boolean));
+ const listings=requestedIds.size?allListings.filter((l:any)=>requestedIds.has(extId(l.listing_url))):allListings;
+ if(requestedIds.size&&listings.length!==requestedIds.size){
+  const found=new Set(listings.map((l:any)=>extId(l.listing_url)));
+  throw Error("Requested FJA import IDs missing from artifact: "+[...requestedIds].filter(id=>!found.has(id)).join(", "));
+ }
  const details=JSON.parse(await readFile(path.join(input,"detail-records.json"),"utf8"));
  const extractionSummary=JSON.parse(await readFile(path.join(input,"summary.json"),"utf8"));
  const startDate=String(extractionSummary.start_date??"");
