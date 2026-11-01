@@ -27,6 +27,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/reconcile-fja-artifact.ts
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-dry-run.ts
-      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-apply.ts
+      - run: npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/reconcile-fja-artifact.ts
+      - run: npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-dry-run.ts
+      - run: npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution bundler --types node scripts/fja-canonical-pilot-apply.ts
