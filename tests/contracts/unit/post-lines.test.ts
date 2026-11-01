@@ -42,6 +42,9 @@ describe("PV-U post-line classifier", () => {
     expect(classifyPostLine("No of Posts", 27)).toBe("GENERIC");
     expect(classifyPostLine("General", 3065)).toBe("CATEGORY_LABEL");
     expect(classifyPostLine("Project Associate I/ Project Associate II", 2)).toBe("COMBINED");
+    expect(classifyPostLine("Adjunct Faculty", 3)).toBe("OK");
+    expect(classifyPostLine("Director, Centre for Distance and Online Education", 1)).toBe("OK");
+    expect(classifyPostLine("Director and Assistant Director", 2)).toBe("COMBINED");
   });
 
   test("PV-U4 a zero or missing count never passes; a bare single-word title is not rejected on length of title alone", () => {
