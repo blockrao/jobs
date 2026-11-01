@@ -75,6 +75,21 @@ function getNotification(detail: Detail): { text: string; url: string; host: str
   const u = new URL(matches[0].url);
   return { text: matches[0].text, url: u.toString(), host: u.hostname.toLowerCase().replace(/^www\\./, "") };
 }
+function getAdvertisementNumber(detail: Detail): string | null {
+  const facts = detail.facts ?? {};
+  const direct = normalizeAdvertisementNumber(facts.advertisement_number ?? facts.notification_number ?? facts.reference_number ?? null);
+  if (direct) return direct;
+  const tables = (detail as Record<string, unknown>).source_tables;
+  if (!Array.isArray(tables)) return null;
+  for (const table of tables as Array<{ rows?: string[][] }>) {
+    for (const row of table.rows ?? []) {
+      if (row.length < 2 || !/advertisement|advt\\.?\\s*(no|number)|notification\\s*(no|number)|reference\\s*(no|number)/i.test(row[0])) continue;
+      const value = normalizeAdvertisementNumber(row[1]);
+      if (value) return value;
+    }
+  }
+  return null;
+}
 async function main() {
   if (!runId || ids.length < 1 || ids.length > 10) throw new Error("Supply source run ID and 1–10 explicit external IDs.");
   const rows = await db.query.fjaJobInventory.findMany({
@@ -135,7 +150,7 @@ async function main() {
       organizationId: org.id,
       recruitmentName: (org.name + " " + lines.map((l) => l.name).join(" / ") + " Recruitment " + yearMatch[1]).slice(0, 220),
       postLines: lines,
-      advertisementNumber: normalizeAdvertisementNumber(facts.advertisement_number ?? null),
+      advertisementNumber: getAdvertisementNumber(detail),
       notificationUrl: notification.url,
       notificationAnchorText: notification.text,
       approvedHosts,
