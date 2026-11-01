@@ -319,7 +319,6 @@ const homeRecruitmentSelect = sql`
     o.name_hi AS org_name_hi,
     o.slug AS org_slug,
     o.sector,
-    r.total_vacancies,
     r.application_end_date,
     (SELECT COUNT(*)::int FROM public.posts p WHERE p.recruitment_id = r.id) AS post_count
   FROM public.recruitments r
@@ -480,7 +479,7 @@ export async function listLivePostsBySector(
       postId: posts.id,
       postName: posts.name,
       postSlug: posts.slug,
-      vacancyTotal: null, // No accepted field-level evidence is currently loaded.
+      vacancyTotal: sql<number | null>`NULL`, // No accepted field-level evidence is currently loaded.
       recruitmentName: recruitments.name,
       recruitmentSlug: recruitments.slug,
       recruitmentStatus: recruitments.status,
