@@ -153,8 +153,8 @@ export function HomeContent({
               <span className="text-[13px] font-bold text-rose-900 sm:text-sm">{isHi ? "पद 7 दिन में बंद" : "posts close within 7 days"}</span>
             </Link>
             <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
-              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
-              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "रिक्तियां खुली" : "vacancies open now"}</span>
+              <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.totalVacancies != null && stats.totalVacancies > 0 ? nf(stats.totalVacancies) : "—"}</span>
+              <span className="text-[13px] font-semibold text-slate-600 sm:text-sm">{isHi ? "रिक्तियों के आंकड़े सत्यापनाधीन" : "vacancy figures pending verification"}</span>
             </Link>
             <Link href="/jobs" className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-indigo-300 hover:shadow-md">
               <span className="text-[28px] font-extrabold leading-none tabular-nums text-slate-950 sm:text-[34px]">{stats.liveRecruitments > 0 ? nf(stats.liveRecruitments) : "—"}</span>
