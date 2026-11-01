@@ -37,8 +37,13 @@ function isApprovedHost(hostname: string, approvedHosts: string[]): boolean {
     return false;
   }
   return approvedHosts.some((entry) => {
-    const approved = normaliseApprovedHost(entry);
-    return !!approved && (host === approved || host.endsWith(`.${approved}`));
+    const raw = entry.trim();
+    const explicitlyAllowsSubdomains = raw.startsWith("*.");
+    const approved = normaliseApprovedHost(raw);
+    return !!approved && (
+      host === approved ||
+      (explicitlyAllowsSubdomains && host.endsWith(`.${approved}`))
+    );
   });
 }
 
@@ -47,6 +52,10 @@ function parseCandidate(value: string, approvedHosts: string[]): URL | null {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) return null;
     if (url.username || url.password) return null;
+    // Notification probes must use the destination's standard HTTP(S) port.
+    // Explicit non-default ports can turn an otherwise trusted hostname into
+    // an unintended service endpoint.
+    if (url.port) return null;
     if (!isApprovedHost(url.hostname, approvedHosts)) return null;
     return url;
   } catch {
