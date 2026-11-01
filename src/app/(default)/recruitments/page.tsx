@@ -10,7 +10,7 @@ export const revalidate = 86400; // Phase 1: daily revalidation // 1 hour
 
 export const metadata: Metadata = {
   title: "Recruitment Campaigns - Government Jobs Timeline",
-  description: "Browse all government recruitment campaigns with notification dates, application windows, exam schedules, and vacancy details.",
+  description: "Browse all government recruitment campaigns with notification dates, application windows, exam schedules, and post details.",
   // SEO-001 D2: noindex, follow until Canonical Read Migration.
   ...pageSeo("/recruitments", { index: false }),
   openGraph: {
@@ -86,7 +86,7 @@ export default async function RecruitmentsPage() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Recruitment Campaigns</h1>
         <p className="text-lg text-gray-600">
-          Browse all government recruitment campaigns with timelines, vacancies, and application details.
+          Browse all government recruitment campaigns with timelines, individual posts, and application details.
         </p>
       </div>
 
