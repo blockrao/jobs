@@ -41,13 +41,15 @@ jobs:
           COUNT=$(echo "$EXTERNAL_IDS" | tr ',; ' '\\n' | sed '/^$/d' | sort -u | wc -l)
           test "$COUNT" -ge 1 -a "$COUNT" -le 10 || { echo "Provide 1–10 unique FJA IDs."; exit 1; }
       - name: Download research extraction artifact
-        env:
-          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        uses: actions/download-artifact@v4
+        with:
+          name: freejobalert-extraction-${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.source_run_id }}
+          path: artifacts/fja-download
+      - name: Locate downloaded artifact
         run: |
-          mkdir -p artifacts/fja-download
-          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \\
-            --name "freejobalert-extraction-$SOURCE_RUN_ID" \\
-            --dir artifacts/fja-download
           INPUT_DIR="$(find artifacts/fja-download -type f -name all-in-window-listings.json -print -quit | xargs -r dirname)"
           test -n "$INPUT_DIR" || { echo "Listing inventory missing."; exit 1; }
           test -f "$INPUT_DIR/detail-records.json" || { echo "Detail records missing."; exit 1; }
