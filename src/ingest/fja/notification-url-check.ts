@@ -138,10 +138,18 @@ async function dnsPinnedHead(url: URL, timeoutMs: number): Promise<HeadResponse>
       (response) => {
         const rawContentType = response.headers["content-type"];
         const contentType = Array.isArray(rawContentType) ? rawContentType[0] : rawContentType ?? null;
+        const rawLocation = response.headers.location;
+        const location = Array.isArray(rawLocation) ? rawLocation[0] : rawLocation ?? null;
         response.resume();
         resolve({
           status: response.statusCode ?? 0,
-          headers: { get: (name: string) => name.toLowerCase() === "content-type" ? contentType : null },
+          headers: {
+            get: (name: string) => {
+              if (name.toLowerCase() === "content-type") return contentType;
+              if (name.toLowerCase() === "location") return location;
+              return null;
+            },
+          },
         });
       },
     );
