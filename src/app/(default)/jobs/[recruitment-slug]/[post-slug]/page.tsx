@@ -188,6 +188,8 @@ export default async function JobDetailPage({ params }: Props) {
         notificationPublicationDate: post.notificationPublicationDate,
         officialSourceUrl: post.officialSourceVerified ? post.officialSourceUrl : null,
         officialSourceVerified: post.officialSourceVerified,
+        notificationLinkUrl: post.notificationLinkUrl ?? null,
+        notificationLinkValidated: post.notificationLinkValidated === true,
         applyUrl: post.officialApplicationVerified
           ? post.applyPortalUrl || post.applicationUrl || post.recruitmentOfficialApplicationUrl
           : null,
