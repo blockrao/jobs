@@ -216,3 +216,62 @@ Each gate requires evidence and a recorded decision. If a gate fails, stop scali
 - Daily scheduling starts only after the pilot and operational controls pass.
 - Never claim records are live until their canonical pages have been checked on the public data path and rendered UI.
 - This process supplements and is subordinate to the JobOye Product & Discovery Operating Charter. If a conflict exists, the charter's trust, canonical and discovery principles prevail; document the resolution rather than silently deviating.
+
+
+## 13. Mandatory FJA-source privacy and official-notification URL contract
+
+This section is a hard publication contract and takes precedence over any earlier generic wording in this document that calls an FJA URL a possible public source link.
+
+### 13.1 FJA article URL is private ingestion provenance only
+
+- The FJA listing/article URL is used solely to discover, fetch and extract source HTML.
+- Store it in internal ingestion/provenance fields and access-controlled operational reports only.
+- It must never be exposed in any public JobOye surface: visible UI, rendered HTML, public API/JSON payload, page metadata, canonical or alternate links, Open Graph/Twitter metadata, JSON-LD/structured data, sitemap, breadcrumbs, share links, buttons, redirects or client-side state.
+- Never use an FJA URL as a notification link, application link, source link, fallback link or public citation.
+- Public responses must use an explicit allowlist/DTO so internal source URLs cannot leak accidentally. Add automated tests that search rendered HTML, metadata, JSON-LD, public API output and sitemap output for known FJA domains and captured FJA article URLs.
+- The FJA URL may be shown in restricted admin/reconciliation tooling only when necessary for operations; never in the public user experience.
+
+### 13.2 Official notification URL is a separate required field
+
+- Extract the notification link from the FJA article HTML's explicit notification/official-notification anchor or clearly labelled notification section.
+- Preserve the exact anchor text, raw href, resolved URL and source HTML locator internally.
+- The public **Official Notification** action must point only to this extracted notification URL after it passes the validation gate below.
+- Never substitute the FJA article URL, FJA listing URL, another aggregator URL, an application portal URL or a guessed organisation homepage when the notification URL is missing or invalid.
+- Keep the application URL in a separate field and label/action. Never interchange notification and application URLs.
+- If no distinct notification URL is present, or the destination cannot be validated, the record is not eligible for public notification-link publication. Keep it in staging/review; do not silently fall back to FJA.
+
+### 13.3 Official destination and accessibility gate
+
+Before accepting a record for public publication, validate the extracted notification URL without extracting any facts from the destination:
+
+1. Require a syntactically valid absolute HTTP(S) URL.
+2. Reject FJA and other aggregator hosts, URL shorteners, tracking redirects and unrelated third-party destinations. The final destination must be attributable to the recruiting organisation, its government department, or an authorised government/recruitment portal. Maintain an auditable host decision.
+3. Perform an HTTP HEAD accessibility probe, following redirects with a bounded redirect count and timeout. Record probe time, response status, redirect chain, final URL, final host and response content type.
+4. Require a successful final response (normally HTTP 200) and a final destination consistent with the official-source host decision. A redirect to a dead page, login wall, aggregator, unrelated domain or error page fails.
+5. Do not download, open, parse, OCR or inspect the PDF/document body. This probe checks reachability and destination only; the FJA HTML remains the sole extraction source.
+6. If HEAD is unsupported or inconclusive, do not mark the link accessible. Keep it in review until a separately approved non-content accessibility check is defined. Do not silently fetch or parse the PDF as a fallback.
+7. Recheck the link before initial publication and on subsequent daily refreshes. Store `last_checked_at`, status, final URL/host and failure reason. A link that later becomes unavailable must be flagged promptly and the public action disabled or marked unavailable according to the UI contract; never leave a broken link presented as working.
+8. Do not describe a URL as official solely because FJA labels it official. The destination host and redirect chain must pass the recorded host policy.
+
+A URL that passes the HEAD check is **reachable at the time checked**; this does not prove that the document contents are accurate, current, complete or genuinely issued by the organisation. Do not overstate what the check proves.
+
+### 13.4 Public source wording and factual claims
+
+- The public action label is **Official Notification** and its target is the validated official notification URL.
+- Do not expose or name FJA anywhere in the public UI, page source, metadata, schema, sitemap or public API.
+- Internal provenance must still accurately record that the factual extraction was performed from FJA HTML.
+- Because this workflow does not read or compare the official notification document, do not claim that JobOye independently extracted, read or verified every displayed fact against that document. A validated official link is not the same as independent content verification.
+- Public wording may identify the linked destination as the official notification only after the host/destination gate passes. Avoid claims such as "verified from official notification" unless a separate, approved verification process actually compares the facts with the official document.
+- If the product requires a claim that all information was verified against the official notification, that claim is out of scope for this HTML-only process and publication must wait for a separately authorised verification workflow.
+
+### 13.5 Required automated acceptance tests
+
+The pilot and production pipeline must include tests proving:
+- FJA article URLs never appear in public API responses, rendered pages, metadata, JSON-LD, sitemaps or user-facing links.
+- The Official Notification action always uses the exact validated notification URL extracted from the FJA article HTML.
+- Application links remain separate from notification links.
+- Missing, malformed, aggregator, redirected-to-untrusted, inaccessible or timed-out notification URLs block public notification-link publication; no FJA fallback exists.
+- A changed notification URL is re-probed and updated only with an auditable record of the previous and new destination.
+- A previously working notification URL that later fails is detected and handled by the daily refresh.
+- The accessibility probe does not retrieve or parse document/PDF content.
+
