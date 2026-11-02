@@ -110,34 +110,34 @@ async function main() {
     const listing = details.listing as Record<string, unknown> | undefined;
     const sourceUrl = detail?.detail_url || String(listing?.listing_url ?? row.sourceUrl);
     const base = { externalId: row.externalId, sourceUrl, title: row.title };
-    if (!captured.has(row.externalId)) { records.push({ ...base, verdict: "REVIEW", reason: "PRIVATE_HTML_CAPTURE_MISSING" }); continue; }
-    if (!detail) { records.push({ ...base, verdict: "REVIEW", reason: "DETAIL_NOT_CAPTURED" }); continue; }
-    if (detail.open_status === "CLOSED_BY_CUTOFF") { records.push({ ...base, verdict: "SKIP", reason: "CLOSED_BY_CUTOFF" }); continue; }
+    if (!captured.has(row.externalId)) { records.push({ ...base, verdict: "REVIEW", reason: "PRIVATE_HTML_CAPTURE_MISSING" }); return records[0]; }
+    if (!detail) { records.push({ ...base, verdict: "REVIEW", reason: "DETAIL_NOT_CAPTURED" }); return records[0]; }
+    if (detail.open_status === "CLOSED_BY_CUTOFF") { records.push({ ...base, verdict: "SKIP", reason: "CLOSED_BY_CUTOFF" }); return records[0]; }
     // Only an explicitly open application is eligible for this live pilot.
     // Walk-in/date-unclear records stay in review; never infer ACTIVE or UPCOMING.
-    if (detail.open_status !== "OPEN_AS_OF_CUTOFF") { records.push({ ...base, verdict: "REVIEW", reason: "LIFECYCLE_UNCLEAR" }); continue; }
+    if (detail.open_status !== "OPEN_AS_OF_CUTOFF") { records.push({ ...base, verdict: "REVIEW", reason: "LIFECYCLE_UNCLEAR" }); return records[0]; }
     const facts = detail.facts ?? {};
     const orgRaw = String(facts.organization ?? row.organizationName ?? "").trim()
       || findOrg(orgIndex, String(detail.page_title ?? "") + " " + String(detail.detail_text ?? ""));
     const orgResult = resolveOrganization(orgIndex, orgRaw);
     if (!("organization" in orgResult) || (orgResult.kind === "EXISTING" && orgResult.ambiguous)) {
-      records.push({ ...base, verdict: "REVIEW", reason: "ORGANIZATION_UNRESOLVED", orgCandidate: orgRaw || null }); continue;
+      records.push({ ...base, verdict: "REVIEW", reason: "ORGANIZATION_UNRESOLVED", orgCandidate: orgRaw || null }); return records[0];
     }
     const org = orgResult.organization;
     const lines = getLines(detail);
-    if (!lines.length) { records.push({ ...base, verdict: "REVIEW", reason: "POST_LEAF_NAME_MISSING", organization: org.name }); continue; }
+    if (!lines.length) { records.push({ ...base, verdict: "REVIEW", reason: "POST_LEAF_NAME_MISSING", organization: org.name }); return records[0]; }
     const rejectedLine = lines.find((line) => classifyPostLine(line.name, line.vacancies ?? 1) !== "OK");
     if (rejectedLine) {
       records.push({ ...base, verdict: "REVIEW", reason: "POST_LEAF_CLASSIFIER_REJECTED", organization: org.name, postName: rejectedLine.name, classifierVerdict: classifyPostLine(rejectedLine.name, rejectedLine.vacancies ?? 1) });
       continue;
     }
     const yearMatch = (String(detail.page_title ?? "") + " " + row.title).match(/\b(20\d{2})\b/);
-    if (!yearMatch) { records.push({ ...base, verdict: "REVIEW", reason: "YEAR_NOT_EXPLICIT", organization: org.name }); continue; }
+    if (!yearMatch) { records.push({ ...base, verdict: "REVIEW", reason: "YEAR_NOT_EXPLICIT", organization: org.name }); return records[0]; }
     const notification = getNotification(detail);
-    if (!notification) { records.push({ ...base, verdict: "REVIEW", reason: "NOTIFICATION_LINK_MISSING_OR_AMBIGUOUS", organization: org.name, postNames: lines.map((l) => l.name) }); continue; }
+    if (!notification) { records.push({ ...base, verdict: "REVIEW", reason: "NOTIFICATION_LINK_MISSING_OR_AMBIGUOUS", organization: org.name, postNames: lines.map((l) => l.name) }); return records[0]; }
     const orgHost = hostOf(String(org.websiteUrl ?? ""));
     if (!orgHost || !(notification.host === orgHost || notification.host.endsWith("." + orgHost))) {
-      records.push({ ...base, verdict: "REVIEW", reason: "NOTIFICATION_HOST_NOT_MATCHED_TO_ORG_WEBSITE", organization: org.name, organizationWebsite: org.websiteUrl, notificationHost: notification.host }); continue;
+      records.push({ ...base, verdict: "REVIEW", reason: "NOTIFICATION_HOST_NOT_MATCHED_TO_ORG_WEBSITE", organization: org.name, organizationWebsite: org.websiteUrl, notificationHost: notification.host }); return records[0];
     }
     const approvedHosts = [...new Set([notification.host, orgHost])];
     const check = await checkOfficialNotificationUrl(notification.url, {
@@ -146,7 +146,7 @@ async function main() {
       maxRedirects: 3,
     });
     if (!check.ok) {
-      records.push({ ...base, verdict: "REVIEW", reason: check.reason, organization: org.name, notificationUrl: notification.url, httpStatus: check.httpStatus }); continue;
+      records.push({ ...base, verdict: "REVIEW", reason: check.reason, organization: org.name, notificationUrl: notification.url, httpStatus: check.httpStatus }); return records[0];
     }
     records.push({
       ...base,
