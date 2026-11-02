@@ -55,6 +55,7 @@ async function main() {
            i.application_end_date::text, i.official_notification_url,
            i.details, i.other_info_raw, i.first_seen_at::text,
            COALESCE(l.posting_count, 0)::int AS legacy_posting_count,
+           COALESCE(l.observation_count, 0)::int AS source_observation_count,
            COALESCE(l.recruitment_ids, ARRAY[]::int[]) AS inferred_recruitment_ids,
            COALESCE(l.post_ids, ARRAY[]::int[]) AS inferred_post_ids,
            r.id AS canonical_recruitment_id, r.name AS canonical_recruitment_name,
@@ -64,10 +65,33 @@ async function main() {
            COALESCE(c.capture_count, 0)::int AS html_capture_count
     FROM public.fja_job_inventory i
     LEFT JOIN LATERAL (
-      SELECT count(*)::int AS posting_count,
-             array_agg(DISTINCT inferred_recruitment_id) FILTER (WHERE inferred_recruitment_id IS NOT NULL) AS recruitment_ids,
-             array_agg(DISTINCT inferred_post_id) FILTER (WHERE inferred_post_id IS NOT NULL) AS post_ids
-      FROM public.postings p WHERE p.external_id = i.external_id
+      SELECT
+        (SELECT count(*)::int FROM public.postings p WHERE p.external_id = i.external_id) AS posting_count,
+        (SELECT count(*)::int FROM public.source_observations so WHERE so.source = 'freejobalert' AND so.external_id = i.external_id) AS observation_count,
+        ARRAY(
+          SELECT DISTINCT mapped.recruitment_id
+          FROM (
+            SELECT p.inferred_recruitment_id AS recruitment_id
+            FROM public.postings p WHERE p.external_id = i.external_id
+            UNION
+            SELECT so.recruitment_id
+            FROM public.source_observations so
+            WHERE so.source = 'freejobalert' AND so.external_id = i.external_id
+          ) mapped
+          WHERE mapped.recruitment_id IS NOT NULL
+        ) AS recruitment_ids,
+        ARRAY(
+          SELECT DISTINCT mapped.post_id
+          FROM (
+            SELECT p.inferred_post_id AS post_id
+            FROM public.postings p WHERE p.external_id = i.external_id
+            UNION
+            SELECT so.post_id
+            FROM public.source_observations so
+            WHERE so.source = 'freejobalert' AND so.external_id = i.external_id
+          ) mapped
+          WHERE mapped.post_id IS NOT NULL
+        ) AS post_ids
     ) l ON true
     LEFT JOIN public.recruitments r
       ON cardinality(COALESCE(l.recruitment_ids, ARRAY[]::int[])) = 1
@@ -131,6 +155,7 @@ async function main() {
       official_notification_url_candidate: officialUrl,
       html_capture_count: row.html_capture_count,
       legacy_posting_count: row.legacy_posting_count,
+      source_observation_count: row.source_observation_count,
       inferred_recruitment_ids: recruitmentIds.join("|"),
       inferred_post_ids: postIds.join("|"),
       canonical_recruitment_id: row.canonical_recruitment_id,
