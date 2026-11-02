@@ -103,8 +103,8 @@ async function main() {
   });
   const captured = new Set(captures.map((r) => r.externalId));
   const orgIndex = await loadOrgIndex(db);
-  const records = [];
-  for (const row of rows) {
+  const evaluate = async (row: typeof rows[number]) => {
+    const records: Array<Record<string, unknown>> = [];
     const details = row.details as Record<string, unknown>;
     const detail = details.detail as Detail | null;
     const listing = details.listing as Record<string, unknown> | undefined;
@@ -140,7 +140,11 @@ async function main() {
       records.push({ ...base, verdict: "REVIEW", reason: "NOTIFICATION_HOST_NOT_MATCHED_TO_ORG_WEBSITE", organization: org.name, organizationWebsite: org.websiteUrl, notificationHost: notification.host }); continue;
     }
     const approvedHosts = [...new Set([notification.host, orgHost])];
-    const check = await checkOfficialNotificationUrl(notification.url, { approvedHosts });
+    const check = await checkOfficialNotificationUrl(notification.url, {
+      approvedHosts,
+      timeoutMs: 5000,
+      maxRedirects: 3,
+    });
     if (!check.ok) {
       records.push({ ...base, verdict: "REVIEW", reason: check.reason, organization: org.name, notificationUrl: notification.url, httpStatus: check.httpStatus }); continue;
     }
@@ -161,7 +165,21 @@ async function main() {
       headFinalUrl: check.finalUrl,
       lifecycleCandidate: detail.open_status,
     });
-  }
+    return records[0];
+  };
+  // Network checks are independent. Keep concurrency bounded so a slow government
+  // host cannot serialize the entire pilot or overwhelm external infrastructure.
+  const records: Array<Record<string, unknown>> = [];
+  const pending = [...rows];
+  const workers = Array.from({ length: Math.min(5, pending.length) }, async () => {
+    while (pending.length) {
+      const row = pending.shift();
+      if (!row) return;
+      records.push(await evaluate(row));
+    }
+  });
+  await Promise.all(workers);
+  records.sort((a, b) => ids.indexOf(String(a.externalId)) - ids.indexOf(String(b.externalId)));
   const report = {
     mode: "dry-run-only",
     sourceRunId: runId,
