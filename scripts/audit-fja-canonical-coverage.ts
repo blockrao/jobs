@@ -9,7 +9,7 @@ type Row = Record<string, any>;
 const obj = (v: unknown): Row => v && typeof v === "object" && !Array.isArray(v) ? v as Row : {};
 const norm = (v: string) => v.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
 
-function roleLines(detail: Row): { names: string[]; basis: string } {
+function roleLines(detail: Row): { names: string[]; basis: string; ambiguous: boolean } {
   const facts = obj(detail.facts);
   const names: string[] = [];
   for (const table of Array.isArray(detail.post_table_candidates) ? detail.post_table_candidates : []) {
@@ -26,11 +26,23 @@ function roleLines(detail: Row): { names: string[]; basis: string } {
     else if (typeof facts.post_name === "string" && facts.post_name.trim()) names.push(facts.post_name.trim());
   }
   const unique = [...new Map(names.map(n => [norm(n), n.trim()])).values()].filter(Boolean);
-  return unique.length ? { names: unique, basis: "FJA_structured_post_table_or_post_name" } : { names: [], basis: "NO_ROLE_NAME_REQUIRES_REVIEW" };
+  const fromStructuredTable = (detail.post_table_candidates ?? []).length > 0 && unique.length > 0;
+  const singleStringMayContainManyRoles = !fromStructuredTable && unique.length === 1 && /[,;\n]/.test(unique[0]);
+  return {
+    names: unique,
+    basis: singleStringMayContainManyRoles ? "AMBIGUOUS_COMPOUND_POST_NAME_REQUIRES_REVIEW"
+      : unique.length ? (fromStructuredTable ? "FJA_STRUCTURED_POST_TABLE" : "FJA_POST_NAME_FIELD")
+      : "NO_ROLE_NAME_REQUIRES_REVIEW",
+    ambiguous: singleStringMayContainManyRoles,
+  };
 }
 
 function candidateOfficialUrl(row: Row, detail: Row): string | null {
   if (typeof row.official_notification_url === "string" && row.official_notification_url.trim()) return row.official_notification_url.trim();
+  const facts = obj(detail.facts);
+  for (const value of [facts.official_notification_url, facts.officialNotificationUrl, detail.official_notification_url, detail.officialNotificationUrl]) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
   const links = Array.isArray(detail.official_link_candidates) ? detail.official_link_candidates : [];
   const candidates = links.filter((x: Row) => typeof x?.url === "string" && /(notification|advertisement|advt|official notice)/i.test(String(x.text ?? "")));
   return candidates.length === 1 ? String(candidates[0].url) : null;
@@ -77,7 +89,6 @@ async function main() {
   const audited = rows.map(row => {
     const wrapper = obj(row.details);
     const detail = obj(wrapper.detail ?? wrapper);
-    const facts = obj(detail.facts);
     const proposed = roleLines(detail);
     const officialUrl = candidateOfficialUrl(row, detail);
     const recruitmentIds = Array.isArray(row.inferred_recruitment_ids) ? row.inferred_recruitment_ids : [];
@@ -94,7 +105,8 @@ async function main() {
       linked_post_reference_present: postIds.length > 0,
       canonical_hub_has_any_leaf: Number(row.canonical_leaf_count) > 0,
       role_names_extracted: proposed.names.length > 0,
-      all_proposed_roles_have_leaf: proposed.names.length > 0 && missingLeaves.length === 0,
+      role_decomposition_ambiguous: proposed.ambiguous,
+      all_proposed_roles_have_leaf: proposed.names.length > 0 && missingLeaves.length === 0 && !proposed.ambiguous,
     };
     let disposition = "REVIEW";
     if (!flags.source_open) disposition = "SOURCE_NOT_OPEN_OR_UNKNOWN";
@@ -102,7 +114,7 @@ async function main() {
     else if (!row.organization_name) disposition = "ORGANIZATION_IDENTITY_REVIEW";
     else if (recruitmentIds.length > 1) disposition = "MULTIPLE_HUB_MATCHES_REVIEW";
     else if (!hasOneHub) disposition = "NEW_CANONICAL_HUB_PREFLIGHT";
-    else if (!proposed.names.length) disposition = "POST_DECOMPOSITION_REVIEW";
+    else if (!proposed.names.length || proposed.ambiguous) disposition = "POST_DECOMPOSITION_REVIEW";
     else if (missingLeaves.length) disposition = "MISSING_OR_MISMATCHED_POST_LEAVES";
     else disposition = "HUB_AND_ROLE_LEAVES_PRESENT_VERIFY_SOURCE_AND_LIFECYCLE";
 
