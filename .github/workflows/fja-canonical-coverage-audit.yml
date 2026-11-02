@@ -1,0 +1,36 @@
+name: FJA canonical hub and leaf coverage audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fja-canonical-coverage-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile every FJA inventory row against canonical hubs and post leaves (read-only)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing DATABASE_URL secret; audit stopped."; exit 1; }
+          npx tsx scripts/audit-fja-canonical-coverage.ts
+      - name: Upload record-level coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fja-canonical-coverage-${{ github.run_id }}
+          path: artifacts/fja-canonical-coverage/
+          if-no-files-found: error
+          retention-days: 30
